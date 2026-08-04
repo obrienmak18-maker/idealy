@@ -46,6 +46,7 @@ import {
 import { Logo } from '@/components/Brand';
 import { WAYS, type WayId } from '@/lore/ways';
 import { useIdealyStore } from '@/stores/idealyStore';
+import { getSupabaseClient } from '@/supabaseClient';
 
 type RightTab = 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
 
@@ -83,7 +84,10 @@ export function WorkspacePage() {
   const [previousSchema, setPreviousSchema] = useState<IdealyUniversalProjectSchema | null>(null);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [toolMessage, setToolMessage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const attachmentRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -109,6 +113,55 @@ export function WorkspacePage() {
     setInput('');
     setShowSlashMenu(false);
     runMission(finalPrompt);
+  }
+
+  async function uploadAttachments(files: FileList | null) {
+    if (!files?.length) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setToolMessage('Supabase n’est pas configuré pour l’import.');
+      return;
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setToolMessage('Connectez-vous avant d’importer un fichier.');
+      return;
+    }
+    const selected = Array.from(files).filter((file) => file.size <= 10 * 1024 * 1024);
+    if (!selected.length) {
+      setToolMessage('Chaque fichier doit faire moins de 10 Mo.');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      await Promise.all(selected.map(async (file) => {
+        const path = `${user.id}/${crypto.randomUUID()}-${file.name}`;
+        const { error } = await supabase.storage.from('project-assets').upload(path, file, { contentType: file.type || undefined });
+        if (error) throw error;
+      }));
+      const names = selected.map((file) => file.name).join(', ');
+      setInput((current) => `${current}${current ? '\n\n' : ''}Fichiers joints : ${names}`);
+      setToolMessage(`${selected.length} fichier(s) ajouté(s) à la mission.`);
+    } catch {
+      setToolMessage('Import impossible. Vérifiez votre session et réessayez.');
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  async function connectGitHub() {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setToolMessage('Supabase n’est pas configuré.');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('integration-connect', { body: { provider: 'github' } });
+      if (error || !data?.url) throw error ?? new Error('OAuth unavailable');
+      window.location.assign(data.url);
+    } catch {
+      setToolMessage('La connexion GitHub nécessite une session active et les secrets OAuth configurés.');
+    }
   }
 
   async function handleDownload() {
@@ -500,11 +553,12 @@ export function WorkspacePage() {
                   />
                   <div className="mt-2 flex items-center justify-between">
                     <div className="flex items-center gap-0.5">
-                      <IconBtn icon={Paperclip} title="Fichier" />
-                      <IconBtn icon={ImageIcon} title="Image" />
-                      <IconBtn icon={Figma} title="Figma" />
-                      <IconBtn icon={Github} title="GitHub" />
-                      <IconBtn icon={Mic} title="Dicter" />
+                      <IconBtn icon={Paperclip} title="Ajouter un fichier" onClick={() => attachmentRef.current?.click()} />
+                      <IconBtn icon={ImageIcon} title="Ajouter une image" onClick={() => attachmentRef.current?.click()} />
+                      <IconBtn icon={Figma} title="Figma" onClick={() => { setTab('connectors'); setToolMessage('La connexion Figma sera disponible après la configuration OAuth Figma.'); }} />
+                      <IconBtn icon={Github} title="Connecter GitHub" onClick={connectGitHub} />
+                      <IconBtn icon={Mic} title="Dictée" onClick={() => setToolMessage('La dictée est disponible depuis l’écran d’accueil ; l’intégration de l’espace de travail suit.')} />
+                      <input ref={attachmentRef} type="file" multiple className="hidden" onChange={(event) => uploadAttachments(event.target.files)} />
                     </div>
                     <button
                       onClick={send}
@@ -515,6 +569,7 @@ export function WorkspacePage() {
                     </button>
                   </div>
                 </div>
+                {toolMessage && <p role="status" className="mt-2 text-xs text-electric-300">{isUploading ? 'Import en cours…' : toolMessage}</p>}
                 <p className="mt-2 text-center text-[11px] text-ink-500">
                   Idealy peut se tromper. Vérifiez le code généré.
                 </p>
@@ -843,11 +898,12 @@ function NavItem({
   );
 }
 
-function IconBtn({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
+function IconBtn({ icon: Icon, title, onClick }: { icon: React.ElementType; title: string; onClick?: () => void }) {
   return (
     <button
       className="rounded-lg p-2 text-ink-400 transition hover:bg-white/5 hover:text-white"
       title={title}
+      onClick={onClick}
     >
       <Icon size={17} />
     </button>

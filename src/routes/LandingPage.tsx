@@ -19,11 +19,24 @@ import { Logo, RotatingWords } from '@/components/Brand';
 import { AuthModal } from '@/components/AuthModal';
 import { useIdealyStore } from '@/stores/idealyStore';
 
+type BrowserSpeechRecognition = {
+  lang: string;
+  interimResults: boolean;
+  start: () => void;
+  onresult: (event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void;
+  onend: () => void;
+  onerror: () => void;
+};
+
+type BrowserSpeechRecognitionFactory = new () => BrowserSpeechRecognition;
+
 export function LandingPage() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
   const [prompt, setPrompt] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const stage = useIdealyStore((s) => s.stage);
 
@@ -41,12 +54,47 @@ export function LandingPage() {
 
   function onFiles(files: FileList | null) {
     if (!files) return;
-    const names = Array.from(files).map((f) => f.name);
+    const accepted = Array.from(files).filter((file) => file.size <= 10 * 1024 * 1024);
+    if (accepted.length !== files.length) setNotice('Les fichiers de plus de 10 Mo ne peuvent pas être ajoutés.');
+    const names = accepted.map((f) => f.name);
     setAttachments((a) => [...a, ...names].slice(0, 5));
+  }
+
+  function openFilePicker(accept = '') {
+    if (!fileRef.current) return;
+    fileRef.current.accept = accept;
+    fileRef.current.click();
+  }
+
+  function startDictation() {
+    const BrowserWindow = window as Window & {
+      SpeechRecognition?: BrowserSpeechRecognitionFactory;
+      webkitSpeechRecognition?: BrowserSpeechRecognitionFactory;
+    };
+    const Recognition = BrowserWindow.SpeechRecognition ?? BrowserWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      setNotice('La dictée n’est pas prise en charge par ce navigateur. Essayez Chrome ou Edge.');
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.lang = 'fr-FR';
+    recognition.interimResults = false;
+    recognition.onresult = (event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => {
+      const transcript = Array.from(event.results).map((result) => result[0]?.transcript ?? '').join(' ').trim();
+      setPrompt((current) => [current, transcript].filter(Boolean).join(current ? ' ' : ''));
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      setNotice('La dictée a été interrompue. Vérifiez l’autorisation du microphone.');
+    };
+    setListening(true);
+    recognition.start();
   }
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
+      {notice && <p role="status" className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-ink-900 px-3 py-2 text-xs text-electric-300 shadow-lg">{notice}</p>}
       {/* Ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute -top-40 left-1/2 h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-electric-600/10 blur-[120px] animate-drift" />
@@ -131,22 +179,22 @@ export function LandingPage() {
             <div className="mt-2 flex items-center justify-between">
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => fileRef.current?.click()}
+                  onClick={() => openFilePicker()}
                   className="rounded-lg p-2 text-ink-400 hover:bg-white/5 hover:text-white transition"
                   title="Importer un fichier"
                 >
                   <Paperclip size={17} />
                 </button>
-                <button className="rounded-lg p-2 text-ink-400 hover:bg-white/5 hover:text-white transition" title="Image">
+                <button onClick={() => openFilePicker('image/*')} className="rounded-lg p-2 text-ink-400 hover:bg-white/5 hover:text-white transition" title="Image">
                   <ImageIcon size={17} />
                 </button>
-                <button className="rounded-lg p-2 text-ink-400 hover:bg-white/5 hover:text-white transition" title="Figma">
+                <button onClick={() => { setNotice('Connectez-vous pour importer un fichier Figma.'); openAuth('signup'); }} className="rounded-lg p-2 text-ink-400 hover:bg-white/5 hover:text-white transition" title="Figma">
                   <Figma size={16} />
                 </button>
-                <button className="rounded-lg p-2 text-ink-400 hover:bg-white/5 hover:text-white transition" title="GitHub">
+                <button onClick={() => { setNotice('Connectez-vous pour relier GitHub à votre espace Idealy.'); openAuth('signup'); }} className="rounded-lg p-2 text-ink-400 hover:bg-white/5 hover:text-white transition" title="GitHub">
                   <Github size={16} />
                 </button>
-                <button className="rounded-lg p-2 text-ink-400 hover:bg-white/5 hover:text-white transition" title="Dicter">
+                <button onClick={startDictation} aria-pressed={listening} className={`rounded-lg p-2 transition ${listening ? 'bg-electric-500/20 text-electric-300' : 'text-ink-400 hover:bg-white/5 hover:text-white'}`} title="Dicter">
                   <Mic size={17} />
                 </button>
                 <input

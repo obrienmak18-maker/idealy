@@ -1,5 +1,5 @@
-import { type ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { type ReactNode, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export function Logo({ size = 32 }: { size?: number }) {
   return (
@@ -60,33 +60,32 @@ export function RotatingWords({
   words: string[];
   className?: string;
 }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (words.length < 2) return;
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % words.length);
+    }, 2800);
+    return () => window.clearInterval(timer);
+  }, [words.length]);
+
   return (
-    <span className={`relative inline-flex ${className}`}>
-      {words.map((w, i) => (
+    <span className={`relative inline-block min-w-[10ch] text-left align-baseline ${className}`}>
+      <AnimatePresence mode="wait" initial={false}>
         <motion.span
-          key={w}
-          className="absolute left-0 top-0 whitespace-nowrap"
-          initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
-          animate={{
-            opacity: [0, 1, 1, 0],
-            y: [20, 0, 0, -20],
-            filter: ['blur(8px)', 'blur(0px)', 'blur(0px)', 'blur(8px)'],
-          }}
-          transition={{
-            duration: 9,
-            times: [0, 0.1, 0.85, 1],
-            delay: i * 3,
-            repeat: Infinity,
-            repeatDelay: words.length * 3 - 3,
-            ease: [0.22, 1, 0.36, 1],
-          }}
+          key={words[index]}
+          className="block whitespace-nowrap"
+          initial={{ opacity: 0, y: 12, filter: 'blur(6px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, y: -12, filter: 'blur(6px)' }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         >
           <span className="bg-gradient-to-r from-electric-400 via-white to-ember-400 bg-clip-text text-transparent">
-            {w}
+            {words[index]}
           </span>
         </motion.span>
-      ))}
-      <span className="invisible">{words[0]}</span>
+      </AnimatePresence>
     </span>
   );
 }
