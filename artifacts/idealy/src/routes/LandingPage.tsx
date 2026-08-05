@@ -94,6 +94,17 @@ export function LandingPage() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
+      {/* Subtle gradient top line — a quiet signature of craft */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 z-50 h-px"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.55) 35%, rgba(249,115,22,0.45) 65%, transparent 100%)',
+          animation: 'shimmer 6s linear infinite',
+          backgroundSize: '200% 100%',
+        }}
+      />
       {notice && <p role="status" className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-ink-900 px-3 py-2 text-xs text-electric-300 shadow-lg">{notice}</p>}
       {/* Ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">

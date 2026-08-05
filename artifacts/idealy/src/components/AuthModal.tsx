@@ -12,7 +12,11 @@ interface Props {
   onSuccess?: () => void;
 }
 
-export function AuthModal({ open, onClose, mode, onSuccess }: Props) {
+export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props) {
+  // Manage mode locally so the sign-in / sign-up toggle works without requiring the
+  // parent to re-open the modal with a different prop.
+  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+
   const setStage = useIdealyStore((s) => s.setStage);
   const setProfile = useIdealyStore((s) => s.setProfile);
   const refillEnergy = useIdealyStore((s) => s.refillEnergy);
@@ -20,66 +24,78 @@ export function AuthModal({ open, onClose, mode, onSuccess }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  /* Removed legacy simulated authentication flow.
-    setLoading(kind);
-    // Simulated auth — real Supabase wiring lands in Phase 4.
-    await new Promise((r) => setTimeout(r, 700));
-    
-    const fakeEmail =
-      kind === 'email' ? email || 'apprenti@idealy.studio' : `shinobi@${kind}.com`;
-    setProfile({
-      email: fakeEmail,
-      displayName: fakeEmail.split('@')[0],
-      avatarHue: Math.floor(Math.random() * 360),
-    });
-    refillEnergy();
-
-    const { way, onboarded } = useIdealyStore.getState();
-    if (way && onboarded) {
-      setStage('ready'); // Déjà onboardé, on saute le choix de voie
-    } else {
-      setStage('choosing-way');
-    }
-    
-    setLoading(null);
-    onClose();
-    onSuccess?.();
-  }
-
-  */
-  async function handleAuth(kind: 'google' | 'github' | 'email') {
-    setLoading(kind);
-    setError(null);
-    try {
-      const supabase = getSupabaseClient();
-      if (!supabase) throw new Error('Supabase is not configured.');
-      if (kind === 'email') {
-        const result = mode === 'signup'
-          ? await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } })
-          : await supabase.auth.signInWithPassword({ email, password });
-        if (result.error) throw result.error;
-        if (!result.data.user) throw new Error('Check your email to confirm your account.');
-        setProfile({ email: result.data.user.email ?? email, displayName: result.data.user.user_metadata.full_name ?? email.split('@')[0], avatarHue: 220 });
-      } else {
-        const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: kind, options: { redirectTo: window.location.origin } });
-        if (oauthError) throw oauthError;
-        return;
-      }
-      refillEnergy();
-      const { way, onboarded } = useIdealyStore.getState();
-      setStage(way && onboarded ? 'ready' : 'choosing-way');
-      onClose();
-      onSuccess?.();
-    } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Authentication failed.');
-    } finally { setLoading(null); }
-  }
+  const [notice, setNotice] = useState<string | null>(null);
 
   const isSignup = mode === 'signup';
 
+  async function handleAuth(kind: 'google' | 'github' | 'email') {
+    setLoading(kind);
+    setError(null);
+    setNotice(null);
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        throw new Error(
+          "Supabase n'est pas encore configuré. Ouvrez Paramètres → Connecteurs et entrez vos clés Supabase.",
+        );
+      }
+
+      if (kind === 'email') {
+        if (isSignup) {
+          const { data, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: window.location.origin },
+          });
+          if (signUpError) throw signUpError;
+          if (!data.user) {
+            setNotice(
+              'Un e-mail de confirmation vous a été envoyé. Vérifiez votre boîte de réception.',
+            );
+            setLoading(null);
+            return;
+          }
+          setProfile({
+            email: data.user.email ?? email,
+            displayName: data.user.user_metadata?.full_name ?? email.split('@')[0],
+            avatarHue: 220,
+          });
+        } else {
+          const { data, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (signInError) throw signInError;
+          if (!data.user) throw new Error('Connexion échouée. Vérifiez vos identifiants.');
+          setProfile({
+            email: data.user.email ?? email,
+            displayName: data.user.user_metadata?.full_name ?? email.split('@')[0],
+            avatarHue: 220,
+          });
+        }
+        refillEnergy();
+        const { way, onboarded } = useIdealyStore.getState();
+        setStage(way && onboarded ? 'ready' : 'choosing-way');
+        onClose();
+        onSuccess?.();
+      } else {
+        // OAuth — redirects away from the page; App.tsx onAuthStateChange handles the return
+        const { error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider: kind,
+          options: { redirectTo: window.location.origin },
+        });
+        if (oauthError) throw oauthError;
+        // Page will redirect; no further action needed here
+      }
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : 'Authentication failed.');
+    } finally {
+      setLoading(null);
+    }
+  }
+
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={false}>
       {open && (
         <motion.div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -87,75 +103,82 @@ export function AuthModal({ open, onClose, mode, onSuccess }: Props) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
+          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-ink-950/80 backdrop-blur-sm"
             onClick={onClose}
           />
+
+          {/* Modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 12 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-md card p-7"
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-ink-900/90 p-8 shadow-2xl backdrop-blur-xl"
           >
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 text-ink-400 hover:text-white transition"
+              className="absolute right-4 top-4 rounded-full p-1.5 text-ink-400 hover:bg-white/5 hover:text-ink-200 transition"
               aria-label="Fermer"
             >
               <X size={18} />
             </button>
-            <div className="flex flex-col items-center text-center">
-              <Logo size={36} />
-              <h2 className="mt-5 text-xl font-semibold text-white">
-                {isSignup ? "Rejoindre l'organisation" : 'Retour au quartier'}
-              </h2>
-              <p className="mt-1.5 text-sm text-ink-300">
-                {isSignup
-                  ? "Créez votre compte pour lancer votre première mission."
-                  : 'Connectez-vous pour reprendre vos missions.'}
-              </p>
-            </div>
 
-            <div className="mt-6 space-y-2.5">
+            <Logo size={28} />
+
+            <h2 className="mt-5 text-xl font-semibold text-white">
+              {isSignup ? 'Rejoindre Idealy' : 'Content de vous revoir'}
+            </h2>
+            <p className="mt-1 text-sm text-ink-400">
+              {isSignup
+                ? 'Créez votre compte pour lancer votre première mission.'
+                : 'Connectez-vous pour rejoindre votre équipe.'}
+            </p>
+
+            {/* OAuth buttons */}
+            <div className="mt-6 flex flex-col gap-2.5">
               <button
                 onClick={() => handleAuth('google')}
-                disabled={loading !== null}
-                className="btn-outline w-full justify-center"
+                disabled={!!loading}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-ink-100 transition hover:bg-white/10 disabled:opacity-50"
               >
                 {loading === 'google' ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={17} className="animate-spin text-ink-400" />
                 ) : (
-                  <Chrome size={16} />
+                  <Chrome size={17} />
                 )}
                 Continuer avec Google
               </button>
+
               <button
                 onClick={() => handleAuth('github')}
-                disabled={loading !== null}
-                className="btn-outline w-full justify-center"
+                disabled={!!loading}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-ink-100 transition hover:bg-white/10 disabled:opacity-50"
               >
                 {loading === 'github' ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={17} className="animate-spin text-ink-400" />
                 ) : (
-                  <Github size={16} />
+                  <Github size={17} />
                 )}
                 Continuer avec GitHub
               </button>
             </div>
 
-            <div className="my-5 flex items-center gap-3 text-xs text-ink-400">
-              <div className="h-px flex-1 bg-white/10" />
-              ou par email
-              <div className="h-px flex-1 bg-white/10" />
+            {/* Divider */}
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/8" />
+              <span className="text-xs text-ink-500">ou par e-mail</span>
+              <div className="h-px flex-1 bg-white/8" />
             </div>
 
+            {/* Email / password form */}
             <form
-              className="space-y-3"
               onSubmit={(e) => {
                 e.preventDefault();
                 handleAuth('email');
               }}
+              className="flex flex-col gap-3"
             >
               <div className="relative">
                 <Mail
@@ -169,6 +192,7 @@ export function AuthModal({ open, onClose, mode, onSuccess }: Props) {
                   placeholder="votre@email.com"
                   className="input pl-10"
                   required
+                  autoComplete="email"
                 />
               </div>
               <input
@@ -178,8 +202,14 @@ export function AuthModal({ open, onClose, mode, onSuccess }: Props) {
                 placeholder="Mot de passe"
                 className="input"
                 required
+                autoComplete={isSignup ? 'new-password' : 'current-password'}
+                minLength={6}
               />
-              <button type="submit" className="btn-primary w-full justify-center">
+              <button
+                type="submit"
+                disabled={!!loading}
+                className="btn-primary w-full justify-center disabled:opacity-60"
+              >
                 {loading === 'email' ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : isSignup ? (
@@ -189,13 +219,36 @@ export function AuthModal({ open, onClose, mode, onSuccess }: Props) {
                 )}
               </button>
             </form>
-            {error && <p role="alert" className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
 
+            {/* Error / notice */}
+            {error && (
+              <p
+                role="alert"
+                className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200"
+              >
+                {error}
+              </p>
+            )}
+            {notice && (
+              <p
+                role="status"
+                className="mt-3 rounded-lg border border-electric-400/20 bg-electric-500/10 p-3 text-sm text-electric-200"
+              >
+                {notice}
+              </p>
+            )}
+
+            {/* Toggle sign-in / sign-up */}
             <p className="mt-5 text-center text-xs text-ink-400">
               {isSignup ? 'Déjà un compte ? ' : 'Pas encore de compte ? '}
               <button
-                className="text-electric-400 hover:text-electric-300 transition font-medium"
-                onClick={() => useIdealyStore.setState({})}
+                type="button"
+                className="font-medium text-electric-400 transition hover:text-electric-300"
+                onClick={() => {
+                  setMode((m) => (m === 'signin' ? 'signup' : 'signin'));
+                  setError(null);
+                  setNotice(null);
+                }}
               >
                 {isSignup ? 'Se connecter' : "S'inscrire"}
               </button>

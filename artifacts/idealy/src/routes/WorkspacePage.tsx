@@ -375,7 +375,7 @@ export function WorkspacePage() {
 
               {/* Gamification Area */}
               <div 
-                className="mt-6 space-y-4 cursor-pointer hover:opacity-90 transition-opacity px-3"
+                className="mt-2 space-y-4 cursor-pointer hover:opacity-90 transition-opacity px-3"
                 onClick={() => setIsPaywallOpen(true)}
               >
                 <div className="rounded-xl border border-white/5 bg-ink-950/50 p-4">
