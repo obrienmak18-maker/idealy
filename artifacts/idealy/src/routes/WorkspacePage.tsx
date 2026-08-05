@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { analyzeIntent, buildIUPS, streamAgentMessage } from '@/agents/orchestrator';
 import { iupsToCode } from '@/core/iups/exporter';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 import { MessageBubble, type ChatMessage } from '@/components/chat/MessageBubble';
@@ -12,6 +11,7 @@ import { WebContainerPreview } from '@/components/workspace/WebContainerPreview'
 import { FileExplorer } from '@/components/workspace/FileExplorer';
 import { ComposerPanel } from '@/components/workspace/ComposerPanel';
 import { downloadProjectZip } from '@/services/projectDownloader';
+import { runWorkspaceAgent } from '@/services/agentService';
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -226,77 +226,42 @@ export function WorkspacePage() {
     }
 
     try {
-      // 1. Orchestrator Phase
-      const msgId = addMessage(orchestrator, '', 'thinking');
-      const context = await analyzeIntent(prompt, way);
-      useIdealyStore.getState().consumeEnergy(context.energyCost);
-      
-      const orchestratorStream = await streamAgentMessage(
-        orchestrator,
-        way,
-        `Mission: ${prompt}\nComplexité estimée: ${context.rank}`,
-        prompt,
-        `Analyse le plan global. Appelle explicitement le développeur (${builder.name}) pour la suite.`
-      );
-
-      let orchestratorText = '';
-      for await (const delta of orchestratorStream.textStream) {
-        orchestratorText += delta;
-        updateMessage(msgId, orchestratorText, 'writing');
-      }
-      updateMessage(msgId, orchestratorText, 'done');
-
-      // 2. Builder Phase
+      const orchestratorId = addMessage(orchestrator, '', 'thinking');
+      updateMessage(orchestratorId, 'Analyse de la mission et inspection du workspace…', 'writing');
       const builderId = addMessage(builder, '', 'thinking');
-      const builderStream = await streamAgentMessage(
-        builder,
-        way,
-        `Plan de l'architecte: ${orchestratorText}`,
-        prompt,
-        `Tu construis les composants. Parle de ce que tu fais, puis dis que c'est bon et appelle ${validator.name}.`
-      );
+      updateMessage(builderId, 'Préparation des fichiers et des outils de développement…', 'writing');
 
-      let builderText = '';
-      for await (const delta of builderStream.textStream) {
-        builderText += delta;
-        updateMessage(builderId, builderText, 'writing');
-      }
-      
-      // Building IUPS in background
-      const schema = await buildIUPS(context);
-      updateMessage(builderId, builderText, 'done');
+      const result = await runWorkspaceAgent(prompt, projectSchema ?? null);
+      useIdealyStore.getState().consumeEnergy(Math.min(energy.current, 10));
 
-      // 3. Validator Phase
-      const validatorId = addMessage(validator, '', 'thinking');
-      if (schema) {
+      if (result.files && Object.keys(result.files).length > 0) {
+        const schema: IdealyUniversalProjectSchema = {
+          project: {
+            name: projectSchema?.project.name ?? 'idealy-project',
+            description: projectSchema?.project.description ?? prompt,
+            stack: projectSchema?.project.stack ?? 'react-vite-typescript',
+            files: result.files,
+          },
+        };
+        setPreviousSchema(projectSchema);
         setProjectSchema(schema);
         setShowPreview(true);
         setTab('preview');
-        if (missionId) {
-          updateStoreMission(missionId, { previewReady: true });
-        }
-        
-        const validatorStream = await streamAgentMessage(
-          validator,
-          way,
-          `Le code a été construit.`,
-          prompt,
-          `Valide que tout est OK et dis à l'utilisateur que le résultat est dans l'Aperçu.`
-        );
-
-        let validatorText = '';
-        for await (const delta of validatorStream.textStream) {
-          validatorText += delta;
-          updateMessage(validatorId, validatorText, 'writing');
-        }
-        updateMessage(validatorId, validatorText, 'done');
-      } else {
-        updateMessage(validatorId, `Attention ! J'ai détecté une anomalie.`, 'done');
+        if (missionId) updateStoreMission(missionId, { previewReady: true });
       }
 
+      const eventText = result.events.map((event) => `• ${event.message}${event.path ? ` — ${event.path}` : ''}`).join('\n');
+      updateMessage(orchestratorId, `Mission analysée.\n\n${eventText || 'Plan exécuté.'}`, 'done');
+      updateMessage(builderId, `${result.text || 'Les fichiers ont été mis à jour.'}\n\nFichiers modifiés : ${result.changedPaths.join(', ') || 'aucun'}`, 'done');
+      const validatorId = addMessage(validator, '', 'writing');
+      updateMessage(validatorId, result.ok ? 'Validation terminée. Le projet est prêt pour l’Aperçu, les tests et l’export.' : (result.error ?? 'Validation incomplète.'), 'done');
     } catch (error) {
-      console.error(error);
-      addMessage(orchestrator, `Erreur lors de la communication.`, 'done');
+      console.error('[v0] Agent mission error:', error);
+      updateMessage(
+        addMessage(orchestrator, '', 'done'),
+        error instanceof Error ? error.message : 'Erreur lors de la communication avec l’agent.',
+        'done',
+      );
     }
 
     setBusy(false);

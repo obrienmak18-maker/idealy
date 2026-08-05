@@ -176,6 +176,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      ai:
+        specifier: ^7.0.51
+        version: 7.0.51(zod@3.25.76)
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -197,6 +200,9 @@ importers:
       stripe:
         specifier: ^22.4.0
         version: 22.4.0(@types/node@25.9.5)
+      zod:
+        specifier: 'catalog:'
+        version: 3.25.76
     devDependencies:
       '@types/cookie-parser':
         specifier: ^1.4.10
