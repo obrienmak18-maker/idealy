@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { Sparkles, Zap, Shield, Crown, X } from 'lucide-react';
-import { getSupabaseClient } from '@/supabaseClient';
-
 interface PaywallModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,20 +11,28 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
   const [error, setError] = useState<string | null>(null);
 
   async function startCheckout(plan: 'pro' | 'business') {
-    setLoadingPlan(plan); setError(null);
+    setLoadingPlan(plan);
+    setError(null);
     try {
-      const supabase = getSupabaseClient();
-      if (!supabase) throw new Error('Supabase is not configured.');
-      const { data, error: invokeError } = await supabase.functions.invoke('create-checkout-session', { body: { plan } });
-      if (invokeError) throw invokeError;
-      if (!data?.url) throw new Error('Checkout session is unavailable.');
+      const apiBase = import.meta.env.VITE_API_BASE_URL ?? window.location.origin;
+      const response = await fetch(`${apiBase.replace(/\/$/, '')}/api/stripe/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': `idealy-${plan}-${billingCycle}-${crypto.randomUUID()}`,
+        },
+        body: JSON.stringify({ plan, billingCycle }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error ?? 'Le paiement sécurisé est momentanément indisponible.');
+      if (!data?.url) throw new Error('Stripe n\'a pas retourné de lien de paiement.');
       window.location.assign(data.url);
     } catch (checkoutError) {
-      setError(checkoutError instanceof Error ? checkoutError.message : 'Checkout could not start.');
-    } finally { setLoadingPlan(null); }
+      setError(checkoutError instanceof Error ? checkoutError.message : 'Impossible de démarrer le paiement.');
+    } finally {
+      setLoadingPlan(null);
+    }
   }
-
-  // On simule l'utilisation de la clé Stripe passée par l'utilisateur
 
   if (!isOpen) return null;
 
