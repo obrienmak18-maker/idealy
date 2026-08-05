@@ -1,1 +1,2 @@
 - [Tailwind v4 @apply restriction](tailwind-v4-apply.md) — cannot @apply custom component classes (e.g. .glass, .btn) in v4; must inline utility classes or use grouped selectors.
+- [Idealy auth pattern](idealy-auth.md) — Supabase client reads store connectors as fallback; App.tsx owns the auth listener; full notes on what's wired vs missing.
