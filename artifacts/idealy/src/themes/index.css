@@ -1,0 +1,191 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* ── Ink palette ── */
+  --color-ink-50:  #f5f6fa;
+  --color-ink-100: #e7e9f2;
+  --color-ink-200: #c9cde0;
+  --color-ink-300: #9ba1c2;
+  --color-ink-400: #6b7196;
+  --color-ink-500: #474d70;
+  --color-ink-600: #2f3454;
+  --color-ink-700: #1d2138;
+  --color-ink-800: #12152a;
+  --color-ink-900: #0a0c1c;
+  --color-ink-950: #05060f;
+
+  /* ── Electric (blue) palette ── */
+  --color-electric-50:  #eff6ff;
+  --color-electric-100: #dbeafe;
+  --color-electric-200: #bfdbfe;
+  --color-electric-300: #93c5fd;
+  --color-electric-400: #60a5fa;
+  --color-electric-500: #3b82f6;
+  --color-electric-600: #2563eb;
+  --color-electric-700: #1d4ed8;
+  --color-electric-800: #1e40af;
+  --color-electric-900: #1e3a8a;
+
+  /* ── Ember (orange) palette ── */
+  --color-ember-50:  #fff7ed;
+  --color-ember-100: #ffedd5;
+  --color-ember-200: #fed7aa;
+  --color-ember-300: #fdba74;
+  --color-ember-400: #fb923c;
+  --color-ember-500: #f97316;
+  --color-ember-600: #ea580c;
+  --color-ember-700: #c2410c;
+  --color-ember-800: #9a3412;
+  --color-ember-900: #7c2d12;
+
+  /* ── Semantic palettes ── */
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+
+  --color-warning-400: #facc15;
+  --color-warning-500: #eab308;
+
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  /* ── Way palettes ── */
+  --color-ninja-primary: #f97316;
+  --color-ninja-glow:    #fb923c;
+  --color-ninja-deep:    #1a1206;
+
+  --color-mage-primary: #3b82f6;
+  --color-mage-glow:    #60a5fa;
+  --color-mage-deep:    #06121f;
+
+  --color-hunter-primary: #22c55e;
+  --color-hunter-glow:    #4ade80;
+  --color-hunter-deep:    #06140a;
+
+  --color-pro-primary: #94a3b8;
+  --color-pro-glow:    #cbd5e1;
+  --color-pro-deep:    #0a0f1c;
+
+  /* ── Typography ── */
+  --font-sans:    'Inter', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', Inter, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── Background images ── */
+  --background-image-halo:       radial-gradient(circle at 50% 0%, rgba(59,130,246,0.18), transparent 60%);
+  --background-image-ember-halo: radial-gradient(circle at 50% 0%, rgba(249,115,22,0.16), transparent 60%);
+
+  /* ── Animations ── */
+  --animate-fade-up:    fade-up    0.6s cubic-bezier(0.22,1,0.36,1) both;
+  --animate-pulse-glow: pulse-glow 3s   ease-in-out infinite;
+  --animate-drift:      drift      18s  ease-in-out infinite;
+  --animate-shimmer:    shimmer    2.5s linear     infinite;
+}
+
+@keyframes fade-up {
+  0%   { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1;   }
+}
+
+@keyframes drift {
+  0%   { transform: translate(0, 0);         }
+  50%  { transform: translate(20px, -20px);  }
+  100% { transform: translate(0, 0);         }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-ink-950 text-ink-100 font-sans antialiased;
+    background-image:
+      radial-gradient(60rem 60rem at 80% -10%, rgba(59, 130, 246, 0.10), transparent 60%),
+      radial-gradient(50rem 50rem at 0% 10%, rgba(249, 115, 22, 0.08), transparent 55%);
+    background-attachment: fixed;
+  }
+  ::selection {
+    @apply bg-electric-500/30 text-white;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-ink-800/60 backdrop-blur-xl border border-white/10;
+  }
+  .glass-soft {
+    @apply bg-ink-700/40 backdrop-blur-md border border-white/[0.06];
+  }
+  .btn,
+  .btn-primary,
+  .btn-ghost,
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply bg-gradient-to-r from-electric-600 to-electric-500 text-white shadow-lg shadow-electric-500/25 hover:shadow-electric-500/40 hover:-translate-y-0.5;
+  }
+  .btn-ghost {
+    @apply text-ink-200 hover:text-white hover:bg-white/5;
+  }
+  .btn-outline {
+    @apply border border-white/15 text-ink-100 hover:bg-white/5 hover:border-white/25;
+  }
+  .card {
+    @apply rounded-2xl bg-ink-800/60 backdrop-blur-xl border border-white/10 overflow-hidden;
+  }
+  .input {
+    @apply w-full bg-ink-900/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-ink-100 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-electric-500/50 focus:border-electric-500/50 transition;
+  }
+  .way-glow-ninja  { box-shadow: 0 0 0 1px rgba(249,115,22,0.25), 0 20px 60px -20px rgba(249,115,22,0.45); }
+  .way-glow-mage   { box-shadow: 0 0 0 1px rgba(59,130,246,0.25), 0 20px 60px -20px rgba(59,130,246,0.45); }
+  .way-glow-hunter { box-shadow: 0 0 0 1px rgba(34,197,94,0.25), 0 20px 60px -20px rgba(34,197,94,0.45); }
+  .way-glow-pro    { box-shadow: 0 0 0 1px rgba(148,163,184,0.25), 0 20px 60px -20px rgba(148,163,184,0.35); }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar        { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.15); border-radius: 999px; }
+  .scrollbar-thin::-webkit-scrollbar-track  { background: transparent; }
+  .text-balance  { text-wrap: balance; }
+  .shimmer-text {
+    background: linear-gradient(110deg, #6b7196 30%, #fff 50%, #6b7196 70%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: var(--animate-shimmer);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

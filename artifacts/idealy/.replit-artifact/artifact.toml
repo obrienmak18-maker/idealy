@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Idealy — AI Development Studio"
+description = "Idealy is an AI-powered development studio that turns ideas into missions, projects into adventures, and successes into collective victories. It provides an interactive workspace for developers to collaborate, build, and ship with AI assistance — featuring chat, agents, skills, and lore systems built around a gamified project management experience."
+version = "1.0.0"
+id = "artifacts/idealy"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20094
+
+[services.development]
+run = "pnpm --filter @workspace/idealy run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/idealy", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/idealy/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20094"
+BASE_PATH = "/"

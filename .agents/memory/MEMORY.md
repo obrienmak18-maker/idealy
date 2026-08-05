@@ -1,0 +1,1 @@
+- [Tailwind v4 @apply restriction](tailwind-v4-apply.md) — cannot @apply custom component classes (e.g. .glass, .btn) in v4; must inline utility classes or use grouped selectors.

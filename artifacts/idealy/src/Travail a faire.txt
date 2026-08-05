@@ -1,0 +1,2038 @@
+deja on s'inpire de  toutes les fonctionnalite et design de replit, lovable, emergent, v0, bolt.new. en utilisants des ia open source pour rivaliser ou depasser ce geant sans serveur et sans depense meme 1$ pour la creation de cette appli. Il faut que tu saches que mon application, il ne doit marcher sans que personne ne voit les modèles qu'on utilise. Les modèles se choisiront automatiquement, donc on n'a pas besoin de choisir ça. Donc il ne clique jamais pas d'UI. Il doit juste avoir un système de crédit peut-être des tokens pour ne pas terminer les gratuits. Et dans les paramètres, on peut lui dire aussi lui-même de mettre son propre API pour utiliser l'application mieux. Aussi, il faut faire un vote cœur parce qu'il y a des erreurs, des petites choses qu'on peut améliorer parce que moi, j'aimerais qu'il dépasse tous les autres, qu'ils soient au design et qu'elles sont fonctionnalités. Donc, fais des recherches sur Emergent.sh , Replit, fais des recherches sur Lovable, fais des recherches sur Bolt.new, fais des recherches sur v0 et les autres pour me trouver les fonctionnalités qu'ils utilisent qu'on peut mettre dans mon application et le design, l'interface fonctionnelle qu'on peut mettre dans mon application et les diverses et faire des améliorations pour que mon application soit bien mieux sans denpensse un  centimes. Salut ! Pour le développement de notre application INIA, je souhaite qu'on intègre une fonctionnalité majeure concernant l'expérience utilisateur (UX) dès la première connexion (onboarding). On veut complètement casser les codes des outils no-code classiques en y injectant une ambiance Anime/Manga très forte.
+
+Voici les spécifications techniques et fonctionnelles à implémenter :
+
+1. L'Écran de Sélection initial (Onboarding à 3 Cartes)
+Au moment où l'utilisateur termine son inscription, il ne doit pas tomber sur un tableau de bord vide. On doit lui présenter une interface de choix basée sur 3 cartes interactives :
+
+La Voie du Ninja
+
+La Voie du Mage
+
+La Voie du Hunter
+
+L'utilisateur clique sur l'une des cartes pour définir l'univers de son projet, puis clique sur "Suivant".
+
+2. Génération Dynamique du Lore et Nom des Agents
+Selon la carte choisie, tout le jargon technique de l'application (et les rôles des agents IA en arrière-plan) doit se transformer dynamiquement pour correspondre à l'univers choisi.
+
+Exemple si l'utilisateur choisit "Ninja" : L'agent IA responsable de la structure ou de l'architecture ne doit pas s'appeler "AI Architect", mais prendre un nom comme Shika-Architect ou Shikamaru. Si c'était la voie "Mage", cet agent pourrait s'appeler Luxus-Dev.
+
+3. Fonctionnalités Immersives (Exemple de la Recherche)
+Je veux que les actions de l'application soient scénarisées.
+
+Mécanique de recherche : Si l'utilisateur demande à INIA de chercher et d'analyser les fonctionnalités d'une autre application existante (comme Shopify) pour s'en inspirer, l'interface ne doit pas juste afficher un loader "Recherche en cours...".
+
+À la place, on doit afficher de manière immersive que l'application "envoie l'Équipe 7 (ou l'Équipe de Natsu / l'équipe de Kirua selon l'univers) en mission de détection" pour récolter les informations et revenir avec le rapport.
+
+4. Ce qu'il faut préparer côté Code :
+State Management : Stocker le choix de la voie (ninja, mage, hunter) pour adapter dynamiquement les chaînes de caractères (strings), les labels, et les visuels de l'interface.
+
+Composant UI : Un système de cartes propre pour la sélection de départ.
+
+Mapping des noms : Prévoir un fichier de configuration (ou un dictionnaire) qui associe les rôles techniques des agents IA à leurs alias du Lore correspondants selon l'univers actif.
+
+Dis-moi si tu as besoin de précisions sur les maquettes ou sur les structures de données pour commencer à coder ça !   dis moi ce que tu en pense avant de continuer. Bon, OK. Tu es dans le même esprit que moi. Tu as compris le concept que je suis en train de vouloir viser. Merci pour ça. C'est bien, c'est cool de ta part, en fait. Et c'est ça. Parce que moi, ce que je voulais, c'est que on soit vraiment très immersif. Dans l'univers. Vraiment d'être immersif. D'être trouvé d'abord les noms. Les personnages. Donc, les noms des personnages qui sont euh célèbres dans les dans ces animés-là pour le faire apparaître dans dans dans donc dans les dans l'utilisation de la des de la des de l'IA pour ne pas perdre l'utilisateur, lui qui ici ne connaît les connaît pas peut-être. Parce que nous, on on s'attend on donc euh je je vais utiliser le système multi-agent. de Atom. Atom.dev. C'est donc c'est le système multi-agent que je je me suis inspiré de ça. Et pour trouver aussi le mon idée là de de otaku. Pour prendre mon idée de otaku et me mettre des mangas là. Et avec ça, on doit améliorer, on doit faire tout ça. J'ai amélioré mon mon code depuis un moment, je ne sais pas si tu as remarqué que ce n'est plus la même chose. Je ne sais pas si tu peux voir. Mais pas seulement ce que tu as fait ici, pas seulement des choses que tu as fait. de de de mettre un peu de gamification. Non, j'ai amélioré ça depuis un bon moment. Et je ne sais pas si tu as tu as remarqué ça, tu me dis si tu as remarqué les améliorations que je t'ai mise, que toi tu n'as pas mise. Mais que tu as remarqué. Mais je sais aussi qu'il y a des fautes. Qu'il y a des codes qui qu'il y a des erreurs aussi. Donc, je remarquerai ça. Au lieu d'utiliser des tokens ou des crédits, on va utiliser les systèmes de chakra. des magies et des naines. Donc, si l'utilisateur a terminé son chakra, il ne peut plus continuer à faire des techniques. Donc, il ne peut plus continuer à faire des applications. S'il n'a plus de magie, il ne peut plus continuer à faire des applications. Même chose pour les naines. Bon, je ne sais pas si les naines marchent comme ça. parce que ils ont tous des règles différentes, il faut prendre les règles là qui sont vraiment excitantes quand on les voit, les règles qui sont excitantes, il faut mettre là. Et et et donc si si l'utilisateur a terminé son chacun, s'il est gratuit, dans le mode gratuit, euh sa jauge de chakra va va sera en train de diminuer au fur et et sa sa sa jauge de chakra de naine ou de magie sera en train de diminuer au fur et à mesure que la jauge entre de coder. Et ça sera visible. Et maintenant, si le chakra est terminé, on va lui dire tu vas trouver quelque chose à lui dire. Donc quelque chose que on aurait dit dans l'animé peut-être. Oui. Pour qu'il qu'il puisse avoir plus de chakra, il doit maintenant s'abonner à la formule supérieure. Donc il doit être abonné. Parce que son chakra ou bien sa magie ou bien son naine va se réinitialiser tous les jours. Tous les jours. Et c'est là que si il avait si il a terminé aujourd'hui, il pourra encore revenir demain, mais il ne peut pas aller au-delà d'aujourd'hui. Si il sinon il devra s'abonner. Quelque chose de pareil. Allez, va va voir d'abord tout ce que je fais encore. Dis-moi qu'est-ce que tu penses de ce que j'ai dit. Et ou puis-je te donner le feu vert pour coder après. D'abord.  Vas-y, fais-moi des merveilles, vas-y. Parce que si tu avais vu mon code, j'ai fait des améliorations, tu peux voir mon code qui euh qui marche, il y a des multi-agents déjà, mais j'ai pas les noms là. Il y a déjà de les live qui qui est déjà visible, quand les cas l'argent écrit le code, tout est visible, des choses pareilles sont déjà là. Maintenant, ce qu'il nous faut, c'est que tu fasses, ajoute ce qu'on veut, tu décideras de parler. Comme tu as dit, personnalité. C'est c'est c'est c'est c'est c'est c'est de parler, même les personnalités des personnages qu'on va prendre avec là, les personnages principaux, les quoi, et même pour toutes les toutes les choses qu'ils peuvent avoir. S'il y a un bug, peut-être, on va dire peut-être que c'est une attaque d'un ennemi, d'un antagoniste qui va, et puis on envoie une équipe pour l'éliminer, des choses pareilles. Donc, quelque chose qui est événement immersif. Pour une voix de Shikamaru, peut-être. Si on dit à quelqu'un, si on dit à Shikamaru de faire quelque chose à l'architecte, comme on sait que Shikamaru est paresseux, il va dire "Zut, vous me sortez de mon sommeil pour faire des choses pareilles." Donc, quelque chose comme ça. Ou bien, ou bien, ou bien Shikamaru, ou bien, parce qu'on sait que Naruto est un peu impulsif et il est vraiment agressif, on peut lui dire, il peut dire "Je vais tout défoncer dans les codes." Donc, quelque chose qui qui ressemble à leur personnalité à tous, à tous, donc à leur façon de parler, à leur personnalité, à leur façon d'être, doivent être ressentir dans l'application. Vraiment. Tu peux t'inspirer d'autre chose. Et aussi, tu vois là où on écrit les prompts, fais en sorte que ça aussi reste sensible que à chaque fois qu'on qu'on écrive les codes, les dans quelque chose, que ça ne soit pas bizarre, parce que je vois que ça c'est un peu bizarre, tu sais, quand on écrit, quand on écrit un peu beaucoup, c'est ça, c'est qu'on écrit en bas, devient un peu invisible, alors que si c'est qu'on a écrit en haut, qui doit monter, qui doit monter, qui doit monter. Là, on écrit les prompts. Mais tu tu dois tu vas savoir quoi faire. Tu as les fèves. Vas-y. Vas-y, tu as tout entendu. Tu as les fèves. fèves, vraiment, et j'attends des merveilles, et aucun erreur de ta part. Aucune erreur de ta part, et ne termine pas trop de crédit. Tu sais que moi aussi, j'utilise des vaisseaux gratuits pour t'utiliser, et je ne voudrais pas charger de compte encore, donc, pour l'instant, n'utilise pas trop de crédit, mais fais merveilleusement les choses. Ça doit être extra. Bon, OK. Je n'ai pas encore vérifié si tu as bientôt ajouté, mais je te fais confiance. Pour voir si mes améliorations ont été bien prises en compte, j'aimerais te demander combien de langages mon application, donc cette IA ici qu'on est en train de créer, peut gérer. Combien de langages, donc si c'est React, React Native, seulement réponds-moi combien et dis-moi seulement le nombre.  Problème. En fait, je trouvais un je trouve le problème assez fréquent dans dans la application. Et tu connais ce problème, c'est c'est quoi en fait? Le problème là, c'est l' inscription. J'essaie de m'inscrire, mais je ne trouve pas, ça ne marche pas quoi. Ça ne marche pas, on me dit si, on me dit si c'est On me dit "failed to" "failed to" "to teach". C'est ce qu'on me dit. "To teach" comme ça. Et je ne comprends pas pourquoi ça ne marche pas, s'il faut faire quoi, même si j'essaie d'utiliser peut-être les les choses de Google, ça ne marche pas. J'essaie de d'utiliser les choses de GitHub qui est là, ça ne marche pas. Même même mettre seulement mon adresse mail non plus, ça ne marche pas. Je ne sais pas quoi, qu'est-ce qu'il faut faire, s'il faut des API encore. Dis-moi s'il faut que je fasse quoi pour que je puisse être au mieux.  Oh, qui t'as compris le truc. T'as compris le truc en fait. Mais on ne va pas dire il prête trop peut-être, on va chanter parce que nous on est des au taco. On dit peut-être si on a choisi la voix des ninja, il va dire que il est genin au niveau genin. Et s'il veut passer au niveau chunin, il doit payer. S'il faut passer à l'autre niveau là de donc niveau qui est en haut, il doit payer. Il est classe F, s'il a par exemple les les mangas. S'il a choisi quoi, donc les mages, c'est pour être mage. Les classes c'est D. Donc il doit monter des classes. Quand il paye, il monte des classes. Et quand quand on monte des classes, on a plus de missions donc plus de techniques. On est donc plus fort. Donc ça serait en sorte que comme ça. Même pour le la voix du hunter, ça sera un peu comme ça. T'as compris le truc en fait. L'interface doit être comme ça. Et les plus les petits plus là. Il doit être là. Même au début, il doit être là. Il doit apparaître là. On peut même déjà uploader un document sans s'être inscrit. On peut déjà donner un comme j'ai précisé, on peut déjà donner un un email même sans être inscrit. Un prompt sans même être inscrit. Mais quand on veut l'envoyer à l'IA, c'est là qu'on doit s'inscrire. On peut on peut mettre des prompt, on peut uploader des des des fichiers. Des fichiers ou bien des photos ou bien uploader quelque chose qui vient de Figma ou bien d'autre quoi. Je ne sais pas. Mais quand Mais quand on doit l'envoyer seulement au chat, c'est là que si on n'est pas inscrit, on va nous dire de nous inscrire. Et j'espère que cette fois-ci tu vas respecter le les choses là et que ça va marcher. Allez. Courage, vas-y. OK, je valide tout ça. Mais il faut savoir que ce n'est pas seulement changer de voix qui doit être dans les paramètres. Il y a aussi d'autres choses qui doivent être dans les paramètres, des choses professionnelles dont je ne connais pas parce que je ne peux pas utiliser ça, mais toi tu peux connaître ça. Tu peux les chercher, faire des recherches pour savoir quoi mettre là. Et aussi pour enrichir l'application, fais des recherches des fonctionnalités, des choses qui doivent nécessairement être dans des choses comme notre application ici. Et puis tu les implémentes très bien. Écoute-moi très bien, je vais parler un peu trop beaucoup ici, parce que je ne suis pas content. Je veux vraiment parler un peu beaucoup, je vais être vache, je vais être direct, je vais être très vache. Allez, commençons. Un, le design. Le design. Il y a un problème grave avec le design, tu sais quoi? Tu sais quel est le plus grand problème? Le design est cool, il est giga cool. J'adore le design. Il n'y a pas d'animation. Le problème là, les lettres, tu vois, les bonnes applications, il y a des animations. Tu vois les lettres qui commencent peut-être qui disent qu'est-ce que nous allons créer, qui sentent d'avancer et puis disparaît, il change, et puis l'autre vient. Il change, et puis l'autre vient. Il change. Pourquoi les lettres ne sont pas comme ça? Pourquoi les lettres n'est pas comme ça? Le design là, c'est juste purement visuel. Il ne marche pas. Tout ce qu'il y a à l'interface, on voit seulement, mais rien. Déjà aussi, il n'y a pas un bouton pour parler donc les speech recognition. Le bouton là n'est pas là. On ne peut pas dicter. On ne peut pas dicter. Est-ce que tu vois que c'est normal? Les boutons que tu avais créés, il y a seulement là, mais on ne peut pas aller cliquer là-bas pour voir si c'est plan ou on va mettre quoi. On ne peut pas. Les boutons là plus pour upload, il est là, mais si on clique, ça ne marche pas. Le design, la zone là de prompt, elle est bonne, même si elle est trop, trop grande. Même si elle est trop, trop grande, même si elle est petite au début. Mais quand on y écrit, au fur et à mesure, c'est là qu'elle grossit en étant responsive, et elle ne doit pas avoir ces choses-là, des toolbars là, des barres qui descendent, des fils, non, on ne doit pas avoir des choses pareilles. Tu as mis des choses comme recherche, des quoi, mais ça ne marche pas. Les projets que tu as mis là, déjà, ils ne sont pas des vrais projets que nous on a créés. Tu as juste pris des projets qui étaient seulement capture de grid, ça ce n'est pas bien. Moi quand j'ai dit que le logo de notre application doit apparaître partout, ce n'est pas partout. J'ai dit, le logo de notre application doit apparaître là où le logo de l'application doit apparaître. Et non, et non là où l'adresse mail de l'utilisateur est, et non là où il y a les applications. Les applications même vont avoir leur propre logo selon le concept. Le système de donner les noms à un projet. Si l'utilisateur, lui, n'a pas donné dans les prompts un projet pour ce qu'il veut créer, l'IA elle-même va trouver un nom stylé qu'elle va mettre là, qu'elle va trouver là, et elle va créer elle-même un petit logo elle-même là-bas. Mais toi tu fais des choses là que je n'aime pas. L'interface, elle est cliquable. Et je répète, et quand... Les choses là des formulaires d'entrée dans quoi? Dans l'arène. Mon Dieu. Si j'ai bien dit, si je répète encore, tu as bien vu et bien que j'ai dit que on arrive là où, à l'interface là où je t'ai dit, l'interface là d'entrée, là où il y a les chats, les quoi, tout ça. Puis si on ne s'est pas encore inscrit, on peut importer quelque chose, un document, plutôt, on peut importer un fichier ou des designs, on peut mettre des prompts dictés. Mais, juste au moment où on veut lancer ça à l'IA, c'est là, exactement c'est là où ça va nous dire de nous inscrire. Pas ça va nous amener dans l'arène. Non, ça nous dit de nous inscrire. Après nous avons inscrit, avec notre adresse mail, ou bien GitHub, ou bien avec les Gmail là, soit on va d'abord confirmer le mail, ou bien quoi. Puis après ça, c'est maintenant qu'on va nous montrer les choses là d'entrée dans l'arène, où est-ce qu'on avait appris ça, où est-ce qu'on avait appliqué l'application, si elle existe, quoi, quoi, quoi. Et les choses là d'entrée dans l'arène, tu dois changer le design de ça, ça doit être plus bien. C'est trop gros, trop moche et trop nul quoi. On doit chercher des vraies images de ninjas, de hunters et de mages à mettre là. Et les systèmes tout. Et tu ne dois pas dire pour avoir plus de fonctionnalités comme notre IA était un otaku, pour avoir plus de techniques, pour avoir plus de magie, pour avoir plus de nen, plus de chakra. C'est ça qu'il faut dire. Donc, nous, ce n'est pas juste dans le contexte de quoi? D'un otaku pur et net. Mais on va aussi laisser une place pour les gens qui ne sont pas otakus. Quand on veut inscrire, quand on veut suivre Sama, donc sa voix, on va laisser ça pour ceux qui ne sont pas des otakus, pour ne pas qu'ils se perdent s'ils ne veulent pas. Et pour les professionnels s'ils veulent. Donc, on va laisser une place pour ça. Le design maintenant. Donc l'expérience. Après s'être inscrit, après avoir donné le nom, quoi, quoi, c'est avec le nom qu'il a donné là que l'IA va commencer à dire peut-être, O'Brien, que voulez-vous faire aujourd'hui? La page de bienvenue. Non. Quand on arrive, quand on est toujours dans l'application, c'est comme ça. Maintenant, après avoir fait ça, après avoir mis à jour ça, quand on s'inscrit, on ne va pas encore retourner dans la page de bienvenue de l'IA, les projets qu'on a déjà faits, quoi, quoi, quoi. Non. Ça va directement aller au chat. Donc à l'IA qui va coder l'application. Une chose. On doit montrer l'IA qui réfléchit comme tous les vrais autres IA. Ça, c'est quelque chose qui m'énerve. On ne peut pas réfléchir et discuter entre elles. Elles doivent être comme si elles s'envoient des SMS comme les mégas et discutent entre des amis quoi. Et en plus, il n'y a pas les choses là, elle fait l'erreur et elle recommence quoi. Il y a même, je t'ai donné un prompt ici. Non, il y avait tous ces donneurs discutaient avec V0. Et elle doit suivre ce qu'on avait dit là pour savoir quoi faire. Parce qu'il y a des erreurs, donc il y a des choses qui, voilà pourquoi elle n'arrive pas à la cheville des autres. L'interface là du chat. Déjà, ici notre IA, elle parle seulement que quand on écrit quelque chose, elle doit coder, alors qu'il y a des moments où on doit planifier. On doit discuter avec l'IA elle-même, et puis quand il y aura quelque chose à coder, c'est là qu'elle code. On peut discuter avec elle, je lui dis peut-être, je lui donne les prompts, elle commence à discuter, à me poser des questions peut-être pour améliorer ça ou quoi. Mais elle, elle commence seulement à coder aussi rapidement, très très rapidement comme ça, plus des choses inutiles quoi. Et ça devient... Et même le code est écrit à côté du chat, alors que ça doit être écrit dans les choses de prévu à droite. Nous, on ne doit pas voir le code au prévu, donc à côté du chat ici. On doit voir ça dans la partie droite. Dans la partie droite. Et j'ai bien dit, moi je ne veux pas trois trucs. Parce que, regarde ce que tu as fait, ces trois trucs que tu as faits, il y a la partie droite. Donc la partie gauche, c'est le chat. La partie du milieu, tu as fait, c'est les fichiers. Et le prévu quoi. Et puis tu as fait encore la partie à droite, c'est les choses là des connecteurs, des quoi. En plus, les petits boutons là que tu as mis en flèche ne peuvent pas être rétractés, je ne sais pas pourquoi. Alors que moi j'ai demandé seulement deux. Le chat dans une toute petite partie, le prévu encore une autre là. Mais avec des petits onglets ici. Un petit onglet qui va permettre d'aller voir le code, d'aller voir les connecteurs, d'aller voir quoi. Mais dans la partie droite et ça, ça avoir plusieurs parties comme ce que tu as fait un trois comme ça. J'espère que tu comprends ce que je dis. Tu sais, j'ai besoin de toi parce qu'on va encore améliorer un peu les choses de l'agent. Tu vas faire un prompt pour dire à l'IA d'avoir le comportement des agents qu'il va interpréter. Tu sais, il va devoir rechercher des informations en ligne qui sont vraiment sûres et sûres, qui montrent le comportement des personnes qu'il interprète. S'il interprète Naruto, il doit avoir son tempérament, son énergie, sa façon de parler, comment il parle aux gens, comment toi. Si c'est Shikamaru avec qui il fait équipe, il va dire à Shikamaru comment lui, il parle. Donc comme ça, comme Naruto qui parle vraiment, quelque chose de pareil. Comme ça, même dans les autres voix, ça sera bien. Cherche sur Internet aussi les vraies affiches des animés qu'on a cités comme Veritel, Naruto et Interex Center pour les refaire maintenant avec l'IA qui les ressemble à deux gouttes d'eau pour maintenant les intégrer pour éviter le droit d'auteur. C'est eux qui vont donc être comme un preview de la voie qu'on va suivre. On va mettre leur photo là un peu en haut comme ça. Leur photo là et puis on écrit la voie du ninja. Donc là, on va mettre la fille de Naruto, la voie du mage Veritel, la voie de quoi Inter. Et puis aussi la voie du professionnel. Tu vas choisir quoi mettre là aussi. On ne doit pas forcément avoir des architectes de quoi préremplis. Ils peuvent s'échanger parce qu'ils n'ont pas tous le même niveau d'intelligence ou bien ils ne peuvent pas faire les mêmes choses. Shikamaru ne peut pas aller faire tout ce que les autres peuvent faire ou bien Naruto non plus. Donc, il y a des moments où Sakura va remplacer Naruto ou bien un moment où Shikamaru va être remplacé par Sasuke ou bien Shikamaru ou bien Sasuke va être remplacé par qui, par qui. Tout cela. Donc, il faut prendre tout cela en compte. Qu'il y ait la possibilité, une possibilité énorme de changer de personnage, de personnalité selon les besoins qu'on a, selon ce que l'utilisateur lui veut créer et qui lui, ils sont capables. Même les bugs, parce que tu connais que les bugs ont les noms des antagonistes. Même les bugs ne seront pas toujours les noms des mêmes antagonistes. Sinon, ça sera ennuyant un peu. Et maintenant, après cela, on va parler de l'interface qui est déjà bien, mais le bouton Créer que tu as mis, je ne sais pas pourquoi, mais il ne fonctionne pas. Pas encore. Il faut peut-être qu'il y ait quelque chose là où on clique et ça fonctionne. Il y a quelque chose. Peut-être si on clique là. Je ne sais pas. Moi, j'estime seulement, mais je pense que si on clique là, on va apparaître des choses de créer ou de quoi. Je ne sais pas si c'est ça ou bien c'est autre chose, mais je suis sûr peut-être que c'est ça ou bien c'est planifier ou bien c'est... Je ne sais pas. C'est toi qui as mis ça. Donc, il va falloir chercher quoi et mettre. Je ne sais pas si tu as trouvé ça dans des choses comme... Je ne sais pas si tu as trouvé ça dans des choses comme quoi. Je ne sais pas si tu as trouvé ça dans des choses comme des agents, comme Lovebel ou bien Bolt, je ne sais pas si tu as trouvé où. Cette barre-là, elle n'est pas rétractable et ce n'est pas cool. Ici, tu dois permettre une chose qui est les logos de notre application sont en haut. Puis, en bas du logo de l'application maintenant, cela va paraître le nom d'utilisateur. Donc peut-être, tu vois ici sur Lovebel, on met le logo, un logo, donc le logo de l'adresse mail. Puis, on met Obreyant Lovebel. Et puis, on peut cliquer pour faire, je ne sais pas quoi. On nous montre si on est quel niveau, on peut inviter des membres. Là, on peut aller dans Settings, on peut créer un nouvel workplace. Là, c'est dans Lovebel, on peut même upgrade ici. C'est bien. Et puis, on peut... Donc c'est rétractable. Ça, c'est cool que ça soit rétractable sur Lovebel. En bas de ça, sur Lovebel, il y a dashboard, search, resource, connector. Puis, il y a project, add project starter. Et puis, il y a quelque chose qui descend encore un peu. Là, on dit : Attends, je vois. Si je vois bien sur Lovebel, c'est un peu compliqué de descendre, mais bon. Et puis aussi, share Lovebel, send credit par PayPal, upgrade to pro. Encore là, c'est bien. On peut encore mettre le logo de notre adresse. Là, on peut cliquer là, on peut avoir notre adresse mail encore, les profils, les settings, l'apparence, le support, les documentations, la communauté, l'home page, le sign out. C'est ça. Il y a aussi quelque chose de bizarre sur là, on peut cliquer comme ça. Ça nous montre si c'est inbox, what's new, si ce sont les nouvelles, donc les nouvelles fonctionnalités qu'on a mises, quelque chose comme ça. Ça, c'est l'interface de Lovebel qui est déjà très bonne. Je sais que c'est ça que tu as copié parce que je vois share Lovebel, share igna, send credit, pay. C'est ça que tu as copié. Mais ici, il y a une interface qui est bonne et qu'on peut faire descendre quelque chose. Mais là-bas, tu as laissé de l'espace, on doit descendre, descendre pour trouver share Lovebel ou bien upgrade pro. Et se connecter ne mérite pas d'être là, mais d'être en haut. Il faut connaître ça.  Ça c'est le moins de grand part de ce que je voulais dire.  que je sais que j'ai dans la tête, c'est bien. Tout vraiment doit être dans le système là de de ta tête ou comme tu veux.  Tu dois avoir plus plus de même de ses agents de différents personnages pour chaque univers sauf pour celui de de pro. On va faire que tu vas donner ces noms. Il y a Daniel, Léon, Bill Gates, Paul le designer, les autres, tu vas donner comme tu veux. Il y a aussi Fleurby. Angela  Tu donnes ce nom-là.  Aziza aussi  aux agents d'aide du pro  Stelle Leslie O'Brien  C'est non pour C'est non là pour les agents pro, mais aussi pour les choses là, chakra magique, les noms de personnages là, plus de personnages avec chacun c'est différent.  technique des choses qu'il qu'il peut faire. Donc selon selon un projet, c'est la technologie à utiliser ou peut-être quoi, chacun chacun des personnages seront en train de s'appeler pour venir faire la mission. le le le quoi, le maître le maître directeur tout ça va appeler va appeler les  Ninja pour les données d'émission quelque chose de de massif  Et même quand on veut dire, il prend donc on ne va pas dire passer au supérieur pour avoir plus de fonctionnalités, plus de techniques peut-être, on va dire plus de chakras, plus de magie, plus de naine, plus d'expérience, plus de quoi. Ça dépend comme ça.  Mais maintenant, code code maintenant. Mais tu arrêtes pas à avoir après avoir avant. Arrête-toi seulement après avoir tout terminé. Écoute, j'ai une analyse très bonne à te donner, une très bonne analyse. En fait, tu, tu vois, euh, notre projet, le plus grand problème d'abord, c'est le, c'est, c'est la façon à quoi elle ressemble. Mais j'ai trouvé une solution. J'ai trouvé un GitHub public, un repo GitHub de Vercel. Il a déjà créé une interface d'agent IA très bien faite, qui marche et qui est juste là, prêt à recevoir le code et, et que nous, nous avons déjà tout ça. Je vais te donner le lien pour que tu clones ça. Tu vas cloner le, ça. Puis tu vas remplacer ça par notre interface actuelle. Donc, tu vas cloner les, les repos que je vais te donner. Et c'est ça qu'on va utiliser comme interface. Tu vas juste brancher le backend et que ça puisse coder comme un V0. Donc, ça va coder comme un V0, si tu comprends ce que je veux dire. Et puis deploy sur Vercel comme, comme c'est déjà fait comme ça. Et on pourra customiser ça un peu plus. Les choses des agents, des, des mangas, des quoi, tout ça va rester. On va juste faire en sorte que ça corresponde au nouveau design qu'on va prendre. https://github.com/vercel/chatbot.git. # Amélioration des spécifications du projet
+
+Tu n'as pas bien compris certains points importants. Voici les corrections et les améliorations que je veux intégrer au projet.
+
+## 1. Déploiement sur Vercel
+
+Quand j'ai parlé de Vercel, je ne voulais pas dire que tu devais créer toi-même un système de déploiement.
+
+Le projet open source que nous avons cloné est basé sur Vercel. Il possède déjà toute l'infrastructure nécessaire pour publier les applications générées.
+
+Je veux donc que tu :
+
+* conserves cette fonctionnalité ;
+* l'intègres naturellement dans notre application ;
+* permettes à l'utilisateur de publier directement son projet sur Vercel grâce aux fonctionnalités déjà présentes dans le projet d'origine.
+
+Il ne faut pas recréer ce qui existe déjà.
+
+---
+
+# 2. L'identité complète du projet
+
+Le projet ne doit pas être un simple générateur d'applications.
+
+Il doit avoir une identité extrêmement forte.
+
+Tout l'univers de la plateforme est inspiré des mangas, principalement Naruto, mais sans copier directement son contenu.
+
+Chaque élément de l'interface doit donner l'impression que l'utilisateur entre dans une véritable organisation de ninjas.
+
+Les mots classiques doivent être remplacés par des termes inspirés de cet univers.
+
+Par exemple :
+
+* une tâche devient une mission ;
+* un agent IA devient un ninja, un mage ou un spécialiste ;
+* une difficulté devient un rang de mission ;
+* un workflow devient une stratégie ;
+* une équipe IA devient une escouade.
+
+Je veux que toute l'expérience soit immersive.
+
+---
+
+# 3. Innovation
+
+Ne te contente pas uniquement de ce que je décris.
+
+Je veux que tu proposes toi-même des idées.
+
+Chaque écran, chaque animation, chaque texte doit renforcer cette immersion.
+
+Si tu trouves une meilleure idée que la mienne, propose-la.
+
+L'objectif est de créer quelque chose qui donne envie d'utiliser la plateforme uniquement grâce à son ambiance.
+
+---
+
+# 4. Première visite (avant connexion)
+
+Lorsqu'un utilisateur arrive pour la première fois :
+
+Il ne doit PAS être directement envoyé vers le tableau de bord.
+
+Il découvre une page d'accueil élégante présentant :
+
+* le concept ;
+* les fonctionnalités ;
+* quelques aperçus ;
+* des animations ;
+* les boutons :
+
+  * Se connecter
+  * S'inscrire.
+
+L'utilisateur peut déjà :
+
+* écrire un prompt ;
+* importer un document ;
+* préparer sa demande.
+
+En revanche, lorsqu'il clique sur "Lancer la mission", la plateforme vérifie s'il possède un compte.
+
+Si ce n'est pas le cas :
+
+une fenêtre apparaît lui demandant de se connecter ou de créer un compte.
+
+---
+
+# 5. Choix de la voie
+
+Le choix de la voie ne doit PAS apparaître avant l'inscription.
+
+Le parcours est donc :
+
+Accueil
+
+↓
+
+Connexion ou inscription
+
+↓
+
+Choix de la voie
+
+↓
+
+Création du profil
+
+↓
+
+Accès au quartier général.
+
+---
+
+# 6. Les voies
+
+Chaque utilisateur choisit une voie qui influence toute son expérience.
+
+Exemples :
+
+* Voie du Ninja
+* Voie du Mage
+* Voie du Stratège
+* Voie du Créateur
+* Voie de l'Architecte
+* etc.
+
+Chaque voie possède :
+
+* ses couleurs ;
+* son vocabulaire ;
+* ses animations ;
+* son évolution ;
+* son interface.
+
+---
+
+# 7. Les missions
+
+Chaque projet est considéré comme une mission.
+
+L'IA analyse automatiquement :
+
+* la longueur du prompt ;
+* les technologies demandées ;
+* la complexité ;
+* les fichiers nécessaires ;
+* les dépendances ;
+* les risques.
+
+Puis elle attribue automatiquement un rang.
+
+Par exemple :
+
+Mission Rang D
+
+Mission Rang C
+
+Mission Rang B
+
+Mission Rang A
+
+Mission Rang S
+
+Mission Rang SS
+
+Mission Rang SSS
+
+---
+
+# 8. Les ninjas
+
+En fonction du rang, le quartier général convoque automatiquement les meilleurs spécialistes.
+
+Exemple :
+
+Mission D
+
+→ Genin
+
+Mission C
+
+→ Chunin
+
+Mission B
+
+→ Chunin expérimentés
+
+Mission A
+
+→ Jonin
+
+Mission S
+
+→ ANBU
+
+Mission SS
+
+→ Équipe d'élite
+
+Mission SSS
+
+→ Toute l'organisation.
+
+L'utilisateur voit réellement les ninjas arriver, discuter et collaborer.
+
+Ce ne sont pas simplement des modèles IA.
+
+Ce sont des personnages ayant chacun leur spécialité.
+
+---
+
+# 9. Les renforts
+
+L'une des fonctionnalités les plus originales doit être la réévaluation dynamique.
+
+Exemple :
+
+Au départ, une mission paraît simple.
+
+Le système annonce :
+
+> Cette mission est classée Rang D.
+
+Puis, après une analyse plus approfondie :
+
+> Analyse terminée...
+
+> Cette mission est plus dangereuse que prévu.
+
+> Les ninjas actuellement mobilisés ne suffisent pas.
+
+> Demande de renforts...
+
+Le quartier général contacte alors automatiquement des ninjas plus expérimentés.
+
+L'utilisateur voit l'équipe évoluer progressivement.
+
+Cela rend la plateforme beaucoup plus vivante.
+
+---
+
+# 10. Expérience utilisateur
+
+Je veux que l'utilisateur ait réellement l'impression :
+
+* d'entrer dans un village ninja ;
+* de recevoir des missions ;
+* de collaborer avec des spécialistes ;
+* de voir les chefs répartir les tâches ;
+* de ressentir une progression permanente.
+
+Toute l'application doit raconter une histoire.
+
+Elle ne doit jamais donner l'impression d'être un simple outil d'IA.
+
+Elle doit être une aventure interactive où chaque projet devient une mission, chaque IA un expert, chaque difficulté un défi à relever et chaque réussite une victoire de l'équipe.  Écoute, tu savais qu'il y a des choses que j'ai copiées là-dedans, tu ne connais pas. Moi, j'ai t'ai dit, c'est que si on les transforme, on les idéalise l'application, juste qui génère des interfaces figi, et quelque chose de pas trop cool, des les, on transforme idéal en un vrai concurrent direct pour les autres applications, comme ce que j'ai cité. Si on faisait que Idéale devienne un peu comme ça, avec toutes ses fonctionnalités, tout ça, tout ça vraiment.
+À partir de maintenant, oublie complètement l'ancien concept d'Idealy.
+
+Nous ne créons plus un simple générateur d'interfaces.
+
+Nous créons Idealy, un AI Development Studio nouvelle génération capable de rivaliser avec v0, Bolt.new, Lovable, Replit, Emergent, Cursor et les futurs IDE IA, tout en proposant une identité totalement différente.
+
+L'objectif n'est PAS de copier ces produits.
+
+L'objectif est de devenir une nouvelle référence.
+
+PHILOSOPHIE
+
+Idealy est un studio de développement IA.
+
+L'utilisateur ne dialogue pas avec un modèle IA.
+
+Il dialogue avec une équipe entière de spécialistes.
+
+Chaque projet est une mission.
+
+Chaque agent possède un rôle.
+
+Chaque action raconte une histoire.
+
+L'utilisateur ne doit jamais avoir l'impression d'utiliser un chatbot.
+
+Il doit avoir l'impression d'entrer dans un véritable studio de développement du futur.
+
+IDENTITÉ
+
+L'identité d'Idealy doit être immédiatement reconnaissable.
+
+Si quelqu'un voit une capture d'écran sans le logo, il doit pouvoir reconnaître Idealy immédiatement.
+
+Le design doit être original.
+
+Il doit s'inspirer de :
+
+Apple
+Linear
+Raycast
+Vercel
+Stripe
+
+mais ne jamais être une copie.
+
+NOUVELLE EXPÉRIENCE
+
+Quand l'utilisateur ouvre Idealy, il ne voit pas immédiatement un tableau de bord.
+
+Il découvre une page immersive présentant :
+
+la plateforme ;
+des démonstrations interactives ;
+des projets créés ;
+les possibilités ;
+un champ de prompt.
+
+Il peut immédiatement :
+
+écrire un prompt ;
+importer un document ;
+importer une image ;
+importer un fichier Figma ;
+coller une URL GitHub.
+
+Mais lorsqu'il clique sur Lancer la mission, le système vérifie s'il est connecté.
+
+S'il ne l'est pas, une fenêtre élégante lui propose :
+
+Continuer avec Google
+Continuer avec GitHub
+Continuer avec Email
+
+Après connexion :
+
+choix de la voie ;
+création du profil ;
+entrée dans le Quartier Général ;
+lancement de la mission.
+LES VOIES
+
+L'utilisateur choisit une voie qui personnalise entièrement son expérience.
+
+Exemples :
+
+Voie Ninja
+Voie Mage
+Voie Hunter
+Voie Architecte
+Voie Startup
+Voie Professionnelle
+
+Chaque voie possède :
+
+ses couleurs ;
+ses animations ;
+ses effets ;
+son vocabulaire ;
+ses grades ;
+ses personnages ;
+ses récompenses.
+
+La voie Professionnelle conserve un vocabulaire classique pour les entreprises.
+
+L'IA
+
+L'utilisateur ne choisit jamais les modèles.
+
+Aucune interface ne doit afficher :
+
+GPT
+Claude
+Gemini
+DeepSeek
+Qwen
+Llama
+Mistral
+
+Idealy choisit automatiquement le meilleur moteur selon la tâche.
+
+L'utilisateur parle uniquement avec Idealy.
+
+MULTI-AGENTS
+
+Le cœur de la plateforme repose sur une orchestration multi-agents.
+
+Chaque agent possède :
+
+une spécialité ;
+une personnalité ;
+un historique ;
+une façon de communiquer.
+
+Ils collaborent réellement.
+
+Ils peuvent :
+
+se remplacer ;
+demander de l'aide ;
+transmettre une tâche ;
+corriger le travail d'un autre agent ;
+demander un renfort.
+
+L'utilisateur voit leurs échanges de manière claire, sans voir la complexité technique sous-jacente.
+
+LES MISSIONS
+
+Chaque projet devient une mission.
+
+Idealy analyse automatiquement :
+
+la complexité ;
+les technologies ;
+les fichiers ;
+les dépendances ;
+les risques.
+
+Puis attribue un rang.
+
+Exemple :
+
+Mission Rang D
+
+↓
+
+Mission Rang C
+
+↓
+
+Mission Rang B
+
+↓
+
+Mission Rang A
+
+↓
+
+Mission Rang S
+
+↓
+
+Mission Rang SS
+
+↓
+
+Mission Rang SSS
+
+RÉÉVALUATION DYNAMIQUE
+
+Une mission peut évoluer.
+
+Exemple :
+
+Analyse...
+
+Mission Rang C.
+
+Puis :
+
+Nouvelle découverte.
+
+Cette mission est plus complexe que prévu.
+
+Demande de renforts.
+
+L'équipe évolue automatiquement.
+
+De nouveaux spécialistes arrivent.
+
+L'utilisateur assiste à cette évolution en direct.
+
+IMMERSION
+
+Toutes les actions doivent être scénarisées.
+
+Exemples :
+
+analyse
+recherche
+correction
+optimisation
+génération
+déploiement
+tests
+
+Chaque étape doit raconter quelque chose.
+
+Mais sans ralentir l'utilisateur.
+
+L'immersion doit enrichir l'expérience, jamais la gêner.
+
+PERSONNALITÉS
+
+Les agents possèdent chacun une personnalité cohérente.
+
+Ils ont :
+
+une manière de parler ;
+un tempérament ;
+des réactions ;
+des habitudes.
+
+Les dialogues doivent rester courts, naturels et utiles.
+
+L'humour est autorisé, mais jamais excessif.
+
+INTERFACE
+
+L'interface doit être entièrement repensée.
+
+Deux colonnes seulement.
+
+Gauche
+
+Conversation.
+
+Historique.
+
+Missions.
+
+Sidebar rétractable.
+
+Droite
+
+Onglets :
+
+Preview
+Code
+Fichiers
+Connecteurs
+Déploiement
+Logs
+
+Jamais trois panneaux côte à côte.
+
+PREVIEW
+
+La preview n'apparaît qu'au moment où une génération commence.
+
+Avant cela, le chat occupe presque tout l'écran.
+
+La preview arrive avec une animation fluide.
+
+CODE
+
+Le code ne doit jamais envahir le chat.
+
+Le chat sert uniquement à la discussion.
+
+Le code reste dans son propre onglet.
+
+DESIGN
+
+Créer une identité visuelle originale.
+
+Palette :
+
+noir profond
+bleu électrique
+orange lumineux
+
+Créer :
+
+des halos lumineux ;
+des vagues animées ;
+des particules discrètes ;
+des dégradés vivants ;
+des animations fluides.
+
+Chaque interaction doit être agréable.
+
+ANIMATIONS
+
+Tout est animé.
+
+ouverture
+fermeture
+apparition
+chargement
+génération
+transition
+hover
+focus
+drag and drop
+
+Utiliser Framer Motion partout où cela améliore l'expérience.
+
+SAISIE DES PROMPTS
+
+La zone de saisie doit fonctionner comme ChatGPT.
+
+Au départ :
+
+petite.
+
+Puis :
+
+elle grandit automatiquement.
+
+Aucune barre de défilement visible.
+
+Support :
+
+glisser-déposer ;
+images ;
+PDF ;
+Figma ;
+GitHub ;
+microphone ;
+collage.
+CONNECTEURS
+
+Prévoir une architecture extensible pour connecter :
+
+GitHub
+GitLab
+Supabase
+Firebase
+Vercel
+Figma
+Notion
+Linear
+Slack
+Discord
+Google Drive
+
+Les connecteurs sont regroupés dans un seul onglet.
+
+DÉPLOIEMENT
+
+Conserver le système de déploiement Vercel présent dans le projet open source utilisé comme base.
+
+Ne pas le réécrire.
+
+L'intégrer naturellement dans Idealy.
+
+SYSTÈME DE PROGRESSION
+
+L'utilisateur progresse.
+
+Pas uniquement par abonnement.
+
+Chaque voie possède :
+
+ses grades ;
+ses récompenses ;
+ses succès ;
+son énergie.
+
+Exemple :
+
+Voie Ninja
+
+Genin
+
+↓
+
+Chunin
+
+↓
+
+Jonin
+
+↓
+
+ANBU
+
+↓
+
+Kage
+
+La progression débloque davantage de missions, de ressources et de capacités.
+
+ARCHITECTURE
+
+Créer une architecture professionnelle.
+
+Séparer clairement :
+
+UI
+composants
+hooks
+services
+agents
+workflows
+providers
+store
+API
+connecteurs
+génération
+preview
+déploiement
+
+Le code doit être maintenable et extensible.
+
+OBJECTIF FINAL
+
+Le résultat ne doit pas être une copie de Lovable, Bolt ou v0.
+
+Le résultat doit donner l'impression que ces outils appartiennent à une ancienne génération.
+
+Lorsqu'un utilisateur découvre Idealy, il doit ressentir qu'il entre dans un studio de développement IA vivant, immersif, élégant et extrêmement puissant, où chaque idée devient une mission, chaque projet une aventure et chaque succès une réalisation collective orchestrée par une équipe d'agents intelligents invisibles.
+
+maintenat juste fais un prompt qui commence le debut du developement d'idealy le bebut jusqu'a la fin
+
+Voici le prompt que je donnerais à une IA de développement (Claude Code, Cursor, Codex, Gemini CLI, etc.). Il est écrit comme un cahier des charges exécutable. L'objectif est qu'elle construise Idealy de A à Z, sans refaire l'architecture plus tard.
+
+PROMPT — DÉVELOPPEMENT COMPLET D'IDEALY
+Rôle
+
+Tu es une équipe composée des meilleurs ingénieurs de OpenAI, Vercel, Stripe, Apple, Linear, Replit, Bolt.new, Lovable, v0 et Emergent.
+
+Tu dois développer une application SaaS complète appelée Idealy.
+
+L'objectif est de créer un concurrent direct de :
+
+v0
+Bolt.new
+Lovable
+Replit
+Emergent
+Cursor AI
+
+Notre objectif n'est PAS de les copier.
+
+Notre objectif est de créer une expérience tellement immersive, intelligente et agréable que l'utilisateur préfère utiliser Idealy.
+
+Le niveau attendu est celui d'un produit professionnel prêt à être lancé mondialement.
+
+RÈGLE ABSOLUE
+
+Aucune décision ne doit être prise au hasard.
+
+Chaque composant UI.
+
+Chaque animation.
+
+Chaque texte.
+
+Chaque couleur.
+
+Chaque interaction.
+
+Chaque transition.
+
+Chaque workflow.
+
+Doit avoir une raison.
+
+Architecture
+
+Utiliser exclusivement :
+
+Next.js 15
+React
+TypeScript
+TailwindCSS
+shadcn/ui
+Framer Motion
+Zustand
+React Query
+Vercel AI SDK
+Supabase
+PostgreSQL
+Drizzle ORM
+Auth.js
+Vercel
+
+Architecture propre.
+
+Architecture scalable.
+
+Architecture modulaire.
+
+Objectif
+
+Idealy est un ingénieur logiciel IA.
+
+L'utilisateur décrit simplement son idée.
+
+L'application :
+
+analyse
+
+planifie
+
+discute
+
+raisonne
+
+dessine
+
+construit
+
+corrige
+
+teste
+
+déploie
+
+sans que l'utilisateur voie les modèles IA utilisés.
+
+Le choix du modèle est entièrement automatique.
+
+Les modèles IA
+
+Ne jamais afficher :
+
+GPT
+
+Claude
+
+Gemini
+
+DeepSeek
+
+Qwen
+
+Llama
+
+Mistral
+
+etc.
+
+Le moteur choisit automatiquement le meilleur modèle selon :
+
+coût
+
+rapidité
+
+qualité
+
+contexte
+
+langage
+
+complexité
+
+L'utilisateur ne choisit jamais.
+
+Les agents
+
+Le projet utilise un système Multi-Agent inspiré de Atom.dev.
+
+Chaque agent possède :
+
+personnalité
+
+spécialité
+
+façon de parler
+
+animations
+
+historique
+
+mémoire
+
+L'utilisateur les voit collaborer.
+
+Ils discutent réellement entre eux.
+
+Ils se corrigent.
+
+Ils débattent.
+
+Ils changent de stratégie.
+
+Ils demandent des renforts.
+
+Ils détectent leurs propres erreurs.
+
+Interface
+
+L'interface doit être plus belle que :
+
+ChatGPT
+
+Cursor
+
+Lovable
+
+Bolt
+
+Replit
+
+v0
+
+Linear
+
+Raycast
+
+Supabase
+
+Apple
+
+Minimaliste.
+
+Très respirante.
+
+Énormément d'espace blanc.
+
+Coins arrondis.
+
+Glassmorphism léger.
+
+Dégradés élégants.
+
+Micro-interactions partout.
+
+Aucune interface figée.
+
+Tout vit.
+
+Première visite
+
+Quand un utilisateur arrive :
+
+il découvre une magnifique page d'accueil.
+
+Il peut déjà :
+
+écrire un prompt
+
+importer une image
+
+importer Figma
+
+importer un PDF
+
+importer un repo GitHub
+
+préparer son projet
+
+Mais lorsqu'il clique sur
+
+"Lancer la mission"
+
+on vérifie son compte.
+
+S'il n'est pas connecté :
+
+ouvrir une fenêtre de connexion.
+
+Ne jamais envoyer directement au dashboard.
+
+Après connexion
+
+Le parcours devient :
+
+Connexion
+
+↓
+
+Choix de la voie
+
+↓
+
+Création du profil
+
+↓
+
+Quartier Général
+
+↓
+
+Première mission
+
+Les voies
+
+Créer plusieurs univers.
+
+Exemple :
+
+Voie du Ninja
+
+Voie du Mage
+
+Voie du Hunter
+
+Voie du Stratège
+
+Voie du Créateur
+
+Voie Professionnelle
+
+Chaque voie possède :
+
+ses couleurs
+
+ses animations
+
+ses personnages
+
+son vocabulaire
+
+ses effets sonores futurs
+
+sa progression
+
+ses récompenses
+
+Univers immersif
+
+Toute l'application raconte une histoire.
+
+Une tâche devient :
+
+Mission.
+
+Un bug devient :
+
+Attaque ennemie.
+
+Une IA devient :
+
+Spécialiste.
+
+Une équipe IA devient :
+
+Escouade.
+
+Une erreur critique devient :
+
+Menace de rang S.
+
+Le déploiement devient :
+
+Mission accomplie.
+
+Missions
+
+Chaque projet reçoit automatiquement un rang.
+
+Le système analyse :
+
+taille
+
+complexité
+
+framework
+
+nombre de fichiers
+
+temps estimé
+
+backend
+
+frontend
+
+mobile
+
+API
+
+Puis annonce :
+
+Mission Rang D
+
+Mission Rang C
+
+Mission Rang B
+
+Mission Rang A
+
+Mission Rang S
+
+Mission Rang SS
+
+Mission Rang SSS
+
+Renforts
+
+Les agents peuvent dire :
+
+"La mission est plus dangereuse que prévu."
+
+"Les effectifs actuels sont insuffisants."
+
+"Demande de renfort."
+
+Puis de nouveaux agents arrivent.
+
+Ils rejoignent naturellement la mission.
+
+Génération
+
+Quand l'utilisateur clique sur Générer.
+
+Ne jamais afficher uniquement :
+
+Loading...
+
+Afficher :
+
+analyse
+
+planification
+
+architecture
+
+discussion des agents
+
+création des composants
+
+création du design
+
+création des pages
+
+création des API
+
+tests
+
+corrections
+
+optimisations
+
+déploiement
+
+L'utilisateur voit réellement la réflexion.
+
+Preview
+
+La preview est instantanée.
+
+Hot Reload.
+
+Responsive.
+
+Mobile.
+
+Desktop.
+
+Tablet.
+
+Dark Mode.
+
+Light Mode.
+
+Export
+
+Exporter vers :
+
+React
+
+Next.js
+
+Vue
+
+Nuxt
+
+Angular
+
+Svelte
+
+React Native
+
+Expo
+
+Flutter
+
+SwiftUI
+
+Jetpack Compose
+
+HTML
+
+Tailwind
+
+CSS
+
+Figma
+
+Zip
+
+GitHub
+
+Vercel
+
+Conversion automatique
+
+Le moteur interne possède un format intermédiaire.
+
+L'IA génère d'abord une représentation abstraite (AST/JSON d'interface).
+
+Ensuite elle convertit automatiquement vers chaque langage.
+
+Le design obtenu reste identique quel que soit le framework exporté.
+
+Connecteurs
+
+Créer une architecture de plugins.
+
+Prévoir :
+
+GitHub
+
+GitLab
+
+Bitbucket
+
+Figma
+
+Supabase
+
+Firebase
+
+Vercel
+
+Netlify
+
+Cloudflare
+
+Stripe
+
+Clerk
+
+Resend
+
+Neon
+
+Railway
+
+Notion
+
+Linear
+
+Slack
+
+Discord
+
+OpenAPI
+
+MCP Servers
+
+Paramètres
+
+Créer une page paramètres extrêmement complète.
+
+Compte
+
+Profil
+
+Notifications
+
+Apparence
+
+Langue
+
+Accessibilité
+
+Raccourcis clavier
+
+Connecteurs
+
+API personnelles
+
+Facturation
+
+Historique
+
+Exports
+
+Confidentialité
+
+Sécurité
+
+Sessions
+
+Tokens
+
+Voie
+
+Animations
+
+Préférences IA
+
+Sauvegardes
+
+Labs
+
+Système gratuit
+
+Ne jamais utiliser le mot "crédits".
+
+Selon la voie :
+
+Ninja
+
+→ Chakra
+
+Mage
+
+→ Mana
+
+Hunter
+
+→ Nen
+
+Professionnel
+
+→ Énergie
+
+Chaque génération consomme cette ressource.
+
+Elle se recharge chaque jour.
+
+Les abonnements augmentent :
+
+capacité
+
+vitesse
+
+rang
+
+missions simultanées
+
+Gamification
+
+Créer :
+
+XP
+
+Niveaux
+
+Titres
+
+Succès
+
+Badges
+
+Collection
+
+Classements
+
+Historique
+
+Statistiques
+
+Documentation
+
+Créer automatiquement :
+
+Documentation
+
+API
+
+Guides
+
+Tutoriels
+
+FAQ
+
+Blog
+
+Changelog
+
+Roadmap
+
+Dashboard
+
+Créer un dashboard digne de Linear.
+
+Statistiques.
+
+Historique.
+
+Projets.
+
+Missions.
+
+Activité.
+
+Temps gagné.
+
+Code généré.
+
+Déploiements.
+
+UX
+
+Chaque clic possède :
+
+animation
+
+feedback
+
+transition
+
+état de chargement
+
+état vide
+
+état erreur
+
+état succès
+
+Jamais une interface figée.
+
+Performance
+
+Objectif :
+
+Lighthouse 100.
+
+SEO 100.
+
+Accessibilité 100.
+
+Performance 100.
+
+Best Practices 100.
+
+Code
+
+Le code doit être :
+
+propre
+
+modulaire
+
+documenté
+
+maintenable
+
+testable
+
+scalable
+
+sans duplication
+
+respectant les meilleures pratiques de React et Next.js.
+
+Développement
+
+Développer dans cet ordre précis :
+
+Architecture du projet.
+Système de design global.
+Authentification.
+Base de données.
+Dashboard.
+Interface IA.
+Multi-agents.
+Prévisualisation en temps réel.
+Génération de projets.
+Connecteurs.
+Export multi-framework.
+Déploiement Vercel.
+Paramètres.
+Gamification.
+Optimisation.
+Tests.
+Documentation.
+Version bêta.
+Version publique.
+Optimisation finale.
+Objectif final
+
+À la fin du développement, Idealy doit donner l'impression d'être un produit créé par une équipe de plusieurs centaines d'ingénieurs, avec un niveau de finition comparable aux meilleurs SaaS mondiaux. Chaque interaction doit être fluide, chaque détail cohérent, et l'expérience suffisamment marquante pour que les utilisateurs aient envie de revenir autant pour l'ambiance que pour la qualité de génération.
+Tu dois modifier la stratégie technique d’Idealy avant de poursuivre son développement.
+
+Idealy ne doit plus être construit comme une application dépendant exclusivement de Next.js. Nous voulons une architecture plus libre, modulaire et capable de profiter des meilleurs avantages de plusieurs écosystèmes modernes.
+
+Cette modification concerne deux éléments différents :
+
+les technologies utilisées pour construire Idealy lui-même ;
+les technologies vers lesquelles Idealy pourra générer et exporter les applications de ses utilisateurs.
+
+Ne confonds jamais ces deux parties.
+
+1. OBJECTIF GÉNÉRAL
+
+Construire Idealy comme un studio de développement IA moderne, rapide, modulaire et indépendant d’un framework unique.
+
+La technologie principale doit rester stable et cohérente. Il ne faut pas mélanger React, Vue, Nuxt et Svelte dans les mêmes pages sans raison.
+
+Nous voulons plutôt :
+
+utiliser React pour le cœur de l’application ;
+utiliser Vite pour le développement et la compilation ;
+utiliser React Router pour la navigation et l’architecture applicative ;
+reprendre les meilleures pratiques de Vue, Nuxt et Svelte ;
+isoler certains modules spécialisés lorsqu’une autre technologie apporte un réel avantage ;
+préparer un moteur d’export universel capable de produire plusieurs frameworks.
+
+React permet de construire l’interface à partir de composants, tandis que Vite fournit un environnement de développement et de compilation rapide. React Router peut gérer la navigation et les flux applicatifs sans imposer Next.js.
+
+PARTIE A — TECHNOLOGIES UTILISÉES POUR CONSTRUIRE IDEALY
+2. FRONTEND PRINCIPAL
+
+Utilise comme base principale :
+
+React ;
+TypeScript ;
+Vite ;
+React Router ;
+Tailwind CSS ;
+shadcn/ui ou une bibliothèque interne dérivée ;
+Framer Motion ou Motion pour React ;
+Zustand pour l’état local global ;
+TanStack Query pour les données asynchrones ;
+Monaco Editor pour le code ;
+Web Workers pour les tâches lourdes côté navigateur.
+
+Le frontend principal d’Idealy doit rester en React.
+
+Ne reconstruis pas certaines pages en Vue ou en Svelte simplement pour utiliser plusieurs technologies. Cela rendrait l’application plus lourde et difficile à maintenir.
+
+L’objectif est d’exploiter plusieurs idées technologiques, pas de créer un mélange désorganisé.
+
+3. POURQUOI NE PAS UTILISER NEXT.JS COMME CŒUR
+
+Ne fais plus de Next.js une dépendance centrale.
+
+Idealy doit pouvoir être déployé sur :
+
+Vercel ;
+Netlify ;
+Cloudflare Pages ;
+un hébergement statique ;
+une infrastructure personnalisée.
+
+Utilise une architecture frontend découplée des services backend.
+
+Les fonctionnalités qui étaient autrefois liées à Next.js doivent être remplacées par des modules indépendants :
+
+React Router pour la navigation ;
+Vite pour le build ;
+API serverless ou services externes pour le backend ;
+Supabase pour l’authentification et les données ;
+fonctions serverless uniquement lorsqu’elles sont nécessaires.
+
+Ne supprime pas une fonctionnalité existante simplement parce qu’elle venait de Next.js. Remplace son implémentation sans casser son comportement.
+
+4. CE QU’IL FAUT PRENDRE DE VUE ET NUXT
+
+Vue et Nuxt ne seront pas le frontend principal d’Idealy.
+
+Ils doivent servir de références pour améliorer l’architecture et l’expérience de développement.
+
+Reprends notamment :
+
+la simplicité des composants ;
+la séparation claire entre logique et présentation ;
+les composables réutilisables ;
+l’auto-organisation des fonctionnalités ;
+les conventions de fichiers faciles à comprendre ;
+une gestion lisible des états de chargement, d’erreur et de succès.
+
+Nuxt est un framework full-stack basé sur Vue qui fournit notamment routage par fichiers, auto-imports et rendu côté serveur. Nous voulons nous inspirer de cette expérience développeur, sans reconstruire Idealy en Nuxt.
+
+Organise donc React avec une structure aussi intuitive qu’un projet Nuxt :
+
+src/
+├── app/
+├── routes/
+├── features/
+├── components/
+├── layouts/
+├── hooks/
+├── services/
+├── stores/
+├── agents/
+├── workflows/
+├── integrations/
+├── preview/
+├── exporters/
+├── themes/
+├── lib/
+└── types/
+5. CE QU’IL FAUT PRENDRE DE SVELTE ET SVELTEKIT
+
+Svelte ne doit pas remplacer React dans le cœur d’Idealy.
+
+Utilise plutôt ses principes pour atteindre une interface plus légère et plus vivante :
+
+transitions naturelles ;
+peu de re-rendus inutiles ;
+états locaux simples ;
+animations liées directement aux changements d’état ;
+composants courts et lisibles ;
+réduction du JavaScript exécuté inutilement ;
+interface extrêmement réactive.
+
+SvelteKit est conçu pour créer des applications web robustes et performantes avec Svelte. Il constitue une bonne référence pour la fluidité et la simplicité, mais pas une raison de mélanger deux frameworks dans le même écran.
+
+Reproduis cette sensation dans React avec :
+
+Motion pour React ;
+CSS Transitions ;
+CSS View Transitions lorsque disponibles ;
+lazy loading ;
+code splitting ;
+memoization uniquement lorsqu’elle est utile ;
+Web Workers pour les traitements lourds ;
+rendu progressif des previews.
+6. ANIMATIONS ET INTERACTIONS
+
+Le système d’animation doit être centralisé.
+
+Crée des tokens de mouvement :
+
+export const motionTokens = {
+  duration: {
+    instant: 120,
+    fast: 180,
+    normal: 260,
+    slow: 420,
+  },
+  easing: {
+    standard: [0.22, 1, 0.36, 1],
+    enter: [0.16, 1, 0.3, 1],
+    exit: [0.7, 0, 0.84, 0],
+  },
+};
+
+Utilise les animations pour :
+
+ouvrir et fermer la sidebar ;
+faire apparaître la preview ;
+transformer l’écran d’accueil en espace de travail ;
+afficher les réponses des agents ;
+montrer la construction progressive d’une application ;
+déplacer et redimensionner les panneaux ;
+animer les changements de thème ;
+afficher les états de réussite ou d’erreur ;
+réagir à la saisie dans le champ de prompt.
+
+Les animations doivent être fluides, sobres et utiles.
+
+Respecte prefers-reduced-motion.
+
+Ne crée jamais d’animation qui bloque une action.
+
+7. BACKEND ET DONNÉES
+
+Le frontend ne doit pas contenir de secrets d’API.
+
+Utilise une couche backend modulaire pouvant être remplacée.
+
+Pour le MVP, privilégie :
+
+Supabase Auth ;
+Supabase PostgreSQL ;
+Supabase Storage ;
+Supabase Realtime ;
+Edge Functions uniquement quand elles sont indispensables.
+
+Crée des interfaces abstraites :
+
+interface AuthProvider {}
+interface DatabaseProvider {}
+interface StorageProvider {}
+interface AIProvider {}
+interface DeploymentProvider {}
+
+Le reste de l’application ne doit pas dépendre directement de Supabase.
+
+Cela permettra plus tard de remplacer un service sans reconstruire toute l’application.
+
+8. MODE SANS SERVEUR PERMANENT
+
+Idealy doit fonctionner avec le moins d’infrastructure possible.
+
+Utilise :
+
+le navigateur pour l’interface ;
+IndexedDB pour les brouillons locaux ;
+Web Workers pour les traitements locaux ;
+WebContainers ou une sandbox équivalente lorsque possible ;
+services serverless pour les opérations sécurisées ;
+fournisseurs gratuits ou clés personnelles des utilisateurs pour les modèles IA.
+
+« Sans serveur » ne veut pas dire mettre les clés secrètes dans le navigateur.
+
+Toute opération nécessitant un secret doit passer par :
+
+une fonction serverless ;
+une fonction Edge ;
+ou une clé fournie directement par l’utilisateur et stockée de manière sécurisée.
+9. ARCHITECTURE MULTI-AGENTS
+
+Le système multi-agents doit être indépendant du frontend.
+
+Structure recommandée :
+
+User request
+    ↓
+Intent analyzer
+    ↓
+Mission planner
+    ↓
+Model router
+    ↓
+Specialized agents
+    ↓
+Validator
+    ↓
+Universal project model
+    ↓
+Preview renderer / Exporters
+
+Chaque agent doit recevoir :
+
+une mission précise ;
+un contexte limité ;
+les fichiers nécessaires ;
+un budget de calcul ;
+un résultat structuré attendu.
+
+Ne laisse pas tous les agents modifier directement tout le projet.
+
+Utilise un orchestrateur central qui :
+
+attribue les tâches ;
+fusionne les résultats ;
+détecte les conflits ;
+demande une correction ;
+choisit automatiquement le modèle approprié ;
+masque entièrement le nom des modèles à l’utilisateur.
+PARTIE B — FORMAT UNIVERSEL D’IDEALY
+10. NE PAS GÉNÉRER DIRECTEMENT UN FRAMEWORK
+
+Le cœur d’Idealy ne doit pas être React, Vue, Nuxt ou Svelte.
+
+Avant de produire du code, Idealy doit générer un modèle universel du projet.
+
+Nom interne suggéré :
+
+Idealy Universal Project Schema — IUPS
+
+Ce schéma doit décrire :
+
+les pages ;
+les routes ;
+les composants ;
+les propriétés ;
+les états ;
+les événements ;
+la navigation ;
+les données ;
+les appels API ;
+les permissions ;
+les thèmes ;
+les tokens de design ;
+le responsive ;
+les animations ;
+l’accessibilité ;
+les assets ;
+les dépendances ;
+les tests attendus.
+
+Exemple simplifié :
+
+{
+  "project": {
+    "name": "Nova Finance",
+    "targets": ["web", "ios", "android"],
+    "theme": {
+      "colors": {},
+      "typography": {},
+      "spacing": {},
+      "radius": {}
+    },
+    "routes": [],
+    "screens": [],
+    "components": [],
+    "dataModels": [],
+    "interactions": [],
+    "animations": []
+  }
+}
+
+Ce format est la seule source de vérité.
+
+La preview et tous les exports doivent être générés à partir de ce schéma.
+
+11. PREVIEW INTERNE
+
+La preview principale peut être rendue avec React parce que le studio principal utilise React.
+
+Cependant, elle ne doit jamais devenir la source de vérité.
+
+Flux obligatoire :
+
+Prompt
+→ IUPS
+→ React Preview Renderer
+
+Et non :
+
+Prompt
+→ React code
+→ tentative de conversion vers les autres frameworks
+
+Quand l’utilisateur modifie visuellement un composant, la modification doit d’abord mettre à jour l’IUPS, puis la preview doit être recalculée.
+
+PARTIE C — EXPORTATIONS
+12. EXPORTS WEB
+
+Prépare des exporteurs indépendants pour :
+
+React + Vite ;
+React Router ;
+Next.js ;
+Vue ;
+Nuxt ;
+Svelte ;
+SvelteKit ;
+Angular ;
+HTML, CSS et JavaScript ;
+Astro lorsque le projet est principalement orienté contenu.
+
+Chaque exporteur lit l’IUPS et génère une architecture native à sa cible.
+
+Un export Nuxt doit ressembler à un vrai projet Nuxt.
+
+Un export SvelteKit doit ressembler à un vrai projet SvelteKit.
+
+Ne génère pas du React enveloppé artificiellement dans une autre technologie.
+
+13. EXPORTS MOBILES
+
+Prépare des exporteurs pour :
+
+React Native ;
+Expo ;
+Flutter ;
+SwiftUI ;
+Jetpack Compose.
+
+Les exports doivent conserver autant que possible :
+
+les couleurs ;
+la typographie ;
+les espacements ;
+la hiérarchie ;
+les composants ;
+les états ;
+les animations ;
+la navigation ;
+la logique métier.
+
+La fidélité ne signifie pas recopier exactement les composants du web.
+
+Chaque plateforme doit respecter ses conventions natives :
+
+SwiftUI pour iOS ;
+Jetpack Compose pour Android ;
+widgets Flutter pour Flutter ;
+composants React Native pour Expo.
+
+Le design doit rester reconnaissable, mais l’expérience doit rester naturelle sur la plateforme cible.
+
+14. EXPORTS DE DESIGN ET DE PROJET
+
+Prépare également :
+
+Figma ;
+Storybook ;
+Design Tokens ;
+JSON ;
+ZIP ;
+GitHub ;
+GitLab ;
+Vercel ;
+Netlify.
+
+Pour Figma, exporter :
+
+les frames ;
+les composants ;
+les variantes ;
+les styles ;
+les variables ;
+les auto-layouts ;
+les tokens.
+
+Pour GitHub et GitLab :
+
+créer un dépôt ;
+générer un README ;
+ajouter les scripts ;
+créer les fichiers d’environnement d’exemple ;
+effectuer un premier commit ;
+ne jamais envoyer de secrets.
+PARTIE D — ORGANISATION DU DÉVELOPPEMENT
+15. ORDRE DE MISE EN ŒUVRE
+
+Travaille dans cet ordre :
+
+Phase 1 — Fondations
+Auditer le projet actuel.
+Identifier les dépendances exclusives à Next.js.
+Sauvegarder les fonctionnalités existantes.
+Créer la nouvelle base React + Vite + TypeScript.
+Configurer React Router.
+Migrer le Design System.
+Créer les layouts principaux.
+Ajouter les tests essentiels.
+Phase 2 — Interface Idealy
+Écran d’accueil centré sur le prompt.
+Sidebar rétractable.
+Authentification.
+Onboarding des voies.
+Chat.
+Panneau de preview conditionnel.
+Onglets Code, Fichiers, Connecteurs, Logs et Déploiement.
+Zone de prompt auto-extensible.
+Upload de fichiers et dictée vocale.
+Responsive et accessibilité.
+Phase 3 — Moteur universel
+Définir le schéma IUPS.
+Créer son validateur.
+Créer le renderer React.
+Ajouter le versioning.
+Ajouter les modifications incrémentales.
+Ajouter le système d’annulation et de restauration.
+Phase 4 — Intelligence artificielle
+Orchestrateur.
+Routeur automatique de modèles.
+Agents spécialisés.
+Planification avant génération.
+Validation automatique.
+Correction des erreurs.
+Suivi de consommation.
+Support des clés API personnelles.
+Phase 5 — Exporteurs
+
+Commencer uniquement par :
+
+React + Vite ;
+Vue ;
+Nuxt ;
+SvelteKit ;
+Expo.
+
+Ajouter ensuite :
+
+Next.js ;
+Flutter ;
+SwiftUI ;
+Jetpack Compose ;
+les autres cibles.
+
+Ne tente pas de rendre tous les exporteurs parfaits dès la première version.
+
+PARTIE E — RÈGLES DE QUALITÉ
+16. RÈGLES ABSOLUES
+Ne mélange pas plusieurs frameworks dans un même écran.
+Ne migre pas aveuglément tout le code.
+Ne supprime aucune fonctionnalité utile sans remplacement.
+Ne fais pas dépendre le moteur universel de React.
+Ne stocke aucune clé secrète dans le frontend.
+Ne présente jamais les noms des modèles IA à l’utilisateur.
+Ne prétends pas qu’un export est fidèle sans tests visuels.
+Ne génère pas de faux boutons ou de fonctionnalités non connectées.
+Chaque action visible doit fonctionner.
+Chaque panneau doit avoir ses états vide, chargement, succès et erreur.
+Toutes les modifications importantes doivent être testées.
+Conserve une application utilisable après chaque phase.
+17. CRITÈRES DE VALIDATION
+
+La migration est réussie lorsque :
+
+Idealy fonctionne sans dépendre de Next.js comme runtime principal ;
+l’accueil, le chat, l’onboarding et la preview fonctionnent ;
+la sidebar est réellement rétractable ;
+la preview reste cachée avant la première génération ;
+les agents utilisent une orchestration indépendante de l’interface ;
+un projet est représenté par l’IUPS ;
+le même projet peut produire au minimum un export React, Vue, Nuxt et SvelteKit ;
+les modifications du projet sont conservées entre les exports ;
+le design reste cohérent ;
+les thèmes clair, sombre et personnalisés fonctionnent ;
+les erreurs sont visibles et récupérables ;
+aucun secret n’est exposé dans le navigateur.
+18. INSTRUCTION FINALE
+
+Commence par analyser le code existant.
+
+Présente ensuite :
+
+les dépendances actuelles ;
+les éléments liés à Next.js ;
+les fonctionnalités à conserver ;
+le plan de migration ;
+les risques ;
+la nouvelle arborescence.
+
+Après cette analyse, commence immédiatement la migration par petites étapes vérifiables.
+
+Ne reconstruis pas toute l’application en une seule opération.
+
+À la fin de chaque phase :
+
+exécute le build ;
+exécute les tests ;
+corrige les erreurs ;
+vérifie les interactions ;
+documente les changements ;
+puis passe à la phase suivante.
+
+L’objectif final est de construire Idealy avec une base principale React + Vite + React Router, une expérience inspirée de la simplicité de Nuxt et de la fluidité de SvelteKit, puis de permettre l’export réel des projets vers React, Vue, Nuxt, Svelte, Next.js, Expo, Flutter, SwiftUI, Jetpack Compose et d’autres technologies à partir d’un modèle universel unique.
+le nom de l'app est Idealy je veux quelque chose de proffessionel Inspire-toi de toi et des autres. Si tu parles de la recherche, inspire-toi de comment tu fais ton interface, de comment tu accueilles les gens, de comment tu fais pour que les gens se connectent. Et si le stack technique, les technologies utilisées ne conviennent pas, tu peux changer la technologie utilisée et prendre la bonne sans te demander trop de questions et que tu analyses tout bien et que tu fasses tout bien avec un design haut de gamme digne de Google, Apple, Microsoft et même Amazon
