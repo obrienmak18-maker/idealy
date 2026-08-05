@@ -28,6 +28,28 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
 
   const isSignup = mode === 'signup';
 
+  async function handlePasswordReset() {
+    setLoading('email');
+    setError(null);
+    setNotice(null);
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) throw new Error('Supabase n\'est pas encore configuré.');
+      if (!email) {
+        setError('Saisissez votre adresse e-mail pour recevoir un lien de récupération.');
+        return;
+      }
+      const redirectTo = `${window.location.origin}/auth/callback`;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (resetError) throw resetError;
+      setNotice('Si un compte correspond à cette adresse, un lien de récupération vient d\'être envoyé.');
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : 'Impossible d\'envoyer le lien de récupération.');
+    } finally {
+      setLoading(null);
+    }
+  }
+
   async function handleAuth(kind: 'google' | 'github' | 'email') {
     setLoading(kind);
     setError(null);
@@ -45,7 +67,9 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
           const { data, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: window.location.origin },
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback`,
+            },
           });
           if (signUpError) throw signUpError;
           if (!data.user) {
@@ -82,7 +106,7 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
         // OAuth — redirects away from the page; App.tsx onAuthStateChange handles the return
         const { error: oauthError } = await supabase.auth.signInWithOAuth({
           provider: kind,
-          options: { redirectTo: window.location.origin },
+          options: { redirectTo: `${window.location.origin}/auth/callback` },
         });
         if (oauthError) throw oauthError;
         // Page will redirect; no further action needed here
@@ -205,6 +229,16 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
                 autoComplete={isSignup ? 'new-password' : 'current-password'}
                 minLength={6}
               />
+              {!isSignup && (
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  disabled={!!loading}
+                  className="self-end text-xs text-electric-400 transition hover:text-electric-300 disabled:opacity-60"
+                >
+                  Mot de passe oublié ?
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={!!loading}

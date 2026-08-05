@@ -370,7 +370,7 @@ const WAY_PREVIEWS = [
 const FEATURES = [
   { icon: Users, title: 'Multi-agents', desc: "Une escouade de spécialistes collabore, débat, se corrige et demande des renforts en temps réel." },
   { icon: Wand2, title: 'Modèles invisibles', desc: "Idealy choisit automatiquement le meilleur moteur. Vous ne voyez jamais GPT, Claude ou Gemini." },
-  { icon: Layers, title: 'Export universel', desc: "React, Vue, Nuxt, SvelteKit, Expo, Flutter, SwiftUI. Un projet, plusieurs cibles." },
+  { icon: Layers, title: 'Export multi-framework', desc: "React, Vue, Nuxt, SvelteKit, Expo, Flutter, SwiftUI. Disponible dans une prochaine version." },
   { icon: Zap, title: 'Renforts dynamiques', desc: "La mission grimpe en rang ? De nouveaux agents arrivent automatiquement pour renflouer l'équipe." },
   { icon: Rocket, title: 'Déploiement intégré', desc: "Publiez directement sur Vercel sans quitter le studio." },
   { icon: Shield, title: 'Sans serveur', desc: "Vos clés restent les vôtres. Aucune infrastructure à gérer, aucune dépense cachée." },

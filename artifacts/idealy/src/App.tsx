@@ -29,8 +29,21 @@ function App() {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
+    // Complete PKCE callbacks before restoring the session. This is required for
+    // production redirects such as /auth/callback as well as local previews.
+    const callbackCode = new URLSearchParams(window.location.search).get('code');
+    const callbackError = new URLSearchParams(window.location.search).get('error_description');
+    if (callbackError) {
+      console.warn('[Idealy] Supabase callback error:', callbackError);
+    }
+    const callbackPromise = callbackCode
+      ? supabase.auth.exchangeCodeForSession(callbackCode).then(({ error }) => {
+          if (error) console.warn('[Idealy] Supabase code exchange failed:', error.message);
+        })
+      : Promise.resolve();
+
     // Parse any active session (including OAuth callback in URL hash)
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    callbackPromise.then(() => supabase.auth.getSession()).then(({ data: { session } }) => {
       if (session?.user) {
         const user = session.user;
         setProfile({
