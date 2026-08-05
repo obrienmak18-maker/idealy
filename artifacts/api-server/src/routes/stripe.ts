@@ -30,15 +30,15 @@ function isBillingCycle(value: unknown): value is BillingCycle {
 }
 
 router.post("/stripe/checkout", async (req, res) => {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) {
-    res.status(503).json({ error: "Stripe is not configured on the server." });
-    return;
-  }
-
   const { plan, billingCycle = "monthly" } = req.body ?? {};
   if (!isPlan(plan) || !isBillingCycle(billingCycle)) {
     res.status(400).json({ error: "A valid plan and billing cycle are required." });
+    return;
+  }
+
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    res.status(503).json({ error: "Stripe is not configured on the server." });
     return;
   }
 
@@ -74,6 +74,12 @@ router.post("/stripe/checkout", async (req, res) => {
           },
         ],
         allow_promotion_codes: true,
+        subscription_data: {
+          trial_period_days: 14,
+          metadata: { plan, billingCycle },
+        },
+        metadata: { plan, billingCycle },
+        integration_identifier: `idealy_${plan}_${billingCycle}_${Math.random().toString(36).slice(2, 10)}`,
         success_url: `${configuredOrigin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${configuredOrigin}/?checkout=cancelled`,
       },
