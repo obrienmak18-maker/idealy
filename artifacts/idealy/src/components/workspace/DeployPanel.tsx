@@ -47,6 +47,11 @@ export function DeployPanel({ schema, missionId }: DeployPanelProps) {
       addLog('❌ Aucun projet à déployer. Créez d\'abord une mission.');
       return;
     }
+    const confirmed = window.confirm(`Publier « ${schema.project.name || 'ce projet'} » sur Vercel en production ?`);
+    if (!confirmed) {
+      addLog('Publication annulée par l\'utilisateur.');
+      return;
+    }
     if (!vercelToken) {
       addLog('❌ Token Vercel manquant. Ajoutez-le dans l\'onglet Connecteurs.');
       return;
