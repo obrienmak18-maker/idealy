@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Stripe } from 'https://esm.sh/stripe@14.14.0';
+import { authenticate, getAppUrl } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,31 +14,21 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
+    const auth = await authenticate(req);
+    if ('error' in auth) {
+      return new Response(JSON.stringify({ error: auth.error }), {
+        status: auth.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
     const { planId, billingCycle } = await req.json();
-
+    const { user, supabaseAdmin } = auth;
+    const body = await req.json();
+    const planId = body.planId ?? body.plan;
+    const billingCycle = body.billingCycle ?? 'monthly';
     const priceMap: Record<string, Record<string, string>> = {
       pro: {
+        monthly: Deno.env.get('STRIPE_PRICE_ID_PRO_MONTHLY') ?? '',
         monthly: Deno.env.get('STRIPE_PRICE_ID_PRO_MONTHLY') ?? '',
         yearly: Deno.env.get('STRIPE_PRICE_ID_PRO_YEARLY') ?? '',
       },
@@ -50,17 +40,22 @@ serve(async (req) => {
 
     const priceId = priceMap[planId]?.[billingCycle];
     if (!priceId) {
-      return new Response(JSON.stringify({ error: 'Invalid plan' }), {
+      return new Response(JSON.stringify({ error: 'Plan ou cycle de facturation invalide.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!stripeSecretKey) {
+      throw new Error('Missing environment variable: STRIPE_SECRET_KEY');
+    }
+
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2024-06-20',
     });
 
-    const { data: existingCustomer } = await supabase
+    const { data: existingCustomer } = await supabaseAdmin
       .from('stripe_customers')
       .select('stripe_customer_id')
       .eq('user_id', user.id)
@@ -76,12 +71,16 @@ serve(async (req) => {
 
       customerId = customer.id;
 
-      await supabase.from('stripe_customers').insert({
+      const { error: customerError } = await supabaseAdmin.from('stripe_customers').upsert({
         user_id: user.id,
         stripe_customer_id: customerId,
       });
+      if (customerError) {
+        throw customerError;
+      }
     }
 
+    const appUrl = getAppUrl(req);
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -92,12 +91,20 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
-      success_url: `${Deno.env.get('APP_URL')}/billing?success=true`,
-      cancel_url: `${Deno.env.get('APP_URL')}/pricing?canceled=true`,
+      allow_promotion_codes: true,
+      success_url: `${appUrl}?checkout=success`,
+      cancel_url: `${appUrl}?checkout=canceled`,
       metadata: {
         userId: user.id,
         planId,
         billingCycle,
+      },
+      subscription_data: {
+        metadata: {
+          userId: user.id,
+          planId,
+          billingCycle,
+        },
       },
     });
 
@@ -105,7 +112,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

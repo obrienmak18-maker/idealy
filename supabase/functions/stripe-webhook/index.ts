@@ -1,8 +1,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Stripe } from 'https://esm.sh/stripe@14.14.0';
+import { createAdminClient } from '../_shared/auth.ts';
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
+const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+if (!stripeSecretKey) {
+  throw new Error('Missing environment variable: STRIPE_SECRET_KEY');
+}
+
+const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2024-06-20',
 });
 
@@ -18,10 +23,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabase = createAdminClient();
 
     const signature = req.headers.get('stripe-signature')!;
     const body = await req.text();
@@ -32,7 +34,32 @@ serve(async (req) => {
       Deno.env.get('STRIPE_WEBHOOK_SECRET')!
     );
 
-    const subscription = event.data.object as Stripe.Subscription;
+    const upsertSubscription = async (subscription: Stripe.Subscription) => {
+      let userId = subscription.metadata.userId;
+
+      if (!userId && typeof subscription.customer === 'string') {
+        const { data: customer } = await supabase
+          .from('stripe_customers')
+          .select('user_id')
+          .eq('stripe_customer_id', subscription.customer)
+          .single();
+
+        userId = customer?.user_id;
+      }
+
+      if (!userId) {
+        return;
+      }
+
+      await supabase.from('subscriptions').upsert({
+        stripe_subscription_id: subscription.id,
+        user_id: userId,
+        status: subscription.status,
+        plan_id: subscription.metadata.planId ?? null,
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        cancel_at_period_end: subscription.cancel_at_period_end,
+      });
+    };
 
     switch (event.type) {
       case 'checkout.session.completed':
@@ -45,18 +72,13 @@ serve(async (req) => {
         }
         break;
 
+      case 'customer.subscription.created':
       case 'customer.subscription.updated':
-        await supabase.from('subscriptions').upsert({
-          stripe_subscription_id: subscription.id,
-          user_id: subscription.metadata.userId,
-          status: subscription.status,
-          plan_id: subscription.metadata.planId,
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          cancel_at_period_end: subscription.cancel_at_period_end,
-        });
+        await upsertSubscription(event.data.object as Stripe.Subscription);
         break;
 
       case 'customer.subscription.deleted':
+        const subscription = event.data.object as Stripe.Subscription;
         await supabase.from('subscriptions')
           .update({ status: 'canceled' })
           .eq('stripe_subscription_id', subscription.id);
@@ -67,7 +89,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : 'Webhook error';
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

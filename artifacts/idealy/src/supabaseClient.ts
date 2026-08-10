@@ -1,6 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { useIdealyStore } from '@/stores/idealyStore';
 
+let client: ReturnType<typeof createClient> | null = null;
+let cachedUrl: string | null = null;
+let cachedAnonKey: string | null = null;
+
 /**
  * Returns a configured Supabase client.
  *
@@ -30,5 +34,18 @@ export const getSupabaseClient = () => {
     return null;
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey);
+  if (!client || cachedUrl !== supabaseUrl || cachedAnonKey !== supabaseAnonKey) {
+    cachedUrl = supabaseUrl;
+    cachedAnonKey = supabaseAnonKey;
+    client = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+        persistSession: true,
+      },
+    });
+  }
+
+  return client;
 };

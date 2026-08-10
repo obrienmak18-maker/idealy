@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Sparkles, Zap, Shield, Crown, X } from 'lucide-react';
 import { getSupabaseClient } from '@/supabaseClient';
 
@@ -13,20 +13,53 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
   const [error, setError] = useState<string | null>(null);
 
   async function startCheckout(plan: 'pro' | 'business') {
-    setLoadingPlan(plan); setError(null);
+    setLoadingPlan(plan);
+    setError(null);
+
     try {
       const supabase = getSupabaseClient();
-      if (!supabase) throw new Error('Supabase is not configured.');
-      const { data, error: invokeError } = await supabase.functions.invoke('create-checkout-session', { body: { plan } });
+      if (!supabase) {
+        throw new Error(
+          "Supabase n'est pas configuré. Ajoutez l'URL du projet et l'anon key dans Paramètres → Connecteurs.",
+        );
+      }
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      if (!session?.access_token) {
+        throw new Error('Connectez-vous d’abord pour démarrer le paiement.');
+      }
+
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        'create-checkout-session',
+        {
+          body: { planId: plan, billingCycle },
+        },
+      );
+
       if (invokeError) throw invokeError;
-      if (!data?.url) throw new Error('Checkout session is unavailable.');
+      if (!data?.url) {
+        throw new Error('La session de paiement Stripe est indisponible.');
+      }
+
       window.location.assign(data.url);
     } catch (checkoutError) {
-      setError(checkoutError instanceof Error ? checkoutError.message : 'Checkout could not start.');
-    } finally { setLoadingPlan(null); }
+      setError(
+        checkoutError instanceof Error
+          ? checkoutError.message
+          : "Le paiement Stripe n'a pas pu démarrer.",
+      );
+    } finally {
+      setLoadingPlan(null);
+    }
   }
-
-  // On simule l'utilisation de la clé Stripe passée par l'utilisateur
 
   if (!isOpen) return null;
 
@@ -123,7 +156,7 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
               <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-primary glow-sm" /> Mana Illimité</li>
             </ul>
             <button onClick={() => startCheckout('pro')} disabled={loadingPlan !== null} className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-bold shadow-[0_0_15px_rgba(76,215,246,0.4)] hover:bg-primary-fixed-dim transition-all disabled:opacity-60">
-              {loadingPlan === 'pro' ? 'Opening secure checkout...' : 'Go Pro — 14-day trial'}
+              {loadingPlan === 'pro' ? 'Ouverture du paiement sécurisé...' : 'Passer Builder'}
             </button>
           </div>
 
@@ -145,7 +178,7 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
               <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-secondary" /> Support prioritaire 24/7</li>
             </ul>
             <button onClick={() => startCheckout('business')} disabled={loadingPlan !== null} className="w-full py-2.5 rounded-lg border border-white/10 text-ink-100 hover:border-secondary hover:text-secondary transition-colors disabled:opacity-60">
-              {loadingPlan === 'business' ? 'Opening secure checkout...' : 'Go Business — 14-day trial'}
+              {loadingPlan === 'business' ? 'Ouverture du paiement sécurisé...' : 'Passer Legend'}
             </button>
           </div>
 

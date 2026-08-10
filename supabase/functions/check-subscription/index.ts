@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Stripe } from 'https://esm.sh/stripe@14.14.0';
+import { authenticate } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,28 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
+    const auth = await authenticate(req);
+    if ('error' in auth) {
+      return new Response(JSON.stringify({ error: auth.error }), {
+        status: auth.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: customer } = await supabase
+    const { user, supabaseAdmin } = auth;
+    const { data: customer } = await supabaseAdmin
       .from('stripe_customers')
       .select('stripe_customer_id')
       .eq('user_id', user.id)
@@ -47,34 +35,43 @@ serve(async (req) => {
       });
     }
 
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!stripeSecretKey) {
+      throw new Error('Missing environment variable: STRIPE_SECRET_KEY');
+    }
+
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2024-06-20',
     });
 
     const subscriptions = await stripe.subscriptions.list({
       customer: customer.stripe_customer_id,
-      status: 'active',
-      limit: 1,
+      status: 'all',
+      limit: 10,
     });
 
-    if (subscriptions.data.length === 0) {
+    const subscription = subscriptions.data.find((item) =>
+      ['active', 'trialing', 'past_due', 'unpaid'].includes(item.status),
+    );
+
+    if (!subscription) {
       return new Response(JSON.stringify({ active: false, planId: null }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const subscription = subscriptions.data[0];
-
     return new Response(JSON.stringify({
-      active: true,
+      active: ['active', 'trialing', 'past_due', 'unpaid'].includes(subscription.status),
       planId: subscription.metadata.planId || 'pro',
       currentPeriodEnd: subscription.current_period_end,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      status: subscription.status,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

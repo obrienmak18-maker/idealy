@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Github, Chrome, Loader2 } from 'lucide-react';
 import { useIdealyStore } from '@/stores/idealyStore';
@@ -27,6 +27,16 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
   const [notice, setNotice] = useState<string | null>(null);
 
   const isSignup = mode === 'signup';
+
+  useEffect(() => {
+    if (!open) return;
+    setMode(initialMode);
+    setEmail('');
+    setPassword('');
+    setError(null);
+    setNotice(null);
+    setLoading(null);
+  }, [initialMode, open]);
 
   async function handleAuth(kind: 'google' | 'github' | 'email') {
     setLoading(kind);
