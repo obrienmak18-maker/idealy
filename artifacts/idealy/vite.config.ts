@@ -54,6 +54,10 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
   },
   preview: {
     port,

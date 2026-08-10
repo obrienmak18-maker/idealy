@@ -117,7 +117,7 @@ export function WebContainerPreview({ schema, className }: WebContainerPreviewPr
           <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
         </div>
         <div className="flex-1 mx-2 text-xs font-mono text-ink-400 bg-surface-container rounded px-2 py-1 truncate">
-          {url || 'localhost:5173'}
+          {url || (status === 'running' ? 'localhost:5173' : 'En attente...')}
         </div>
         <button
           onClick={boot}

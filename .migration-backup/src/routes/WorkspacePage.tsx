@@ -47,8 +47,20 @@ import { Logo } from '@/components/Brand';
 import { WAYS, type WayId } from '@/lore/ways';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
+import { useStripe } from '@/hooks/useStripe';
 
 type RightTab = 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
+
+type BrowserSpeechRecognition = {
+  lang: string;
+  interimResults: boolean;
+  start: () => void;
+  onresult: (event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void;
+  onend: () => void;
+  onerror: () => void;
+};
+
+type BrowserSpeechRecognitionFactory = new () => BrowserSpeechRecognition;
 
 // Slash commands available in the chat input
 const SLASH_COMMANDS = [
@@ -78,7 +90,10 @@ export function WorkspacePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+  const [isBillingPortalOpen, setIsBillingPortalOpen] = useState(false);
   const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
+
+  const { subscription, checkSubscription } = useStripe();
 
   const [projectSchema, setProjectSchema] = useState<IdealyUniversalProjectSchema | null>(null);
   const [previousSchema, setPreviousSchema] = useState<IdealyUniversalProjectSchema | null>(null);
@@ -86,8 +101,10 @@ export function WorkspacePage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [toolMessage, setToolMessage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [listening, setListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const attachmentRef = useRef<HTMLInputElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -161,6 +178,40 @@ export function WorkspacePage() {
       window.location.assign(data.url);
     } catch {
       setToolMessage('La connexion GitHub nécessite une session active et les secrets OAuth configurés.');
+    }
+  }
+
+  function startDictation() {
+    const browserWindow = window as Window & {
+      SpeechRecognition?: BrowserSpeechRecognitionFactory;
+      webkitSpeechRecognition?: BrowserSpeechRecognitionFactory;
+    };
+    const Recognition = browserWindow.SpeechRecognition ?? browserWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      setToolMessage('La dictée n’est pas prise en charge par ce navigateur. Essayez Chrome ou Edge.');
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.lang = 'fr-FR';
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results).map((result) => result[0]?.transcript ?? '').join(' ').trim();
+      setInput((current) => [current, transcript].filter(Boolean).join(current ? ' ' : ''));
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      setToolMessage('La dictée a été interrompue. Vérifiez l’autorisation du microphone.');
+    };
+    setListening(true);
+    recognition.start();
+  }
+
+  async function handleSignOut() {
+    try {
+      await getSupabaseClient()?.auth.signOut();
+    } finally {
+      signOut();
     }
   }
 
@@ -349,7 +400,7 @@ export function WorkspacePage() {
                     >
                       <MenuItem icon={Crown} label="Passer supérieur" accent onClick={() => { setIsPaywallOpen(true); setMenuOpen(false); }} />
                       <MenuItem icon={Settings} label="Paramètres" onClick={() => { setIsSettingsOpen(true); setMenuOpen(false); }} />
-                      <MenuItem icon={LogOut} label="Se déconnecter" onClick={signOut} />
+                      <MenuItem icon={LogOut} label="Se déconnecter" onClick={() => void handleSignOut()} />
                     </motion.div>
                   )}
                 </AnimatePresence>

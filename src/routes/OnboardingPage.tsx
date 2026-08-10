@@ -1,0 +1,197 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Logo } from '@/components/Brand';
+import { WAYS, WAY_LIST, type WayId } from '@/lore/ways';
+import { useIdealyStore } from '@/stores/idealyStore';
+
+export function OnboardingPage() {
+  const setWay = useIdealyStore((s) => s.setWay);
+  const setProfile = useIdealyStore((s) => s.setProfile);
+  const completeOnboarding = useIdealyStore((s) => s.completeOnboarding);
+  const profile = useIdealyStore((s) => s.profile);
+
+  const [step, setStep] = useState<'way' | 'profile'>('way');
+  const [selected, setSelected] = useState<WayId | null>(null);
+  const [name, setName] = useState(profile?.displayName ?? '');
+
+  function chooseWay(id: WayId) {
+    setSelected(id);
+    setWay(id);
+  }
+
+  function next() {
+    if (selected) setStep('profile');
+  }
+
+  function finish() {
+    setProfile({
+      email: profile?.email ?? 'apprenti@idealy.studio',
+      displayName: name || 'Apprenti',
+      avatarHue: profile?.avatarHue ?? Math.floor(Math.random() * 360),
+    });
+    completeOnboarding();
+  }
+
+  return (
+    <div className="relative min-h-screen overflow-x-hidden">
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute top-0 left-1/2 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-electric-600/10 blur-[120px]" />
+      </div>
+
+      <header className="mx-auto max-w-7xl px-5 pt-6">
+        <div className="flex items-center justify-between">
+          <Logo />
+          <div className="flex items-center gap-2 text-xs text-ink-400">
+            <span className={step === 'way' ? 'text-white' : ''}>1. Voie</span>
+            <span className="text-ink-600">/</span>
+            <span className={step === 'profile' ? 'text-white' : ''}>2. Profil</span>
+          </div>
+        </div>
+      </header>
+
+      <AnimatePresence mode="wait">
+        {step === 'way' ? (
+          <motion.div
+            key="way"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="mx-auto max-w-6xl px-5 py-12"
+          >
+            <div className="mb-10 text-center">
+              <h1 className="text-4xl font-semibold text-white md:text-5xl">
+                Choisissez votre voie
+              </h1>
+              <p className="mx-auto mt-4 max-w-xl text-ink-300">
+                Chaque voie définit votre univers : vocabulaire, agents, grades et énergie.
+                Vous pourrez la changer plus tard dans les paramètres.
+              </p>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {WAY_LIST.map((w, i) => {
+                const isSelected = selected === w.id;
+                return (
+                  <motion.button
+                    key={w.id}
+                    onClick={() => chooseWay(w.id)}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    whileHover={{ y: -6 }}
+                    className={`group relative overflow-hidden rounded-2xl border text-left transition-all duration-300 ${
+                      isSelected
+                        ? `${w.borderClass} ${w.glowClass}`
+                        : 'border-white/10 hover:border-white/25'
+                    }`}
+                  >
+                    <div className="aspect-[4/5] overflow-hidden">
+                      <img
+                        src={w.image}
+                        alt={w.name}
+                        className="h-full w-full object-cover opacity-55 transition duration-700 group-hover:scale-105 group-hover:opacity-75"
+                      />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/50 to-transparent" />
+                    {isSelected && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className={`absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full ${w.primaryClass} text-ink-950`}
+                      >
+                        <Check size={15} strokeWidth={3} />
+                      </motion.div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 p-5">
+                      <div className={`mb-2 h-1 w-10 rounded-full ${w.primaryClass}`} />
+                      <h3 className="text-lg font-semibold text-white">{w.name}</h3>
+                      <p className="mt-1 text-xs text-ink-300">{w.tagline}</p>
+                      <p className="mt-3 text-[11px] text-ink-400">
+                        Énergie : <span className={w.textClass}>{w.energy}</span>
+                      </p>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            <div className="mt-10 flex items-center justify-between">
+              <div className="text-sm text-ink-400">
+                {selected
+                  ? `Voie sélectionnée : ${WAYS[selected].name}`
+                  : 'Sélectionnez une voie pour continuer'}
+              </div>
+              <button
+                onClick={next}
+                disabled={!selected}
+                className="btn-primary px-6"
+              >
+                Suivant
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="mx-auto max-w-lg px-5 py-16"
+          >
+            {selected && (
+              <>
+                <div className="mb-8 text-center">
+                  <div className={`mx-auto mb-4 h-1 w-12 rounded-full ${WAYS[selected].primaryClass}`} />
+                  <h1 className="text-3xl font-semibold text-white">
+                    Bienvenue, {WAYS[selected].vocab.task === 'Mission' ? 'Genin' : 'apprenti'}
+                  </h1>
+                  <p className="mt-3 text-ink-300">
+                    Donnez un nom à votre spécialiste. Vos agents vous appelleront ainsi.
+                  </p>
+                </div>
+
+                <div className="card p-6">
+                  <label className="mb-2 block text-sm text-ink-200">
+                    Nom de spécialiste
+                  </label>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ex : Naruto, Natsu, Gon..."
+                    className="input"
+                    autoFocus
+                  />
+
+                  <div className="mt-5 rounded-xl bg-white/5 p-4">
+                    <p className="text-xs text-ink-400">Aperçu</p>
+                    <p className="mt-1.5 text-sm text-ink-100">
+                      <span className={WAYS[selected].textClass}>
+                        {WAYS[selected].agents[0].name}
+                      </span>
+                      {' '}— « {name || 'Apprenti'}, que voulons-nous construire aujourd'hui ? »
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex items-center justify-between">
+                  <button onClick={() => setStep('way')} className="btn-ghost">
+                    <ArrowLeft size={16} />
+                    Retour
+                  </button>
+                  <button onClick={finish} className="btn-primary px-6">
+                    Entrer dans le quartier général
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

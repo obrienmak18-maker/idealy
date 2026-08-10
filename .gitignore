@@ -39,6 +39,31 @@ testem.log
 
 # System Files
 .DS_Store
+<<<<<<< HEAD
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.env
+
+# Additional security
+.env.local
+.env.*.local
+.env.server
+
+# Build outputs
+build/
+out/
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+=======
 Thumbs.db
 
 .cursor/rules/nx-rules.mdc
@@ -47,3 +72,4 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+>>>>>>> 03f92c3680b2aeebc38fbe27376beec112c234ea
