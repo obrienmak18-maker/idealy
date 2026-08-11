@@ -8,6 +8,7 @@ const required = (name) => {
 
 const supabaseUrl = required('SUPABASE_URL').replace(/\/$/, '');
 const serviceRoleKey = required('SUPABASE_SERVICE_ROLE_KEY');
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 const webhookSecret = required('STRIPE_WEBHOOK_SECRET');
 const webhookUrl = process.env.WEBHOOK_URL || 'http://127.0.0.1:54321/functions/v1/stripe-webhook';
 const proPriceId = process.env.TEST_STRIPE_PRICE_ID_PRO || 'price_test_pro';
@@ -94,6 +95,9 @@ async function sendEvent(event) {
     headers: {
       'Content-Type': 'application/json',
       'stripe-signature': signatureFor(payload),
+      ...(supabaseAnonKey
+        ? { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` }
+        : {}),
     },
     body: payload,
   });

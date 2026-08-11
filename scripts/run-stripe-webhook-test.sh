@@ -51,6 +51,8 @@ FUNCTION_PID=$!
 
 for _ in $(seq 1 30); do
   HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+    -H "apikey: $ANON_KEY" \
+    -H "Authorization: Bearer $ANON_KEY" \
     -H 'Content-Type: application/json' \
     -H 'stripe-signature: t=0,v1=probe' \
     http://127.0.0.1:54321/functions/v1/stripe-webhook || true)
@@ -61,6 +63,7 @@ for _ in $(seq 1 30); do
 done
 
 SUPABASE_URL="$API_URL" \
+SUPABASE_ANON_KEY="$ANON_KEY" \
 SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
 STRIPE_WEBHOOK_SECRET="${STRIPE_WEBHOOK_SECRET:-whsec_idealy_local_test}" \
 TEST_STRIPE_PRICE_ID_PRO="${TEST_STRIPE_PRICE_ID_PRO:-price_test_pro}" \
