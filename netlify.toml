@@ -1,0 +1,42 @@
+[build]
+  # Commande de build explicite pour éviter de builder mockup-sandbox
+  # qui nécessite des variables d'environnement spécifiques à Replit
+  command = "pnpm --filter @workspace/idealy run build"
+  
+  # Dossier de publication correspondant à la sortie du build Vite de idealy
+  publish = "artifacts/idealy/dist/public"
+
+[build.environment]
+  # Variables d'environnement pour le build
+  NODE_VERSION = "20"
+  PNPM_VERSION = "9"
+
+# Redirections pour gérer le routing client-side
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers pour améliorer la sécurité et les performances
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
