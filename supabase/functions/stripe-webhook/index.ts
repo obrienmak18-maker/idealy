@@ -44,7 +44,8 @@ Deno.serve(async (req) => {
         ? subscription.customer
         : subscription.customer.id;
     const priceId = subscription.items.data[0]?.price.id;
-    const plan = PRICE_TO_PLAN[priceId] ?? "free";
+    const isDeleted = event.type === "customer.subscription.deleted";
+    const plan = isDeleted ? "free" : (PRICE_TO_PLAN[priceId] ?? "free");
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
