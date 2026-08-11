@@ -13,6 +13,10 @@ cleanup() {
     kill "$FUNCTION_PID" 2>/dev/null || true
     wait "$FUNCTION_PID" 2>/dev/null || true
   fi
+  if [[ -s "$FUNCTION_LOG" && "${TEST_WEBHOOK_PASSED:-0}" != "1" ]]; then
+    echo '--- stripe-webhook local log ---' >&2
+    tail -n 120 "$FUNCTION_LOG" >&2 || true
+  fi
   (cd "$ROOT_DIR" && "${SUPABASE_CMD[@]}" stop --no-backup >/dev/null 2>&1) || true
   rm -f "$STATUS_FILE" "$FUNCTION_ENV" "$FUNCTION_LOG"
 }
@@ -46,6 +50,7 @@ cat >"$FUNCTION_ENV" <<EOF
 SUPABASE_URL=$API_URL
 SUPABASE_ANON_KEY=$ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY
+STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-sk_test_idealy_local_webhook_test}
 STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_idealy_local_test}
 STRIPE_PRICE_ID_PRO=${TEST_STRIPE_PRICE_ID_PRO:-price_test_pro}
 STRIPE_PRICE_ID_BUSINESS=${TEST_STRIPE_PRICE_ID_BUSINESS:-price_test_business}
@@ -77,4 +82,6 @@ STRIPE_WEBHOOK_SECRET="${STRIPE_WEBHOOK_SECRET:-whsec_idealy_local_test}" \
 TEST_STRIPE_PRICE_ID_PRO="${TEST_STRIPE_PRICE_ID_PRO:-price_test_pro}" \
 TEST_STRIPE_PRICE_ID_BUSINESS="${TEST_STRIPE_PRICE_ID_BUSINESS:-price_test_business}" \
 WEBHOOK_URL="http://127.0.0.1:54321/functions/v1/stripe-webhook" \
+STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-sk_test_idealy_local_webhook_test}" \
 node scripts/test-stripe-webhook.mjs
+TEST_WEBHOOK_PASSED=1
