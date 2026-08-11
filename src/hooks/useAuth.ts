@@ -99,7 +99,7 @@ export function useAuth(): UseAuthReturn {
 
     try {
       const supabase = getSupabaseClient();
-      if (!supabase) throw new Error('Service d\'authentification non disponible.');
+      if (!supabase) throw new Error('Supabase n’est pas encore configuré. Ouvrez Paramètres → Connecteurs et entrez vos clés Supabase.');
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -146,7 +146,7 @@ export function useAuth(): UseAuthReturn {
 
     try {
       const supabase = getSupabaseClient();
-      if (!supabase) throw new Error('Service d\'authentification non disponible.');
+      if (!supabase) throw new Error('Supabase n’est pas encore configuré. Ouvrez Paramètres → Connecteurs et entrez vos clés Supabase.');
 
       const { error: signUpError } = await supabase.auth.signUp({
         email,
@@ -188,7 +188,7 @@ export function useAuth(): UseAuthReturn {
 
     try {
       const supabase = getSupabaseClient();
-      if (!supabase) throw new Error('Service d\'authentification non disponible.');
+      if (!supabase) throw new Error('Supabase n’est pas encore configuré. Ouvrez Paramètres → Connecteurs et entrez vos clés Supabase.');
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}#reset-password`,

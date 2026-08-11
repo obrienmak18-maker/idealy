@@ -131,6 +131,7 @@ export const useIdealyStore = create<IdealyState>()(
         theme: s.theme,
         onboarded: s.onboarded,
         energy: s.energy,
+        connectors: s.connectors,
       }),
       version: 2,
       merge: (persistedState, currentState) => {
@@ -138,7 +139,7 @@ export const useIdealyStore = create<IdealyState>()(
         return {
           ...currentState,
           ...saved,
-          connectors: {},
+          connectors: saved.connectors ?? currentState.connectors,
         };
       },
     },
