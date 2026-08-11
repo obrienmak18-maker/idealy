@@ -39,7 +39,7 @@ testem.log
 
 # System Files
 .DS_Store
-<<<<<<< HEAD
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
@@ -51,6 +51,7 @@ testem.log
 .env.local
 .env.*.local
 .env.server
+SUPABASE_SECRETS.md
 
 # Build outputs
 build/
@@ -63,8 +64,6 @@ coverage/
 tmp/
 temp/
 *.tmp
-=======
-Thumbs.db
 
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
@@ -72,4 +71,3 @@ Thumbs.db
 # Replit
 .cache/
 .local/
->>>>>>> 03f92c3680b2aeebc38fbe27376beec112c234ea
