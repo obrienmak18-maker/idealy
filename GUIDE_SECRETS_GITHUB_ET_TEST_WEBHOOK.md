@@ -55,7 +55,17 @@ supabase functions deploy stripe-webhook --no-verify-jwt
 
 ## 2. Préparer le test local
 
-Le test local utilise exclusivement le **mode test Stripe**. Il ne nécessite pas de paiement réel et ne modifie pas les événements live. Il faut installer sur ton ordinateur :
+Le test local utilise exclusivement le **mode test Stripe**. Il ne nécessite pas de paiement réel et ne modifie pas les événements live. Le dépôt fournit maintenant une commande tout-en-un :
+
+```bash
+pnpm test:webhook:local
+```
+
+Cette commande démarre Supabase localement, applique les migrations, récupère les clés locales, sert les Edge Functions, génère des événements Stripe signés synthétiques pour création/mise à jour/résiliation, vérifie `profiles` et `subscriptions`, puis supprime l’utilisateur temporaire. Elle nécessite Docker et pnpm ; la CLI Supabase est utilisée si elle est déjà installée, sinon le script la télécharge via pnpm.
+
+Le même test s’exécute automatiquement dans le job **webhook-test** du workflow GitHub à chaque push ou exécution manuelle. Le dernier run validé est `31519193677`.
+
+Il faut installer sur ton ordinateur :
 
 1. [Stripe CLI](https://docs.stripe.com/stripe-cli), puis exécuter `stripe login` ;
 2. [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) ;
@@ -137,7 +147,9 @@ where id = 'UUID_DE_L_UTILISATEUR_DE_TEST';
 
 Avant cette mise à jour, tu peux retrouver l’UUID depuis la page **Authentication → Users** de Supabase. Utilise un compte de test et ne partage pas son adresse e-mail ni son UUID publiquement.
 
-## 6. Générer un événement d’abonnement signé
+## 6. Générer un événement d’abonnement signé manuellement
+
+La commande `pnpm test:webhook:local` est la méthode recommandée, car elle automatise tout le cycle sans Stripe CLI. Si tu veux observer les événements avec Stripe CLI, utilise la procédure manuelle suivante.
 
 Avec `stripe listen` toujours actif, exécute dans un troisième terminal :
 
