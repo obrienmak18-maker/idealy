@@ -128,14 +128,20 @@ export const useIdealyStore = create<IdealyState>()(
         onboarded: s.onboarded,
         energy: s.energy,
         missions: s.missions,
+        // Supabase URL and publishable/anon key are public browser configuration.
+        // Keep only these two connector fields across reloads; never persist server secrets.
+        connectors: {
+          supabaseUrl: s.connectors.supabaseUrl,
+          supabaseAnonKey: s.connectors.supabaseAnonKey,
+        },
       }),
-      version: 2,
+      version: 3,
       merge: (persistedState, currentState) => {
         const saved = persistedState as Partial<IdealyState>;
         return {
           ...currentState,
           ...saved,
-          connectors: {},
+          connectors: saved.connectors ?? currentState.connectors,
         };
       },
     },

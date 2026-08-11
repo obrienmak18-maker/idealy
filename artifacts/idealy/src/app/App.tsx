@@ -19,6 +19,8 @@ function App() {
   const setProfile = useIdealyStore((s) => s.setProfile);
   const setStage = useIdealyStore((s) => s.setStage);
   const way = useIdealyStore((s) => s.way);
+  const supabaseUrl = useIdealyStore((s) => s.connectors.supabaseUrl);
+  const supabaseAnonKey = useIdealyStore((s) => s.connectors.supabaseAnonKey);
 
   useEffect(() => {
     refillEnergy();
@@ -81,8 +83,7 @@ function App() {
     });
 
     return () => subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount — supabase client built lazily from store
+  }, [refillEnergy, setProfile, setStage, supabaseUrl, supabaseAnonKey]);
 
   let page;
   if (!onboarded || stage === 'choosing-way' || stage === 'creating-profile') {

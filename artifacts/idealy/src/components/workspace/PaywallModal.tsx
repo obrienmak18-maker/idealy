@@ -16,8 +16,10 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
     setLoadingPlan(plan); setError(null);
     try {
       const supabase = getSupabaseClient();
-      if (!supabase) throw new Error('Supabase is not configured.');
-      const { data, error: invokeError } = await supabase.functions.invoke('create-checkout-session', { body: { plan } });
+      if (!supabase) throw new Error('Supabase n’est pas configuré.');
+      const { data, error: invokeError } = await supabase.functions.invoke('create-checkout-session', {
+        body: { plan, billingCycle },
+      });
       if (invokeError) throw invokeError;
       if (!data?.url) throw new Error('Checkout session is unavailable.');
       window.location.assign(data.url);
