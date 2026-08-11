@@ -1,23 +1,29 @@
 name: Deploy Idealy
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm run build
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm --filter @workspace/idealy run build
 
   deploy:
     needs: build
@@ -25,24 +31,25 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: npm
-      - run: npm ci
-      - run: npm run build
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @workspace/idealy run build
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase functions deploy ai-proxy
+      - name: Deploy Supabase functions
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      - run: supabase functions deploy create-checkout-session
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      - run: supabase functions deploy stripe-webhook
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$PROJECT_ID"
+          supabase functions deploy ai-proxy --project-ref "$PROJECT_ID"
+          supabase functions deploy create-checkout-session --project-ref "$PROJECT_ID"
+          supabase functions deploy stripe-webhook --project-ref "$PROJECT_ID" --no-verify-jwt
