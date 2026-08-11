@@ -50,10 +50,11 @@ supabase functions serve stripe-webhook \
 FUNCTION_PID=$!
 
 for _ in $(seq 1 30); do
-  if curl -fsS -o /dev/null -X POST \
+  HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
     -H 'Content-Type: application/json' \
     -H 'stripe-signature: t=0,v1=probe' \
-    http://127.0.0.1:54321/functions/v1/stripe-webhook; then
+    http://127.0.0.1:54321/functions/v1/stripe-webhook || true)
+  if [[ "$HTTP_CODE" != "000" ]]; then
     break
   fi
   sleep 1

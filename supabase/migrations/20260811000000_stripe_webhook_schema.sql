@@ -48,3 +48,13 @@ CREATE INDEX IF NOT EXISTS subscriptions_user_id_idx
 
 CREATE INDEX IF NOT EXISTS subscriptions_customer_id_idx
   ON public.subscriptions (stripe_customer_id);
+
+-- The local REST gateway uses service_role for the integration test and the
+-- webhook's admin client. Keep these grants explicit in the local schema.
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO service_role;
