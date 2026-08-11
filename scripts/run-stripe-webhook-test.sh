@@ -57,7 +57,7 @@ STRIPE_PRICE_ID_BUSINESS=${TEST_STRIPE_PRICE_ID_BUSINESS:-price_test_business}
 APP_ORIGIN=http://127.0.0.1:3000
 EOF
 
-"${SUPABASE_CMD[@]}" functions serve stripe-webhook \
+"${SUPABASE_CMD[@]}" functions serve \
   --env-file "$FUNCTION_ENV" \
   --no-verify-jwt >"$FUNCTION_LOG" 2>&1 &
 FUNCTION_PID=$!
