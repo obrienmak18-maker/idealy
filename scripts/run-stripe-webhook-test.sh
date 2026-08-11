@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STATUS_FILE="$(mktemp)"
 FUNCTION_ENV="$(mktemp)"
 FUNCTION_LOG="$(mktemp)"
+SUPABASE_CMD=()
 
 cleanup() {
   set +e
@@ -12,18 +13,25 @@ cleanup() {
     kill "$FUNCTION_PID" 2>/dev/null || true
     wait "$FUNCTION_PID" 2>/dev/null || true
   fi
-  (cd "$ROOT_DIR" && supabase stop --no-backup >/dev/null 2>&1) || true
+  (cd "$ROOT_DIR" && "${SUPABASE_CMD[@]}" stop --no-backup >/dev/null 2>&1) || true
   rm -f "$STATUS_FILE" "$FUNCTION_ENV" "$FUNCTION_LOG"
 }
 trap cleanup EXIT
 
-command -v supabase >/dev/null || { echo 'supabase CLI is required.' >&2; exit 1; }
+if command -v supabase >/dev/null 2>&1; then
+  SUPABASE_CMD=(supabase)
+elif command -v pnpm >/dev/null 2>&1; then
+  SUPABASE_CMD=(pnpm dlx supabase@latest)
+else
+  echo 'Supabase CLI or pnpm is required.' >&2
+  exit 1
+fi
 command -v docker >/dev/null || { echo 'Docker is required for local Supabase.' >&2; exit 1; }
 
 cd "$ROOT_DIR"
-supabase start
-supabase db reset --local --yes
-supabase status -o env >"$STATUS_FILE"
+"${SUPABASE_CMD[@]}" start
+"${SUPABASE_CMD[@]}" db reset --local --yes
+"${SUPABASE_CMD[@]}" status -o env >"$STATUS_FILE"
 
 # status -o env uses API_URL, ANON_KEY and SERVICE_ROLE_KEY for local credentials.
 set -a
@@ -44,7 +52,7 @@ STRIPE_PRICE_ID_BUSINESS=${TEST_STRIPE_PRICE_ID_BUSINESS:-price_test_business}
 APP_ORIGIN=http://127.0.0.1:3000
 EOF
 
-supabase functions serve stripe-webhook \
+"${SUPABASE_CMD[@]}" functions serve stripe-webhook \
   --env-file "$FUNCTION_ENV" \
   --no-verify-jwt >"$FUNCTION_LOG" 2>&1 &
 FUNCTION_PID=$!

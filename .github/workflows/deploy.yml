@@ -39,9 +39,6 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
       - run: pnpm install --frozen-lockfile
       - name: Run local Stripe webhook integration test
         env:
