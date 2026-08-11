@@ -8,7 +8,6 @@ interface PaywallModalProps {
 }
 
 export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [loadingPlan, setLoadingPlan] = useState<'pro' | 'business' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +17,7 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
       const supabase = getSupabaseClient();
       if (!supabase) throw new Error('Supabase n’est pas configuré.');
       const { data, error: invokeError } = await supabase.functions.invoke('create-checkout-session', {
-        body: { plan, billingCycle },
+        body: { plan },
       });
       if (invokeError) throw invokeError;
       if (!data?.url) throw new Error('Checkout session is unavailable.');
@@ -60,25 +59,9 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
             Unlock more chakra, summon advanced agents, and deploy to production.
           </p>
 
-          {/* Billing Toggle */}
-          <div className="mt-8 flex items-center justify-center gap-3">
-            <span className={`text-sm ${billingCycle === 'monthly' ? 'text-white font-medium' : 'text-ink-300'}`}>
-              Mensuel
-            </span>
-            <button 
-              onClick={() => setBillingCycle(b => b === 'monthly' ? 'yearly' : 'monthly')}
-              className="relative w-14 h-7 rounded-full bg-surface-bright border border-white/10 transition-colors duration-300 focus:outline-none"
-            >
-              <div 
-                className={`absolute top-1 left-1 h-5 w-5 rounded-full bg-primary transition-transform duration-300 ${
-                  billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'
-                }`}
-              />
-            </button>
-            <span className={`text-sm ${billingCycle === 'yearly' ? 'text-white font-medium' : 'text-ink-300'}`}>
-              Annuel <span className="ml-2 text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">2 Mois Gratuits</span>
-            </span>
-          </div>
+          <p className="mt-8 text-center text-sm text-ink-300">
+            Facturation mensuelle · 14 jours d’essai inclus
+          </p>
         </div>
 
         {/* Pricing Cards */}
@@ -114,7 +97,7 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
               Builder <span className="text-xs bg-primary/10 px-2 py-0.5 rounded ml-2">Rang S</span>
             </h3>
             <div className="mb-4">
-              <span className="text-3xl font-bold font-geist">{billingCycle === 'monthly' ? '29€' : '24€'}</span>
+              <span className="text-3xl font-bold font-geist">19€</span>
               <span className="text-ink-300 text-sm"> /mois</span>
             </div>
             <p className="text-sm text-ink-300 mb-6">Missions de Rang S, déploiements réels.</p>
@@ -136,7 +119,7 @@ export function PaywallModal({ isOpen, onClose }: PaywallModalProps) {
               Legend <span className="text-xs bg-secondary/10 px-2 py-0.5 rounded ml-2 text-secondary">Rang SSS</span>
             </h3>
             <div className="mb-4">
-              <span className="text-3xl font-bold font-geist">{billingCycle === 'monthly' ? '99€' : '79€'}</span>
+              <span className="text-3xl font-bold font-geist">79€</span>
               <span className="text-ink-300 text-sm"> /mois</span>
             </div>
             <p className="text-sm text-ink-300 mb-6">Pour les guildes et agences d'élite.</p>
