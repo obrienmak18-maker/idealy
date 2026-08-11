@@ -9,7 +9,10 @@
 [build.environment]
   # Variables d'environnement pour le build
   NODE_VERSION = "20"
-  PNPM_VERSION = "9"
+  PNPM_VERSION = "10.30.3"
+  
+  # Configuration pnpm pour le build
+  NPM_FLAGS = "--no-frozen-lockfile"
 
 # Redirections pour gérer le routing client-side
 [[redirects]]
