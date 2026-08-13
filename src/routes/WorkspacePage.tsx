@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { analyzeIntent, buildIUPS, streamAgentMessage } from '@/agents/orchestrator';
 import { iupsToCode } from '@/core/iups/exporter';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
@@ -64,6 +64,7 @@ type BrowserSpeechRecognition = {
   lang: string;
   interimResults: boolean;
   start: () => void;
+  stop: () => void;
   onresult: (event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void;
   onend: () => void;
   onerror: () => void;
@@ -80,6 +81,33 @@ const SLASH_COMMANDS = [
   { cmd: '/style', label: '/style', desc: 'Améliorer le style du projet' },
 ];
 
+const DICTATION_THEME: Record<WayId, { active: string; wave: string; ring: string; label: string }> = {
+  ninja: {
+    active: 'bg-ember-500/15 text-ember-200',
+    wave: 'bg-ember-300',
+    ring: 'border-ember-300/70',
+    label: 'Canal de mission ouvert',
+  },
+  mage: {
+    active: 'bg-electric-500/15 text-electric-200',
+    wave: 'bg-electric-300',
+    ring: 'border-electric-300/70',
+    label: 'Canal arcanique ouvert',
+  },
+  hunter: {
+    active: 'bg-success-500/15 text-success-200',
+    wave: 'bg-success-300',
+    ring: 'border-success-300/70',
+    label: 'Canal de traque ouvert',
+  },
+  pro: {
+    active: 'bg-white/15 text-white',
+    wave: 'bg-white',
+    ring: 'border-white/70',
+    label: 'Dictée professionnelle active',
+  },
+};
+
 export function WorkspacePage() {
   const wayId = useIdealyStore((s) => s.way) as WayId;
   const profile = useIdealyStore((s) => s.profile);
@@ -95,6 +123,8 @@ export function WorkspacePage() {
   const signOut = useIdealyStore((s) => s.signOut);
 
   const way = WAYS[wayId];
+  const dictationTheme = DICTATION_THEME[wayId];
+  const shouldReduceMotion = useReducedMotion();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tab, setTab] = useState<RightTab>('preview');
   const [showPreview, setShowPreview] = useState(false);
@@ -121,12 +151,19 @@ export function WorkspacePage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const attachmentRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const dictationRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      dictationRecognitionRef.current?.stop();
+    };
+  }, []);
 
   // Load missions from Supabase on mount
   useEffect(() => {
@@ -293,6 +330,11 @@ export function WorkspacePage() {
   }
 
   function startDictation() {
+    if (listening) {
+      dictationRecognitionRef.current?.stop();
+      return;
+    }
+
     const browserWindow = window as Window & {
       SpeechRecognition?: BrowserSpeechRecognitionFactory;
       webkitSpeechRecognition?: BrowserSpeechRecognitionFactory;
@@ -302,6 +344,7 @@ export function WorkspacePage() {
       setToolMessage('La dictée n’est pas prise en charge par ce navigateur. Essayez Chrome ou Edge.');
       return;
     }
+
     const recognition = new Recognition();
     recognition.lang = 'fr-FR';
     recognition.interimResults = false;
@@ -309,13 +352,26 @@ export function WorkspacePage() {
       const transcript = Array.from(event.results).map((result) => result[0]?.transcript ?? '').join(' ').trim();
       setInput((current) => [current, transcript].filter(Boolean).join(current ? ' ' : ''));
     };
-    recognition.onend = () => setListening(false);
+    recognition.onend = () => {
+      dictationRecognitionRef.current = null;
+      setListening(false);
+    };
     recognition.onerror = () => {
+      dictationRecognitionRef.current = null;
       setListening(false);
       setToolMessage('La dictée a été interrompue. Vérifiez l’autorisation du microphone.');
     };
-    setListening(true);
-    recognition.start();
+
+    try {
+      dictationRecognitionRef.current = recognition;
+      setToolMessage(null);
+      setListening(true);
+      recognition.start();
+    } catch {
+      dictationRecognitionRef.current = null;
+      setListening(false);
+      setToolMessage('La dictée ne peut pas démarrer. Vérifiez l’autorisation du microphone.');
+    }
   }
 
   async function handleSignOut() {
@@ -837,7 +893,38 @@ export function WorkspacePage() {
                       <IconBtn icon={ImageIcon} title="Ajouter une image" onClick={() => attachmentRef.current?.click()} />
                       <IconBtn icon={Figma} title="Figma" onClick={() => { setTab('connectors'); setToolMessage('La connexion Figma sera disponible après la configuration OAuth Figma.'); }} />
                       <IconBtn icon={Github} title="Connecter GitHub" onClick={connectGitHub} />
-                      <IconBtn icon={Mic} title="Dictée" onClick={() => setToolMessage('La dictée est disponible depuis l’écran d’accueil ; l’intégration de l’espace de travail suit.')} />
+                      <button
+                        type="button"
+                        onClick={startDictation}
+                        aria-pressed={listening}
+                        aria-label={listening ? 'Arrêter la dictée' : 'Démarrer la dictée'}
+                        title={listening ? 'Arrêter la dictée' : 'Dicter votre mission'}
+                        className={`relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-white/30 ${
+                          listening ? dictationTheme.active : 'text-ink-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        {listening && !shouldReduceMotion && (
+                          <motion.span
+                            aria-hidden="true"
+                            className={`pointer-events-none absolute -inset-1 rounded-xl border ${dictationTheme.ring}`}
+                            initial={{ opacity: 0.75, scale: 0.82 }}
+                            animate={{ opacity: 0, scale: 1.35 }}
+                            transition={{ duration: 1.3, repeat: Infinity, ease: 'easeOut' }}
+                          />
+                        )}
+                        <span className={`absolute inset-0 flex items-center justify-center gap-[2px] transition-opacity ${listening ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
+                          {[0, 1, 2, 3].map((bar) => (
+                            <motion.span
+                              key={bar}
+                              className={`h-3 w-[2px] rounded-full ${dictationTheme.wave}`}
+                              style={{ transformOrigin: 'center' }}
+                              animate={listening && !shouldReduceMotion ? { scaleY: [0.45, 1, 0.55, 0.85, 0.45] } : { scaleY: 0.45 }}
+                              transition={{ duration: 0.72, delay: bar * 0.09, repeat: listening && !shouldReduceMotion ? Infinity : 0, ease: 'easeInOut' }}
+                            />
+                          ))}
+                        </span>
+                        <Mic size={16} className={`transition-opacity ${listening ? 'opacity-0' : 'opacity-100'}`} />
+                      </button>
                       <input ref={attachmentRef} type="file" multiple className="hidden" onChange={(event) => uploadAttachments(event.target.files)} />
                     </div>
                     <button
@@ -849,6 +936,12 @@ export function WorkspacePage() {
                     </button>
                   </div>
                 </div>
+                {listening && (
+                  <p role="status" aria-live="polite" className={`mt-2 flex items-center gap-2 text-xs ${way.textClass}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${dictationTheme.wave} motion-safe:animate-pulse`} aria-hidden="true" />
+                    {dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.
+                  </p>
+                )}
                 {toolMessage && <p role="status" className="mt-2 text-xs text-electric-300">{isUploading ? 'Import en cours…' : toolMessage}</p>}
                 <p className="mt-2 text-center text-[11px] text-ink-500">
                   Idealy peut se tromper. Vérifiez le code généré.
