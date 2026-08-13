@@ -1,7 +1,8 @@
 -- OAuth tokens are server-managed credentials. Clients receive status only through Edge Functions.
 
 DROP POLICY IF EXISTS "Users can view own integrations." ON public.integrations;
-REVOKE SELECT ON TABLE public.integrations FROM anon, authenticated;
+REVOKE ALL ON TABLE public.integrations FROM anon, authenticated;
+REVOKE ALL ON TABLE public.oauth_states FROM anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.list_my_integration_status()
 RETURNS TABLE (
