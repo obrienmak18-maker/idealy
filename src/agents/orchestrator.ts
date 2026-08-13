@@ -2,6 +2,9 @@ import { streamText } from 'ai';
 import { getModel } from './provider';
 import type { Way } from '@/lore/ways';
 import { planMission, type ConnectorProvider, type SkillSlug } from './skillRouter';
+import { buildMissionContracts } from '@/core/mission/missionContract';
+import type { MissionContracts } from '@/core/mission/contracts';
+import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 
 export interface MissionContext {
   prompt: string;
@@ -10,6 +13,7 @@ export interface MissionContext {
   energyCost: number;
   skills: SkillSlug[];
   preferredConnectors: ConnectorProvider[];
+  contracts: MissionContracts;
   /** Called during buildIUPS streaming with (tokensGenerated, partialText) */
   onProgress?: (tokens: number, partial: string) => void;
 }
@@ -43,10 +47,18 @@ Un projet complexe (ex: un SaaS, un réseau social) coûte plus d'énergie (30-5
       rank: data.rank || way.ranks[0],
       energyCost: data.energyCost || 10,
       ...plan,
+      contracts: buildMissionContracts(prompt, way, plan),
     };
   } catch (error) {
     console.error('Intent analysis failed, defaulting:', error);
-    return { prompt, way, rank: way.ranks[0], energyCost: 5, ...plan };
+    return {
+      prompt,
+      way,
+      rank: way.ranks[0],
+      energyCost: 5,
+      ...plan,
+      contracts: buildMissionContracts(prompt, way, plan),
+    };
   }
 }
 
@@ -82,7 +94,7 @@ function extractJSON(raw: string): Record<string, unknown> | null {
 
 // ─── IUPS Builder (code generation) ──────────────────────────────────────────
 
-export async function buildIUPS(context: MissionContext) {
+export async function buildIUPS(context: MissionContext): Promise<IdealyUniversalProjectSchema | null> {
   const model = getModel('high');
 
   const mobileKeywords = /mobile|android|ios|expo|react.native|app.store|téléphone|smartphone|apk/i;
@@ -94,6 +106,9 @@ Rang de complexité : ${context.rank}
 
 MISSION : Génère un projet web complet, production-ready, avec une UI moderne et professionnelle.
 
+CONTRAT DE MISSION À RESPECTER :
+${JSON.stringify(context.contracts)}
+
 RÈGLES IMPÉRATIVES :
 - Génère un vrai projet fonctionnel, pas un template vide.
 - Le code doit être complet, pas tronqué.
@@ -102,6 +117,10 @@ RÈGLES IMPÉRATIVES :
 - Pour un projet complexe, génère aussi : src/components/, src/pages/, src/hooks/, src/utils/.
 - Chaque fichier doit être complet et syntaxiquement correct.
 - N'utilise PAS de placeholder comme "// TODO" ou "..." dans le code.
+- Génère une première tranche verticale utilisable : données de démonstration cohérentes, action principale, états loading/empty/error/success et responsive.
+- Ne place jamais de clé secrète, token privé ou mot de passe dans les fichiers générés.
+  - Respecte le DesignContract, les entités du DataContract et les critères du TestContract ci-dessus.
+  - Les contrats, le rapport de validation et le snapshotId sont ajoutés par Idealy après génération ; ne mets aucun secret dans ces métadonnées.
 
 STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON, sans markdown) :
 {
@@ -126,11 +145,18 @@ Rang de complexité : ${context.rank}
 
 MISSION : Génère un projet Expo (React Native) complet et fonctionnel, mobile-first.
 
+CONTRAT DE MISSION À RESPECTER :
+${JSON.stringify(context.contracts)}
+
 RÈGLES IMPÉRATIVES :
 - Génère un vrai projet Expo, pas un template vide.
 - Utilise expo-router pour la navigation.
 - Génère AU MINIMUM : package.json, app.json, app/(tabs)/index.tsx, app/(tabs)/_layout.tsx.
 - N'utilise PAS de placeholder.
+- Génère des états de chargement, vide, succès et erreur pour l’action principale.
+- Ne place jamais de secret dans les fichiers générés.
+  - Respecte le DesignContract, le DataContract et le TestContract.
+  - Les métadonnées de contrat et de validation sont ajoutées par Idealy après génération.
 
 STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
 {
@@ -174,7 +200,12 @@ STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
       }
 
       const parsed = extractJSON(accumulated);
-      if (parsed) return parsed;
+      if (parsed && typeof parsed === 'object' && 'project' in parsed) {
+        return {
+          ...(parsed as unknown as IdealyUniversalProjectSchema),
+          contracts: context.contracts,
+        };
+      }
       console.warn(`[buildIUPS] Attempt ${attempt}: JSON extraction failed, raw length=${accumulated.length}`);
     } catch (error) {
       console.error(`[buildIUPS] Attempt ${attempt} threw:`, error);

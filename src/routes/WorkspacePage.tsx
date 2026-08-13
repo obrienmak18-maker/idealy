@@ -44,14 +44,21 @@ import {
   Loader2,
   Download,
   GitBranch,
+  ShieldCheck,
 } from 'lucide-react';
 import { Logo } from '@/components/Brand';
 import { WAYS, type WayId } from '@/lore/ways';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
 import { useStripe } from '@/hooks/useStripe';
+import { MissionBriefPanel } from '@/components/workspace/MissionBriefPanel';
+import { MissionStatusPanel } from '@/components/workspace/MissionStatusPanel';
+import { buildMissionContracts } from '@/core/mission/missionContract';
+import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/mission/missionDNA';
+import { validateGeneratedProject } from '@/core/mission/validateMission';
+import type { MissionContracts } from '@/core/mission/contracts';
 
-type RightTab = 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
+type RightTab = 'mission' | 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
 
 type BrowserSpeechRecognition = {
   lang: string;
@@ -81,6 +88,10 @@ export function WorkspacePage() {
   const missions = useIdealyStore((s) => s.missions);
   const addMission = useIdealyStore((s) => s.addMission);
   const updateStoreMission = useIdealyStore((s) => s.updateMission);
+  const setActiveMissionId = useIdealyStore((s) => s.setActiveMissionId);
+  const setMissionDNA = useIdealyStore((s) => s.setMissionDNA);
+  const updateMissionDNA = useIdealyStore((s) => s.updateMissionDNA);
+  const missionDNA = useIdealyStore((s) => s.missionDNA);
   const signOut = useIdealyStore((s) => s.signOut);
 
   const way = WAYS[wayId];
@@ -95,6 +106,7 @@ export function WorkspacePage() {
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [isBillingPortalOpen, setIsBillingPortalOpen] = useState(false);
   const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
+  const [pendingBrief, setPendingBrief] = useState<{ prompt: string; contracts: MissionContracts } | null>(null);
 
   const { subscription, checkSubscription } = useStripe();
 
@@ -140,12 +152,14 @@ export function WorkspacePage() {
     if (currentMissionId) {
       const supabase = getSupabaseClient();
       if (!supabase) return;
-      supabase.from('missions').select('schema').eq('id', currentMissionId).single().then(({ data }) => {
+      supabase.from('missions').select('schema, dna, validation, status, preview_ready').eq('id', currentMissionId).single().then(({ data }) => {
         if (data?.schema) {
           setProjectSchema(data.schema as IdealyUniversalProjectSchema);
         } else {
           setProjectSchema(null);
         }
+        if (data?.dna) setMissionDNA(currentMissionId, data.dna);
+        if (data?.status) updateStoreMission(currentMissionId, { status: data.status, previewReady: Boolean(data.preview_ready), validation: data.validation ?? undefined });
       });
     }
   }, [currentMissionId]);
@@ -153,9 +167,55 @@ export function WorkspacePage() {
   const updateProjectSchema = (newSchema: IdealyUniversalProjectSchema | null) => {
     setProjectSchema(newSchema);
     if (currentMissionId && newSchema) {
-      getSupabaseClient()?.from('missions').update({ schema: newSchema }).eq('id', currentMissionId).then();
+      getSupabaseClient()?.from('missions').update({ schema: newSchema, updated_at: new Date().toISOString() }).eq('id', currentMissionId).then();
     }
   };
+
+  const restoreMissionSnapshot = (snapshot: import('@/core/mission/contracts').MissionSnapshot) => {
+    if (!currentMissionId || !snapshot.schema) return;
+    setPreviousSchema(projectSchema);
+    updateProjectSchema(snapshot.schema as IdealyUniversalProjectSchema);
+    updateStoreMission(currentMissionId, { previewReady: true, status: 'ready', validation: snapshot.validation });
+    updateMissionDNA(currentMissionId, (dna) => ({
+      ...dna,
+      status: 'ready',
+      updatedAt: Date.now(),
+      validation: snapshot.validation ?? dna.validation,
+    }));
+    const restoredDNA = useIdealyStore.getState().missionDNA[currentMissionId];
+    getSupabaseClient()?.from('missions').update({
+      schema: snapshot.schema,
+      status: 'ready',
+      validation: snapshot.validation ?? null,
+      dna: restoredDNA,
+      updated_at: new Date().toISOString(),
+      preview_ready: true,
+    }).eq('id', currentMissionId).then();
+    setShowPreview(true);
+    setTab('preview');
+    setToolMessage(`Version restaurée : ${snapshot.label}`);
+  };
+
+  function repairMission() {
+    const activeDNA = currentMissionId ? missionDNA[currentMissionId] : null;
+    const issues = activeDNA?.validation?.issues ?? [];
+    if (!activeDNA || issues.length === 0) {
+      setToolMessage('Aucune issue déterministe à corriger pour cette mission.');
+      return;
+    }
+    const issueLines = issues.map((issue) => `- [${issue.severity}] ${issue.code}: ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join('\\n');
+    const repairPrompt = `RÉPARATION CIBLÉE DE LA MISSION\\n\\nCorrige le projet existant sans changer son intention ni sa voie. Traite chaque issue réelle ci-dessous, puis vérifie les contrats et les états loading/error avant de retourner une version complète.\\n\\nIssues du validateur :\\n${issueLines}`;
+    setMessages((messages) => [...messages, {
+      id: crypto.randomUUID(),
+      author: profile?.displayName ?? 'Vous',
+      role: 'Vous',
+      text: 'Corriger la mission à partir du diagnostic de validation',
+      kind: 'user',
+      ts: Date.now(),
+    }]);
+    setToolMessage(`Réparation ciblée lancée pour ${issues.length} issue(s).`);
+    void runMission(repairPrompt, activeDNA.contracts);
+  }
 
   function send() {
     const text = input.trim();
@@ -180,17 +240,7 @@ export function WorkspacePage() {
     }
     
     const finalPrompt = text;
-
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      author: profile?.displayName ?? 'Vous',
-      role: 'Vous',
-      text: finalPrompt,
-      kind: 'user',
-      ts: Date.now(),
-    };
-    setMessages((m) => [...m, userMsg]);
-    runMission(finalPrompt);
+    setPendingBrief({ prompt: finalPrompt, contracts: buildMissionContracts(finalPrompt, way) });
   }
 
   async function uploadAttachments(files: FileList | null) {
@@ -288,7 +338,8 @@ export function WorkspacePage() {
     }
   }
 
-  async function runMission(prompt: string) {
+  async function runMission(prompt: string, overrideContracts?: MissionContracts) {
+    const initialContracts = overrideContracts ?? buildMissionContracts(prompt, way);
     let missionId = currentMissionId;
     if (!missionId) {
       missionId = crypto.randomUUID();
@@ -298,17 +349,42 @@ export function WorkspacePage() {
         title: prompt.slice(0, 30) + (prompt.length > 30 ? '...' : ''),
         createdAt: Date.now(),
         way: wayId,
-        previewReady: false
+        previewReady: false,
+        status: 'draft' as const,
       };
+      const initialDNA = createMissionDNA(missionId, prompt, way, initialContracts);
       addMission(newMission);
+      setActiveMissionId(missionId);
+      setMissionDNA(missionId, initialDNA);
       getSupabaseClient()?.from('missions').insert([{
         id: newMission.id,
         user_id: (await getSupabaseClient()?.auth.getUser())?.data.user?.id,
         title: newMission.title,
         created_at: newMission.createdAt,
         way: newMission.way,
-        preview_ready: newMission.previewReady
+        preview_ready: newMission.previewReady,
+        status: newMission.status,
+        brief: initialContracts.brief,
+        contracts: initialContracts,
+        dna: initialDNA,
+        snapshots: [],
       }]).then();
+    }
+
+    if (missionId && !missionDNA[missionId]) {
+      setMissionDNA(missionId, createMissionDNA(missionId, prompt, way, initialContracts));
+    }
+    if (missionId && projectSchema) {
+      updateMissionDNA(missionId, (dna) => appendSnapshot(
+        dna,
+        createMissionSnapshot(projectSchema, 'Dernière version stable', 'restore-point'),
+        dna.status,
+        dna.validation,
+      ));
+    }
+    if (missionId) {
+      updateStoreMission(missionId, { status: 'building' });
+      updateMissionDNA(missionId, (dna) => ({ ...dna, status: 'building', updatedAt: Date.now() }));
     }
 
     // Save current schema as "previous" before generating a new one (for Composer diff)
@@ -350,6 +426,7 @@ export function WorkspacePage() {
       // 1. Orchestrator Phase
       const msgId = addMessage(orchestrator, '', 'thinking');
       const context = await analyzeIntent(prompt, way);
+      context.contracts = initialContracts;
       useIdealyStore.getState().consumeEnergy(context.energyCost);
       
       const orchestratorStream = await streamAgentMessage(
@@ -396,14 +473,43 @@ export function WorkspacePage() {
       setGenerationProgress(100);
       updateMessage(builderId, builderText, 'done');
 
+      const validation = validateGeneratedProject(schema, context.contracts);
+      const status = validation.status === 'failed' ? 'needs-fix' : 'ready';
+      const baseSnapshot = createMissionSnapshot(schema, validation.status === 'passed' ? 'Version validée' : 'Version à corriger', 'generation', validation);
+      const enrichedSchema = schema ? {
+        ...schema,
+        contracts: context.contracts,
+        validation,
+        snapshotId: baseSnapshot.id,
+      } : null;
+      const snapshot = enrichedSchema ? { ...baseSnapshot, schema: enrichedSchema } : baseSnapshot;
+      if (enrichedSchema) setProjectSchema(enrichedSchema);
+      if (missionId) {
+        updateStoreMission(missionId, {
+          previewReady: Boolean(schema && validation.status !== 'failed'),
+          status,
+          validation,
+        });
+        updateMissionDNA(missionId, (dna) => appendSnapshot(dna, snapshot, status, validation));
+        const latestDNA = useIdealyStore.getState().missionDNA[missionId];
+        getSupabaseClient()?.from('missions').update({
+          status,
+          validation,
+          snapshots: latestDNA?.snapshots ?? [snapshot],
+          dna: latestDNA,
+          preview_ready: validation.status !== 'failed',
+          updated_at: new Date().toISOString(),
+        }).eq('id', missionId).then();
+      }
+
       // 3. Validator Phase
       const validatorId = addMessage(validator, '', 'thinking');
-      if (schema) {
-        updateProjectSchema(schema);
+      if (enrichedSchema) {
+        updateProjectSchema(enrichedSchema);
         setShowPreview(true);
         setTab('preview');
         if (missionId) {
-          updateStoreMission(missionId, { previewReady: true });
+          updateStoreMission(missionId, { previewReady: validation.status !== 'failed' });
         }
         
         const validatorStream = await streamAgentMessage(
@@ -411,7 +517,7 @@ export function WorkspacePage() {
           way,
           `Le code a été construit.`,
           prompt,
-          `Valide que tout est OK et dis à l'utilisateur que le résultat est dans l'Aperçu.`
+          `Valide la version générée à partir des contrats. Le rapport déterministe ci-dessous est la source de vérité : ${validation.status}. ${validation.issues.map((issue) => `[${issue.code}] ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join(' ')}. Cite les issues concrètes dans ton compte rendu et indique clairement si une réparation est nécessaire.`
         );
 
         let validatorText = '';
@@ -419,14 +525,23 @@ export function WorkspacePage() {
           validatorText += delta;
           updateMessage(validatorId, validatorText, 'writing');
         }
-        updateMessage(validatorId, validatorText, 'done');
+        const issueSummary = validation.issues.length > 0
+          ? validation.issues.map((issue) => `- [${issue.severity}] ${issue.code}: ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join('\\n')
+          : 'Aucune issue détectée.';
+        updateMessage(validatorId, validation.status === 'failed'
+          ? `${validatorText || 'Validation terminée.'}\\n\\nIssues déterministes :\\n${issueSummary}\\n\\nUtilisez « Corriger avec ces issues » dans l’onglet Mission.`
+          : `${validatorText || 'Validation terminée.'}\\n\\nRapport déterministe : ${validation.status}. ${issueSummary}`, 'done');
       } else {
         updateMessage(validatorId, `Attention ! J'ai détecté une anomalie.`, 'done');
       }
 
     } catch (error) {
       console.error(error);
-      addMessage(orchestrator, `Erreur lors de la communication.`, 'done');
+      if (missionId) {
+        updateStoreMission(missionId, { status: 'needs-fix' });
+        updateMissionDNA(missionId, (dna) => ({ ...dna, status: 'needs-fix', updatedAt: Date.now() }));
+      }
+      addMessage(orchestrator, `Erreur lors de la communication. La version stable précédente est conservée.`, 'done');
     }
 
     setBusy(false);
@@ -491,6 +606,8 @@ export function WorkspacePage() {
                   className="btn-primary w-full justify-center"
                   onClick={() => {
                     setCurrentMissionId(null);
+                    setActiveMissionId(null);
+                    setPendingBrief(null);
                     setProjectSchema(null);
                     setPreviousSchema(null);
                     setMessages([]);
@@ -539,7 +656,7 @@ export function WorkspacePage() {
                     missions.map((m) => (
                       <button
                         key={m.id}
-                        onClick={() => setCurrentMissionId(m.id)}
+                        onClick={() => { setCurrentMissionId(m.id); setActiveMissionId(m.id); }}
                         className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-white/5 ${currentMissionId === m.id ? 'bg-white/10 text-white' : 'text-ink-300 hover:text-white'}`}
                       >
                         <span className={`h-1.5 w-1.5 rounded-full ${m.previewReady ? 'bg-emerald-500' : 'bg-ink-500'}`} />
@@ -612,6 +729,29 @@ export function WorkspacePage() {
         <div className="flex min-h-0 flex-1">
           {/* Chat */}
           <div className="flex min-w-0 flex-1 flex-col">
+            {pendingBrief && (
+              <div className="shrink-0 border-b border-white/5 bg-ink-950/40 p-4">
+                <MissionBriefPanel
+                  way={way}
+                  prompt={pendingBrief.prompt}
+                  contracts={pendingBrief.contracts}
+                  onCancel={() => setPendingBrief(null)}
+                  onConfirm={(contracts) => {
+                    const brief = pendingBrief;
+                    setPendingBrief(null);
+                    setMessages((current) => [...current, {
+                      id: crypto.randomUUID(),
+                      author: profile?.displayName ?? 'Vous',
+                      role: 'Vous',
+                      text: brief.prompt,
+                      kind: 'user',
+                      ts: Date.now(),
+                    }]);
+                    void runMission(brief.prompt, contracts);
+                  }}
+                />
+              </div>
+            )}
             <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
               <div className="mx-auto max-w-3xl px-5 py-8">
                 {messages.length === 0 ? (
@@ -702,7 +842,7 @@ export function WorkspacePage() {
                     </div>
                     <button
                       onClick={send}
-                      disabled={!input.trim() || busy}
+                      disabled={!input.trim() || busy || Boolean(pendingBrief)}
                       className="btn-primary px-3.5"
                     >
                       <Send size={15} />
@@ -764,10 +904,13 @@ export function WorkspacePage() {
                       schema={projectSchema}
                       previousSchema={previousSchema}
                       missionId={currentMissionId}
+                      dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
                       onUpdateSchema={updateProjectSchema}
-                      onAskAI={(prompt) => {
+          onRestore={restoreMissionSnapshot}
+                      onFix={repairMission}
+                          onAskAI={(prompt) => {
                         // Inject AI file-context prompt into the chat pipeline
-                        void handleRunMission(prompt);
+                        void runMission(prompt);
                       }}
                     />
                   </div>
@@ -825,7 +968,10 @@ function RightPanelContent({
   schema,
   previousSchema,
   missionId,
+  dna,
   onUpdateSchema,
+  onRestore,
+  onFix,
   onAskAI,
 }: { 
   tab: RightTab; 
@@ -833,7 +979,10 @@ function RightPanelContent({
   schema: IdealyUniversalProjectSchema | null;
   previousSchema: IdealyUniversalProjectSchema | null;
   missionId: string | null;
+  dna: import('@/core/mission/contracts').MissionDNA | null;
   onUpdateSchema: (schema: IdealyUniversalProjectSchema | null) => void;
+  onRestore: (snapshot: import('@/core/mission/contracts').MissionSnapshot) => void;
+  onFix: () => void;
   onAskAI?: (prompt: string) => void;
 }) {
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
@@ -957,6 +1106,10 @@ function RightPanelContent({
         />
       </div>
 
+      <div className={tab === 'mission' ? 'h-full' : 'hidden'}>
+        <MissionStatusPanel dna={dna} onRestore={onRestore} onFix={onFix} />
+      </div>
+
       <div className={tab === 'connectors' ? 'h-full' : 'hidden'}>
         <ConnectorsPanel />
       </div>
@@ -1030,6 +1183,7 @@ function IconBtn({ icon: Icon, title, onClick }: { icon: React.ElementType; titl
 }
 
 const TABS: { id: RightTab; label: string; icon: React.ElementType }[] = [
+  { id: 'mission', label: 'Mission', icon: ShieldCheck },
   { id: 'preview', label: 'Aperçu', icon: Eye },
   { id: 'code', label: 'Code', icon: Code2 },
   { id: 'files', label: 'Fichiers', icon: FolderTree },

@@ -44,7 +44,7 @@ serve(async (req) => {
       .eq('state', state)
       .single();
 
-    if (stateError || !oauthState) {
+    if (stateError || !oauthState || oauthState.provider !== provider) {
       return Response.redirect(`${APP_URL}?error=invalid_state`);
     }
 
@@ -69,6 +69,11 @@ serve(async (req) => {
     if (!config) {
       return Response.redirect(`${APP_URL}?error=unsupported_provider`);
     }
+    const clientId = Deno.env.get(config.clientIdEnv);
+    const clientSecret = Deno.env.get(config.clientSecretEnv);
+    if (!clientId || !clientSecret) {
+      return Response.redirect(`${APP_URL}?error=oauth_server_not_configured`);
+    }
 
     const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/integration-callback?provider=${provider}`;
 
@@ -80,8 +85,8 @@ serve(async (req) => {
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        client_id: Deno.env.get(config.clientIdEnv),
-        client_secret: Deno.env.get(config.clientSecretEnv),
+        client_id: clientId,
+        client_secret: clientSecret,
         code,
         redirect_uri: redirectUri,
       }),
@@ -90,7 +95,7 @@ serve(async (req) => {
     const tokenData = await tokenRes.json();
 
     if (tokenData.error || !tokenData.access_token) {
-      console.error('Token exchange failed:', tokenData);
+      console.error('Token exchange failed for provider:', provider);
       return Response.redirect(`${APP_URL}?error=token_exchange_failed`);
     }
 
@@ -116,7 +121,7 @@ serve(async (req) => {
     }
 
     // Redirect back to the app with success
-    return Response.redirect(`${APP_URL}?connected=${provider}`);
+    return Response.redirect(`${APP_URL}?connected=${encodeURIComponent(provider)}`);
 
   } catch (error) {
     console.error('OAuth callback error:', error);
