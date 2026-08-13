@@ -53,9 +53,11 @@ import { getSupabaseClient } from '@/supabaseClient';
 import { useStripe } from '@/hooks/useStripe';
 import { MissionBriefPanel } from '@/components/workspace/MissionBriefPanel';
 import { MissionStatusPanel } from '@/components/workspace/MissionStatusPanel';
+import { MissionActivityPanel, type MissionExecutionStage } from '@/components/workspace/MissionActivityPanel';
 import { buildMissionContracts } from '@/core/mission/missionContract';
 import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/mission/missionDNA';
 import { validateGeneratedProject } from '@/core/mission/validateMission';
+import { selectMissionTeam } from '@/core/mission/missionTeam';
 import type { MissionContracts } from '@/core/mission/contracts';
 
 type RightTab = 'mission' | 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
@@ -123,6 +125,7 @@ export function WorkspacePage() {
   const signOut = useIdealyStore((s) => s.signOut);
 
   const way = WAYS[wayId];
+  const missionTeam = selectMissionTeam(way);
   const dictationTheme = DICTATION_THEME[wayId];
   const shouldReduceMotion = useReducedMotion();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -147,6 +150,7 @@ export function WorkspacePage() {
   const [toolMessage, setToolMessage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [missionActivity, setMissionActivity] = useState<{ missionId: string; stage: MissionExecutionStage } | null>(null);
   const [generationProgress, setGenerationProgress] = useState<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const attachmentRef = useRef<HTMLInputElement>(null);
@@ -446,9 +450,9 @@ export function WorkspacePage() {
     // Save current schema as "previous" before generating a new one (for Composer diff)
     setPreviousSchema(projectSchema);
     setBusy(true);
-    const orchestrator = way.agents[0];
-    const builder = way.agents[1];
-    const validator = way.agents[2];
+    const orchestrator = missionTeam.strategist;
+    const builder = missionTeam.builder;
+    const validator = missionTeam.validator;
 
     const addMessage = (agent: (typeof way.agents)[number], text: string, status: ChatMessage['status'] = 'done'): string => {
       const id = crypto.randomUUID();
@@ -479,6 +483,7 @@ export function WorkspacePage() {
     }
 
     try {
+      if (missionId) setMissionActivity({ missionId, stage: 'planning' });
       // 1. Orchestrator Phase
       const msgId = addMessage(orchestrator, '', 'thinking');
       const context = await analyzeIntent(prompt, way);
@@ -501,6 +506,7 @@ export function WorkspacePage() {
       updateMessage(msgId, orchestratorText, 'done');
 
       // 2. Builder Phase
+      if (missionId) setMissionActivity({ missionId, stage: 'building' });
       const builderId = addMessage(builder, '', 'thinking');
       const builderStream = await streamAgentMessage(
         builder,
@@ -559,6 +565,7 @@ export function WorkspacePage() {
       }
 
       // 3. Validator Phase
+      if (missionId) setMissionActivity({ missionId, stage: 'validating' });
       const validatorId = addMessage(validator, '', 'thinking');
       if (enrichedSchema) {
         updateProjectSchema(enrichedSchema);
@@ -587,7 +594,9 @@ export function WorkspacePage() {
         updateMessage(validatorId, validation.status === 'failed'
           ? `${validatorText || 'Validation terminée.'}\\n\\nIssues déterministes :\\n${issueSummary}\\n\\nUtilisez « Corriger avec ces issues » dans l’onglet Mission.`
           : `${validatorText || 'Validation terminée.'}\\n\\nRapport déterministe : ${validation.status}. ${issueSummary}`, 'done');
+        if (missionId) setMissionActivity({ missionId, stage: validation.status === 'failed' ? 'needs-fix' : 'completed' });
       } else {
+        if (missionId) setMissionActivity({ missionId, stage: 'needs-fix' });
         updateMessage(validatorId, `Attention ! J'ai détecté une anomalie.`, 'done');
       }
 
@@ -596,6 +605,7 @@ export function WorkspacePage() {
       if (missionId) {
         updateStoreMission(missionId, { status: 'needs-fix' });
         updateMissionDNA(missionId, (dna) => ({ ...dna, status: 'needs-fix', updatedAt: Date.now() }));
+        setMissionActivity({ missionId, stage: 'needs-fix' });
       }
       addMessage(orchestrator, `Erreur lors de la communication. La version stable précédente est conservée.`, 'done');
     }
@@ -667,6 +677,7 @@ export function WorkspacePage() {
                     setProjectSchema(null);
                     setPreviousSchema(null);
                     setMessages([]);
+                    setMissionActivity(null);
                     setShowPreview(false);
                     setInput('');
                   }}
@@ -810,6 +821,12 @@ export function WorkspacePage() {
             )}
             <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
               <div className="mx-auto max-w-3xl px-5 py-8">
+                <MissionActivityPanel
+                  way={way}
+                  team={missionTeam}
+                  stage={missionActivity?.stage ?? 'planning'}
+                  visible={Boolean(missionActivity && missionActivity.missionId === currentMissionId)}
+                />
                 {messages.length === 0 ? (
                   <EmptyState way={way} name={profile?.displayName ?? 'apprenti'} />
                 ) : (
