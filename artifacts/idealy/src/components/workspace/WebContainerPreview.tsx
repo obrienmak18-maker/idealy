@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Terminal, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
+import { getWebContainerInstance } from '@/core/webcontainer/webcontainer';
 
 interface WebContainerPreviewProps {
   schema: IdealyUniversalProjectSchema | null;
@@ -15,19 +16,19 @@ interface WebContainerPreviewProps {
 type Status = 'idle' | 'booting' | 'installing' | 'running' | 'error';
 
 /**
- * Convertit un Record<string, string> (chemins de fichiers -> contenu) 
+ * Convertit un Record<string, string> (chemins de fichiers -> contenu)
  * en un FileSystemTree compatible avec WebContainer.
  */
 type FileSystemTree = Record<string, FileSystemEntry>;
-type FileSystemEntry = { file: { contents: string } } | { directory: FileSystemTree };
+type FileSystemEntry = { file: { contents: string | Uint8Array } } | { directory: FileSystemTree };
 
 function recordToTree(files: Record<string, string>): FileSystemTree {
   const tree: FileSystemTree = {};
-  
+
   for (const [path, contents] of Object.entries(files)) {
     const parts = path.split('/');
     let current = tree;
-    
+
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       if (i === parts.length - 1) {
@@ -51,25 +52,27 @@ export function WebContainerPreview({ schema, className }: WebContainerPreviewPr
   const [status, setStatus] = useState<Status>('idle');
   const [logs, setLogs] = useState<string[]>([]);
   const [url, setUrl] = useState<string | null>(null);
+  const prevFiles = useRef<Record<string, string>>({});
+  const hasBooted = useRef(false);
 
   const addLog = (line: string) => setLogs((prev) => [...prev.slice(-50), line]);
 
   const boot = useCallback(async () => {
-    if (!schema || !schema.project.files) return;
+    if (!schema || !schema.project.files || hasBooted.current) return;
+    hasBooted.current = true;
     setStatus('booting');
     setLogs([]);
     addLog('⚡ Démarrage de WebContainer...');
 
     try {
-      // Import dynamique pour éviter les erreurs au chargement initial
-      const { WebContainer } = await import('@webcontainer/api');
-      const instance = await WebContainer.boot();
+      const instance = await getWebContainerInstance();
 
       addLog('📦 Montage des fichiers du projet...');
       setStatus('installing');
-      
+
       const tree = recordToTree(schema.project.files);
-      
+      prevFiles.current = { ...schema.project.files };
+
       // Monter les fichiers
       await instance.mount(tree);
 
@@ -100,12 +103,42 @@ export function WebContainerPreview({ schema, className }: WebContainerPreviewPr
       const message = err instanceof Error ? err.message : String(err);
       addLog(`❌ Erreur: ${message}`);
       setStatus('error');
+      hasBooted.current = false;
     }
   }, [schema]);
 
+  // Handle Hot Module Replacement (HMR) when files change
   useEffect(() => {
-    if (schema) void boot();
-  }, [schema, boot]);
+    if (status !== 'running' || !schema?.project?.files) return;
+
+    const currentFiles = schema.project.files;
+    const prev = prevFiles.current;
+
+    // Find changed or new files
+    for (const [path, content] of Object.entries(currentFiles)) {
+      if (prev[path] !== content) {
+        addLog(`📝 HMR: Mise à jour de ${path}`);
+        getWebContainerInstance().then(async (instance) => {
+          try {
+            const dir = path.split('/').slice(0, -1).join('/');
+            if (dir) await instance.fs.mkdir(dir, { recursive: true }).catch(() => {});
+            await instance.fs.writeFile(path, content);
+          } catch (e) {
+            console.error('Failed to write file to WebContainer:', e);
+          }
+        });
+      }
+    }
+
+    prevFiles.current = { ...currentFiles };
+  }, [schema?.project?.files, status]);
+
+  // Initial boot
+  useEffect(() => {
+    if (schema && status === 'idle' && !hasBooted.current) {
+      void boot();
+    }
+  }, [schema, status, boot]);
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
@@ -117,10 +150,13 @@ export function WebContainerPreview({ schema, className }: WebContainerPreviewPr
           <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
         </div>
         <div className="flex-1 mx-2 text-xs font-mono text-ink-400 bg-surface-container rounded px-2 py-1 truncate">
-          {url || 'localhost:5173'}
+          {url || (status === 'running' ? 'localhost:5173' : 'En attente...')}
         </div>
         <button
-          onClick={boot}
+          onClick={() => {
+            hasBooted.current = false;
+            void boot();
+          }}
           disabled={status === 'booting' || status === 'installing'}
           className="rounded p-1.5 text-ink-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40"
         >
@@ -152,13 +188,29 @@ export function WebContainerPreview({ schema, className }: WebContainerPreviewPr
         )}
 
         {status === 'error' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-dim gap-3 z-10">
-            <AlertTriangle className="h-8 w-8 text-amber-400" />
-            <p className="text-sm text-ink-300 text-center px-8">
-              WebContainer nécessite un contexte d'isolation cross-origin.<br />
-              <span className="text-xs text-ink-400">Vérifiez que le serveur envoie les headers COOP/COEP.</span>
+          <div className="absolute inset-0 flex flex-col bg-[#0d1117] z-10">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-red-500/20 bg-red-500/5">
+              <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+              <p className="text-sm text-red-300 font-semibold">Erreur de démarrage</p>
+              <button
+                onClick={() => { hasBooted.current = false; void boot(); }}
+                className="ml-auto btn-outline text-xs"
+              >
+                <RefreshCw className="h-3 w-3" /> Réessayer
+              </button>
+            </div>
+            {/* Show actual build logs so the user can diagnose the problem */}
+            <div className="flex-1 overflow-y-auto p-3 font-mono text-[11px] space-y-0.5">
+              {logs.map((line, i) => (
+                <div key={i} className={`leading-relaxed whitespace-pre-wrap break-all ${
+                  line.includes('❌') || line.toLowerCase().includes('error') ? 'text-red-400' :
+                  line.includes('✅') ? 'text-green-400' : 'text-ink-300'
+                }`}>{line}</div>
+              ))}
+            </div>
+            <p className="px-3 py-2 text-[10px] text-ink-500 border-t border-white/5">
+              Conseil : vérifiez que le serveur envoie les headers COOP/COEP requis par WebContainer.
             </p>
-            <button onClick={boot} className="btn-outline text-xs">Réessayer</button>
           </div>
         )}
 

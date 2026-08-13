@@ -1,3 +1,5 @@
+import type { MissionContracts, ValidationReport } from '@/core/mission/contracts';
+
 export interface IdealyUniversalProjectSchema {
   project: {
     name: string;
@@ -5,4 +7,10 @@ export interface IdealyUniversalProjectSchema {
     stack?: 'react-vite-typescript' | 'expo-react-native' | string;
     files: Record<string, string>; // Maps file paths (e.g. 'src/App.tsx') to file content
   };
+  /** Versioned mission intent and implementation contracts used to generate this project. */
+  contracts?: MissionContracts;
+  /** Latest deterministic validation report for this exact schema. */
+  validation?: ValidationReport;
+  /** Restorable snapshot associated with the schema. */
+  snapshotId?: string;
 }

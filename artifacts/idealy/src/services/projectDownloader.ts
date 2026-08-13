@@ -108,7 +108,9 @@ function crc32(data: Uint8Array): number {
 }
 
 function triggerDownload(data: Uint8Array, filename: string): void {
-  const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/zip' });
+  const buffer = new ArrayBuffer(data.byteLength);
+  new Uint8Array(buffer).set(data);
+  const blob = new Blob([buffer], { type: 'application/zip' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

@@ -1,5 +1,4 @@
-import { streamText } from 'ai';
-import { getModel } from './provider';
+import { callAIProxy, streamAIProxy } from './provider';
 import type { Way } from '@/lore/ways';
 import { planMission, type ConnectorProvider, type SkillSlug } from './skillRouter';
 import { buildMissionContracts } from '@/core/mission/missionContract';
@@ -22,7 +21,6 @@ export interface MissionContext {
 
 export async function analyzeIntent(prompt: string, way: Way): Promise<MissionContext> {
   const plan = planMission(prompt);
-  const model = getModel('fast');
   const ranksList = way.ranks.join(', ');
 
   const systemPrompt = `Tu es l'Orchestrateur en chef de la voie "${way.name}".
@@ -36,9 +34,12 @@ Un projet simple (ex: un bouton, une todo list) coûte peu d'énergie (5-10) et 
 Un projet complexe (ex: un SaaS, un réseau social) coûte plus d'énergie (30-50) et reçoit un rang élevé.`;
 
   try {
-    let text = '';
-    const { textStream } = await streamText({ model, system: systemPrompt, prompt });
-    for await (const delta of textStream) text += delta;
+    const text = await callAIProxy({
+      prompt,
+      systemPrompt,
+      complexity: 'fast',
+      maxTokens: 350,
+    });
     const clean = text.trim().replace(/^```json?\s*/i, '').replace(/\s*```\s*$/, '');
     const data = JSON.parse(clean);
     return {
@@ -95,8 +96,6 @@ function extractJSON(raw: string): Record<string, unknown> | null {
 // ─── IUPS Builder (code generation) ──────────────────────────────────────────
 
 export async function buildIUPS(context: MissionContext): Promise<IdealyUniversalProjectSchema | null> {
-  const model = getModel('high');
-
   const mobileKeywords = /mobile|android|ios|expo|react.native|app.store|téléphone|smartphone|apk/i;
   const isMobile = mobileKeywords.test(context.prompt);
 
@@ -180,13 +179,13 @@ STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
       let accumulated = '';
       let tokenCount = 0;
 
-      // Stream tokens in real-time (Fix #13)
-      const { textStream } = await streamText({
-        model,
-        system: systemPrompt,
+      // Stream tokens in real-time via the authenticated server proxy.
+      const textStream = await streamAIProxy({
+        systemPrompt,
         prompt: attempt === 1
           ? "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication."
           : "Réponds UNIQUEMENT avec un objet JSON valide commençant par { et terminant par }. Pas de texte avant ou après.",
+        complexity: 'high',
         maxTokens: 8000,
       });
 
@@ -226,8 +225,6 @@ export async function streamAgentMessage(
   missionPrompt: string,
   instruction: string
 ) {
-  const model = getModel('fast');
-
   const systemPrompt = `Tu es ${agent.name} (${agent.role}), un membre incontournable de la voie "${way.name}".
 Ta personnalité profonde (agis EXACTEMENT comme ce personnage sans briser le 4ème mur) : ${agent.personality}.
 Ta spécialité : ${agent.specialty}.
@@ -244,9 +241,12 @@ RÈGLE ABSOLUE : Tu dois TOUJOURS structurer ta réponse ainsi :
 1. Commence par tes pensées détaillées, ton raisonnement, tes doutes, ou ce que tu fais techniquement, encadré EXACTEMENT par <think> et </think>.
 2. Ensuite, écris ton message final (résumé clair, direct, dans le ton de ta personnalité) qui sera lu par l'utilisateur et l'agent suivant. Tu es un expert technique, mais tu t'exprimes avec le fort caractère de ton personnage.`;
 
-  return streamText({
-    model,
-    system: systemPrompt,
-    prompt: "A toi de jouer.",
-  });
+  return {
+    textStream: await streamAIProxy({
+      systemPrompt,
+      prompt: 'À toi de jouer.',
+      complexity: 'fast',
+      maxTokens: 900,
+    }),
+  };
 }

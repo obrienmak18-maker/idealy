@@ -1,7 +1,18 @@
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import App from './app/App.tsx';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import '../themes/index.css';
 
-import App from './App';
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error('Failed to find the root element');
+}
 
-import './index.css';
-
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(rootElement).render(
+  <StrictMode>
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  </StrictMode>,
+);

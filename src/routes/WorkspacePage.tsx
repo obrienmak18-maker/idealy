@@ -58,7 +58,7 @@ import { buildMissionContracts } from '@/core/mission/missionContract';
 import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/mission/missionDNA';
 import { validateGeneratedProject } from '@/core/mission/validateMission';
 import { selectMissionTeam } from '@/core/mission/missionTeam';
-import type { MissionContracts } from '@/core/mission/contracts';
+import type { MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
 type RightTab = 'mission' | 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
 
@@ -174,9 +174,9 @@ export function WorkspacePage() {
     if (profile) {
       const supabase = getSupabaseClient();
       if (!supabase) return;
-      supabase.from('missions').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      supabase.from('missions').select('*').order('created_at', { ascending: false }).then(({ data }: { data: Array<{ id: string; title: string; created_at: number; way: string; preview_ready: boolean }> | null }) => {
         if (data) {
-          setMissions(data.map(d => ({
+          setMissions(data.map((d) => ({
             id: d.id,
             title: d.title,
             createdAt: d.created_at,
@@ -193,7 +193,7 @@ export function WorkspacePage() {
     if (currentMissionId) {
       const supabase = getSupabaseClient();
       if (!supabase) return;
-      supabase.from('missions').select('schema, dna, validation, status, preview_ready').eq('id', currentMissionId).single().then(({ data }) => {
+      supabase.from('missions').select('schema, dna, validation, status, preview_ready').eq('id', currentMissionId).single().then(({ data }: { data: { schema?: unknown; dna?: MissionDNA; validation?: ValidationReport; status?: 'draft' | 'planned' | 'building' | 'ready' | 'needs-fix' | 'published'; preview_ready?: boolean } | null }) => {
         if (data?.schema) {
           setProjectSchema(data.schema as IdealyUniversalProjectSchema);
         } else {
@@ -261,7 +261,7 @@ export function WorkspacePage() {
   function send() {
     const text = input.trim();
     if (!text || busy) return;
-    
+
     setInput('');
     setShowSlashMenu(false);
 
@@ -279,7 +279,7 @@ export function WorkspacePage() {
       runMission("RÉPARATION REQUISE : " + fixPrompt);
       return;
     }
-    
+
     const finalPrompt = text;
     setPendingBrief({ prompt: finalPrompt, contracts: buildMissionContracts(finalPrompt, way) });
   }
@@ -489,7 +489,7 @@ export function WorkspacePage() {
       const context = await analyzeIntent(prompt, way);
       context.contracts = initialContracts;
       useIdealyStore.getState().consumeEnergy(context.energyCost);
-      
+
       const orchestratorStream = await streamAgentMessage(
         orchestrator,
         way,
@@ -521,7 +521,7 @@ export function WorkspacePage() {
         builderText += delta;
         updateMessage(builderId, builderText, 'writing');
       }
-      
+
       // Building IUPS with real-time progress (Fix #13)
       setGenerationProgress(0);
       const schema = await buildIUPS({
@@ -574,7 +574,7 @@ export function WorkspacePage() {
         if (missionId) {
           updateStoreMission(missionId, { previewReady: validation.status !== 'failed' });
         }
-        
+
         const validatorStream = await streamAgentMessage(
           validator,
           way,
@@ -698,7 +698,7 @@ export function WorkspacePage() {
               <div className="mx-3 my-3 h-px bg-white/5" />
 
               {/* Gamification Area */}
-              <div 
+              <div
                 className="mt-6 space-y-4 cursor-pointer hover:opacity-90 transition-opacity px-3"
                 onClick={() => setIsPaywallOpen(true)}
               >
@@ -828,7 +828,14 @@ export function WorkspacePage() {
                   visible={Boolean(missionActivity && missionActivity.missionId === currentMissionId)}
                 />
                 {messages.length === 0 ? (
-                  <EmptyState way={way} name={profile?.displayName ?? 'apprenti'} />
+                  <EmptyState
+                    way={way}
+                    name={profile?.displayName ?? 'apprenti'}
+                    onSelectSuggestion={(suggestion) => {
+                      setInput(suggestion);
+                      composerRef.current?.focus();
+                    }}
+                  />
                 ) : (
                   <div className="space-y-5">
                     {messages.map((m) => (
@@ -1008,9 +1015,9 @@ export function WorkspacePage() {
                     )}
                   </div>
                   <div className="flex-1 overflow-hidden">
-                    <RightPanelContent 
-                      tab={tab} 
-                      way={way} 
+                    <RightPanelContent
+                      tab={tab}
+                      way={way}
                       schema={projectSchema}
                       previousSchema={previousSchema}
                       missionId={currentMissionId}
@@ -1036,7 +1043,15 @@ export function WorkspacePage() {
   );
 }
 
-function EmptyState({ way, name }: { way: (typeof WAYS)[WayId]; name: string }) {
+function EmptyState({
+  way,
+  name,
+  onSelectSuggestion,
+}: {
+  way: (typeof WAYS)[WayId];
+  name: string;
+  onSelectSuggestion?: (suggestion: string) => void;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <motion.div
@@ -1058,10 +1073,7 @@ function EmptyState({ way, name }: { way: (typeof WAYS)[WayId]; name: string }) 
         {SUGGESTIONS.map((s) => (
           <button
             key={s}
-            onClick={() => {
-              setInput(s);
-              composerRef.current?.focus();
-            }}
+            onClick={() => onSelectSuggestion?.(s)}
             className="rounded-xl glass-soft px-4 py-3 text-left text-sm text-ink-200 transition hover:bg-white/5 hover:text-white"
           >
             {s}
@@ -1072,9 +1084,9 @@ function EmptyState({ way, name }: { way: (typeof WAYS)[WayId]; name: string }) 
   );
 }
 
-function RightPanelContent({ 
-  tab, 
-  way, 
+function RightPanelContent({
+  tab,
+  way,
   schema,
   previousSchema,
   missionId,
@@ -1083,9 +1095,9 @@ function RightPanelContent({
   onRestore,
   onFix,
   onAskAI,
-}: { 
-  tab: RightTab; 
-  way: (typeof WAYS)[WayId]; 
+}: {
+  tab: RightTab;
+  way: (typeof WAYS)[WayId];
   schema: IdealyUniversalProjectSchema | null;
   previousSchema: IdealyUniversalProjectSchema | null;
   missionId: string | null;
@@ -1140,10 +1152,10 @@ function RightPanelContent({
         {!hasFiles ? (
           <EmptyState way={way} name="Aucun code généré" />
         ) : (
-          <CodeEditor 
-            files={files} 
-            selectedPath={selectedFilePath} 
-            onSelectFile={(path) => setSelectedFilePath(path)} 
+          <CodeEditor
+            files={files}
+            selectedPath={selectedFilePath}
+            onSelectFile={(path) => setSelectedFilePath(path)}
             onSaveFile={(path, newContent) => {
               if (!schema) return;
               const updatedSchema = {
@@ -1183,7 +1195,7 @@ function RightPanelContent({
                 <>
                   <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
                     <span className="text-xs font-mono text-ink-300">{selectedFilePath}</span>
-                    <button 
+                    <button
                       onClick={() => copyToClipboard(selectedContent)}
                       className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20 transition"
                     >

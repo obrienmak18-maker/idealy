@@ -1,7 +1,9 @@
-import { generateText, streamText } from 'ai';
-import { getModel } from './provider';
+import { callAIProxy, streamAIProxy } from './provider';
 import type { Way } from '@/lore/ways';
 import { planMission, type ConnectorProvider, type SkillSlug } from './skillRouter';
+import { buildMissionContracts } from '@/core/mission/missionContract';
+import type { MissionContracts } from '@/core/mission/contracts';
+import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 
 export interface MissionContext {
   prompt: string;
@@ -10,18 +12,17 @@ export interface MissionContext {
   energyCost: number;
   skills: SkillSlug[];
   preferredConnectors: ConnectorProvider[];
+  contracts: MissionContracts;
+  /** Called during buildIUPS streaming with (tokensGenerated, partialText) */
+  onProgress?: (tokens: number, partial: string) => void;
 }
 
-/**
- * Analyzes the user's prompt to determine project complexity and assign a rank.
- */
+// ─── Intent Analysis ─────────────────────────────────────────────────────────
+
 export async function analyzeIntent(prompt: string, way: Way): Promise<MissionContext> {
   const plan = planMission(prompt);
-  // Use a fast model to analyze the intent
-  const model = getModel('fast');
-  
   const ranksList = way.ranks.join(', ');
-  
+
   const systemPrompt = `Tu es l'Orchestrateur en chef de la voie "${way.name}".
 Ta tâche est d'analyser la demande de l'utilisateur pour estimer sa complexité.
 Tu dois répondre UNIQUEMENT avec un objet JSON strict :
@@ -33,20 +34,21 @@ Un projet simple (ex: un bouton, une todo list) coûte peu d'énergie (5-10) et 
 Un projet complexe (ex: un SaaS, un réseau social) coûte plus d'énergie (30-50) et reçoit un rang élevé.`;
 
   try {
-    const { text } = await generateText({
-      model,
-      system: systemPrompt,
+    const text = await callAIProxy({
       prompt,
+      systemPrompt,
+      complexity: 'fast',
+      maxTokens: 350,
     });
-    
-    // Parse the JSON
-    const data = JSON.parse(text.trim().replace(/```json/g, '').replace(/```/g, ''));
+    const clean = text.trim().replace(/^```json?\s*/i, '').replace(/\s*```\s*$/, '');
+    const data = JSON.parse(clean);
     return {
       prompt,
       way,
       rank: data.rank || way.ranks[0],
       energyCost: data.energyCost || 10,
       ...plan,
+      contracts: buildMissionContracts(prompt, way, plan),
     };
   } catch (error) {
     console.error('Intent analysis failed, defaulting:', error);
@@ -56,17 +58,44 @@ Un projet complexe (ex: un SaaS, un réseau social) coûte plus d'énergie (30-5
       rank: way.ranks[0],
       energyCost: 5,
       ...plan,
+      contracts: buildMissionContracts(prompt, way, plan),
     };
   }
 }
 
-/**
- * Generates the IUPS representation of the project using a high-capability model.
- */
-export async function buildIUPS(context: MissionContext) {
-  const model = getModel('high');
+// ─── Robust JSON Extraction ───────────────────────────────────────────────────
 
-  // Detect if the user wants a mobile app (Rork style)
+function extractJSON(raw: string): Record<string, unknown> | null {
+  const cleaned = raw.trim();
+
+  // 1. Direct parse
+  try { return JSON.parse(cleaned); } catch { /* continue */ }
+
+  // 2. Strip markdown fences
+  const stripped = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  try { return JSON.parse(stripped); } catch { /* continue */ }
+
+  // 3. Brace-depth extraction — finds first complete JSON object
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < cleaned.length; i++) {
+    if (cleaned[i] === '{') {
+      if (start === -1) start = i;
+      depth++;
+    } else if (cleaned[i] === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        try { return JSON.parse(cleaned.slice(start, i + 1)); } catch { /* try next */ }
+        start = -1;
+      }
+    }
+  }
+  return null;
+}
+
+// ─── IUPS Builder (code generation) ──────────────────────────────────────────
+
+export async function buildIUPS(context: MissionContext): Promise<IdealyUniversalProjectSchema | null> {
   const mobileKeywords = /mobile|android|ios|expo|react.native|app.store|téléphone|smartphone|apk/i;
   const isMobile = mobileKeywords.test(context.prompt);
 
@@ -76,28 +105,35 @@ Rang de complexité : ${context.rank}
 
 MISSION : Génère un projet web complet, production-ready, avec une UI moderne et professionnelle.
 
+CONTRAT DE MISSION À RESPECTER :
+${JSON.stringify(context.contracts)}
+
 RÈGLES IMPÉRATIVES :
 - Génère un vrai projet fonctionnel, pas un template vide.
 - Le code doit être complet, pas tronqué.
-- Utilise des couleurs harmonieuses (pas de couleurs crues), du glassmorphisme, des animations CSS subtiles.
-- Génère AU MINIMUM : package.json, vite.config.js, index.html, src/main.tsx, src/App.tsx, src/App.css (ou Tailwind).
+- Utilise des couleurs harmonieuses, du glassmorphisme, des animations CSS subtiles.
+- Génère AU MINIMUM : package.json, vite.config.js, index.html, src/main.tsx, src/App.tsx, src/App.css.
 - Pour un projet complexe, génère aussi : src/components/, src/pages/, src/hooks/, src/utils/.
 - Chaque fichier doit être complet et syntaxiquement correct.
 - N'utilise PAS de placeholder comme "// TODO" ou "..." dans le code.
+- Génère une première tranche verticale utilisable : données de démonstration cohérentes, action principale, états loading/empty/error/success et responsive.
+- Ne place jamais de clé secrète, token privé ou mot de passe dans les fichiers générés.
+  - Respecte le DesignContract, les entités du DataContract et les critères du TestContract ci-dessus.
+  - Les contrats, le rapport de validation et le snapshotId sont ajoutés par Idealy après génération ; ne mets aucun secret dans ces métadonnées.
 
 STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON, sans markdown) :
 {
   "project": {
-    "name": "Nom du projet (kebab-case)",
+    "name": "nom-kebab-case",
     "description": "Description courte",
     "stack": "react-vite-typescript",
     "files": {
-      "package.json": "{ \\"name\\": \\"mon-app\\", \\"type\\": \\"module\\", \\"scripts\\": { \\"dev\\": \\"vite\\", \\"build\\": \\"vite build\\" }, \\"dependencies\\": { \\"react\\": \\"^18.2.0\\", \\"react-dom\\": \\"^18.2.0\\" }, \\"devDependencies\\": { \\"vite\\": \\"^5.0.0\\", \\"@vitejs/plugin-react\\": \\"^4.0.0\\" } }",
-      "vite.config.js": "import { defineConfig } from 'vite';\\nimport react from '@vitejs/plugin-react';\\nexport default defineConfig({ plugins: [react()] });",
-      "index.html": "<!DOCTYPE html><html lang=\\"fr\\"><head><meta charset=\\"UTF-8\\"/><title>Mon App</title></head><body><div id=\\"root\\"></div><script type=\\"module\\" src=\\"/src/main.tsx\\"></script></body></html>",
-      "src/main.tsx": "import React from 'react';\\nimport ReactDOM from 'react-dom/client';\\nimport App from './App.tsx';\\nimport './App.css';\\nReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);",
-      "src/App.tsx": "... code complet de l'app ...",
-      "src/App.css": "... styles complets ..."
+      "package.json": "contenu complet",
+      "vite.config.js": "contenu complet",
+      "index.html": "contenu complet",
+      "src/main.tsx": "contenu complet",
+      "src/App.tsx": "contenu complet",
+      "src/App.css": "contenu complet"
     }
   }
 }`;
@@ -108,11 +144,18 @@ Rang de complexité : ${context.rank}
 
 MISSION : Génère un projet Expo (React Native) complet et fonctionnel, mobile-first.
 
+CONTRAT DE MISSION À RESPECTER :
+${JSON.stringify(context.contracts)}
+
 RÈGLES IMPÉRATIVES :
 - Génère un vrai projet Expo, pas un template vide.
 - Utilise expo-router pour la navigation.
-- Génère AU MINIMUM : package.json, app.json, app/(tabs)/index.tsx, app/(tabs)/_layout.tsx, components/ThemedView.tsx.
+- Génère AU MINIMUM : package.json, app.json, app/(tabs)/index.tsx, app/(tabs)/_layout.tsx.
 - N'utilise PAS de placeholder.
+- Génère des états de chargement, vide, succès et erreur pour l’action principale.
+- Ne place jamais de secret dans les fichiers générés.
+  - Respecte le DesignContract, le DataContract et le TestContract.
+  - Les métadonnées de contrat et de validation sont ajoutées par Idealy après génération.
 
 STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
 {
@@ -121,40 +164,60 @@ STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
     "description": "Description courte",
     "stack": "expo-react-native",
     "files": {
-      "package.json": "{ \\"name\\": \\"mon-app\\", \\"main\\": \\"expo-router/entry\\", \\"dependencies\\": { \\"expo\\": \\"~52.0.0\\", \\"expo-router\\": \\"~4.0.0\\", \\"react\\": \\"18.3.1\\", \\"react-native\\": \\"0.76.0\\" } }",
-      "app.json": "{ \\"expo\\": { \\"name\\": \\"MonApp\\", \\"scheme\\": \\"mon-app\\", \\"platforms\\": [\\"ios\\", \\"android\\", \\"web\\"] } }",
-      "app/(tabs)/index.tsx": "... code de l'écran principal ...",
-      "app/(tabs)/_layout.tsx": "... code de la navigation par tabs ..."
+      "package.json": "contenu complet",
+      "app.json": "contenu complet",
+      "app/(tabs)/index.tsx": "contenu complet",
+      "app/(tabs)/_layout.tsx": "contenu complet"
     }
   }
 }`;
 
   const systemPrompt = isMobile ? mobileSystemPrompt : webSystemPrompt;
 
-  try {
-    const { text } = await generateText({
-      model,
-      system: systemPrompt,
-      prompt: "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication.",
-      maxOutputTokens: 8000,
-    });
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      let accumulated = '';
+      let tokenCount = 0;
 
-    // Robust JSON extraction
-    const cleaned = text.trim();
-    const jsonStart = cleaned.indexOf('{');
-    const jsonEnd = cleaned.lastIndexOf('}');
-    if (jsonStart === -1 || jsonEnd === -1) throw new Error('No JSON found in response');
-    
-    return JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1));
-  } catch (error) {
-    console.error('IUPS generation failed:', error);
-    return null;
+      // Stream tokens in real-time via the authenticated server proxy.
+      const textStream = await streamAIProxy({
+        systemPrompt,
+        prompt: attempt === 1
+          ? "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication."
+          : "Réponds UNIQUEMENT avec un objet JSON valide commençant par { et terminant par }. Pas de texte avant ou après.",
+        complexity: 'high',
+        maxTokens: 8000,
+      });
+
+      for await (const delta of textStream) {
+        accumulated += delta;
+        tokenCount += delta.length;
+        // Notify every ~50 chars
+        if (context.onProgress && tokenCount % 50 < delta.length) {
+          context.onProgress(tokenCount, accumulated);
+        }
+      }
+
+      const parsed = extractJSON(accumulated);
+      if (parsed && typeof parsed === 'object' && 'project' in parsed) {
+        return {
+          ...(parsed as unknown as IdealyUniversalProjectSchema),
+          contracts: context.contracts,
+        };
+      }
+      console.warn(`[buildIUPS] Attempt ${attempt}: JSON extraction failed, raw length=${accumulated.length}`);
+    } catch (error) {
+      console.error(`[buildIUPS] Attempt ${attempt} threw:`, error);
+      if (attempt === 2) return null;
+    }
   }
+
+  console.error('[buildIUPS] All attempts failed — returning null');
+  return null;
 }
 
-/**
- * Streams an agent's response, asking them to think first, then summarize and pass the baton.
- */
+// ─── Agent Message Streamer ───────────────────────────────────────────────────
+
 export async function streamAgentMessage(
   agent: Way['agents'][number],
   way: Way,
@@ -162,8 +225,6 @@ export async function streamAgentMessage(
   missionPrompt: string,
   instruction: string
 ) {
-  const model = getModel('fast');
-
   const systemPrompt = `Tu es ${agent.name} (${agent.role}), un membre incontournable de la voie "${way.name}".
 Ta personnalité profonde (agis EXACTEMENT comme ce personnage sans briser le 4ème mur) : ${agent.personality}.
 Ta spécialité : ${agent.specialty}.
@@ -180,9 +241,12 @@ RÈGLE ABSOLUE : Tu dois TOUJOURS structurer ta réponse ainsi :
 1. Commence par tes pensées détaillées, ton raisonnement, tes doutes, ou ce que tu fais techniquement, encadré EXACTEMENT par <think> et </think>.
 2. Ensuite, écris ton message final (résumé clair, direct, dans le ton de ta personnalité) qui sera lu par l'utilisateur et l'agent suivant. Tu es un expert technique, mais tu t'exprimes avec le fort caractère de ton personnage.`;
 
-  return streamText({
-    model,
-    system: systemPrompt,
-    prompt: "A toi de jouer.",
-  });
+  return {
+    textStream: await streamAIProxy({
+      systemPrompt,
+      prompt: 'À toi de jouer.',
+      complexity: 'fast',
+      maxTokens: 900,
+    }),
+  };
 }

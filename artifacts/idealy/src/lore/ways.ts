@@ -8,7 +8,9 @@ export interface WayAgent {
   personality: string;
   greeting: string;
   catchphrase: string;
-  avatar?: string; // Path to AI-generated portrait
+  avatar?: string; // Path served from /public/agents/
+  /** Emoji fallback shown when avatar is missing */
+  emoji: string;
 }
 
 export interface Way {
@@ -28,6 +30,8 @@ export interface Way {
   bgClass: string;
   image: string;
   agents: WayAgent[];
+  mentors: WayAgent[];
+  antagonists: WayAgent[];
   vocab: {
     task: string;
     agent: string;
@@ -76,7 +80,8 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Génie stratégique, paresseux mais brillant',
         greeting: 'Zut... vous me sortez de ma sieste pour une mission ? Bon, voyons ce projet.',
         catchphrase: 'Quel drag... mais je vois déjà le plan.',
-        avatar: '/agents/avatar_shikamaru_1785475953727.jpg',
+        avatar: '/agents/avatar_shikamaru.jpg',
+        emoji: '🧠',
       },
       {
         id: 'naruto',
@@ -86,7 +91,8 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Énergique, impulsif, ne lâche jamais',
         greeting: 'OK ! Je vais tout défonser dans le code ! Croyez-le !',
         catchphrase: 'Je ne recule jamais. Dattebayo !',
-        avatar: '/agents/avatar_naruto_1785475981229.jpg',
+        avatar: '/agents/avatar_naruto.jpg',
+        emoji: '🌀',
       },
       {
         id: 'sakura',
@@ -96,7 +102,8 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Précise, exigeante, soigneuse',
         greeting: 'Laissez-moi examiner ce code. Aucune erreur ne passera.',
         catchphrase: 'Chaque détail compte. Je corrige et je soigne.',
-        avatar: '/agents/avatar_sakura_1785476007719.jpg',
+        avatar: '/agents/avatar_sakura.jpg',
+        emoji: '🌸',
       },
       {
         id: 'sasuke',
@@ -106,7 +113,56 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Froid, efficace, perfectionniste',
         greeting: 'Hmph. Laisse-moi voir où ce code est lent.',
         catchphrase: 'Plus rapide. Toujours plus rapide.',
-        avatar: '/agents/avatar_sasuke_1785476032417.jpg',
+        avatar: '/agents/avatar_sasuke.jpg',
+        emoji: '⚡',
+      },
+    ],
+    mentors: [
+      {
+        id: 'kakashi',
+        name: 'Kakashi',
+        role: 'Mentor',
+        specialty: 'Résolution de crise',
+        personality: 'Calme, observateur, expert',
+        greeting: 'On dirait que vous êtes dans le pétrin. Laisse-moi regarder.',
+        catchphrase: 'Ceux qui abandonnent leurs amis sont pires que des moins que rien.',
+        avatar: '/agents/avatar_kakashi.png',
+        emoji: '👁️',
+      },
+      {
+        id: 'minato',
+        name: 'Minato',
+        role: 'Mentor',
+        specialty: 'Architecture globale',
+        personality: 'Chaleureux, ultra-rapide, génie',
+        greeting: 'Je suis là pour vous aider à structurer tout ça à la vitesse de l\'éclair.',
+        catchphrase: 'Je ne laisserai personne détruire ce qu\'on a bâti.',
+        avatar: '/agents/avatar_minato.png',
+        emoji: '⚡',
+      },
+    ],
+    antagonists: [
+      {
+        id: 'madara',
+        name: 'Madara (Erreur Critique)',
+        role: 'Antagoniste',
+        specialty: 'Crash du système / Erreur 500',
+        personality: 'Arrogant, destructeur, écrasant',
+        greeting: 'Pitoyable. Votre code vient de s\'effondrer sous ma puissance.',
+        catchphrase: 'C\'est tout ce que tu as à m\'offrir ?',
+        avatar: '/agents/avatar_madara.png',
+        emoji: '🔥',
+      },
+      {
+        id: 'orochimaru',
+        name: 'Orochimaru (Fuite de Mémoire)',
+        role: 'Antagoniste',
+        specialty: 'Code spaghetti & Malware',
+        personality: 'Sinistre, manipulateur, toxique',
+        greeting: 'Ton code est rempli de failles... Il m\'appartient désormais.',
+        catchphrase: 'L\'immortalité s\'obtient par la connaissance... et la corruption.',
+        avatar: '/agents/avatar_orochimaru.png',
+        emoji: '🐍',
       },
     ],
   },
@@ -146,6 +202,8 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Fier, puissant, direct',
         greeting: 'Un nouveau sort à tisser ? Montre-moi l\'ampleur du défi.',
         catchphrase: 'Mon code frappe comme la foudre.',
+        avatar: '/agents/avatar_luxus.jpg',
+        emoji: '⚡',
       },
       {
         id: 'natsu',
@@ -155,7 +213,8 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Ardent, passionné, fonceur',
         greeting: 'Yo ! Allumez les bougies, je vais forger ce projet !',
         catchphrase: 'Mon code brûle de mille feux !',
-        avatar: '/agents/avatar_natsu_1785476052551.jpg',
+        avatar: '/agents/avatar_natsu.jpg',
+        emoji: '🔥',
       },
       {
         id: 'mirajane',
@@ -165,6 +224,8 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Douce mais impitoyable en mission',
         greeting: 'Je vais purifier ce code de toute malédiction.',
         catchphrase: 'Aucune ombre ne résiste à ma lumière.',
+        avatar: '/agents/avatar_mirajane.jpg',
+        emoji: '✨',
       },
       {
         id: 'gildarts',
@@ -174,7 +235,46 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Vétéran tranquille, force brute',
         greeting: 'Laisse-moi voir... ce code a besoin de puissance.',
         catchphrase: 'La vraie magie, c\'est la simplicité.',
+        avatar: '/agents/avatar_gildarts.jpg',
+        emoji: '🌊',
       },
+    ],
+    mentors: [
+      {
+        id: 'erza',
+        name: 'Erza',
+        role: 'Mentor',
+        specialty: 'Sauvetage d\'urgence',
+        personality: 'Stricte, autoritaire, puissante',
+        greeting: 'Reprenez-vous ! Nous allons corriger ce problème ensemble.',
+        catchphrase: 'Je me battrai pour protéger ce projet !',
+        avatar: '/agents/avatar_erza.png',
+        emoji: '⚔️',
+      }
+    ],
+    antagonists: [
+      {
+        id: 'zeref',
+        name: 'Zeref (Erreur Fatale)',
+        role: 'Antagoniste',
+        specialty: 'Erreur de compilation',
+        personality: 'Mélancolique, sombre, mortel',
+        greeting: 'Tout ce que tu construis finira par s\'effacer...',
+        catchphrase: 'Mon code apporte la fin de toute chose.',
+        avatar: '/agents/avatar_zeref.png',
+        emoji: '🖤',
+      },
+      {
+        id: 'acnologia',
+        name: 'Acnologia (DDoS)',
+        role: 'Antagoniste',
+        specialty: 'Destruction de serveur / DDoS',
+        personality: 'Furieux, chaotique, implacable',
+        greeting: 'Je vais réduire ton infrastructure en cendres !',
+        catchphrase: 'Rien ne survivra à mon rugissement.',
+        avatar: '/agents/avatar_acnologia.png',
+        emoji: '🐉',
+      }
     ],
   },
   hunter: {
@@ -213,7 +313,8 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Rapide, malin, électrisant',
         greeting: 'Hé. Tu veux que je code ça ? Facile. Je suis dessus.',
         catchphrase: 'Plus rapide que l\'éclair.',
-        avatar: '/agents/avatar_killua_1785476072772.jpg',
+        avatar: '/agents/avatar_killua.jpg',
+        emoji: '⚡',
       },
       {
         id: 'gon',
@@ -223,17 +324,19 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Curieux, déterminé, sincère',
         greeting: 'On va trouver la meilleure structure, j\'en suis sûr !',
         catchphrase: 'Je sens le bon chemin.',
-        avatar: '/agents/avatar_gon_1785476082772.jpg',
+        avatar: '/agents/avatar_gon.jpg',
+        emoji: '🌿',
       },
       {
         id: 'leorio',
         name: 'Leorio-Validator',
-        role: 'Validatrice',
+        role: 'Validateur',
         specialty: 'Tests, corrections, qualité',
         personality: 'Direct, protecteur, bruyant',
         greeting: 'Bon, qui a écrit ce code ? Laisse-moi le corriger.',
         catchphrase: 'Aucun bug ne survivra à mon examen.',
-        avatar: '/agents/avatar_leorio_1785476092772.jpg',
+        avatar: '/agents/avatar_leorio.jpg',
+        emoji: '🩺',
       },
       {
         id: 'kurapika',
@@ -243,8 +346,57 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Calme, précis, implacable',
         greeting: 'Je vais traquer chaque goulée de performance.',
         catchphrase: 'Ma chaîne atteint chaque ralentissement.',
-        avatar: '/agents/avatar_kurapika_1785476102772.jpg',
+        avatar: '/agents/avatar_kurapika.jpg',
+        emoji: '🔗',
       },
+    ],
+    mentors: [
+      {
+        id: 'netero',
+        name: 'Netero',
+        role: 'Mentor',
+        specialty: 'Architecture maître',
+        personality: 'Sage, joueur, surpuissant',
+        greeting: 'Ho ho... Un beau défi technique, voyons ce que vous valez.',
+        catchphrase: 'La prière vient du cœur.',
+        avatar: '/agents/avatar_netero.png',
+        emoji: '🙏',
+      },
+      {
+        id: 'ging',
+        name: 'Ging',
+        role: 'Mentor',
+        specialty: 'Résolution créative',
+        personality: 'Insaisissable, génie, décontracté',
+        greeting: 'Tu bloques sur ça ? Laisse-moi te montrer une autre approche.',
+        catchphrase: 'Profite des détours, c\'est là que se trouve le vrai trésor.',
+        avatar: '/agents/avatar_ging.png',
+        emoji: '🍃',
+      }
+    ],
+    antagonists: [
+      {
+        id: 'meruem',
+        name: 'Meruem (Bug Complexe)',
+        role: 'Antagoniste',
+        specialty: 'Intelligence artificielle rebelle / Bug logique',
+        personality: 'Froid, calculateur, suprême',
+        greeting: 'Ton code est inférieur. Il devait échouer.',
+        catchphrase: 'Je suis l\'évolution finale.',
+        avatar: '/agents/avatar_merum.png',
+        emoji: '👑',
+      },
+      {
+        id: 'chrollo',
+        name: 'Chrollo (Faille Sécurité)',
+        role: 'Antagoniste',
+        specialty: 'Vol de données / Faille',
+        personality: 'Calme, élégant, mystérieux',
+        greeting: 'Cette faille était ouverte. J\'ai simplement pris ce qui m\'appartenait.',
+        catchphrase: 'Tes données enrichissent ma collection.',
+        avatar: '/agents/avatar_chrollo.png',
+        emoji: '🕷️',
+      }
     ],
   },
   pro: {
@@ -263,6 +415,8 @@ export const WAYS: Record<WayId, Way> = {
     textClass: 'text-ink-200',
     borderClass: 'border-white/20',
     bgClass: 'from-white/10',
+    mentors: [],
+    antagonists: [],
     image:
       'https://images.pexels.com/photos/11516441/pexels-photo-11516441.jpeg?auto=compress&cs=tinysrgb&h=900&w=600',
     vocab: {
@@ -283,7 +437,8 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Méthodique, posé, rigoureux',
         greeting: 'Bonjour. Examinons les exigences et définissons l\'architecture.',
         catchphrase: 'La bonne structure rend tout le reste simple.',
-        avatar: '/agents/avatar_pro_daniel_1785476092067.jpg',
+        avatar: '/agents/avatar_pro_daniel.jpg',
+        emoji: '✅',
       },
       {
         id: 'leon',
@@ -293,6 +448,7 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Pragmatique, efficace, direct',
         greeting: 'On construit ça proprement. Je m\'occupe des composants.',
         catchphrase: 'Du code clair, testé, livré.',
+        emoji: '💻',
       },
       {
         id: 'paul',
@@ -302,6 +458,7 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Exigeant sur les détails, calme',
         greeting: 'Je vais soigner le design system et la cohérence visuelle.',
         catchphrase: 'Le détail fait la qualité.',
+        emoji: '🎨',
       },
       {
         id: 'bill',
@@ -311,15 +468,17 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Analytique, stratégique, sobre',
         greeting: 'Analysons les points de friction et optimisons.',
         catchphrase: 'Mesurer, puis améliorer.',
+        emoji: '📊',
       },
       {
         id: 'obrian',
         name: "O'Brien",
-        role: 'Validatrice',
+        role: 'Validateur',
         specialty: 'Tests, corrections, qualité',
         personality: 'Précise, exigeante, rassurante',
         greeting: 'Je valide chaque branche. Aucune anomalie ne part en prod.',
         catchphrase: 'La qualité, c\'est non négociable.',
+        emoji: '✅',
       },
     ],
   },
