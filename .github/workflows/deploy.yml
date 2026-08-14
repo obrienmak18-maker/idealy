@@ -2,7 +2,9 @@ name: Deploy Idealy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - feat/idealy-complete-system
   pull_request:
     branches: [main]
   workflow_dispatch:
