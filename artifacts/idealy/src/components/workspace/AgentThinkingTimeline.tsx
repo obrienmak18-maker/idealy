@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Check, CircleAlert, Hammer, ScanSearch, Sparkles, Terminal } from 'lucide-react';
+import { Check, CircleAlert, CircleCheck, CircleDot, Crosshair, Hammer, LayoutDashboard, ScanSearch, Sparkles, Target, Terminal, WandSparkles, Zap } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { Way, WayAgent } from '@/lore/ways';
 import type { MissionTeam } from '@/core/mission/missionTeam';
 import type { MissionExecutionStage } from './MissionActivityPanel';
@@ -17,10 +18,17 @@ type TimelineStep = {
   label: string;
   detail: string;
   agent: WayAgent;
-  icon: typeof ScanSearch;
+  icon: LucideIcon;
 };
 
 const ORDER: TimelineStep['id'][] = ['planning', 'building', 'validating'];
+
+const WAY_VISUALS: Record<Way['id'], { headerIcon: LucideIcon; stepIcons: [LucideIcon, LucideIcon, LucideIcon]; planningDuration: number }> = {
+  ninja: { headerIcon: Zap, stepIcons: [Crosshair, Hammer, ScanSearch], planningDuration: 0.78 },
+  mage: { headerIcon: WandSparkles, stepIcons: [Sparkles, WandSparkles, CircleCheck], planningDuration: 1.45 },
+  hunter: { headerIcon: Target, stepIcons: [Target, Crosshair, ScanSearch], planningDuration: 1.05 },
+  pro: { headerIcon: CircleDot, stepIcons: [LayoutDashboard, CircleCheck, Terminal], planningDuration: 1.25 },
+};
 
 function indexOfStage(stage: MissionExecutionStage): number {
   if (stage === 'needs-fix') return 2;
@@ -49,27 +57,29 @@ function AgentMark({ agent, active, way }: { agent: WayAgent; active: boolean; w
 
 export function AgentThinkingTimeline({ way, team, stage, visible, progress = 0 }: AgentThinkingTimelineProps) {
   const shouldReduceMotion = useReducedMotion();
+  const visual = WAY_VISUALS[way.id];
+  const HeaderIcon = visual.headerIcon;
   const steps: TimelineStep[] = [
     {
       id: 'planning',
       label: 'Orchestrateur',
       detail: `${team.strategist.name} transforme votre demande en plan d’action.`,
       agent: team.strategist,
-      icon: ScanSearch,
+      icon: visual.stepIcons[0],
     },
     {
       id: 'building',
       label: 'Bâtisseur',
       detail: `${team.builder.name} assemble l’interface et les fichiers du projet.`,
       agent: team.builder,
-      icon: Hammer,
+      icon: visual.stepIcons[1],
     },
     {
       id: 'validating',
       label: 'Terminal',
       detail: 'Le terminal vérifie le résultat sans inventer de réflexion.',
       agent: team.validator,
-      icon: Terminal,
+      icon: visual.stepIcons[2],
     },
   ];
 
@@ -83,16 +93,16 @@ export function AgentThinkingTimeline({ way, team, stage, visible, progress = 0 
           animate={{ opacity: 1, y: 0 }}
           exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -5 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto mb-5 w-full max-w-3xl overflow-hidden rounded-2xl border border-white/10 bg-ink-950/70"
+          className={`mx-auto mb-5 w-full max-w-3xl overflow-hidden rounded-2xl border ${way.borderClass} bg-ink-950/70`}
         >
           <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3">
             <div className="flex min-w-0 items-center gap-2.5">
               <motion.span
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${way.primaryClass} text-ink-950`}
                 animate={stage === 'planning' && !shouldReduceMotion ? { rotate: [0, -6, 6, 0] } : { rotate: 0 }}
-                transition={{ duration: 1.1, repeat: stage === 'planning' && !shouldReduceMotion ? Infinity : 0 }}
+                transition={{ duration: visual.planningDuration, repeat: stage === 'planning' && !shouldReduceMotion ? Infinity : 0 }}
               >
-                <Sparkles size={14} />
+                <HeaderIcon size={14} />
               </motion.span>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-white">Atelier en cours</p>

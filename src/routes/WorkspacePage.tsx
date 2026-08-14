@@ -20,6 +20,8 @@ import {
   PanelLeftOpen,
   PanelRightOpen,
   PanelRightClose,
+  Maximize2,
+  Minimize2,
   Plus,
   Send,
   Paperclip,
@@ -161,6 +163,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const [activeIntent, setActiveIntent] = useState<IntentCategory>('CONVERSATION');
   const [codePanelOpen, setCodePanelOpen] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [demoMode, setDemoMode] = useState(initialDemoMode);
   const scrollRef = useRef<HTMLDivElement>(null);
   const attachmentRef = useRef<HTMLInputElement>(null);
@@ -184,11 +187,16 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       if ((event.ctrlKey || event.metaKey) && (event.key === '`' || event.key === '~')) {
         event.preventDefault();
         setTerminalOpen((open) => !open);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b' && showPreview) {
+        event.preventDefault();
+        setFocusMode((open) => !open);
       }
     };
     window.addEventListener('keydown', onShortcut);
     return () => window.removeEventListener('keydown', onShortcut);
-  }, []);
+  }, [showPreview]);
 
   useEffect(() => {
     if (initialDemoMode && messages.length === 0) startDemoMode();
@@ -813,7 +821,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <AnimatePresence initial={false}>
-        {sidebarOpen && (
+        {sidebarOpen && !focusMode && (
           <motion.aside
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 264, opacity: 1 }}
@@ -976,6 +984,17 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {showPreview && (
+              <button
+                onClick={() => setFocusMode((open) => !open)}
+                aria-pressed={focusMode}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition ${focusMode ? `bg-white/10 ${way.textClass}` : 'text-ink-400 hover:bg-white/5 hover:text-white'}`}
+                title={focusMode ? 'Quitter le Focus Mode (Ctrl+B)' : 'Focus Mode (Ctrl+B)'}
+              >
+                {focusMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                <span className="hidden lg:inline">{focusMode ? 'Quitter le focus' : 'Focus'}</span>
+              </button>
+            )}
             <button className="rounded-lg p-2 text-ink-300 transition hover:bg-white/5 hover:text-white" title="Notifications">
               <Bell size={17} />
             </button>
@@ -988,8 +1007,18 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
 
         {/* Body: chat + right panel */}
         <div className="flex min-h-0 flex-1">
-          {/* Chat */}
-          <div className="flex min-w-0 flex-1 flex-col">
+          {/* Chat : la sidebar se retire avec le Canvas, pas avec un simple display:none. */}
+          <AnimatePresence initial={false} mode="popLayout">
+            {!focusMode && (
+              <motion.div
+                key="chat-pane"
+                layout="position"
+                initial={{ opacity: 0, x: -24, scale: 0.985 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -32, scale: 0.985 }}
+                transition={{ type: 'spring', stiffness: 360, damping: 34, mass: 0.7 }}
+                className="flex min-w-0 flex-1 flex-col"
+              >
             {pendingBrief && (
               <div className="shrink-0 border-b border-white/5 bg-ink-950/40 p-4">
                 <MissionBriefPanel
@@ -1163,29 +1192,33 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                     {dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.
                   </p>
                 )}
-                {toolMessage && <p role="status" className="mt-2 text-xs text-electric-300">{isUploading ? 'Import en cours…' : toolMessage}</p>}
+                {toolMessage && <p role="status" className={`mt-2 text-xs ${way.textClass}`}>{isUploading ? 'Import en cours…' : toolMessage}</p>}
                 <p className="mt-2 text-center text-[11px] text-ink-500">
                   Idealy peut se tromper. Vérifiez le code généré.
                 </p>
               </div>
             </div>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Canvas central : l’aperçu est la surface principale, le code reste latéral. */}
           <AnimatePresence>
             {showPreview && (
               <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: '66%', opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                className="hidden min-w-0 shrink-0 border-l border-white/5 bg-ink-900/30 md:block"
-                style={{ minWidth: 520 }}
+                layout
+                layoutId="idealy-canvas"
+                initial={{ width: 0, opacity: 0, scale: 0.98 }}
+                animate={{ width: focusMode ? '100%' : '66%', opacity: 1, scale: 1 }}
+                exit={{ width: 0, opacity: 0, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 32, mass: 0.8 }}
+                className={`hidden min-w-0 shrink-0 border-l ${way.borderClass} bg-ink-900/30 md:block`}
+                style={{ minWidth: focusMode ? 0 : 520 }}
               >
-                <div className="flex h-full min-w-0 flex-col">
+                <div className="flex h-full min-w-0 flex-col" data-focus-mode={focusMode ? 'true' : 'false'}>
                   <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/5 px-3 py-2">
                     <div className="flex min-w-0 items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-400/15 text-emerald-300"><Eye size={14} /></div>
+                      <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${way.bgClass} ${way.textClass}`}><Eye size={14} /></div>
                       <div className="min-w-0">
                         <p className="truncate text-xs font-semibold text-white">Canvas central</p>
                         <p className="text-[10px] text-ink-500">Prévisualisation live de l’application</p>
@@ -1380,10 +1413,10 @@ function RightPanelContent({
             <div className="flex items-center gap-1 px-4 py-2 border-b border-white/5">
               <Terminal size={12} className="text-primary" />
               <span className="text-xs text-ink-300 ml-1">WebContainer</span>
-              <span className="ml-2 text-[10px] bg-electric-400/20 text-electric-400 px-1.5 py-0.5 rounded-full">Live</span>
+              <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${way.bgClass} ${way.textClass}`}>Live</span>
             </div>
             <div className="flex-1 overflow-hidden">
-              <WebContainerPreview schema={schema} className="h-full" />
+              <WebContainerPreview schema={schema} way={way} className="h-full" />
             </div>
           </div>
         ) : (
