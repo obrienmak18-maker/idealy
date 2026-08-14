@@ -17,6 +17,18 @@ export interface MissionContext {
   onProgress?: (tokens: number, partial: string) => void;
 }
 
+export interface TerminalCorrectionIssue {
+  file: string | null;
+  line: number | null;
+  column: number | null;
+  message: string;
+}
+
+export interface TerminalCorrectionFeedback {
+  command: string;
+  issues: TerminalCorrectionIssue[];
+}
+
 // ─── Intent Analysis ─────────────────────────────────────────────────────────
 
 export async function analyzeIntent(prompt: string, way: Way): Promise<MissionContext> {
@@ -95,7 +107,11 @@ function extractJSON(raw: string): Record<string, unknown> | null {
 
 // ─── IUPS Builder (code generation) ──────────────────────────────────────────
 
-export async function buildIUPS(context: MissionContext): Promise<IdealyUniversalProjectSchema | null> {
+export async function buildIUPS(
+  context: MissionContext,
+  correction?: TerminalCorrectionFeedback,
+  onProgress: MissionContext['onProgress'] = context.onProgress,
+): Promise<IdealyUniversalProjectSchema | null> {
   const mobileKeywords = /mobile|android|ios|expo|react.native|app.store|téléphone|smartphone|apk/i;
   const isMobile = mobileKeywords.test(context.prompt);
 
@@ -172,47 +188,57 @@ STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
   }
 }`;
 
-  const systemPrompt = isMobile ? mobileSystemPrompt : webSystemPrompt;
+  const correctionSystemPrompt = correction
+    ? `
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      let accumulated = '';
-      let tokenCount = 0;
+SELF-CORRECTION TERMINALISÉE — TOUR SUIVANT
+Le projet précédent a été exécuté dans WebContainer. Corrige uniquement les erreurs réelles ci-dessous.
+N'invente pas d'autres erreurs, ne change pas l'intention du produit et retourne le projet complet au même format JSON.
+${correction.issues.map((issue) => {
+  const location = issue.file
+    ? `Fichier concerné : ${issue.file}.`
+    : 'Fichier concerné : emplacement non déterminé.';
+  return `- ${location} Message d'erreur : ${issue.message}`;
+}).join('\n')}
+`
+    : '';
+  const systemPrompt = `${isMobile ? mobileSystemPrompt : webSystemPrompt}${correctionSystemPrompt}`;
 
-      // Stream tokens in real-time via the authenticated server proxy.
-      const textStream = await streamAIProxy({
-        systemPrompt,
-        prompt: attempt === 1
-          ? "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication."
-          : "Réponds UNIQUEMENT avec un objet JSON valide commençant par { et terminant par }. Pas de texte avant ou après.",
-        complexity: 'high',
-        maxTokens: 8000,
-      });
+  try {
+    let accumulated = '';
+    let tokenCount = 0;
 
-      for await (const delta of textStream) {
-        accumulated += delta;
-        tokenCount += delta.length;
-        // Notify every ~50 chars
-        if (context.onProgress && tokenCount % 50 < delta.length) {
-          context.onProgress(tokenCount, accumulated);
-        }
+    // Un seul appel LLM par tour : la boucle de correction est pilotée par le terminal.
+    const textStream = await streamAIProxy({
+      systemPrompt,
+      prompt: correction
+        ? "Corrige les fichiers signalés par le terminal. Réponds UNIQUEMENT avec le JSON complet, sans markdown ni explication."
+        : "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication.",
+      complexity: 'high',
+      maxTokens: 8000,
+    });
+
+    for await (const delta of textStream) {
+      accumulated += delta;
+      tokenCount += delta.length;
+      // Notify every ~50 chars
+      if (onProgress && tokenCount % 50 < delta.length) {
+        onProgress(tokenCount, accumulated);
       }
-
-      const parsed = extractJSON(accumulated);
-      if (parsed && typeof parsed === 'object' && 'project' in parsed) {
-        return {
-          ...(parsed as unknown as IdealyUniversalProjectSchema),
-          contracts: context.contracts,
-        };
-      }
-      console.warn(`[buildIUPS] Attempt ${attempt}: JSON extraction failed, raw length=${accumulated.length}`);
-    } catch (error) {
-      console.error(`[buildIUPS] Attempt ${attempt} threw:`, error);
-      if (attempt === 2) return null;
     }
+
+    const parsed = extractJSON(accumulated);
+    if (parsed && typeof parsed === 'object' && 'project' in parsed) {
+      return {
+        ...(parsed as unknown as IdealyUniversalProjectSchema),
+        contracts: context.contracts,
+      };
+    }
+    console.warn(`[buildIUPS] JSON extraction failed, raw length=${accumulated.length}`);
+  } catch (error) {
+    console.error('[buildIUPS] Generation threw:', error);
   }
 
-  console.error('[buildIUPS] All attempts failed — returning null');
   return null;
 }
 

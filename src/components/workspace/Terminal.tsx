@@ -3,6 +3,7 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { getWebContainerInstance, WebContainerState } from '@/core/webcontainer/webcontainer';
+import { subscribeTerminalEvents } from '@/core/webcontainer/terminalEvents';
 import type { WebContainerProcess } from '@webcontainer/api';
 
 export function Terminal() {
@@ -45,7 +46,7 @@ export function Terminal() {
 
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
-    
+
     term.open(terminalRef.current);
     fitAddon.fit();
 
@@ -58,6 +59,13 @@ export function Terminal() {
     resizeObserver.observe(terminalRef.current);
 
     let inputWriter: WritableStreamDefaultWriter<string> | null = null;
+    const unsubscribeTerminalEvents = subscribeTerminalEvents((event) => {
+      const ansi = String.fromCharCode(27);
+      if (event.kind === 'error') term.write(`${ansi}[31m${event.text}${ansi}[0m`);
+      else if (event.kind === 'command') term.write(`${ansi}[36m${event.text}${ansi}[0m`);
+      else if (event.kind === 'status') term.write(`${ansi}[33m${event.text}${ansi}[0m`);
+      else term.write(event.text);
+    });
 
     async function startShell() {
       try {
@@ -103,6 +111,7 @@ export function Terminal() {
 
     return () => {
       resizeObserver.disconnect();
+      unsubscribeTerminalEvents();
       if (inputWriter) {
         inputWriter.releaseLock();
       }

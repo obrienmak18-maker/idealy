@@ -83,7 +83,7 @@ export function MissionStatusPanel({ dna, onRestore, onFix }: MissionStatusPanel
 
       <section className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">Validation</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">Validation déterministe</p>
           {validation?.status === 'passed' ? <CheckCircle2 size={15} className="text-emerald-400" /> : <CircleAlert size={15} className="text-amber-300" />}
         </div>
         {validation ? (
@@ -130,6 +130,7 @@ export function MissionStatusPanel({ dna, onRestore, onFix }: MissionStatusPanel
               <div className="min-w-0">
                 <p className="text-ink-200">{proof.label}</p>
                 <p className="mt-0.5 text-[10px] leading-4 text-ink-500">{proof.detail}</p>
+                {proof.evidence && <p className="mt-0.5 text-[10px] leading-4 text-electric-300/70">Preuve : {proof.evidence}</p>}
               </div>
               <span className={proof.status === 'passed' ? 'text-emerald-400' : proof.status === 'failed' ? 'text-red-300' : proof.status === 'warning' ? 'text-amber-300' : 'text-ink-500'}>{proof.status}</span>
             </div>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { analyzeIntent, buildIUPS, streamAgentMessage } from '@/agents/orchestrator';
+import { analyzeIntent, streamAgentMessage } from '@/agents/orchestrator';
 import { iupsToCode } from '@/core/iups/exporter';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 import { MessageBubble, type ChatMessage } from '@/components/chat/MessageBubble';
@@ -59,6 +59,7 @@ import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/
 import { validateGeneratedProject } from '@/core/mission/validateMission';
 import { buildPreflightProofs } from '@/core/mission/preflight';
 import { createDemoMission } from '@/core/mission/demoMission';
+import { buildWithSelfCorrection } from '@/core/webcontainer/selfCorrection';
 import { selectMissionTeam } from '@/core/mission/missionTeam';
 import type { ChangeCapsule, MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
@@ -501,7 +502,6 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     setBusy(true);
     const orchestrator = missionTeam.strategist;
     const builder = missionTeam.builder;
-    const validator = missionTeam.validator;
 
     const addMessage = (agent: (typeof way.agents)[number], text: string, status: ChatMessage['status'] = 'done'): string => {
       const id = crypto.randomUUID();
@@ -574,7 +574,8 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         way,
         `Plan de l'architecte: ${orchestratorText}`,
         prompt,
-        `Tu construis les composants. Parle de ce que tu fais, puis dis que c'est bon et appelle ${validator.name}.`
+                  'Tu construis les composants. Décris brièvement le chantier et retourne une version complète prête à être exécutée dans le terminal.'
+
       );
 
       let builderText = '';
@@ -583,24 +584,44 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         updateMessage(builderId, builderText, 'writing');
       }
 
-      // Building IUPS with real-time progress (Fix #13)
+      // Self-correction terminalisée : une génération, un build/typecheck, puis au plus deux corrections ciblées.
       setGenerationProgress(0);
-      const schema = await buildIUPS({
-        ...context,
-        onProgress: (tokens) => {
-          // ~8000 max tokens, show progress
-          setGenerationProgress(Math.min(95, Math.round((tokens / 8000) * 100)));
-          updateMessage(builderId, `${builderText}\n\n⚙️ Génération du code... (${Math.min(95, Math.round((tokens / 8000) * 100))}%)`, 'writing');
+      const terminalLog: string[] = [];
+      const appendTerminalLog = (line: string) => {
+        terminalLog.push(line);
+        const visibleLog = terminalLog.slice(-40).join('');
+        updateMessage(builderId, `${builderText}\n\n${visibleLog}`, 'writing');
+      };
+      const selfCorrection = await buildWithSelfCorrection(
+        context,
+        {
+          onProgress: (tokens) => {
+            // ~8000 max tokens par tour, sans dépasser 95 % avant le preflight.
+            setGenerationProgress(Math.min(95, Math.round((tokens / 8000) * 100)));
+          },
+          onLog: appendTerminalLog,
         },
-      });
+      );
+      const schema = selfCorrection.schema;
       setGenerationProgress(100);
-      updateMessage(builderId, builderText, 'done');
+      const terminalSummary = selfCorrection.status === 'passed'
+        ? `✅ Self-Correction terminalisée réussie en ${selfCorrection.attempts.length} tour(s).`
+        : selfCorrection.status === 'needs-fix'
+          ? `⛔ Trois tours de self-correction atteints ; la validation déterministe reste la source de vérité.`
+          : `⚠️ WebContainer indisponible ; validation déterministe exécutée sans prétendre qu’un build terminal a réussi.`;
+      updateMessage(builderId, `${builderText}\n\n${terminalSummary}`, 'done');
 
       const validation = validateGeneratedProject(schema, context.contracts);
       const status = validation.status === 'failed' ? 'needs-fix' : 'ready';
       const baseSnapshot = createMissionSnapshot(schema, validation.status === 'passed' ? 'Version validée' : 'Version à corriger', 'generation', validation);
       const currentDNA = missionId ? useIdealyStore.getState().missionDNA[missionId] : undefined;
-      const preflight = buildPreflightProofs(schema, validation, currentDNA?.snapshots ?? [baseSnapshot]);
+      const terminalPreflight = {
+        status: selfCorrection.status,
+        attempts: selfCorrection.attempts.length,
+        command: selfCorrection.attempts.at(-1)?.validation.command,
+        output: selfCorrection.attempts.at(-1)?.validation.output,
+      } as const;
+      const preflight = buildPreflightProofs(schema, validation, currentDNA?.snapshots ?? [baseSnapshot], terminalPreflight);
       const enrichedSchema = schema ? {
         ...schema,
         contracts: context.contracts,
@@ -633,9 +654,8 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         }).eq('id', missionId).then();
       }
 
-      // 3. Validator Phase
+      // 3. Validation déterministe finale — aucun appel LLM supplémentaire.
       if (missionId) setMissionActivity({ missionId, stage: 'validating' });
-      const validatorId = addMessage(validator, '', 'thinking');
       if (enrichedSchema) {
         updateProjectSchema(enrichedSchema);
         setShowPreview(true);
@@ -644,29 +664,17 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           updateStoreMission(missionId, { previewReady: validation.status !== 'failed' });
         }
 
-        const validatorStream = await streamAgentMessage(
-          validator,
-          way,
-          `Le code a été construit.`,
-          prompt,
-          `Valide la version générée à partir des contrats. Le rapport déterministe ci-dessous est la source de vérité : ${validation.status}. ${validation.issues.map((issue) => `[${issue.code}] ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join(' ')}. Cite les issues concrètes dans ton compte rendu et indique clairement si une réparation est nécessaire.`
-        );
-
-        let validatorText = '';
-        for await (const delta of validatorStream.textStream) {
-          validatorText += delta;
-          updateMessage(validatorId, validatorText, 'writing');
-        }
         const issueSummary = validation.issues.length > 0
           ? validation.issues.map((issue) => `- [${issue.severity}] ${issue.code}: ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join('\\n')
           : 'Aucune issue détectée.';
-        updateMessage(validatorId, validation.status === 'failed'
-          ? `${validatorText || 'Validation terminée.'}\\n\\nIssues déterministes :\\n${issueSummary}\\n\\nUtilisez « Corriger avec ces issues » dans l’onglet Mission.`
-          : `${validatorText || 'Validation terminée.'}\\n\\nRapport déterministe : ${validation.status}. ${issueSummary}`, 'done');
+        updateMessage(builderId, validation.status === 'failed'
+          ? `${builderText}\\n\\n${terminalSummary}\\n\\nIssues déterministes :\\n${issueSummary}\\n\\nUtilisez « Corriger avec ces issues » dans l’onglet Mission.`
+          : `${builderText}\\n\\n${terminalSummary}\\n\\nRapport déterministe : ${validation.status}.\\n${issueSummary}`, 'done');
+        setToolMessage(terminalSummary);
         if (missionId) setMissionActivity({ missionId, stage: validation.status === 'failed' ? 'needs-fix' : 'completed' });
       } else {
         if (missionId) setMissionActivity({ missionId, stage: 'needs-fix' });
-        updateMessage(validatorId, `Attention ! J'ai détecté une anomalie.`, 'done');
+        updateMessage(builderId, `${builderText}\\n\\n${terminalSummary}\\n\\nAucun projet exploitable n’a été généré.`, 'done');
       }
 
     } catch (error) {
