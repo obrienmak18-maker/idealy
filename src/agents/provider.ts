@@ -10,6 +10,7 @@ import { getSupabaseClient } from '@/supabaseClient';
 
 export type Complexity = 'low' | 'medium' | 'high' | 'fast';
 export type LLMProvider = 'groq' | 'openrouter' | 'deepseek';
+export type AIRequestMode = 'auto' | 'free' | 'trial' | 'byok';
 
 export interface ModelConfig {
   provider: LLMProvider;
@@ -33,10 +34,22 @@ export interface ProxyCallOptions {
   complexity?: Complexity;
   stream?: boolean;
   maxTokens?: number;
+  mode?: AIRequestMode;
+  missionId?: string;
+  idempotencyKey?: string;
 }
 
 async function createProxyRequest(options: ProxyCallOptions): Promise<Response> {
-  const { prompt, systemPrompt, complexity = 'medium', stream = false, maxTokens = 8000 } = options;
+  const {
+    prompt,
+    systemPrompt,
+    complexity = 'medium',
+    stream = false,
+    maxTokens = 8000,
+    mode = 'auto',
+    missionId,
+    idempotencyKey,
+  } = options;
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase non configuré.');
 
@@ -62,6 +75,9 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
       model: config.model,
       stream,
       maxTokens,
+      mode,
+      missionId,
+      idempotencyKey,
     }),
   });
 }

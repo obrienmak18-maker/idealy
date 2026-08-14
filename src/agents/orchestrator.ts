@@ -4,6 +4,7 @@ import { planMission, type ConnectorProvider, type SkillSlug } from './skillRout
 import { buildMissionContracts } from '@/core/mission/missionContract';
 import type { MissionContracts } from '@/core/mission/contracts';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
+import { buildArchitectureContext, type RelevantVFSFile } from '@/core/webcontainer/architectureMemory';
 
 export interface MissionContext {
   prompt: string;
@@ -15,6 +16,12 @@ export interface MissionContext {
   contracts: MissionContracts;
   /** Called during buildIUPS streaming with (tokensGenerated, partialText) */
   onProgress?: (tokens: number, partial: string) => void;
+  /** Persistent project memory injected into every builder call. */
+  architecture?: string;
+  /** At most three existing files selected from the VFS for this mission. */
+  relevantFiles?: RelevantVFSFile[];
+  /** Stable mission identity used for idempotent managed-credit debits. */
+  missionId?: string;
 }
 
 export interface TerminalCorrectionIssue {
@@ -27,6 +34,7 @@ export interface TerminalCorrectionIssue {
 export interface TerminalCorrectionFeedback {
   command: string;
   issues: TerminalCorrectionIssue[];
+  iteration?: number;
 }
 
 // ─── Intent Analysis ─────────────────────────────────────────────────────────
@@ -188,6 +196,7 @@ STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
   }
 }`;
 
+  const architectureContext = buildArchitectureContext(context.architecture ?? '', context.relevantFiles ?? []);
   const correctionSystemPrompt = correction
     ? `
 
@@ -202,7 +211,7 @@ ${correction.issues.map((issue) => {
 }).join('\n')}
 `
     : '';
-  const systemPrompt = `${isMobile ? mobileSystemPrompt : webSystemPrompt}${correctionSystemPrompt}`;
+  const systemPrompt = `${isMobile ? mobileSystemPrompt : webSystemPrompt}${architectureContext}${correctionSystemPrompt}`;
 
   try {
     let accumulated = '';
@@ -216,6 +225,10 @@ ${correction.issues.map((issue) => {
         : "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication.",
       complexity: 'high',
       maxTokens: 8000,
+      missionId: context.missionId,
+      idempotencyKey: context.missionId
+        ? `${context.missionId}:build:${correction ? `fix-${correction.iteration ?? 1}` : 'initial'}`
+        : undefined,
     });
 
     for await (const delta of textStream) {
@@ -249,7 +262,10 @@ export async function streamAgentMessage(
   way: Way,
   contextText: string,
   missionPrompt: string,
-  instruction: string
+  instruction: string,
+  architecture = '',
+  relevantFiles: RelevantVFSFile[] = [],
+  idempotencyKey?: string,
 ) {
   const systemPrompt = `Tu es ${agent.name} (${agent.role}), un membre incontournable de la voie "${way.name}".
 Ta personnalité profonde (agis EXACTEMENT comme ce personnage sans briser le 4ème mur) : ${agent.personality}.
@@ -259,6 +275,7 @@ Ton expression fétiche que tu utilises naturellement : "${agent.catchphrase}".
 L'utilisateur a demandé : "${missionPrompt}".
 Contexte actuel :
 ${contextText}
+${buildArchitectureContext(architecture, relevantFiles)}
 
 Instructions spécifiques pour cette étape :
 ${instruction}
@@ -273,6 +290,7 @@ RÈGLE ABSOLUE : Tu dois TOUJOURS structurer ta réponse ainsi :
       prompt: 'À toi de jouer.',
       complexity: 'fast',
       maxTokens: 900,
+      idempotencyKey,
     }),
   };
 }

@@ -7,6 +7,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Terminal, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 import { getWebContainerInstance } from '@/core/webcontainer/webcontainer';
+import {
+  ARCHITECTURE_FILE,
+  getArchitectureMemory,
+  writeArchitectureFile,
+} from '@/core/webcontainer/architectureMemory';
 
 interface WebContainerPreviewProps {
   schema: IdealyUniversalProjectSchema | null;
@@ -70,11 +75,18 @@ export function WebContainerPreview({ schema, className }: WebContainerPreviewPr
       addLog('📦 Montage des fichiers du projet...');
       setStatus('installing');
 
-      const tree = recordToTree(schema.project.files);
-      prevFiles.current = { ...schema.project.files };
+      const architecture = getArchitectureMemory(schema.project.files);
+      const filesWithArchitecture = {
+        ...schema.project.files,
+        [ARCHITECTURE_FILE]: architecture,
+      };
+      const tree = recordToTree(filesWithArchitecture);
+      prevFiles.current = { ...filesWithArchitecture };
 
-      // Monter les fichiers
+      // Monter les fichiers, y compris la mémoire cachée de contexte.
       await instance.mount(tree);
+      await writeArchitectureFile(instance, architecture);
+      addLog('🧠 Mémoire architecture persistée dans .idealy/architecture.md');
 
       addLog('📥 Installation des dépendances (npm install)...');
       const installProcess = await instance.spawn('npm', ['install']);
@@ -114,20 +126,30 @@ export function WebContainerPreview({ schema, className }: WebContainerPreviewPr
     const currentFiles = schema.project.files;
     const prev = prevFiles.current;
 
-    // Find changed or new files
-    for (const [path, content] of Object.entries(currentFiles)) {
-      if (prev[path] !== content) {
-        addLog(`📝 HMR: Mise à jour de ${path}`);
-        getWebContainerInstance().then(async (instance) => {
-          try {
+    // Find changed or new files. Keep architecture.md out of the visible file list.
+    const changedPaths = Object.entries(currentFiles)
+      .filter(([path, content]) => prev[path] !== content)
+      .map(([path]) => path);
+
+    if (changedPaths.length > 0) {
+      void getWebContainerInstance().then(async (instance) => {
+        try {
+          for (const path of changedPaths) {
+            const content = currentFiles[path];
+            addLog(`📝 HMR: Mise à jour de ${path}`);
             const dir = path.split('/').slice(0, -1).join('/');
             if (dir) await instance.fs.mkdir(dir, { recursive: true }).catch(() => {});
             await instance.fs.writeFile(path, content);
-          } catch (e) {
-            console.error('Failed to write file to WebContainer:', e);
           }
-        });
-      }
+
+          if (changedPaths.some((path) => path !== ARCHITECTURE_FILE)) {
+            await writeArchitectureFile(instance, getArchitectureMemory(currentFiles));
+            addLog('🧠 HMR significatif : architecture.md synchronisé');
+          }
+        } catch (e) {
+          console.error('Failed to write files to WebContainer:', e);
+        }
+      });
     }
 
     prevFiles.current = { ...currentFiles };

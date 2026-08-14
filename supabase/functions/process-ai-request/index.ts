@@ -1,24 +1,56 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  consumeManagedCredit,
+  isSupportedProvider,
+  PROVIDER_CONFIGS,
+  resolveAIProvider,
+  type Provider,
+  type RequestedMode,
+} from './aiProvider.ts';
 
 /**
- * process-ai-request — Secure LLM proxy.
+ * process-ai-request — proxy IA sécurisé.
  *
- * Receives: { prompt, systemPrompt, model, stream, maxTokens }
- * - Authenticates user via JWT
- * - Checks + decrements energy
- * - Proxies to the chosen LLM provider (DeepSeek / Groq / OpenRouter)
- * - Supports streaming via SSE
- *
- * This is the ONLY place where LLM API keys are used.
- * They are NEVER sent to the frontend.
+ * Les clés fournisseur ne sont utilisées que dans cette Edge Function.
+ * Le navigateur ne reçoit jamais la clé centralisée ni la clé BYOK déchiffrée.
  */
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'https://idealy.app',
+  'https://idealy-ai.netlify.app',
 ];
+
+type LLMRequest = {
+  prompt: string;
+  systemPrompt?: string;
+  provider?: Provider;
+  model?: string;
+  stream?: boolean;
+  maxTokens?: number;
+  mode?: RequestedMode;
+  missionId?: string | null;
+  idempotencyKey?: string;
+};
+
+const DEFAULT_MODELS: Record<Provider, string> = {
+  groq: 'llama-3.3-70b-versatile',
+  openrouter: 'deepseek/deepseek-coder',
+  deepseek: 'deepseek-chat',
+};
+
+const ALLOWED_MODELS: Record<Provider, readonly string[]> = {
+  groq: ['llama-3.3-70b-versatile'],
+  openrouter: ['deepseek/deepseek-coder', 'openrouter/free'],
+  deepseek: ['deepseek-chat'],
+};
+
+const MAX_PROMPT_CHARS = 120_000;
+const MAX_SYSTEM_PROMPT_CHARS = 20_000;
+const MAX_OUTPUT_TOKENS = 8_000;
+const MAX_IDEMPOTENCY_KEY_CHARS = 180;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const configuredOrigins = (Deno.env.get('IDEALY_ALLOWED_ORIGINS') ?? '')
@@ -39,146 +71,69 @@ function getCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
-type Provider = 'groq' | 'openrouter' | 'deepseek';
-
-interface LLMRequest {
-  prompt: string;
-  systemPrompt?: string;
-  provider?: Provider;
-  model?: string;
-  stream?: boolean;
-  maxTokens?: number;
-}
-
-const PROVIDER_CONFIGS: Record<Provider, { url: string; envKey: string }> = {
-  groq: {
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    envKey: 'GROQ_API_KEY',
-  },
-  openrouter: {
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    envKey: 'OPENROUTER_API_KEY',
-  },
-  deepseek: {
-    url: 'https://api.deepseek.com/chat/completions',
-    envKey: 'DEEPSEEK_API_KEY',
-  },
-};
-
-const DEFAULT_MODELS: Record<Provider, string> = {
-  groq: 'llama-3.3-70b-versatile',
-  openrouter: 'deepseek/deepseek-coder',
-  deepseek: 'deepseek-chat',
-};
-
-const ALLOWED_MODELS: Record<Provider, readonly string[]> = {
-  groq: ['llama-3.3-70b-versatile'],
-  openrouter: ['deepseek/deepseek-coder', 'openrouter/free'],
-  deepseek: ['deepseek-chat'],
-};
-
-const MAX_PROMPT_CHARS = 120_000;
-const MAX_SYSTEM_PROMPT_CHARS = 20_000;
-const MAX_OUTPUT_TOKENS = 8_000;
-
-function isProvider(value: unknown): value is Provider {
-  return value === 'groq' || value === 'openrouter' || value === 'deepseek';
-}
-
-function jsonError(message: string, status: number, headers: Record<string, string>): Response {
-  return new Response(JSON.stringify({ error: message }), {
+function jsonError(message: string, status: number, headers: Record<string, string>, code?: string): Response {
+  return new Response(JSON.stringify({ error: message, ...(code ? { code } : {}) }), {
     status,
     headers: { ...headers, 'Content-Type': 'application/json' },
   });
 }
 
+function isRequestedMode(value: unknown): value is RequestedMode {
+  return value === undefined || value === 'auto' || value === 'free' || value === 'trial' || value === 'byok';
+}
+
+function isValidUUID(value: string): boolean {
+  return UUID_PATTERN.test(value);
+}
+
 serve(async (req) => {
   const headers = getCorsHeaders(req);
 
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers });
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers });
+  if (req.method !== 'POST') return jsonError('Method not allowed.', 405, headers);
 
   try {
-    // 1. Authenticate user
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      return jsonError('Supabase server configuration is incomplete.', 500, headers);
+    }
 
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...headers, 'Content-Type': 'application/json' },
-      });
-    }
+    if (!authHeader?.startsWith('Bearer ')) return jsonError('Unauthorized.', 401, headers);
 
-    // Verify token with anon client
-    const anonClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-    const { data: { user }, error: userError } = await anonClient.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const anonClient = createClient(supabaseUrl, anonKey);
+    const { data: { user }, error: userError } = await anonClient.auth.getUser(authHeader.slice('Bearer '.length));
+    if (userError || !user) return jsonError('Unauthorized.', 401, headers);
 
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...headers, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 2. Check energy & Rate limit
-    const { data: energyData, error: energyError } = await supabaseAdmin
+    const { data: energySnapshot } = await supabaseAdmin
       .from('user_energy')
-      .select('current_energy, updated_at')
+      .select('updated_at')
       .eq('id', user.id)
-      .single();
-
-    if (energyError || !energyData) {
-      // Auto-create energy record if missing
-      await supabaseAdmin.from('user_energy').insert({ id: user.id, current_energy: 50 });
-    } else {
-      // Rate Limit: 3 seconds per user to prevent spam / race conditions
-      const lastUpdate = new Date(energyData.updated_at).getTime();
-      const now = Date.now();
-      if (now - lastUpdate < 3000) {
-        return new Response(JSON.stringify({ error: 'Too many requests. Please wait a few seconds.', code: 'RATE_LIMIT' }), {
-          status: 429, headers: { ...headers, 'Content-Type': 'application/json' },
-        });
-      }
-
-      if (energyData.current_energy <= 0) {
-        return new Response(JSON.stringify({ error: 'Insufficient energy', code: 'ENERGY_DEPLETED' }), {
-          status: 402, headers: { ...headers, 'Content-Type': 'application/json' },
-        });
-      }
+      .maybeSingle();
+    if (energySnapshot?.updated_at && Date.now() - new Date(energySnapshot.updated_at).getTime() < 3_000) {
+      return jsonError('Too many requests. Please wait a few seconds.', 429, headers, 'RATE_LIMIT');
     }
 
-    // 3. Parse and validate request before selecting a provider or consuming energy
     const body: unknown = await req.json().catch(() => null);
-    if (!body || typeof body !== 'object') {
-      return jsonError('Invalid JSON request.', 400, headers);
-    }
-
+    if (!body || typeof body !== 'object') return jsonError('Invalid JSON request.', 400, headers);
     const input = body as Partial<LLMRequest>;
+
     const prompt = typeof input.prompt === 'string' ? input.prompt.trim() : '';
     const systemPrompt = input.systemPrompt === undefined
       ? undefined
       : typeof input.systemPrompt === 'string'
         ? input.systemPrompt.trim()
         : null;
-
     if (!prompt) return jsonError('Prompt is required.', 400, headers);
     if (prompt.length > MAX_PROMPT_CHARS) return jsonError('Prompt is too large.', 413, headers);
     if (systemPrompt === null) return jsonError('systemPrompt must be a string.', 400, headers);
-    if (systemPrompt && systemPrompt.length > MAX_SYSTEM_PROMPT_CHARS) {
-      return jsonError('systemPrompt is too large.', 413, headers);
-    }
+    if (systemPrompt && systemPrompt.length > MAX_SYSTEM_PROMPT_CHARS) return jsonError('systemPrompt is too large.', 413, headers);
 
-    const providerValue = input.provider ?? 'groq';
-    if (!isProvider(providerValue)) return jsonError('Unsupported provider.', 400, headers);
-    const provider = providerValue;
+    const provider = input.provider ?? 'groq';
+    if (!isSupportedProvider(provider)) return jsonError('Unsupported provider.', 400, headers);
 
     const model = input.model ?? DEFAULT_MODELS[provider];
     if (typeof model !== 'string' || !ALLOWED_MODELS[provider].includes(model)) {
@@ -189,47 +144,60 @@ serve(async (req) => {
     if (typeof stream !== 'boolean') return jsonError('stream must be boolean.', 400, headers);
 
     const maxTokens = input.maxTokens ?? MAX_OUTPUT_TOKENS;
-    if (typeof maxTokens !== 'number' || !Number.isInteger(maxTokens) || maxTokens < 128 || maxTokens > MAX_OUTPUT_TOKENS) {
+    if (!Number.isInteger(maxTokens) || maxTokens < 128 || maxTokens > MAX_OUTPUT_TOKENS) {
       return jsonError(`maxTokens must be an integer between 128 and ${MAX_OUTPUT_TOKENS}.`, 400, headers);
     }
 
-    const config = PROVIDER_CONFIGS[provider];
-
-    const apiKey = Deno.env.get(config.envKey);
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: `API key not configured: ${config.envKey}` }), {
-        status: 500, headers: { ...headers, 'Content-Type': 'application/json' },
-      });
+    const mode = input.mode ?? 'auto';
+    if (!isRequestedMode(mode)) return jsonError('Invalid AI provider mode.', 400, headers);
+    if (input.missionId !== undefined && input.missionId !== null && (typeof input.missionId !== 'string' || !isValidUUID(input.missionId))) {
+      return jsonError('missionId must be a UUID.', 400, headers);
+    }
+    if (input.idempotencyKey !== undefined && (typeof input.idempotencyKey !== 'string' || input.idempotencyKey.length > MAX_IDEMPOTENCY_KEY_CHARS)) {
+      return jsonError('idempotencyKey is invalid.', 400, headers);
     }
 
-    // 4. Decrement energy (and update timestamp)
-    const currentEnergy = energyData?.current_energy ?? 50;
-    await supabaseAdmin
-      .from('user_energy')
-      .update({ 
-        current_energy: Math.max(0, currentEnergy - 10),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', user.id);
+    const resolution = await resolveAIProvider(user.id, supabaseAdmin, { provider, model, mode });
+    const managed = resolution.mode !== 'byok';
+    let energyRemaining: number | null = null;
 
-    // 5. Build messages
-    const messages: { role: string; content: string }[] = [];
+    if (managed) {
+      const idempotencyKey = input.idempotencyKey?.trim() || `${user.id}:${crypto.randomUUID()}`;
+      try {
+        const debit = await consumeManagedCredit(supabaseAdmin, {
+          userId: user.id,
+          missionId: input.missionId,
+          idempotencyKey,
+          amount: 10,
+          reason: `ai:${provider}:${model}`,
+        });
+        energyRemaining = debit.energyRemaining;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (/insufficient|energy|credit/i.test(message)) {
+          return jsonError('Insufficient energy for a managed AI request.', 402, headers, 'ENERGY_DEPLETED');
+        }
+        throw error;
+      }
+    }
+
+    const config = PROVIDER_CONFIGS[resolution.provider];
+    const messages: { role: 'system' | 'user'; content: string }[] = [];
     if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
     messages.push({ role: 'user', content: prompt });
 
-    // 6. Call LLM
     const llmRes = await fetch(config.url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${resolution.apiKey}`,
         'Content-Type': 'application/json',
-        ...(provider === 'openrouter' ? {
-          'HTTP-Referer': 'https://idealy.app',
+        ...(resolution.provider === 'openrouter' ? {
+          'HTTP-Referer': 'https://idealy-ai.netlify.app',
           'X-Title': 'Idealy',
         } : {}),
       },
       body: JSON.stringify({
-        model,
+        model: resolution.model,
         messages,
         stream,
         max_tokens: maxTokens,
@@ -239,14 +207,10 @@ serve(async (req) => {
 
     if (!llmRes.ok) {
       const err = await llmRes.json().catch(() => ({ error: llmRes.statusText }));
-      return new Response(JSON.stringify({ error: err.error?.message ?? err.error ?? 'LLM error' }), {
-        status: llmRes.status, headers: { ...headers, 'Content-Type': 'application/json' },
-      });
+      return jsonError(err.error?.message ?? err.error ?? 'LLM error.', llmRes.status, headers);
     }
 
-    // 7. Stream or return response
     if (stream) {
-      // Pass through SSE stream directly to client
       return new Response(llmRes.body, {
         headers: {
           ...headers,
@@ -259,15 +223,18 @@ serve(async (req) => {
     const result = await llmRes.json();
     return new Response(JSON.stringify({
       message: result.choices?.[0]?.message?.content ?? '',
-      energyRemaining: Math.max(0, currentEnergy - 10),
-      model,
-      provider,
+      energyRemaining,
+      mode: resolution.mode,
+      model: resolution.model,
+      provider: resolution.provider,
     }), {
       headers: { ...headers, 'Content-Type': 'application/json' },
     });
-
   } catch (error) {
     console.error('process-ai-request failed', error);
+    const message = error instanceof Error ? error.message : String(error);
+    if (/No BYOK key configured/i.test(message)) return jsonError('No BYOK key is configured for this provider.', 409, headers, 'BYOK_NOT_CONFIGURED');
+    if (/AI_KEY_ENCRYPTION_SECRET/i.test(message)) return jsonError('BYOK server encryption is not configured.', 500, headers, 'BYOK_CONFIG_ERROR');
     return jsonError('Unexpected AI proxy error.', 500, headers);
   }
 });

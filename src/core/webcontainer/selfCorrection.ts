@@ -7,6 +7,14 @@ import {
   type TerminalCorrectionFeedback,
 } from '@/agents/orchestrator';
 import { parseTerminalIssues, selectValidationCommand, type TerminalIssue } from './terminalDiagnostics';
+import {
+  ARCHITECTURE_FILE,
+  ensureArchitectureFile,
+  generateArchitectureSummary,
+  readArchitectureFile,
+  selectRelevantFiles,
+  writeArchitectureFile,
+} from './architectureMemory';
 
 export const MAX_SELF_CORRECTION_ITERATIONS = 3;
 
@@ -141,7 +149,7 @@ async function mountAndValidate(
   return runTerminalCommand(instance, command, onLog);
 }
 
-function buildCorrectionFeedback(result: TerminalValidationResult): TerminalCorrectionFeedback {
+function buildCorrectionFeedback(result: TerminalValidationResult, iteration: number): TerminalCorrectionFeedback {
   const issues = result.issues.length > 0
     ? result.issues.map((issue) => ({
       file: issue.file,
@@ -154,6 +162,7 @@ function buildCorrectionFeedback(result: TerminalValidationResult): TerminalCorr
   return {
     command: result.command,
     issues,
+    iteration,
   };
 }
 
@@ -174,6 +183,29 @@ export async function buildWithSelfCorrection(
     }
 
     try {
+      const generatedArchitecture = generateArchitectureSummary(schema, context.contracts);
+      schema = {
+        ...ensureArchitectureFile(schema, generatedArchitecture),
+        project: {
+          ...schema.project,
+          files: {
+            ...schema.project.files,
+            [ARCHITECTURE_FILE]: generatedArchitecture,
+          },
+        },
+      };
+      const instance = await (async () => {
+        const { getWebContainerInstance } = await import('@/core/webcontainer/webcontainer');
+        return getWebContainerInstance();
+      })();
+      await writeArchitectureFile(instance, schema.project.files['.idealy/architecture.md'] ?? context.architecture ?? '');
+      context.architecture = await readArchitectureFile(instance) ?? context.architecture;
+      context.relevantFiles = selectRelevantFiles(
+        schema.project.files,
+        context.prompt,
+        correction?.issues.map((issue) => issue.file).filter((file): file is string => Boolean(file)) ?? [],
+      );
+      options.onLog?.('🧠 Mémoire architecture chargée dans le VFS (.idealy/architecture.md).\n');
       const validation = await mountAndValidate(schema, options.onLog);
       const attempt: SelfCorrectionAttempt = { iteration, validation, feedback: correction };
       attempts.push(attempt);
@@ -184,7 +216,7 @@ export async function buildWithSelfCorrection(
         return { schema, attempts, status: 'passed', terminalAvailable: true };
       }
 
-      correction = buildCorrectionFeedback(validation);
+      correction = buildCorrectionFeedback(validation, iteration);
       emitTerminalEvent('error', `❌ ${validation.command} a trouvé ${correction.issues.length} problème(s).\\r\\n`);
       options.onLog?.(`❌ ${validation.command} a trouvé ${correction.issues.length} problème(s).\\n`);
       if (iteration < MAX_SELF_CORRECTION_ITERATIONS) {

@@ -60,6 +60,7 @@ import { validateGeneratedProject } from '@/core/mission/validateMission';
 import { buildPreflightProofs } from '@/core/mission/preflight';
 import { createDemoMission } from '@/core/mission/demoMission';
 import { buildWithSelfCorrection } from '@/core/webcontainer/selfCorrection';
+import { createArchitectureContext } from '@/core/webcontainer/architectureMemory';
 import { selectMissionTeam } from '@/core/mission/missionTeam';
 import type { ChangeCapsule, MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
@@ -536,6 +537,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       // 1. Orchestrator Phase
       const msgId = addMessage(orchestrator, '', 'thinking');
       const context = await analyzeIntent(prompt, way);
+      const architectureContext = createArchitectureContext(projectSchema?.project.files, prompt);
+      context.architecture = architectureContext.architecture;
+      context.relevantFiles = architectureContext.relevantFiles;
+      context.missionId = missionId ?? undefined;
       context.contracts = initialContracts;
       if (missionId) {
         updateMissionDNA(missionId, (dna) => ({
@@ -556,7 +561,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         way,
         `Mission: ${prompt}\nComplexité estimée: ${context.rank}`,
         prompt,
-        `Analyse le plan global. Appelle explicitement le développeur (${builder.name}) pour la suite.`
+        `Analyse le plan global. Appelle explicitement le développeur (${builder.name}) pour la suite.`,
+        context.architecture,
+        context.relevantFiles,
+        missionId ? `${missionId}:strategy` : undefined,
       );
 
       let orchestratorText = '';
@@ -574,8 +582,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         way,
         `Plan de l'architecte: ${orchestratorText}`,
         prompt,
-                  'Tu construis les composants. Décris brièvement le chantier et retourne une version complète prête à être exécutée dans le terminal.'
-
+        'Tu construis les composants. Décris brièvement le chantier et retourne une version complète prête à être exécutée dans le terminal.',
+        context.architecture,
+        context.relevantFiles,
+        missionId ? `${missionId}:builder` : undefined,
       );
 
       let builderText = '';
