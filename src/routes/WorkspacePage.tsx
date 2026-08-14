@@ -152,6 +152,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const { subscription, checkSubscription } = useStripe();
 
   const [projectSchema, setProjectSchema] = useState<IdealyUniversalProjectSchema | null>(null);
+  const [reviewSchema, setReviewSchema] = useState<IdealyUniversalProjectSchema | null>(null);
   const [previousSchema, setPreviousSchema] = useState<IdealyUniversalProjectSchema | null>(null);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -519,6 +520,30 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     setToolMessage(`Capsule proposée : ${capsule.summary}`);
   }
 
+  function acceptReviewSchema(nextSchema: IdealyUniversalProjectSchema) {
+    setPreviousSchema(projectSchema);
+    updateProjectSchema(nextSchema);
+    setReviewSchema(null);
+    setShowPreview(true);
+    setTab('preview');
+    if (currentMissionId) {
+      updateStoreMission(currentMissionId, { previewReady: true, status: 'ready', validation: nextSchema.validation });
+      updateMissionDNA(currentMissionId, (dna) => ({
+        ...dna,
+        status: 'ready',
+        validation: nextSchema.validation ?? dna.validation,
+        updatedAt: Date.now(),
+        capsules: (dna.capsules ?? []).map((capsule, index, all) => index === all.length - 1 && capsule.status === 'proposed' ? { ...capsule, status: 'applied' as const } : capsule),
+      }));
+    }
+    setToolMessage('Proposition acceptée : la nouvelle version est maintenant montée dans la preview.');
+  }
+
+  function rejectReviewSchema() {
+    setReviewSchema(null);
+    setToolMessage('Proposition rejetée : la version stable est conservée.');
+  }
+
   async function handleSignOut() {
     try {
       await getSupabaseClient()?.auth.signOut();
@@ -740,7 +765,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         snapshotId: baseSnapshot.id,
       } : null;
       const snapshot = enrichedSchema ? { ...baseSnapshot, schema: enrichedSchema } : baseSnapshot;
-      if (enrichedSchema) setProjectSchema(enrichedSchema);
+      if (enrichedSchema) setReviewSchema(enrichedSchema);
       if (missionId) {
         updateStoreMission(missionId, {
           previewReady: Boolean(schema && validation.status !== 'failed'),
@@ -768,9 +793,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         void streamAgentUI({ missionId, phase: 'validating', progress: 92 }).catch(() => undefined);
       }
       if (enrichedSchema) {
-        updateProjectSchema(enrichedSchema);
+        setReviewSchema(enrichedSchema);
         setShowPreview(true);
-        setTab('preview');
+        setCodePanelOpen(true);
+        setTab('code');
         if (missionId) {
           updateStoreMission(missionId, { previewReady: validation.status !== 'failed' });
         }
@@ -877,6 +903,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                     setActiveMissionId(null);
                     setPendingBrief(null);
                     setProjectSchema(null);
+                    setReviewSchema(null);
                     setPreviousSchema(null);
                     setMessages([]);
                     setMissionActivity(null);
@@ -1262,7 +1289,9 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                             <RightPanelContent
                               tab="code"
                               way={way}
-                              schema={projectSchema}
+                              schema={reviewSchema ?? projectSchema}
+                              baseSchema={projectSchema}
+                              reviewMode={Boolean(reviewSchema)}
                               previousSchema={previousSchema}
                               missionId={currentMissionId}
                               dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
@@ -1271,6 +1300,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                               onFix={repairMission}
                               onAskAI={(prompt) => void runMission(prompt)}
                               onProposeChange={proposeChangeCapsule}
+                              onAcceptReview={acceptReviewSchema}
+                              onRejectReview={rejectReviewSchema}
+                              onUpdateReview={setReviewSchema}
+                              onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
                             />
                           </ResizablePanel>
                           <ResizableHandle withHandle />
@@ -1281,6 +1314,8 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                           tab="preview"
                           way={way}
                           schema={projectSchema}
+                          baseSchema={projectSchema}
+                          reviewMode={false}
                           previousSchema={previousSchema}
                           missionId={currentMissionId}
                           dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
@@ -1289,6 +1324,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                           onFix={repairMission}
                           onAskAI={(prompt) => void runMission(prompt)}
                           onProposeChange={proposeChangeCapsule}
+                          onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
                         />
                       </ResizablePanel>
                     </ResizablePanelGroup>
@@ -1370,6 +1406,8 @@ function RightPanelContent({
   tab,
   way,
   schema,
+  baseSchema,
+  reviewMode,
   previousSchema,
   missionId,
   dna,
@@ -1378,10 +1416,16 @@ function RightPanelContent({
   onFix,
   onAskAI,
   onProposeChange,
+  onAcceptReview,
+  onRejectReview,
+  onUpdateReview,
+  onCrashFix,
 }: {
   tab: RightTab;
   way: (typeof WAYS)[WayId];
   schema: IdealyUniversalProjectSchema | null;
+  baseSchema: IdealyUniversalProjectSchema | null;
+  reviewMode: boolean;
   previousSchema: IdealyUniversalProjectSchema | null;
   missionId: string | null;
   dna: import('@/core/mission/contracts').MissionDNA | null;
@@ -1390,6 +1434,10 @@ function RightPanelContent({
   onFix: () => void;
   onAskAI?: (prompt: string) => void;
   onProposeChange?: (capsule: ChangeCapsule) => void;
+  onAcceptReview?: (schema: IdealyUniversalProjectSchema) => void;
+  onRejectReview?: () => void;
+  onUpdateReview?: (schema: IdealyUniversalProjectSchema | null) => void;
+  onCrashFix?: (logs: string) => void | Promise<void>;
 }) {
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -1416,7 +1464,7 @@ function RightPanelContent({
               <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${way.bgClass} ${way.textClass}`}>Live</span>
             </div>
             <div className="flex-1 overflow-hidden">
-              <WebContainerPreview schema={schema} way={way} className="h-full" />
+              <WebContainerPreview schema={schema} way={way} className="h-full" onCrashFix={onCrashFix} />
             </div>
           </div>
         ) : (
@@ -1438,8 +1486,16 @@ function RightPanelContent({
         ) : (
           <CodeEditor
             files={files}
+            baseFiles={baseSchema?.project?.files ?? {}}
             selectedPath={selectedFilePath}
             onSelectFile={(path) => setSelectedFilePath(path)}
+            reviewMode={reviewMode}
+            way={way}
+            onAcceptGhost={(path, newContent) => {
+              if (!schema || !onAcceptReview) return;
+              onAcceptReview({ ...schema, project: { ...schema.project, files: { ...schema.project.files, [path]: newContent } } });
+            }}
+            onRejectGhost={onRejectReview}
             onSaveFile={(path, newContent) => {
               if (!schema) return;
               const updatedSchema = {
@@ -1452,7 +1508,8 @@ function RightPanelContent({
                   }
                 }
               };
-              onUpdateSchema(updatedSchema);
+              if (reviewMode) onUpdateReview?.(updatedSchema);
+              else onUpdateSchema(updatedSchema);
             }}
             onAskAI={onAskAI}
             onProposeChange={onProposeChange}

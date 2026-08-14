@@ -13,11 +13,14 @@ import {
   writeArchitectureFile,
 } from '@/core/webcontainer/architectureMemory';
 import { PreviewBrowser, type PreviewDevice } from './PreviewBrowser';
+import { CrashOverlay } from './CrashOverlay';
+import { appendCrashLog, isFatalWebContainerLog, summarizeCrashLogs } from '@/core/webcontainer/crashDiagnostics';
 
 interface WebContainerPreviewProps {
   schema: IdealyUniversalProjectSchema | null;
-  way?: Way;
+  way: Way;
   className?: string;
+  onCrashFix?: (logs: string) => void | Promise<void>;
 }
 
 type Status = 'idle' | 'booting' | 'installing' | 'running' | 'error';
@@ -43,16 +46,32 @@ function recordToTree(files: Record<string, string>): FileSystemTree {
   return tree;
 }
 
-export function WebContainerPreview({ schema, way, className }: WebContainerPreviewProps) {
+export function WebContainerPreview({ schema, way, className, onCrashFix }: WebContainerPreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [logs, setLogs] = useState<string[]>([]);
   const [url, setUrl] = useState<string | null>(null);
   const [device, setDevice] = useState<PreviewDevice>('desktop');
+  const [crashOpen, setCrashOpen] = useState(false);
+  const [crashResolving, setCrashResolving] = useState(false);
+  const crashHandledRef = useRef(false);
+  const logsRef = useRef<string[]>([]);
   const prevFiles = useRef<Record<string, string>>({});
   const hasBooted = useRef(false);
 
-  const addLog = (line: string) => setLogs((previous) => [...previous.slice(-50), line]);
+  const addLog = (line: string) => {
+    const nextLogs = appendCrashLog(logsRef.current, line);
+    logsRef.current = nextLogs;
+    setLogs(nextLogs);
+    if (isFatalWebContainerLog(line)) {
+      setCrashOpen(true);
+      if (!crashHandledRef.current) {
+        crashHandledRef.current = true;
+        setCrashResolving(true);
+        Promise.resolve(onCrashFix?.(summarizeCrashLogs(nextLogs))).finally(() => setCrashResolving(false));
+      }
+    }
+  };
 
   const boot = useCallback(async () => {
     if (!schema?.project.files || hasBooted.current) return;
@@ -60,6 +79,10 @@ export function WebContainerPreview({ schema, way, className }: WebContainerPrev
     setStatus('booting');
     setUrl(null);
     setLogs([]);
+    logsRef.current = [];
+    setCrashOpen(false);
+    setCrashResolving(false);
+    crashHandledRef.current = false;
     addLog('⚡ Démarrage de WebContainer...');
 
     try {
@@ -138,6 +161,13 @@ export function WebContainerPreview({ schema, way, className }: WebContainerPrev
   }, [schema, status, boot]);
 
   const loading = status !== 'running' && status !== 'error';
+  const crashLogs = summarizeCrashLogs(logs);
+  const handleCrashAnalyze = () => {
+    if (crashHandledRef.current) return;
+    crashHandledRef.current = true;
+    setCrashResolving(true);
+    Promise.resolve(onCrashFix?.(crashLogs)).finally(() => setCrashResolving(false));
+  };
 
   return (
     <div className={`h-full min-h-0 ${className ?? ''}`}>
@@ -150,6 +180,7 @@ export function WebContainerPreview({ schema, way, className }: WebContainerPrev
         onDeviceChange={setDevice}
         onRefresh={refresh}
       >
+        <div className="relative h-full min-h-0">
         {status === 'error' ? (
           <div className="flex h-full flex-col bg-[#0d1117]">
             <div className="flex items-center gap-2 border-b border-red-500/20 bg-red-500/5 px-3 py-2">
@@ -166,8 +197,20 @@ export function WebContainerPreview({ schema, way, className }: WebContainerPrev
             </div>
           </div>
         ) : status === 'running' && url ? (
-          <iframe ref={iframeRef} src={url} className="h-full w-full border-0" allow="cross-origin-isolated" title="WebContainer Preview" />
+          <div className="relative h-full w-full">
+            <iframe ref={iframeRef} src={url} className="h-full w-full border-0" allow="cross-origin-isolated" title="WebContainer Preview" onError={() => setCrashOpen(true)} />
+
+          </div>
         ) : null}
+        <CrashOverlay
+          way={way}
+          open={crashOpen}
+          logs={logs}
+          resolving={crashResolving}
+          onAnalyze={handleCrashAnalyze}
+          onDismiss={() => { setCrashOpen(false); setCrashResolving(false); crashHandledRef.current = false; }}
+        />
+        </div>
       </PreviewBrowser>
     </div>
   );

@@ -1,4 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import { Check, CircleAlert, CircleCheck, CircleDot, Crosshair, Hammer, LayoutDashboard, ScanSearch, Sparkles, Target, Terminal, WandSparkles, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Way, WayAgent } from '@/lore/ways';
@@ -30,6 +31,33 @@ const WAY_VISUALS: Record<Way['id'], { headerIcon: LucideIcon; stepIcons: [Lucid
   pro: { headerIcon: CircleDot, stepIcons: [LayoutDashboard, CircleCheck, Terminal], planningDuration: 1.25 },
 };
 
+const WAY_MOTION: Record<Way['id'], { section: Variants; item: Variants; scan: boolean; glow: boolean }> = {
+  ninja: {
+    section: { hidden: { opacity: 0, x: -10 }, visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: 'easeOut', staggerChildren: 0.035 } } },
+    item: { hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: 'easeOut' } } },
+    scan: false,
+    glow: false,
+  },
+  mage: {
+    section: { hidden: { opacity: 0, scale: 0.985 }, visible: { opacity: 1, scale: 1, transition: { duration: 0.46, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.08 } } },
+    item: { hidden: { opacity: 0, scale: 0.97, y: 4 }, visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] } } },
+    scan: false,
+    glow: true,
+  },
+  hunter: {
+    section: { hidden: { opacity: 0, y: 7 }, visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut', staggerChildren: 0.06 } } },
+    item: { hidden: { opacity: 0, y: 5 }, visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: 'easeOut' } } },
+    scan: true,
+    glow: false,
+  },
+  pro: {
+    section: { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.24, ease: 'easeOut', staggerChildren: 0.02 } } },
+    item: { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.22, ease: 'easeOut' } } },
+    scan: false,
+    glow: false,
+  },
+};
+
 function indexOfStage(stage: MissionExecutionStage): number {
   if (stage === 'needs-fix') return 2;
   if (stage === 'completed') return 3;
@@ -58,6 +86,7 @@ function AgentMark({ agent, active, way }: { agent: WayAgent; active: boolean; w
 export function AgentThinkingTimeline({ way, team, stage, visible, progress = 0 }: AgentThinkingTimelineProps) {
   const shouldReduceMotion = useReducedMotion();
   const visual = WAY_VISUALS[way.id];
+  const motionProfile = WAY_MOTION[way.id];
   const HeaderIcon = visual.headerIcon;
   const steps: TimelineStep[] = [
     {
@@ -89,8 +118,9 @@ export function AgentThinkingTimeline({ way, team, stage, visible, progress = 0 
         <motion.section
           aria-live="polite"
           aria-label="Chronologie de travail des agents"
-          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
+          variants={motionProfile.section}
+          initial={shouldReduceMotion ? { opacity: 0 } : 'hidden'}
+          animate={shouldReduceMotion ? { opacity: 1 } : 'visible'}
           exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -5 }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           className={`mx-auto mb-5 w-full max-w-3xl overflow-hidden rounded-2xl border ${way.borderClass} bg-ink-950/70`}
@@ -126,6 +156,7 @@ export function AgentThinkingTimeline({ way, team, stage, visible, progress = 0 
                   <motion.div
                     key={step.id}
                     layout={!shouldReduceMotion}
+                    variants={motionProfile.item}
                     className="grid grid-cols-[30px_1fr_auto] items-center gap-3"
                   >
                     <div className="z-10 flex h-7 w-7 items-center justify-center rounded-full bg-ink-950">
@@ -139,12 +170,14 @@ export function AgentThinkingTimeline({ way, team, stage, visible, progress = 0 
                       </div>
                       <p className="mt-1 text-[11px] leading-4 text-ink-400">{step.detail}</p>
                       <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/8">
-                        <motion.div
-                          className={`h-full origin-left rounded-full ${status === 'error' ? 'bg-amber-300' : way.primaryClass}`}
-                          initial={{ scaleX: 0 }}
-                          animate={{ scaleX: isDone ? 1 : isActive ? Math.max(0.08, Math.min(1, progress / 100)) : 0 }}
-                          transition={{ duration: shouldReduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
-                        />
+                          <motion.div
+                            className={`relative h-full origin-left rounded-full ${status === 'error' ? 'bg-amber-300' : way.primaryClass} ${motionProfile.glow && isActive ? 'shadow-[0_0_12px_rgba(167,139,250,0.5)]' : ''}`}
+                            initial={{ scaleX: 0 }}
+                            animate={{ scaleX: isDone ? 1 : isActive ? Math.max(0.08, Math.min(1, progress / 100)) : 0 }}
+                            transition={{ duration: shouldReduceMotion ? 0 : way.id === 'ninja' ? 0.2 : 0.28, ease: way.id === 'ninja' ? 'easeOut' : [0.22, 1, 0.36, 1] }}
+                          >
+                            {motionProfile.scan && isActive && !shouldReduceMotion && <motion.span className="absolute inset-y-0 left-0 w-1/4 bg-white/55 blur-[1px]" animate={{ x: ['-120%', '520%'] }} transition={{ duration: 1.05, repeat: Infinity, ease: 'linear' }} />}
+                          </motion.div>
                       </div>
                     </div>
                     <span className={`text-[10px] font-medium ${isActive ? way.textClass : isDone ? 'text-emerald-300' : status === 'error' ? 'text-amber-300' : 'text-ink-600'}`}>
