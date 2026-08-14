@@ -1,92 +1,77 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
+import { AuthModal } from '@/components/AuthModal';
 
-const LandingPage = lazy(() =>
-  import('@/routes/LandingPage').then((m) => ({ default: m.LandingPage })),
-);
-const OnboardingPage = lazy(() =>
-  import('@/routes/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
-);
-const WorkspacePage = lazy(() =>
-  import('@/routes/WorkspacePage').then((m) => ({ default: m.WorkspacePage })),
-);
+const LandingPage = lazy(() => import('@/routes/LandingPage').then((module) => ({ default: module.LandingPage })));
+const OnboardingPage = lazy(() => import('@/routes/OnboardingPage').then((module) => ({ default: module.OnboardingPage })));
+const WorkspacePage = lazy(() => import('@/routes/WorkspacePage').then((module) => ({ default: module.WorkspacePage })));
+const PricingPage = lazy(() => import('@/routes/PricingPage').then((module) => ({ default: module.PricingPage })));
+
+// Simple path-based routing without React Router
+const currentPath = window.location.pathname;
 
 function App() {
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
   const stage = useIdealyStore((s) => s.stage);
   const onboarded = useIdealyStore((s) => s.onboarded);
   const refillEnergy = useIdealyStore((s) => s.refillEnergy);
   const setProfile = useIdealyStore((s) => s.setProfile);
   const setStage = useIdealyStore((s) => s.setStage);
-  const way = useIdealyStore((s) => s.way);
-  const supabaseUrl = useIdealyStore((s) => s.connectors.supabaseUrl);
-  const supabaseAnonKey = useIdealyStore((s) => s.connectors.supabaseAnonKey);
 
   useEffect(() => {
     refillEnergy();
   }, [refillEnergy]);
 
-  // Restore Supabase session on load (handles OAuth redirects + persisted sessions)
   useEffect(() => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    // Parse any active session (including OAuth callback in URL hash)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const user = session.user;
-        setProfile({
-          email: user.email ?? '',
-          displayName:
-            user.user_metadata?.full_name ??
-            user.user_metadata?.name ??
-            user.email?.split('@')[0] ??
-            'Utilisateur',
-          avatarHue: 220,
-        });
-        refillEnergy();
-        const { way: currentWay, onboarded: currentOnboarded } = useIdealyStore.getState();
-        if (currentWay && currentOnboarded) {
-          setStage('ready');
-        } else if (useIdealyStore.getState().stage === 'guest') {
-          setStage('choosing-way');
+    const applySession = async (user: any | null) => {
+      if (!user) return;
+      const displayName =
+        (typeof user.user_metadata?.full_name === 'string' && user.user_metadata.full_name) ||
+        (typeof user.user_metadata?.name === 'string' && user.user_metadata.name) ||
+        user.email?.split('@')[0] ||
+        'Utilisateur';
+
+      setProfile({ email: user.email ?? '', displayName, avatarHue: 220 });
+
+      if (user.id) {
+        const { data: energyData } = await supabase.from('user_energy').select('*').eq('id', user.id).single();
+        if (energyData) {
+          useIdealyStore.getState().setEnergy({
+            current: energyData.current_energy,
+            max: energyData.max_energy,
+            lastRefill: energyData.last_refill
+          });
         }
-      }
-    });
-
-    // Listen for future auth state changes (sign in, sign out, token refresh)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const user = session.user;
-        setProfile({
-          email: user.email ?? '',
-          displayName:
-            user.user_metadata?.full_name ??
-            user.user_metadata?.name ??
-            user.email?.split('@')[0] ??
-            'Utilisateur',
-          avatarHue: 220,
-        });
+      } else {
         refillEnergy();
-        const { way: currentWay, onboarded: currentOnboarded } = useIdealyStore.getState();
-        setStage(currentWay && currentOnboarded ? 'ready' : 'choosing-way');
       }
 
-      if (event === 'SIGNED_OUT') {
-        useIdealyStore.setState({
-          stage: 'guest',
-          profile: null,
-        });
-      }
+      const current = useIdealyStore.getState();
+      setStage(current.way && current.onboarded ? 'ready' : 'choosing-way');
+    };
+
+    void supabase.auth.getSession().then(({ data }) => applySession(data.session?.user ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') void applySession(session?.user ?? null);
+      if (event === 'PASSWORD_RECOVERY') setRecoveryOpen(true);
+      if (event === 'SIGNED_OUT') useIdealyStore.getState().signOut();
     });
 
     return () => subscription.unsubscribe();
-  }, [refillEnergy, setProfile, setStage, supabaseUrl, supabaseAnonKey]);
+  }, [refillEnergy, setProfile, setStage]);
 
   let page;
-  if (!onboarded || stage === 'choosing-way' || stage === 'creating-profile') {
+
+  // Public routes — accessible without auth
+  if (currentPath === '/pricing') {
+    page = <PricingPage />;
+  } else if (currentPath === '/demo') {
+    page = <WorkspacePage demoMode />;
+  } else if (!onboarded || stage === 'choosing-way' || stage === 'creating-profile') {
     if (stage === 'choosing-way' || stage === 'creating-profile') {
       page = <OnboardingPage />;
     } else {
@@ -96,11 +81,10 @@ function App() {
     page = <WorkspacePage />;
   }
 
-  return (
-    <Suspense fallback={<main className="min-h-screen bg-ink-950" aria-busy="true" />}>
-      {page}
-    </Suspense>
-  );
+  return <>
+    <Suspense fallback={<main className="min-h-screen bg-ink-950" aria-busy="true" />}>{page}</Suspense>
+    <AuthModal open={recoveryOpen} onClose={() => setRecoveryOpen(false)} mode="recovery" />
+  </>;
 }
 
 export default App;

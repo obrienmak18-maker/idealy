@@ -1,49 +1,105 @@
 import { createClient } from '@supabase/supabase-js';
 import { useIdealyStore } from '@/stores/idealyStore';
 
-// These are public browser coordinates for the IDEALY Supabase project.
-// Server-side secrets must never be placed here or in any Vite variable.
-const DEFAULT_SUPABASE_URL = 'https://vhucjkyktdflwocrmzhe.supabase.co';
-const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_276s95nUxgNgees9AzIP8g_VW53w9ee';
+type IdealySupabaseClient = Omit<ReturnType<typeof createClient>, 'from'> & {
+  from: (table: string) => any;
+};
 
-let client: ReturnType<typeof createClient> | null = null;
+let client: IdealySupabaseClient | null = null;
 let clientConfig = { url: '', key: '' };
 
-/**
- * Returns a configured Supabase client.
- *
- * Priority:
- *  1. VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY from the deployment environment
- *  2. Values entered in Settings → Connectors and persisted locally
- *  3. The public IDEALY project configuration above
- */
-export const getSupabaseClient = () => {
-  const connectors = useIdealyStore.getState().connectors;
-  const supabaseUrl = (
-    import.meta.env.VITE_SUPABASE_URL || connectors.supabaseUrl || DEFAULT_SUPABASE_URL
-  ).trim();
-  const supabaseKey = (
-    import.meta.env.VITE_SUPABASE_ANON_KEY ||
-    connectors.supabaseAnonKey ||
-    DEFAULT_SUPABASE_PUBLISHABLE_KEY
-  ).trim();
+const getRuntimeSupabaseConfig = () => {
+  const envUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+  const store = useIdealyStore.getState();
+  const storedUrl = store.connectors.supabaseUrl?.trim();
+  const storedKey = store.connectors.supabaseAnonKey?.trim();
 
-  if (!supabaseUrl || !supabaseKey) {
+  if (envUrl && envKey) {
+    return { supabaseUrl: envUrl, supabaseAnonKey: envKey };
+  }
+
+  if (storedUrl && storedKey) {
+    return { supabaseUrl: storedUrl, supabaseAnonKey: storedKey };
+  }
+
+  const persisted = typeof window !== 'undefined' ? window.localStorage.getItem('idealy-state') : null;
+  if (persisted) {
+    try {
+      const parsed = JSON.parse(persisted) as { state?: { connectors?: { supabaseUrl?: string; supabaseAnonKey?: string } } };
+      const persistedUrl = parsed?.state?.connectors?.supabaseUrl?.trim();
+      const persistedKey = parsed?.state?.connectors?.supabaseAnonKey?.trim();
+      if (persistedUrl && persistedKey) {
+        return { supabaseUrl: persistedUrl, supabaseAnonKey: persistedKey };
+      }
+    } catch {
+      // Ignore invalid localStorage format
+    }
+  }
+
+  return {
+    supabaseUrl: storedUrl || '',
+    supabaseAnonKey: storedKey || '',
+  };
+};
+
+/** Uses only public browser configuration; server secrets never belong in Vite. */
+export const getSupabaseClient = (): IdealySupabaseClient | null => {
+  const { supabaseUrl, supabaseAnonKey } = getRuntimeSupabaseConfig();
+
+  if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('[Idealy] Supabase frontend configuration is missing.');
     return null;
   }
 
-  if (!client || clientConfig.url !== supabaseUrl || clientConfig.key !== supabaseKey) {
-    client = createClient(supabaseUrl, supabaseKey, {
+  if (!client || clientConfig.url !== supabaseUrl || clientConfig.key !== supabaseAnonKey) {
+    client = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         flowType: 'pkce',
         persistSession: true,
       },
-    });
-    clientConfig = { url: supabaseUrl, key: supabaseKey };
+    }) as IdealySupabaseClient;
+    clientConfig = { url: supabaseUrl, key: supabaseAnonKey };
   }
 
   return client;
+};
+
+export const signInWithGithub = async () => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase client not initialized');
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: {
+      scopes: 'repo', // we need repo scope to push code if needed
+      redirectTo: window.location.origin, // redirect back to idealy
+    },
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+export const signInWithGoogle = async () => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase client not initialized');
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+export const signOut = async () => {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  await supabase.auth.signOut();
 };

@@ -1,7 +1,9 @@
-import { streamText } from 'ai';
-import { getModel } from './provider';
+import { callAIProxy, streamAIProxy } from './provider';
 import type { Way } from '@/lore/ways';
 import { planMission, type ConnectorProvider, type SkillSlug } from './skillRouter';
+import { buildMissionContracts } from '@/core/mission/missionContract';
+import type { MissionContracts } from '@/core/mission/contracts';
+import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 
 export interface MissionContext {
   prompt: string;
@@ -10,6 +12,7 @@ export interface MissionContext {
   energyCost: number;
   skills: SkillSlug[];
   preferredConnectors: ConnectorProvider[];
+  contracts: MissionContracts;
   /** Called during buildIUPS streaming with (tokensGenerated, partialText) */
   onProgress?: (tokens: number, partial: string) => void;
 }
@@ -18,7 +21,6 @@ export interface MissionContext {
 
 export async function analyzeIntent(prompt: string, way: Way): Promise<MissionContext> {
   const plan = planMission(prompt);
-  const model = getModel('fast');
   const ranksList = way.ranks.join(', ');
 
   const systemPrompt = `Tu es l'Orchestrateur en chef de la voie "${way.name}".
@@ -32,9 +34,12 @@ Un projet simple (ex: un bouton, une todo list) coûte peu d'énergie (5-10) et 
 Un projet complexe (ex: un SaaS, un réseau social) coûte plus d'énergie (30-50) et reçoit un rang élevé.`;
 
   try {
-    let text = '';
-    const { textStream } = await streamText({ model, system: systemPrompt, prompt });
-    for await (const delta of textStream) text += delta;
+    const text = await callAIProxy({
+      prompt,
+      systemPrompt,
+      complexity: 'fast',
+      maxTokens: 350,
+    });
     const clean = text.trim().replace(/^```json?\s*/i, '').replace(/\s*```\s*$/, '');
     const data = JSON.parse(clean);
     return {
@@ -43,10 +48,18 @@ Un projet complexe (ex: un SaaS, un réseau social) coûte plus d'énergie (30-5
       rank: data.rank || way.ranks[0],
       energyCost: data.energyCost || 10,
       ...plan,
+      contracts: buildMissionContracts(prompt, way, plan),
     };
   } catch (error) {
     console.error('Intent analysis failed, defaulting:', error);
-    return { prompt, way, rank: way.ranks[0], energyCost: 5, ...plan };
+    return {
+      prompt,
+      way,
+      rank: way.ranks[0],
+      energyCost: 5,
+      ...plan,
+      contracts: buildMissionContracts(prompt, way, plan),
+    };
   }
 }
 
@@ -82,9 +95,7 @@ function extractJSON(raw: string): Record<string, unknown> | null {
 
 // ─── IUPS Builder (code generation) ──────────────────────────────────────────
 
-export async function buildIUPS(context: MissionContext) {
-  const model = getModel('high');
-
+export async function buildIUPS(context: MissionContext): Promise<IdealyUniversalProjectSchema | null> {
   const mobileKeywords = /mobile|android|ios|expo|react.native|app.store|téléphone|smartphone|apk/i;
   const isMobile = mobileKeywords.test(context.prompt);
 
@@ -94,6 +105,9 @@ Rang de complexité : ${context.rank}
 
 MISSION : Génère un projet web complet, production-ready, avec une UI moderne et professionnelle.
 
+CONTRAT DE MISSION À RESPECTER :
+${JSON.stringify(context.contracts)}
+
 RÈGLES IMPÉRATIVES :
 - Génère un vrai projet fonctionnel, pas un template vide.
 - Le code doit être complet, pas tronqué.
@@ -102,6 +116,10 @@ RÈGLES IMPÉRATIVES :
 - Pour un projet complexe, génère aussi : src/components/, src/pages/, src/hooks/, src/utils/.
 - Chaque fichier doit être complet et syntaxiquement correct.
 - N'utilise PAS de placeholder comme "// TODO" ou "..." dans le code.
+- Génère une première tranche verticale utilisable : données de démonstration cohérentes, action principale, états loading/empty/error/success et responsive.
+- Ne place jamais de clé secrète, token privé ou mot de passe dans les fichiers générés.
+  - Respecte le DesignContract, les entités du DataContract et les critères du TestContract ci-dessus.
+  - Les contrats, le rapport de validation et le snapshotId sont ajoutés par Idealy après génération ; ne mets aucun secret dans ces métadonnées.
 
 STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON, sans markdown) :
 {
@@ -126,11 +144,18 @@ Rang de complexité : ${context.rank}
 
 MISSION : Génère un projet Expo (React Native) complet et fonctionnel, mobile-first.
 
+CONTRAT DE MISSION À RESPECTER :
+${JSON.stringify(context.contracts)}
+
 RÈGLES IMPÉRATIVES :
 - Génère un vrai projet Expo, pas un template vide.
 - Utilise expo-router pour la navigation.
 - Génère AU MINIMUM : package.json, app.json, app/(tabs)/index.tsx, app/(tabs)/_layout.tsx.
 - N'utilise PAS de placeholder.
+- Génère des états de chargement, vide, succès et erreur pour l’action principale.
+- Ne place jamais de secret dans les fichiers générés.
+  - Respecte le DesignContract, le DataContract et le TestContract.
+  - Les métadonnées de contrat et de validation sont ajoutées par Idealy après génération.
 
 STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
 {
@@ -154,13 +179,13 @@ STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
       let accumulated = '';
       let tokenCount = 0;
 
-      // Stream tokens in real-time (Fix #13)
-      const { textStream } = await streamText({
-        model,
-        system: systemPrompt,
+      // Stream tokens in real-time via the authenticated server proxy.
+      const textStream = await streamAIProxy({
+        systemPrompt,
         prompt: attempt === 1
           ? "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication."
           : "Réponds UNIQUEMENT avec un objet JSON valide commençant par { et terminant par }. Pas de texte avant ou après.",
+        complexity: 'high',
         maxTokens: 8000,
       });
 
@@ -174,7 +199,12 @@ STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
       }
 
       const parsed = extractJSON(accumulated);
-      if (parsed) return parsed;
+      if (parsed && typeof parsed === 'object' && 'project' in parsed) {
+        return {
+          ...(parsed as unknown as IdealyUniversalProjectSchema),
+          contracts: context.contracts,
+        };
+      }
       console.warn(`[buildIUPS] Attempt ${attempt}: JSON extraction failed, raw length=${accumulated.length}`);
     } catch (error) {
       console.error(`[buildIUPS] Attempt ${attempt} threw:`, error);
@@ -195,8 +225,6 @@ export async function streamAgentMessage(
   missionPrompt: string,
   instruction: string
 ) {
-  const model = getModel('fast');
-
   const systemPrompt = `Tu es ${agent.name} (${agent.role}), un membre incontournable de la voie "${way.name}".
 Ta personnalité profonde (agis EXACTEMENT comme ce personnage sans briser le 4ème mur) : ${agent.personality}.
 Ta spécialité : ${agent.specialty}.
@@ -213,9 +241,12 @@ RÈGLE ABSOLUE : Tu dois TOUJOURS structurer ta réponse ainsi :
 1. Commence par tes pensées détaillées, ton raisonnement, tes doutes, ou ce que tu fais techniquement, encadré EXACTEMENT par <think> et </think>.
 2. Ensuite, écris ton message final (résumé clair, direct, dans le ton de ta personnalité) qui sera lu par l'utilisateur et l'agent suivant. Tu es un expert technique, mais tu t'exprimes avec le fort caractère de ton personnage.`;
 
-  return streamText({
-    model,
-    system: systemPrompt,
-    prompt: "A toi de jouer.",
-  });
+  return {
+    textStream: await streamAIProxy({
+      systemPrompt,
+      prompt: 'À toi de jouer.',
+      complexity: 'fast',
+      maxTokens: 900,
+    }),
+  };
 }

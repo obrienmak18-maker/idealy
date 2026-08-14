@@ -24,8 +24,7 @@ const AVATAR_COLORS = [
 ];
 
 export function DeployPanel({ schema, missionId }: DeployPanelProps) {
-  const { connectors, profile } = useIdealyStore();
-  const vercelToken = connectors?.vercelToken || '';
+  const { profile } = useIdealyStore();
 
   // --- Deployment State ---
   const [deployState, setDeployState] = useState<DeployState>('idle');
@@ -47,16 +46,11 @@ export function DeployPanel({ schema, missionId }: DeployPanelProps) {
       addLog('❌ Aucun projet à déployer. Créez d\'abord une mission.');
       return;
     }
-    if (!vercelToken) {
-      addLog('❌ Token Vercel manquant. Ajoutez-le dans l\'onglet Connecteurs.');
-      return;
-    }
-
     setDeployState('deploying');
     setLogs([]);
 
     try {
-      const result = await deployToVercel(schema, vercelToken, addLog);
+      const result = await deployToVercel(schema, addLog);
       setDeployment(result);
 
       if (result.readyState === 'READY') {
@@ -87,7 +81,7 @@ export function DeployPanel({ schema, missionId }: DeployPanelProps) {
       attempts++;
 
       try {
-        const status = await getDeploymentStatus(deploymentId, vercelToken);
+        const status = await getDeploymentStatus(deploymentId);
         addLog(`📡 Statut: ${status.readyState} (tentative ${attempts}/${maxAttempts})`);
 
         if (status.readyState === 'READY') {
@@ -181,11 +175,9 @@ export function DeployPanel({ schema, missionId }: DeployPanelProps) {
           <h3 className="text-sm font-semibold text-ink-100">Déploiement Vercel</h3>
         </div>
 
-        {!vercelToken && (
-          <div className="mb-3 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-300">
-            ⚠️ Token Vercel manquant. Ajoutez-le dans l'onglet <strong>Connecteurs</strong>.
-          </div>
-        )}
+        <div className="mb-3 rounded-lg bg-electric-500/10 border border-electric-500/20 p-3 text-xs leading-5 text-electric-200">
+          Le déploiement passe par une fonction serveur authentifiée. Le token Vercel n’est jamais stocké dans le navigateur ; si le connecteur n’est pas configuré côté serveur, le journal l’indiquera.
+        </div>
 
         {/* Status Badge */}
         {deployment && (

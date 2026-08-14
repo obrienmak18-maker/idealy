@@ -1,6 +1,37 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --color-ink-100: #f3f4f8;
+  --color-ink-200: #d9dce8;
+  --color-ink-300: #b3b8ca;
+  --color-ink-400: #858ca5;
+  --color-ink-500: #626a85;
+  --color-ink-600: #454c66;
+  --color-ink-700: #2f354d;
+  --color-ink-800: #20253a;
+  --color-ink-900: #121628;
+  --color-ink-950: #080b16;
+  --color-electric-200: #c9dcff;
+  --color-electric-300: #9fc2ff;
+  --color-electric-400: #6fa6ff;
+  --color-electric-500: #3b82f6;
+  --color-electric-600: #2563eb;
+  --color-ember-200: #fed7aa;
+  --color-ember-300: #fdba74;
+  --color-ember-400: #fb923c;
+  --color-ember-500: #f97316;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --font-display: 'Space Grotesk', sans-serif;
+  --animate-shimmer: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
 @layer base {
   :root {
@@ -37,16 +68,16 @@
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply btn bg-gradient-to-r from-electric-600 to-electric-500 text-white shadow-lg shadow-electric-500/25 hover:shadow-electric-500/40 hover:-translate-y-0.5;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-electric-600 to-electric-500 text-white shadow-lg shadow-electric-500/25 hover:shadow-electric-500/40 hover:-translate-y-0.5;
   }
   .btn-ghost {
-    @apply btn text-ink-200 hover:text-white hover:bg-white/5;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-ink-200 hover:text-white hover:bg-white/5;
   }
   .btn-outline {
-    @apply btn border border-white/15 text-ink-100 hover:bg-white/5 hover:border-white/25;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-white/15 text-ink-100 hover:bg-white/5 hover:border-white/25;
   }
   .card {
-    @apply rounded-2xl glass overflow-hidden;
+    @apply rounded-2xl overflow-hidden bg-ink-800/60 backdrop-blur-xl border border-white/10;
   }
   .input {
     @apply w-full bg-ink-900/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-ink-100 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-electric-500/50 focus:border-electric-500/50 transition;
@@ -459,4 +490,3 @@
     inset: -1px;
   }
 }
-

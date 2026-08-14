@@ -1,185 +1,170 @@
-import React, { useState } from 'react';
-import { useIdealyStore, type IdealyConnectors } from '@/stores/idealyStore';
-import { Save, Check, ExternalLink } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, ChevronDown, ExternalLink, LockKeyhole, Plug, ShieldCheck, TestTube2 } from 'lucide-react';
+import { CONNECTOR_REGISTRY, type ConnectorDefinition, type ConnectorEnvironment } from '@/core/connectors/registry';
+import { AZURE_RECIPES } from '@/core/connectors/azureRecipes';
+import { useIdealyStore } from '@/stores/idealyStore';
+import { getSupabaseClient } from '@/supabaseClient';
 
-type Connector = {
-  id: string;
-  name: string;
-  description: string;
-  link: string;
-  price: string;
-  fields: Array<{ key: keyof IdealyConnectors; label: string; placeholder: string; secret?: boolean }>;
-};
-
-const CONNECTORS: Connector[] = [
-  {
-    id: 'vercel',
-    name: 'Vercel',
-    description: 'Déploiement en un clic de vos projets front-end.',
-    link: 'https://vercel.com/account/tokens',
-    price: 'Hobby Gratuit',
-    fields: [
-      { key: 'vercelToken', label: 'Access Token', placeholder: 'vk1_xxxxxxxxxxxxxxxxxxx', secret: true }
-    ]
-  },
-  {
-    id: 'supabase',
-    name: 'Supabase',
-    description: 'Backend as a Service (Postgres, Auth, Storage).',
-    link: 'https://supabase.com/dashboard/project/_/settings/api',
-    price: 'Plan Gratuit Généreux',
-    fields: [
-      { key: 'supabaseUrl', label: 'Project URL', placeholder: 'https://xxxx.supabase.co' },
-      { key: 'supabaseAnonKey', label: 'Anon Public Key', placeholder: 'eyJh...', secret: true }
-    ]
-  },
-  {
-    id: 'firebase',
-    name: 'Firebase',
-    description: 'Plateforme Google (Firestore, Auth, Hosting).',
-    link: 'https://console.firebase.google.com/',
-    price: 'Plan Spark Gratuit',
-    fields: [
-      { key: 'firebaseConfig', label: 'Config JSON', placeholder: '{"apiKey": "...", ...}' }
-    ]
-  },
-  {
-    id: 'github',
-    name: 'GitHub',
-    description: 'Sauvegarde du code source et CI/CD.',
-    link: 'https://github.com/settings/tokens',
-    price: 'Gratuit',
-    fields: [
-      { key: 'githubToken', label: 'Personal Access Token', placeholder: 'ghp_xxxxxxxxxxxxxxxxxxx', secret: true }
-    ]
-  },
-  {
-    id: 'clerk',
-    name: 'Clerk',
-    description: 'Authentification complète et gestion utilisateurs.',
-    link: 'https://dashboard.clerk.com/',
-    price: 'Jusqu\'à 10,000 MAUs gratuit',
-    fields: [
-      { key: 'clerkSecretKey', label: 'Secret Key', placeholder: 'sk_test_...', secret: true }
-    ]
-  },
-  {
-    id: 'stripe',
-    name: 'Stripe',
-    description: 'Paiements en ligne et abonnements.',
-    link: 'https://dashboard.stripe.com/apikeys',
-    price: 'Pay as you go (frais de transaction)',
-    fields: [
-      { key: 'stripeSecretKey', label: 'Secret Key', placeholder: 'sk_test_...', secret: true }
-    ]
-  },
+const publicFields = [
+  { key: 'supabaseUrl' as const, label: 'Project URL', placeholder: 'https://xxxx.supabase.co' },
+  { key: 'supabaseAnonKey' as const, label: 'Publishable / anon key', placeholder: 'eyJ...' },
 ];
 
 export function ConnectorsPanel() {
-  const connectors = useIdealyStore(s => s.connectors);
-  const updateConnectors = useIdealyStore(s => s.updateConnectors);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  
-  const [localValues, setLocalValues] = useState<Record<string, string>>({});
-  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const connectors = useIdealyStore((state) => state.connectors);
+  const updateConnectors = useIdealyStore((state) => state.updateConnectors);
+  const [expanded, setExpanded] = useState<string | null>('supabase');
+  const [environment, setEnvironment] = useState<ConnectorEnvironment>('test');
+  const [localSupabase, setLocalSupabase] = useState({
+    supabaseUrl: connectors.supabaseUrl ?? '',
+    supabaseAnonKey: connectors.supabaseAnonKey ?? '',
+  });
+  const [saved, setSaved] = useState(false);
+  const [serverConnected, setServerConnected] = useState<Set<string>>(new Set());
+  const [statusLoading, setStatusLoading] = useState(false);
 
-  const handleExpand = (id: string) => {
-    setExpanded(id === expanded ? null : id);
-    setLocalValues({});
-    setSavedMsg(null);
-  };
+  useEffect(() => {
+    let cancelled = false;
+    const loadStatus = async () => {
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
+      setStatusLoading(true);
+      try {
+        const { data } = await supabase.functions.invoke('integration-status', { body: {} });
+        if (!cancelled && Array.isArray(data?.integrations)) {
+          setServerConnected(new Set(data.integrations.map((item: { provider: string }) => item.provider)));
+        }
+      } finally {
+        if (!cancelled) setStatusLoading(false);
+      }
+    };
+    void loadStatus();
+    return () => { cancelled = true; };
+  }, []);
 
-  const handleSave = (id: string) => {
-    updateConnectors(localValues);
-    setSavedMsg(id);
-    setTimeout(() => setSavedMsg(null), 2000);
+  const saveSupabasePublicConfig = () => {
+    updateConnectors(localSupabase);
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1800);
   };
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-white">Connecteurs Externes</h3>
-        <p className="text-xs text-ink-400 mt-1">Configurez vos clés API pour qu'Idealy puisse interagir avec ces services lors de la construction ou du déploiement.</p>
+    <div className="h-full overflow-y-auto p-4 scrollbar-thin">
+      <div className="mb-5">
+        <div className="flex items-center gap-2">
+          <Plug size={16} className="text-electric-300" />
+          <h3 className="text-sm font-semibold text-white">Capacités et connecteurs</h3>
+        </div>
+        <p className="mt-2 max-w-xl text-xs leading-5 text-ink-400">
+          Idealy ne demande pas une clé pour chaque action. Il vérifie un environnement, expose des capacités précises et garde les secrets serveur hors du navigateur.
+        </p>
+      </div>
+
+      <div className="mb-4 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-3">
+        <div className="flex items-center gap-2">
+          <TestTube2 size={15} className="text-amber-300" />
+          <div>
+            <p className="text-xs font-medium text-white">Environnement actif</p>
+            <p className="text-[10px] text-ink-500">Les tests ne touchent pas la production.</p>
+          </div>
+        </div>
+        <select value={environment} onChange={(event) => setEnvironment(event.target.value as ConnectorEnvironment)} className="rounded-lg border border-white/10 bg-ink-950 px-2 py-1.5 text-xs text-white outline-none">
+          <option value="test">Test / sandbox</option>
+          <option value="production">Production</option>
+        </select>
       </div>
 
       <div className="space-y-3">
-        {CONNECTORS.map(connector => {
-          const isExpanded = expanded === connector.id;
-          const hasData = connector.fields.some((field) => Boolean(connectors[field.key]));
+        {CONNECTOR_REGISTRY.map((connector) => {
+          const isOpen = expanded === connector.id;
+          const isSupabase = connector.id === 'supabase';
+          const readinessLabel = connector.readiness === 'operational'
+            ? 'Connecteur opérationnel'
+            : connector.readiness === 'admin-config'
+              ? 'Configuration administrateur requise'
+              : 'Adaptateur prévu — non activé';
+          const stateLabel = serverConnected.has(connector.id) ? 'OAuth connecté côté serveur' : isSupabase && localSupabase.supabaseUrl ? 'Configuration publique enregistrée' : connector.secretHandling === 'oauth' ? (statusLoading ? 'Vérification de la connexion...' : 'Connexion OAuth à autoriser') : connector.secretHandling === 'server-managed' ? 'Secret géré côté serveur' : 'Configuration requise';
 
           return (
-            <div key={connector.id} className={`rounded-xl border transition-all ${isExpanded ? 'border-electric-500/30 bg-white/5' : 'border-white/5 bg-ink-900/30 hover:border-white/10'}`}>
-              <div 
-                className="flex items-center justify-between p-3 cursor-pointer"
-                onClick={() => handleExpand(connector.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center font-bold text-white text-xs">
-                    {connector.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-white flex items-center gap-2">
+            <section key={connector.id} className={`rounded-xl border transition ${isOpen ? 'border-electric-400/30 bg-white/[0.04]' : 'border-white/10 bg-ink-900/40'}`}>
+              <button onClick={() => setExpanded(isOpen ? null : connector.id)} className="flex w-full items-center justify-between gap-3 p-3 text-left">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-xs font-semibold text-white">{connector.name[0]}</div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-sm font-medium text-white">
                       {connector.name}
-                      {hasData && <Check size={12} className="text-green-400" />}
+                      {(serverConnected.has(connector.id) || (isSupabase && localSupabase.supabaseUrl)) && <Check size={13} className="text-emerald-400" />}
                     </div>
-                    <div className="text-[11px] text-ink-400">{connector.description}</div>
+                    <p className="truncate text-[11px] text-ink-400">{connector.description}</p>
                   </div>
                 </div>
-                <div className="text-[10px] uppercase tracking-wider px-2 py-1 rounded bg-white/5 text-ink-300">
-                  {connector.price}
-                </div>
-              </div>
+                <ChevronDown size={15} className={`shrink-0 text-ink-500 transition ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
 
-              {isExpanded && (
-                <div className="p-3 pt-0 border-t border-white/5 mt-2">
-                  <div className="flex items-center justify-between mb-3 pt-2">
-                    <span className="text-xs text-ink-300">Configuration</span>
-                    <a 
-                      href={connector.link} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-xs text-electric-400 hover:text-electric-300 flex items-center gap-1"
-                    >
-                      Obtenir les clés <ExternalLink size={12} />
-                    </a>
+              {isOpen && (
+                <div className="border-t border-white/5 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium text-ink-200">{stateLabel}</p>
+                      <p className={`mt-1 text-[10px] ${connector.readiness === 'operational' ? 'text-emerald-300' : connector.readiness === 'admin-config' ? 'text-amber-200' : 'text-ink-400'}`}>{readinessLabel}</p>
+                      <p className="mt-1 text-[11px] leading-4 text-ink-500">{connector.capabilities.length} capacité(s) déclarée(s) pour {environment}.</p>
+                    </div>
+                    <a href={connector.setupUrl} target="_blank" rel="noopener noreferrer" className="flex shrink-0 items-center gap-1 text-[11px] text-electric-300 hover:text-electric-200">Documentation <ExternalLink size={11} /></a>
                   </div>
-                  
-                  <div className="space-y-3">
-                    {connector.fields.map(field => {
-                      const value = localValues[field.key] !== undefined 
-                        ? localValues[field.key] 
-                        : connectors[field.key] || '';
-                        
-                      return (
-                        <div key={field.key}>
-                          <label className="block text-[11px] text-ink-400 mb-1">{field.label}</label>
-                          <input 
-                            type={field.secret ? "password" : "text"}
-                            value={value}
-                            onChange={(e) => setLocalValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                            placeholder={field.placeholder}
-                            className="w-full bg-ink-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-ink-600 focus:outline-none focus:border-electric-500/50"
-                          />
+
+                  {isSupabase ? (
+                    <>
+                      <div className="mt-4 grid gap-3">
+                        {publicFields.map((field) => (
+                          <label key={field.key} className="block">
+                            <span className="mb-1 block text-[11px] text-ink-400">{field.label}</span>
+                            <input
+                              type={field.key === 'supabaseAnonKey' ? 'password' : 'url'}
+                              value={localSupabase[field.key]}
+                              onChange={(event) => setLocalSupabase((current) => ({ ...current, [field.key]: event.target.value }))}
+                              placeholder={field.placeholder}
+                              className="w-full rounded-lg border border-white/10 bg-ink-950 px-3 py-2 text-xs text-white outline-none placeholder:text-ink-600 focus:border-electric-400/60"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <p className="flex items-center gap-1.5 text-[10px] leading-4 text-ink-500"><ShieldCheck size={12} className="text-emerald-400" /> Ces deux valeurs sont publiques côté client.</p>
+                        <button onClick={saveSupabasePublicConfig} className="btn-primary px-3 py-1.5 text-xs">{saved ? 'Enregistré' : 'Enregistrer'}</button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-4 rounded-lg bg-amber-400/10 px-3 py-2.5 text-xs leading-5 text-amber-100">
+                      <div className="flex items-start gap-2"><LockKeyhole size={14} className="mt-0.5 shrink-0 text-amber-300" /><span>La clé privée ne doit pas être saisie dans l’application. Cette connexion passera par OAuth ou par une fonction serveur lorsqu’elle sera activée.</span></div>
+                    </div>
+                  )}
+
+                  {connector.id === 'azure' && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">Recettes précises — non activées</p>
+                      {AZURE_RECIPES.map((recipe) => (
+                        <div key={recipe.id} className="rounded-lg border border-amber-300/15 bg-amber-300/5 p-2.5">
+                          <p className="text-xs font-medium text-amber-100">{recipe.name}</p>
+                          <p className="mt-1 text-[10px] leading-4 text-ink-400">{recipe.purpose}</p>
+                          <p className="mt-1.5 text-[10px] text-amber-200/80">Secrets serveur attendus : {recipe.serverSecretNames.join(', ')}</p>
+                          <p className="mt-1 text-[10px] text-ink-500">Prochaine action : {recipe.nextServerAction}</p>
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
-                  <div className="mt-4 flex justify-end">
-                    <button 
-                      onClick={() => handleSave(connector.id)}
-                      className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg transition"
-                    >
-                      {savedMsg === connector.id ? (
-                        <><Check size={14} className="text-green-400" /> Sauvegardé</>
-                      ) : (
-                        <><Save size={14} /> Enregistrer</>
-                      )}
-                    </button>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {connector.capabilities.map((capability) => (
+                      <div key={capability.id} className="rounded-lg border border-white/5 bg-ink-950/60 p-2.5">
+                        <p className="text-xs font-medium text-ink-200">{capability.label}</p>
+                        <p className="mt-1 text-[10px] leading-4 text-ink-500">{capability.description}</p>
+                        <p className="mt-1.5 font-mono text-[10px] text-electric-300/80">{capability.permission}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
-            </div>
+            </section>
           );
         })}
       </div>

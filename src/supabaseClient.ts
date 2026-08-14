@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { useIdealyStore } from '@/stores/idealyStore';
 
-let client: ReturnType<typeof createClient> | null = null;
+type IdealySupabaseClient = Omit<ReturnType<typeof createClient>, 'from'> & {
+  from: (table: string) => any;
+};
+
+let client: IdealySupabaseClient | null = null;
 let clientConfig = { url: '', key: '' };
 
 const getRuntimeSupabaseConfig = () => {
@@ -40,7 +44,7 @@ const getRuntimeSupabaseConfig = () => {
 };
 
 /** Uses only public browser configuration; server secrets never belong in Vite. */
-export const getSupabaseClient = () => {
+export const getSupabaseClient = (): IdealySupabaseClient | null => {
   const { supabaseUrl, supabaseAnonKey } = getRuntimeSupabaseConfig();
 
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -56,7 +60,7 @@ export const getSupabaseClient = () => {
         flowType: 'pkce',
         persistSession: true,
       },
-    });
+    }) as IdealySupabaseClient;
     clientConfig = { url: supabaseUrl, key: supabaseAnonKey };
   }
 
@@ -66,7 +70,7 @@ export const getSupabaseClient = () => {
 export const signInWithGithub = async () => {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase client not initialized');
-  
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'github',
     options: {
@@ -82,7 +86,7 @@ export const signInWithGithub = async () => {
 export const signInWithGoogle = async () => {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase client not initialized');
-  
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {

@@ -6,6 +6,7 @@
  */
 import { useState } from 'react';
 import { CheckCircle2, XCircle, ChevronDown, ChevronRight, FileCode2, Sparkles } from 'lucide-react';
+import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer-continued';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 
 interface FileChange {
@@ -41,61 +42,42 @@ function computeChanges(
 }
 
 function DiffView({ oldContent, newContent }: { oldContent?: string; newContent: string }) {
-  if (!oldContent) {
-    // Nouveau fichier — tout est ajouté
-    const lines = newContent.split('\n').slice(0, 30);
-    return (
-      <div className="font-mono text-xs leading-relaxed overflow-auto max-h-48 bg-[#0d1117] rounded-lg p-3 scrollbar-thin">
-        {lines.map((line, i) => (
-          <div key={i} className="flex gap-2">
-            <span className="text-green-500 select-none">+</span>
-            <span className="text-green-300">{line}</span>
-          </div>
-        ))}
-        {newContent.split('\n').length > 30 && (
-          <div className="text-ink-500 mt-1">... ({newContent.split('\n').length - 30} lignes de plus)</div>
-        )}
-      </div>
-    );
-  }
-
-  // Diff simplifié ligne par ligne
-  const oldLines = oldContent.split('\n');
-  const newLines = newContent.split('\n');
-  const maxLines = Math.max(oldLines.length, newLines.length);
-  const displayed = Math.min(maxLines, 40);
-
-  const diffLines = [];
-  for (let i = 0; i < displayed; i++) {
-    const o = oldLines[i];
-    const n = newLines[i];
-    if (o === n) {
-      diffLines.push({ kind: 'same', text: n ?? '' });
-    } else {
-      if (o !== undefined) diffLines.push({ kind: 'removed', text: o });
-      if (n !== undefined) diffLines.push({ kind: 'added', text: n });
-    }
-  }
-
   return (
-    <div className="font-mono text-xs leading-relaxed overflow-auto max-h-48 bg-[#0d1117] rounded-lg p-3 scrollbar-thin">
-      {diffLines.map((line, i) => (
-        <div key={i} className="flex gap-2">
-          <span className={`select-none ${
-            line.kind === 'added' ? 'text-green-500' : line.kind === 'removed' ? 'text-red-500' : 'text-ink-600'
-          }`}>
-            {line.kind === 'added' ? '+' : line.kind === 'removed' ? '-' : ' '}
-          </span>
-          <span className={
-            line.kind === 'added' ? 'text-green-300' : line.kind === 'removed' ? 'text-red-300 line-through' : 'text-ink-400'
-          }>
-            {line.text}
-          </span>
-        </div>
-      ))}
-      {maxLines > 40 && (
-        <div className="text-ink-500 mt-1">... ({maxLines - 40} lignes de plus)</div>
-      )}
+    <div className="rounded-lg overflow-hidden border border-white/10 text-xs">
+      <ReactDiffViewer
+        oldValue={oldContent ?? ''}
+        newValue={newContent}
+        splitView={false}
+        useDarkTheme={true}
+        compareMethod={DiffMethod.WORDS}
+        hideLineNumbers={false}
+        styles={{
+          variables: {
+            dark: {
+              diffViewerBackground: '#0d1117',
+              addedBackground: 'rgba(46, 160, 67, 0.15)',
+              addedColor: '#7ee787',
+              removedBackground: 'rgba(248, 81, 73, 0.15)',
+              removedColor: '#ff7b72',
+              wordAddedBackground: 'rgba(46, 160, 67, 0.3)',
+              wordRemovedBackground: 'rgba(248, 81, 73, 0.3)',
+              addedGutterBackground: 'rgba(46, 160, 67, 0.15)',
+              removedGutterBackground: 'rgba(248, 81, 73, 0.15)',
+              gutterBackground: '#0d1117',
+              gutterBackgroundDark: '#0d1117',
+              highlightBackground: '#0d1117',
+              highlightGutterBackground: '#0d1117',
+              codeFoldGutterBackground: '#0d1117',
+              codeFoldBackground: '#0d1117',
+              emptyLineBackground: '#0d1117',
+              gutterColor: '#8b949e',
+              addedGutterColor: '#8b949e',
+              removedGutterColor: '#8b949e',
+              codeFoldContentColor: '#8b949e',
+            }
+          }
+        }}
+      />
     </div>
   );
 }

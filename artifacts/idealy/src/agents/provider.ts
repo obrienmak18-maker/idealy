@@ -1,71 +1,140 @@
-import { createOpenAI } from '@ai-sdk/openai';
-import { generateText, streamText } from 'ai';
+/**
+ * provider.ts — Client IA sécurisé.
+ *
+ * Le navigateur ne contient aucune clé fournisseur. Il envoie uniquement une
+ * demande authentifiée à l’Edge Function `process-ai-request`, qui choisit le
+ * fournisseur autorisé et conserve les secrets côté serveur.
+ */
 
-// Initialize multiple providers based on available keys
-function openRouterProvider() {
-  return createOpenAI({
-    baseURL: 'https://openrouter.ai/api/v1',
-    // Only a user-provided browser key may be used here. Platform keys belong in a server-side Edge Function.
-    apiKey: localStorage.getItem('IDEALY_OPENROUTER_KEY') || '',
-  });
+import { getSupabaseClient } from '@/supabaseClient';
+
+export type Complexity = 'low' | 'medium' | 'high' | 'fast';
+export type LLMProvider = 'groq' | 'openrouter' | 'deepseek';
+
+export interface ModelConfig {
+  provider: LLMProvider;
+  model: string;
 }
 
-function groqProvider() {
-  return createOpenAI({
-    baseURL: 'https://api.groq.com/openai/v1',
-    // Never read VITE_* secrets: Vite exposes those values to every browser bundle.
-    apiKey: localStorage.getItem('IDEALY_GROQ_KEY') || '',
-  });
+const MODEL_MAP: Record<Complexity, ModelConfig> = {
+  fast: { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+  low: { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+  medium: { provider: 'deepseek', model: 'deepseek-chat' },
+  high: { provider: 'openrouter', model: 'deepseek/deepseek-coder' },
+};
+
+export function getModelConfig(complexity: Complexity): ModelConfig {
+  return MODEL_MAP[complexity];
 }
 
-// A basic routing function to pick the best model for the job
-// The user doesn't see which model is chosen.
-export function getModel(taskComplexity: 'low' | 'medium' | 'high' | 'fast') {
-  switch (taskComplexity) {
-    case 'fast':
-      // Fast generations (Groq with llama3)
-      return groqProvider()('llama3-8b-8192');
-    case 'high':
-      // Complex reasoning (OpenRouter with Claude 3.5 Sonnet or GPT-4o)
-      return openRouterProvider()('anthropic/claude-3.5-sonnet');
-    case 'medium':
-      return openRouterProvider()('meta-llama/llama-3.1-70b-instruct');
-    case 'low':
-    default:
-      return groqProvider()('llama3-8b-8192');
-  }
+export interface ProxyCallOptions {
+  prompt: string;
+  systemPrompt?: string;
+  complexity?: Complexity;
+  stream?: boolean;
+  maxTokens?: number;
 }
 
-export async function askAgent(
-  prompt: string,
-  systemPrompt: string,
-  complexity: 'low' | 'medium' | 'high' | 'fast' = 'medium'
-) {
-  const model = getModel(complexity);
-  
-  try {
-    const { text } = await generateText({
-      model,
-      system: systemPrompt,
+async function createProxyRequest(options: ProxyCallOptions): Promise<Response> {
+  const { prompt, systemPrompt, complexity = 'medium', stream = false, maxTokens = 8000 } = options;
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase non configuré.');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Connectez-vous avant de lancer une mission IA.');
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+  if (!supabaseUrl || !anonKey) throw new Error('Configuration publique Supabase incomplète.');
+
+  const config = getModelConfig(complexity);
+  return fetch(`${supabaseUrl}/functions/v1/process-ai-request`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: anonKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
       prompt,
-    });
-    return text;
-  } catch (error) {
-    console.error('Agent error:', error);
-    return "Je rencontre une perturbation dans mon mana. Essayons à nouveau.";
-  }
+      systemPrompt,
+      provider: config.provider,
+      model: config.model,
+      stream,
+      maxTokens,
+    }),
+  });
 }
 
-export function streamAgent(
-  prompt: string,
-  systemPrompt: string,
-  complexity: 'low' | 'medium' | 'high' | 'fast' = 'medium'
-) {
-  const model = getModel(complexity);
-  
-  return streamText({
-    model,
-    system: systemPrompt,
-    prompt,
-  });
+async function readProxyError(response: Response): Promise<string> {
+  const payload = await response.json().catch(() => null) as { error?: string } | null;
+  return payload?.error ?? `Erreur IA (${response.status}).`;
+}
+
+/** Appel non-streaming vers l’Edge Function ; aucun secret fournisseur ne traverse le navigateur. */
+export async function callAIProxy(options: ProxyCallOptions): Promise<string> {
+  const response = await createProxyRequest({ ...options, stream: false });
+  if (!response.ok) throw new Error(await readProxyError(response));
+
+  const payload = await response.json() as { message?: string };
+  return payload.message ?? '';
+}
+
+/**
+ * Flux de texte via l’Edge Function. Le proxy renvoie des événements SSE
+ * OpenAI-compatibles et ce lecteur expose seulement les fragments texte.
+ */
+export async function streamAIProxy(options: ProxyCallOptions): Promise<AsyncIterable<string>> {
+  const response = await createProxyRequest({ ...options, stream: true });
+  if (!response.ok || !response.body) throw new Error(await readProxyError(response));
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = '';
+
+  async function* readEvents(): AsyncGenerator<string> {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        pending += decoder.decode(value, { stream: true });
+        const lines = pending.split('\n');
+        pending = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (!data) continue;
+          if (data === '[DONE]') return;
+          try {
+            const parsed = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
+            const text = parsed.choices?.[0]?.delta?.content;
+            if (text) yield text;
+          } catch {
+            // Ignore incomplete or provider-specific SSE events.
+          }
+        }
+      }
+
+      if (pending.trim()) {
+        for (const line of pending.split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (!data || data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
+            const text = parsed.choices?.[0]?.delta?.content;
+            if (text) yield text;
+          } catch {
+            // Ignore malformed final SSE event.
+          }
+        }
+      }
+    } finally {
+      await reader.cancel().catch(() => undefined);
+    }
+  }
+
+  return readEvents();
 }

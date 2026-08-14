@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { WayId } from '@/lore/ways';
+import type { MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
 export type AuthStage =
   | 'guest'
@@ -18,7 +19,7 @@ export interface UserProfile {
 export interface EnergyState {
   current: number;
   max: number;
-  lastRefill: string; // ISO date (YYYY-MM-DD)
+  lastRefill: string;
 }
 
 export interface MissionHistory {
@@ -27,19 +28,18 @@ export interface MissionHistory {
   createdAt: number;
   way: WayId;
   previewReady: boolean;
+  status?: 'draft' | 'planned' | 'building' | 'ready' | 'needs-fix' | 'published';
+  validation?: ValidationReport;
 }
 
+/**
+ * Only publishable Supabase browser configuration belongs in the frontend store.
+ * OAuth tokens, provider keys and deployment secrets are server-managed and are
+ * intentionally absent from this type.
+ */
 export interface IdealyConnectors {
-  vercelToken?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
-  firebaseConfig?: string;
-  githubToken?: string;
-  stripeSecretKey?: string;
-  clerkSecretKey?: string;
-  openAIApiKey?: string;
-  webcontainerKey?: string;
-  collaborationRoom?: string; // Yjs room ID for real-time collab
 }
 
 export interface IdealyState {
@@ -50,6 +50,8 @@ export interface IdealyState {
   theme: 'dark' | 'light';
   onboarded: boolean;
   missions: MissionHistory[];
+  activeMissionId: string | null;
+  missionDNA: Record<string, MissionDNA>;
   connectors: IdealyConnectors;
 
   setStage: (s: AuthStage) => void;
@@ -64,6 +66,9 @@ export interface IdealyState {
   addMission: (mission: MissionHistory) => void;
   updateMission: (id: string, updates: Partial<MissionHistory>) => void;
   setMissions: (missions: MissionHistory[]) => void;
+  setActiveMissionId: (id: string | null) => void;
+  setMissionDNA: (missionId: string, dna: MissionDNA) => void;
+  updateMissionDNA: (missionId: string, updater: (dna: MissionDNA) => MissionDNA) => void;
   updateConnectors: (updates: Partial<IdealyConnectors>) => void;
   updateConnector: (provider: keyof IdealyConnectors, value: string) => void;
 }
@@ -84,6 +89,8 @@ export const useIdealyStore = create<IdealyState>()(
       theme: 'dark',
       onboarded: false,
       missions: [],
+      activeMissionId: null,
+      missionDNA: {},
       connectors: {},
 
       setStage: (s) => set({ stage: s }),
@@ -97,6 +104,7 @@ export const useIdealyStore = create<IdealyState>()(
           way: null,
           profile: null,
           onboarded: false,
+          activeMissionId: null,
           energy: { current: DAILY_MAX, max: DAILY_MAX, lastRefill: today() },
         }),
       setEnergy: (energy) => set({ energy }),
@@ -112,33 +120,52 @@ export const useIdealyStore = create<IdealyState>()(
         }
       },
       addMission: (mission) => set((state) => ({ missions: [mission, ...state.missions] })),
-      updateMission: (id, updates) => set((state) => ({
-        missions: state.missions.map(m => m.id === id ? { ...m, ...updates } : m)
-      })),
+      updateMission: (id, updates) =>
+        set((state) => ({
+          missions: state.missions.map((mission) =>
+            mission.id === id ? { ...mission, ...updates } : mission,
+          ),
+        })),
       setMissions: (missions) => set({ missions }),
-      updateConnectors: (updates) => set((state) => ({
-        connectors: { ...state.connectors, ...updates }
-      })),
-      updateConnector: (provider, value) => set((state) => ({
-        connectors: { ...state.connectors, [provider]: value }
-      })),
+      setActiveMissionId: (activeMissionId) => set({ activeMissionId }),
+      setMissionDNA: (missionId, dna) =>
+        set((state) => ({ missionDNA: { ...state.missionDNA, [missionId]: dna } })),
+      updateMissionDNA: (missionId, updater) =>
+        set((state) => {
+          const current = state.missionDNA[missionId];
+          return current
+            ? { missionDNA: { ...state.missionDNA, [missionId]: updater(current) } }
+            : state;
+        }),
+      updateConnectors: (updates) =>
+        set((state) => ({ connectors: { ...state.connectors, ...updates } })),
+      updateConnector: (provider, value) =>
+        set((state) => ({ connectors: { ...state.connectors, [provider]: value } })),
     }),
     {
       name: 'idealy-state',
-      partialize: (s) => ({
-        way: s.way,
-        profile: s.profile,
-        theme: s.theme,
-        onboarded: s.onboarded,
-        energy: s.energy,
-        connectors: s.connectors,
+      partialize: (state) => ({
+        way: state.way,
+        profile: state.profile,
+        theme: state.theme,
+        onboarded: state.onboarded,
+        energy: state.energy,
+        missions: state.missions,
+        activeMissionId: state.activeMissionId,
+        missionDNA: state.missionDNA,
+        // Only public Supabase browser configuration persists across reloads.
+        connectors: {
+          supabaseUrl: state.connectors.supabaseUrl,
+          supabaseAnonKey: state.connectors.supabaseAnonKey,
+        },
       }),
-      version: 2,
+      version: 4,
       merge: (persistedState, currentState) => {
         const saved = persistedState as Partial<IdealyState>;
         return {
           ...currentState,
           ...saved,
+          missionDNA: saved.missionDNA ?? currentState.missionDNA,
           connectors: saved.connectors ?? currentState.connectors,
         };
       },

@@ -2,7 +2,9 @@ name: Deploy Idealy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - feat/idealy-complete-system
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -75,5 +77,15 @@ jobs:
             exit 0
           fi
           supabase functions deploy ai-proxy --project-ref "$PROJECT_ID"
+          supabase functions deploy process-ai-request --project-ref "$PROJECT_ID"
           supabase functions deploy create-checkout-session --project-ref "$PROJECT_ID"
+          supabase functions deploy create-billing-portal --project-ref "$PROJECT_ID"
+          supabase functions deploy check-subscription --project-ref "$PROJECT_ID"
+          supabase functions deploy cancel-subscription --project-ref "$PROJECT_ID"
           supabase functions deploy stripe-webhook --project-ref "$PROJECT_ID" --no-verify-jwt
+          supabase functions deploy github-export --project-ref "$PROJECT_ID"
+          supabase functions deploy integration-connect --project-ref "$PROJECT_ID"
+          supabase functions deploy integration-status --project-ref "$PROJECT_ID"
+          supabase functions deploy vercel-deploy --project-ref "$PROJECT_ID"
+          supabase functions deploy vercel-status --project-ref "$PROJECT_ID"
+          supabase functions deploy integration-callback --project-ref "$PROJECT_ID" --no-verify-jwt

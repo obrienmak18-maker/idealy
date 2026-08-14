@@ -415,6 +415,8 @@ export const WAYS: Record<WayId, Way> = {
     textClass: 'text-ink-200',
     borderClass: 'border-white/20',
     bgClass: 'from-white/10',
+    mentors: [],
+    antagonists: [],
     image:
       'https://images.pexels.com/photos/11516441/pexels-photo-11516441.jpeg?auto=compress&cs=tinysrgb&h=900&w=600',
     vocab: {

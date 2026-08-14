@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { analyzeIntent, buildIUPS, streamAgentMessage } from '@/agents/orchestrator';
 import { iupsToCode } from '@/core/iups/exporter';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
@@ -44,19 +44,31 @@ import {
   Loader2,
   Download,
   GitBranch,
+  ShieldCheck,
 } from 'lucide-react';
 import { Logo } from '@/components/Brand';
 import { WAYS, type WayId } from '@/lore/ways';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
 import { useStripe } from '@/hooks/useStripe';
+import { MissionBriefPanel } from '@/components/workspace/MissionBriefPanel';
+import { MissionStatusPanel } from '@/components/workspace/MissionStatusPanel';
+import { MissionActivityPanel, type MissionExecutionStage } from '@/components/workspace/MissionActivityPanel';
+import { buildMissionContracts } from '@/core/mission/missionContract';
+import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/mission/missionDNA';
+import { validateGeneratedProject } from '@/core/mission/validateMission';
+import { buildPreflightProofs } from '@/core/mission/preflight';
+import { createDemoMission } from '@/core/mission/demoMission';
+import { selectMissionTeam } from '@/core/mission/missionTeam';
+import type { ChangeCapsule, MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
-type RightTab = 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
+type RightTab = 'mission' | 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
 
 type BrowserSpeechRecognition = {
   lang: string;
   interimResults: boolean;
   start: () => void;
+  stop: () => void;
   onresult: (event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void;
   onend: () => void;
   onerror: () => void;
@@ -73,17 +85,52 @@ const SLASH_COMMANDS = [
   { cmd: '/style', label: '/style', desc: 'Améliorer le style du projet' },
 ];
 
-export function WorkspacePage() {
-  const wayId = useIdealyStore((s) => s.way) as WayId;
+const DICTATION_THEME: Record<WayId, { active: string; wave: string; ring: string; label: string }> = {
+  ninja: {
+    active: 'bg-ember-500/15 text-ember-200',
+    wave: 'bg-ember-300',
+    ring: 'border-ember-300/70',
+    label: 'Canal de mission ouvert',
+  },
+  mage: {
+    active: 'bg-electric-500/15 text-electric-200',
+    wave: 'bg-electric-300',
+    ring: 'border-electric-300/70',
+    label: 'Canal arcanique ouvert',
+  },
+  hunter: {
+    active: 'bg-success-500/15 text-success-200',
+    wave: 'bg-success-300',
+    ring: 'border-success-300/70',
+    label: 'Canal de traque ouvert',
+  },
+  pro: {
+    active: 'bg-white/15 text-white',
+    wave: 'bg-white',
+    ring: 'border-white/70',
+    label: 'Dictée professionnelle active',
+  },
+};
+
+export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?: boolean } = {}) {
+  const storedWayId = useIdealyStore((s) => s.way) as WayId | null;
+  const wayId = storedWayId ?? (initialDemoMode ? 'pro' : 'ninja');
   const profile = useIdealyStore((s) => s.profile);
   const energy = useIdealyStore((s) => s.energy);
   const setMissions = useIdealyStore((s) => s.setMissions);
   const missions = useIdealyStore((s) => s.missions);
   const addMission = useIdealyStore((s) => s.addMission);
   const updateStoreMission = useIdealyStore((s) => s.updateMission);
+  const setActiveMissionId = useIdealyStore((s) => s.setActiveMissionId);
+  const setMissionDNA = useIdealyStore((s) => s.setMissionDNA);
+  const updateMissionDNA = useIdealyStore((s) => s.updateMissionDNA);
+  const missionDNA = useIdealyStore((s) => s.missionDNA);
   const signOut = useIdealyStore((s) => s.signOut);
 
   const way = WAYS[wayId];
+  const missionTeam = selectMissionTeam(way);
+  const dictationTheme = DICTATION_THEME[wayId];
+  const shouldReduceMotion = useReducedMotion();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tab, setTab] = useState<RightTab>('preview');
   const [showPreview, setShowPreview] = useState(false);
@@ -95,6 +142,7 @@ export function WorkspacePage() {
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [isBillingPortalOpen, setIsBillingPortalOpen] = useState(false);
   const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
+  const [pendingBrief, setPendingBrief] = useState<{ prompt: string; contracts: MissionContracts } | null>(null);
 
   const { subscription, checkSubscription } = useStripe();
 
@@ -105,10 +153,13 @@ export function WorkspacePage() {
   const [toolMessage, setToolMessage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [missionActivity, setMissionActivity] = useState<{ missionId: string; stage: MissionExecutionStage } | null>(null);
   const [generationProgress, setGenerationProgress] = useState<number>(0);
+  const [demoMode, setDemoMode] = useState(initialDemoMode);
   const scrollRef = useRef<HTMLDivElement>(null);
   const attachmentRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const dictationRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -116,14 +167,24 @@ export function WorkspacePage() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    return () => {
+      dictationRecognitionRef.current?.stop();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (initialDemoMode && messages.length === 0) startDemoMode();
+  }, [initialDemoMode]);
+
   // Load missions from Supabase on mount
   useEffect(() => {
     if (profile) {
       const supabase = getSupabaseClient();
       if (!supabase) return;
-      supabase.from('missions').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      supabase.from('missions').select('*').order('created_at', { ascending: false }).then(({ data }: { data: Array<{ id: string; title: string; created_at: number; way: string; preview_ready: boolean }> | null }) => {
         if (data) {
-          setMissions(data.map(d => ({
+          setMissions(data.map((d) => ({
             id: d.id,
             title: d.title,
             createdAt: d.created_at,
@@ -140,12 +201,14 @@ export function WorkspacePage() {
     if (currentMissionId) {
       const supabase = getSupabaseClient();
       if (!supabase) return;
-      supabase.from('missions').select('schema').eq('id', currentMissionId).single().then(({ data }) => {
+      supabase.from('missions').select('schema, dna, validation, status, preview_ready').eq('id', currentMissionId).single().then(({ data }: { data: { schema?: unknown; dna?: MissionDNA; validation?: ValidationReport; status?: 'draft' | 'planned' | 'building' | 'ready' | 'needs-fix' | 'published'; preview_ready?: boolean } | null }) => {
         if (data?.schema) {
           setProjectSchema(data.schema as IdealyUniversalProjectSchema);
         } else {
           setProjectSchema(null);
         }
+        if (data?.dna) setMissionDNA(currentMissionId, data.dna);
+        if (data?.status) updateStoreMission(currentMissionId, { status: data.status, previewReady: Boolean(data.preview_ready), validation: data.validation ?? undefined });
       });
     }
   }, [currentMissionId]);
@@ -153,14 +216,60 @@ export function WorkspacePage() {
   const updateProjectSchema = (newSchema: IdealyUniversalProjectSchema | null) => {
     setProjectSchema(newSchema);
     if (currentMissionId && newSchema) {
-      getSupabaseClient()?.from('missions').update({ schema: newSchema }).eq('id', currentMissionId).then();
+      getSupabaseClient()?.from('missions').update({ schema: newSchema, updated_at: new Date().toISOString() }).eq('id', currentMissionId).then();
     }
   };
+
+  const restoreMissionSnapshot = (snapshot: import('@/core/mission/contracts').MissionSnapshot) => {
+    if (!currentMissionId || !snapshot.schema) return;
+    setPreviousSchema(projectSchema);
+    updateProjectSchema(snapshot.schema as IdealyUniversalProjectSchema);
+    updateStoreMission(currentMissionId, { previewReady: true, status: 'ready', validation: snapshot.validation });
+    updateMissionDNA(currentMissionId, (dna) => ({
+      ...dna,
+      status: 'ready',
+      updatedAt: Date.now(),
+      validation: snapshot.validation ?? dna.validation,
+    }));
+    const restoredDNA = useIdealyStore.getState().missionDNA[currentMissionId];
+    getSupabaseClient()?.from('missions').update({
+      schema: snapshot.schema,
+      status: 'ready',
+      validation: snapshot.validation ?? null,
+      dna: restoredDNA,
+      updated_at: new Date().toISOString(),
+      preview_ready: true,
+    }).eq('id', currentMissionId).then();
+    setShowPreview(true);
+    setTab('preview');
+    setToolMessage(`Version restaurée : ${snapshot.label}`);
+  };
+
+  function repairMission() {
+    const activeDNA = currentMissionId ? missionDNA[currentMissionId] : null;
+    const issues = activeDNA?.validation?.issues ?? [];
+    if (!activeDNA || issues.length === 0) {
+      setToolMessage('Aucune issue déterministe à corriger pour cette mission.');
+      return;
+    }
+    const issueLines = issues.map((issue) => `- [${issue.severity}] ${issue.code}: ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join('\\n');
+    const repairPrompt = `RÉPARATION CIBLÉE DE LA MISSION\\n\\nCorrige le projet existant sans changer son intention ni sa voie. Traite chaque issue réelle ci-dessous, puis vérifie les contrats et les états loading/error avant de retourner une version complète.\\n\\nIssues du validateur :\\n${issueLines}`;
+    setMessages((messages) => [...messages, {
+      id: crypto.randomUUID(),
+      author: profile?.displayName ?? 'Vous',
+      role: 'Vous',
+      text: 'Corriger la mission à partir du diagnostic de validation',
+      kind: 'user',
+      ts: Date.now(),
+    }]);
+    setToolMessage(`Réparation ciblée lancée pour ${issues.length} issue(s).`);
+    void runMission(repairPrompt, activeDNA.contracts);
+  }
 
   function send() {
     const text = input.trim();
     if (!text || busy) return;
-    
+
     setInput('');
     setShowSlashMenu(false);
 
@@ -178,19 +287,9 @@ export function WorkspacePage() {
       runMission("RÉPARATION REQUISE : " + fixPrompt);
       return;
     }
-    
-    const finalPrompt = text;
 
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      author: profile?.displayName ?? 'Vous',
-      role: 'Vous',
-      text: finalPrompt,
-      kind: 'user',
-      ts: Date.now(),
-    };
-    setMessages((m) => [...m, userMsg]);
-    runMission(finalPrompt);
+    const finalPrompt = text;
+    setPendingBrief({ prompt: finalPrompt, contracts: buildMissionContracts(finalPrompt, way) });
   }
 
   async function uploadAttachments(files: FileList | null) {
@@ -243,6 +342,11 @@ export function WorkspacePage() {
   }
 
   function startDictation() {
+    if (listening) {
+      dictationRecognitionRef.current?.stop();
+      return;
+    }
+
     const browserWindow = window as Window & {
       SpeechRecognition?: BrowserSpeechRecognitionFactory;
       webkitSpeechRecognition?: BrowserSpeechRecognitionFactory;
@@ -252,6 +356,7 @@ export function WorkspacePage() {
       setToolMessage('La dictée n’est pas prise en charge par ce navigateur. Essayez Chrome ou Edge.');
       return;
     }
+
     const recognition = new Recognition();
     recognition.lang = 'fr-FR';
     recognition.interimResults = false;
@@ -259,13 +364,67 @@ export function WorkspacePage() {
       const transcript = Array.from(event.results).map((result) => result[0]?.transcript ?? '').join(' ').trim();
       setInput((current) => [current, transcript].filter(Boolean).join(current ? ' ' : ''));
     };
-    recognition.onend = () => setListening(false);
+    recognition.onend = () => {
+      dictationRecognitionRef.current = null;
+      setListening(false);
+    };
     recognition.onerror = () => {
+      dictationRecognitionRef.current = null;
       setListening(false);
       setToolMessage('La dictée a été interrompue. Vérifiez l’autorisation du microphone.');
     };
-    setListening(true);
-    recognition.start();
+
+    try {
+      dictationRecognitionRef.current = recognition;
+      setToolMessage(null);
+      setListening(true);
+      recognition.start();
+    } catch {
+      dictationRecognitionRef.current = null;
+      setListening(false);
+      setToolMessage('La dictée ne peut pas démarrer. Vérifiez l’autorisation du microphone.');
+    }
+  }
+
+  function startDemoMode() {
+    const demo = createDemoMission(way);
+    const missionId = demo.dna.missionId;
+    setDemoMode(true);
+    setCurrentMissionId(missionId);
+    setActiveMissionId(missionId);
+    setMissionDNA(missionId, demo.dna);
+    setProjectSchema(demo.schema);
+    setPreviousSchema(null);
+    setMessages([
+      { id: crypto.randomUUID(), author: 'Idealy Démo', role: 'Guide de mission', text: 'Mode démo activé : aucune session, clé IA ou connexion externe n’est utilisée.', kind: 'agent', ts: Date.now(), status: 'done' },
+      { id: crypto.randomUUID(), author: way.agents[0].name, agentId: way.agents[0].id, role: way.agents[0].role, text: 'Le brief local est prêt. Le Passeport de Mission et les preuves sont consultables dans l’onglet Mission.', kind: 'agent', ts: Date.now(), status: 'done' },
+    ]);
+    const demoHistory = { id: missionId, title: 'Mission démo sans compte', createdAt: Date.now(), way: wayId, previewReady: true, status: 'ready' as const, validation: demo.dna.validation };
+    setMissions([...useIdealyStore.getState().missions.filter((mission) => !mission.id.startsWith('demo-') && mission.title !== 'Mission démo sans compte'), demoHistory]);
+    setMissionActivity({ missionId, stage: 'completed' });
+    setShowPreview(true);
+    setTab('mission');
+    setToolMessage('Mode démo local activé. Les données sont fictives et clairement marquées.');
+  }
+
+  function proposeChangeCapsule(capsule: ChangeCapsule) {
+    if (!currentMissionId) return;
+    updateMissionDNA(currentMissionId, (dna) => ({
+      ...dna,
+      updatedAt: Date.now(),
+      capsules: [...(dna.capsules ?? []), capsule].slice(-10),
+      passport: dna.passport ? { ...dna.passport, nextAction: 'Examiner la capsule et la validation après la réponse de l’IA.' } : dna.passport,
+    }));
+    const nextDNA = useIdealyStore.getState().missionDNA[currentMissionId];
+    if (projectSchema && nextDNA) {
+      updateProjectSchema({
+        ...projectSchema,
+        capsules: nextDNA.capsules ?? [],
+        passport: nextDNA.passport,
+        preflight: nextDNA.preflight,
+      });
+    }
+    setToolMessage(`Capsule proposée : ${capsule.summary}`);
   }
 
   async function handleSignOut() {
@@ -288,7 +447,8 @@ export function WorkspacePage() {
     }
   }
 
-  async function runMission(prompt: string) {
+  async function runMission(prompt: string, overrideContracts?: MissionContracts) {
+    const initialContracts = overrideContracts ?? buildMissionContracts(prompt, way);
     let missionId = currentMissionId;
     if (!missionId) {
       missionId = crypto.randomUUID();
@@ -298,25 +458,50 @@ export function WorkspacePage() {
         title: prompt.slice(0, 30) + (prompt.length > 30 ? '...' : ''),
         createdAt: Date.now(),
         way: wayId,
-        previewReady: false
+        previewReady: false,
+        status: 'draft' as const,
       };
+      const initialDNA = createMissionDNA(missionId, prompt, way, initialContracts);
       addMission(newMission);
+      setActiveMissionId(missionId);
+      setMissionDNA(missionId, initialDNA);
       getSupabaseClient()?.from('missions').insert([{
         id: newMission.id,
         user_id: (await getSupabaseClient()?.auth.getUser())?.data.user?.id,
         title: newMission.title,
         created_at: newMission.createdAt,
         way: newMission.way,
-        preview_ready: newMission.previewReady
+        preview_ready: newMission.previewReady,
+        status: newMission.status,
+        brief: initialContracts.brief,
+        contracts: initialContracts,
+        dna: initialDNA,
+        snapshots: [],
       }]).then();
+    }
+
+    if (missionId && !missionDNA[missionId]) {
+      setMissionDNA(missionId, createMissionDNA(missionId, prompt, way, initialContracts));
+    }
+    if (missionId && projectSchema) {
+      updateMissionDNA(missionId, (dna) => appendSnapshot(
+        dna,
+        createMissionSnapshot(projectSchema, 'Dernière version stable', 'restore-point'),
+        dna.status,
+        dna.validation,
+      ));
+    }
+    if (missionId) {
+      updateStoreMission(missionId, { status: 'building' });
+      updateMissionDNA(missionId, (dna) => ({ ...dna, status: 'building', updatedAt: Date.now() }));
     }
 
     // Save current schema as "previous" before generating a new one (for Composer diff)
     setPreviousSchema(projectSchema);
     setBusy(true);
-    const orchestrator = way.agents[0];
-    const builder = way.agents[1];
-    const validator = way.agents[2];
+    const orchestrator = missionTeam.strategist;
+    const builder = missionTeam.builder;
+    const validator = missionTeam.validator;
 
     const addMessage = (agent: (typeof way.agents)[number], text: string, status: ChatMessage['status'] = 'done'): string => {
       const id = crypto.randomUUID();
@@ -347,11 +532,25 @@ export function WorkspacePage() {
     }
 
     try {
+      if (missionId) setMissionActivity({ missionId, stage: 'planning' });
       // 1. Orchestrator Phase
       const msgId = addMessage(orchestrator, '', 'thinking');
       const context = await analyzeIntent(prompt, way);
+      context.contracts = initialContracts;
+      if (missionId) {
+        updateMissionDNA(missionId, (dna) => ({
+          ...dna,
+          updatedAt: Date.now(),
+          passport: dna.passport ? {
+            ...dna.passport,
+            rank: context.rank,
+            objective: initialContracts.brief.primaryOutcome,
+            nextAction: `Lancer l’escouade de rang ${context.rank}, puis examiner le preflight.`,
+          } : dna.passport,
+        }));
+      }
       useIdealyStore.getState().consumeEnergy(context.energyCost);
-      
+
       const orchestratorStream = await streamAgentMessage(
         orchestrator,
         way,
@@ -368,6 +567,7 @@ export function WorkspacePage() {
       updateMessage(msgId, orchestratorText, 'done');
 
       // 2. Builder Phase
+      if (missionId) setMissionActivity({ missionId, stage: 'building' });
       const builderId = addMessage(builder, '', 'thinking');
       const builderStream = await streamAgentMessage(
         builder,
@@ -382,7 +582,7 @@ export function WorkspacePage() {
         builderText += delta;
         updateMessage(builderId, builderText, 'writing');
       }
-      
+
       // Building IUPS with real-time progress (Fix #13)
       setGenerationProgress(0);
       const schema = await buildIUPS({
@@ -396,22 +596,60 @@ export function WorkspacePage() {
       setGenerationProgress(100);
       updateMessage(builderId, builderText, 'done');
 
+      const validation = validateGeneratedProject(schema, context.contracts);
+      const status = validation.status === 'failed' ? 'needs-fix' : 'ready';
+      const baseSnapshot = createMissionSnapshot(schema, validation.status === 'passed' ? 'Version validée' : 'Version à corriger', 'generation', validation);
+      const currentDNA = missionId ? useIdealyStore.getState().missionDNA[missionId] : undefined;
+      const preflight = buildPreflightProofs(schema, validation, currentDNA?.snapshots ?? [baseSnapshot]);
+      const enrichedSchema = schema ? {
+        ...schema,
+        contracts: context.contracts,
+        validation,
+        preflight,
+        capsules: currentDNA?.capsules ?? [],
+        passport: currentDNA?.passport,
+        snapshotId: baseSnapshot.id,
+      } : null;
+      const snapshot = enrichedSchema ? { ...baseSnapshot, schema: enrichedSchema } : baseSnapshot;
+      if (enrichedSchema) setProjectSchema(enrichedSchema);
+      if (missionId) {
+        updateStoreMission(missionId, {
+          previewReady: Boolean(schema && validation.status !== 'failed'),
+          status,
+          validation,
+        });
+        updateMissionDNA(missionId, (dna) => {
+          const capsules = (dna.capsules ?? []).map((capsule, index, all) => index === all.length - 1 && capsule.status === 'proposed' ? { ...capsule, status: 'applied' as const } : capsule);
+          return appendSnapshot({ ...dna, capsules }, snapshot, status, validation);
+        });
+        const latestDNA = useIdealyStore.getState().missionDNA[missionId];
+        getSupabaseClient()?.from('missions').update({
+          status,
+          validation,
+          snapshots: latestDNA?.snapshots ?? [snapshot],
+          dna: latestDNA,
+          preview_ready: validation.status !== 'failed',
+          updated_at: new Date().toISOString(),
+        }).eq('id', missionId).then();
+      }
+
       // 3. Validator Phase
+      if (missionId) setMissionActivity({ missionId, stage: 'validating' });
       const validatorId = addMessage(validator, '', 'thinking');
-      if (schema) {
-        updateProjectSchema(schema);
+      if (enrichedSchema) {
+        updateProjectSchema(enrichedSchema);
         setShowPreview(true);
         setTab('preview');
         if (missionId) {
-          updateStoreMission(missionId, { previewReady: true });
+          updateStoreMission(missionId, { previewReady: validation.status !== 'failed' });
         }
-        
+
         const validatorStream = await streamAgentMessage(
           validator,
           way,
           `Le code a été construit.`,
           prompt,
-          `Valide que tout est OK et dis à l'utilisateur que le résultat est dans l'Aperçu.`
+          `Valide la version générée à partir des contrats. Le rapport déterministe ci-dessous est la source de vérité : ${validation.status}. ${validation.issues.map((issue) => `[${issue.code}] ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join(' ')}. Cite les issues concrètes dans ton compte rendu et indique clairement si une réparation est nécessaire.`
         );
 
         let validatorText = '';
@@ -419,14 +657,32 @@ export function WorkspacePage() {
           validatorText += delta;
           updateMessage(validatorId, validatorText, 'writing');
         }
-        updateMessage(validatorId, validatorText, 'done');
+        const issueSummary = validation.issues.length > 0
+          ? validation.issues.map((issue) => `- [${issue.severity}] ${issue.code}: ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join('\\n')
+          : 'Aucune issue détectée.';
+        updateMessage(validatorId, validation.status === 'failed'
+          ? `${validatorText || 'Validation terminée.'}\\n\\nIssues déterministes :\\n${issueSummary}\\n\\nUtilisez « Corriger avec ces issues » dans l’onglet Mission.`
+          : `${validatorText || 'Validation terminée.'}\\n\\nRapport déterministe : ${validation.status}. ${issueSummary}`, 'done');
+        if (missionId) setMissionActivity({ missionId, stage: validation.status === 'failed' ? 'needs-fix' : 'completed' });
       } else {
+        if (missionId) setMissionActivity({ missionId, stage: 'needs-fix' });
         updateMessage(validatorId, `Attention ! J'ai détecté une anomalie.`, 'done');
       }
 
     } catch (error) {
       console.error(error);
-      addMessage(orchestrator, `Erreur lors de la communication.`, 'done');
+      if (missionId) {
+        updateStoreMission(missionId, { status: 'needs-fix' });
+        updateMissionDNA(missionId, (dna) => ({
+          ...dna,
+          status: 'needs-fix',
+          updatedAt: Date.now(),
+          capsules: (dna.capsules ?? []).map((capsule, index, all) => index === all.length - 1 && capsule.status === 'proposed' ? { ...capsule, status: 'failed' as const } : capsule),
+          passport: dna.passport ? { ...dna.passport, nextAction: 'La version stable est conservée ; corriger la capsule puis relancer la validation.' } : dna.passport,
+        }));
+        setMissionActivity({ missionId, stage: 'needs-fix' });
+      }
+      addMessage(orchestrator, `Erreur lors de la communication. La version stable précédente est conservée.`, 'done');
     }
 
     setBusy(false);
@@ -491,9 +747,12 @@ export function WorkspacePage() {
                   className="btn-primary w-full justify-center"
                   onClick={() => {
                     setCurrentMissionId(null);
+                    setActiveMissionId(null);
+                    setPendingBrief(null);
                     setProjectSchema(null);
                     setPreviousSchema(null);
                     setMessages([]);
+                    setMissionActivity(null);
                     setShowPreview(false);
                     setInput('');
                   }}
@@ -514,7 +773,7 @@ export function WorkspacePage() {
               <div className="mx-3 my-3 h-px bg-white/5" />
 
               {/* Gamification Area */}
-              <div 
+              <div
                 className="mt-6 space-y-4 cursor-pointer hover:opacity-90 transition-opacity px-3"
                 onClick={() => setIsPaywallOpen(true)}
               >
@@ -539,7 +798,7 @@ export function WorkspacePage() {
                     missions.map((m) => (
                       <button
                         key={m.id}
-                        onClick={() => setCurrentMissionId(m.id)}
+                        onClick={() => { setCurrentMissionId(m.id); setActiveMissionId(m.id); }}
                         className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-white/5 ${currentMissionId === m.id ? 'bg-white/10 text-white' : 'text-ink-300 hover:text-white'}`}
                       >
                         <span className={`h-1.5 w-1.5 rounded-full ${m.previewReady ? 'bg-emerald-500' : 'bg-ink-500'}`} />
@@ -612,10 +871,48 @@ export function WorkspacePage() {
         <div className="flex min-h-0 flex-1">
           {/* Chat */}
           <div className="flex min-w-0 flex-1 flex-col">
+            {pendingBrief && (
+              <div className="shrink-0 border-b border-white/5 bg-ink-950/40 p-4">
+                <MissionBriefPanel
+                  way={way}
+                  prompt={pendingBrief.prompt}
+                  contracts={pendingBrief.contracts}
+                  onCancel={() => setPendingBrief(null)}
+                  onConfirm={(contracts) => {
+                    const brief = pendingBrief;
+                    setPendingBrief(null);
+                    setMessages((current) => [...current, {
+                      id: crypto.randomUUID(),
+                      author: profile?.displayName ?? 'Vous',
+                      role: 'Vous',
+                      text: brief.prompt,
+                      kind: 'user',
+                      ts: Date.now(),
+                    }]);
+                    void runMission(brief.prompt, contracts);
+                  }}
+                />
+              </div>
+            )}
             <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
               <div className="mx-auto max-w-3xl px-5 py-8">
-                {messages.length === 0 ? (
-                  <EmptyState way={way} name={profile?.displayName ?? 'apprenti'} />
+                <MissionActivityPanel
+                  way={way}
+                  team={missionTeam}
+                  stage={missionActivity?.stage ?? 'planning'}
+                  visible={Boolean(missionActivity && missionActivity.missionId === currentMissionId)}
+                />
+                    {messages.length === 0 ? (
+                  <EmptyState
+                    way={way}
+                    name={profile?.displayName ?? 'apprenti'}
+                    demoMode={demoMode}
+                    onSelectDemo={startDemoMode}
+                    onSelectSuggestion={(suggestion) => {
+                      setInput(suggestion);
+                      composerRef.current?.focus();
+                    }}
+                  />
                 ) : (
                   <div className="space-y-5">
                     {messages.map((m) => (
@@ -697,18 +994,55 @@ export function WorkspacePage() {
                       <IconBtn icon={ImageIcon} title="Ajouter une image" onClick={() => attachmentRef.current?.click()} />
                       <IconBtn icon={Figma} title="Figma" onClick={() => { setTab('connectors'); setToolMessage('La connexion Figma sera disponible après la configuration OAuth Figma.'); }} />
                       <IconBtn icon={Github} title="Connecter GitHub" onClick={connectGitHub} />
-                      <IconBtn icon={Mic} title="Dictée" onClick={() => setToolMessage('La dictée est disponible depuis l’écran d’accueil ; l’intégration de l’espace de travail suit.')} />
+                      <button
+                        type="button"
+                        onClick={startDictation}
+                        aria-pressed={listening}
+                        aria-label={listening ? 'Arrêter la dictée' : 'Démarrer la dictée'}
+                        title={listening ? 'Arrêter la dictée' : 'Dicter votre mission'}
+                        className={`relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-white/30 ${
+                          listening ? dictationTheme.active : 'text-ink-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        {listening && !shouldReduceMotion && (
+                          <motion.span
+                            aria-hidden="true"
+                            className={`pointer-events-none absolute -inset-1 rounded-xl border ${dictationTheme.ring}`}
+                            initial={{ opacity: 0.75, scale: 0.82 }}
+                            animate={{ opacity: 0, scale: 1.35 }}
+                            transition={{ duration: 1.3, repeat: Infinity, ease: 'easeOut' }}
+                          />
+                        )}
+                        <span className={`absolute inset-0 flex items-center justify-center gap-[2px] transition-opacity ${listening ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
+                          {[0, 1, 2, 3].map((bar) => (
+                            <motion.span
+                              key={bar}
+                              className={`h-3 w-[2px] rounded-full ${dictationTheme.wave}`}
+                              style={{ transformOrigin: 'center' }}
+                              animate={listening && !shouldReduceMotion ? { scaleY: [0.45, 1, 0.55, 0.85, 0.45] } : { scaleY: 0.45 }}
+                              transition={{ duration: 0.72, delay: bar * 0.09, repeat: listening && !shouldReduceMotion ? Infinity : 0, ease: 'easeInOut' }}
+                            />
+                          ))}
+                        </span>
+                        <Mic size={16} className={`transition-opacity ${listening ? 'opacity-0' : 'opacity-100'}`} />
+                      </button>
                       <input ref={attachmentRef} type="file" multiple className="hidden" onChange={(event) => uploadAttachments(event.target.files)} />
                     </div>
                     <button
                       onClick={send}
-                      disabled={!input.trim() || busy}
+                      disabled={!input.trim() || busy || Boolean(pendingBrief)}
                       className="btn-primary px-3.5"
                     >
                       <Send size={15} />
                     </button>
                   </div>
                 </div>
+                {listening && (
+                  <p role="status" aria-live="polite" className={`mt-2 flex items-center gap-2 text-xs ${way.textClass}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${dictationTheme.wave} motion-safe:animate-pulse`} aria-hidden="true" />
+                    {dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.
+                  </p>
+                )}
                 {toolMessage && <p role="status" className="mt-2 text-xs text-electric-300">{isUploading ? 'Import en cours…' : toolMessage}</p>}
                 <p className="mt-2 text-center text-[11px] text-ink-500">
                   Idealy peut se tromper. Vérifiez le code généré.
@@ -758,17 +1092,21 @@ export function WorkspacePage() {
                     )}
                   </div>
                   <div className="flex-1 overflow-hidden">
-                    <RightPanelContent 
-                      tab={tab} 
-                      way={way} 
+                    <RightPanelContent
+                      tab={tab}
+                      way={way}
                       schema={projectSchema}
                       previousSchema={previousSchema}
                       missionId={currentMissionId}
+                      dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
                       onUpdateSchema={updateProjectSchema}
-                      onAskAI={(prompt) => {
+          onRestore={restoreMissionSnapshot}
+                      onFix={repairMission}
+                          onAskAI={(prompt) => {
                         // Inject AI file-context prompt into the chat pipeline
-                        void handleRunMission(prompt);
+                        void runMission(prompt);
                       }}
+                      onProposeChange={proposeChangeCapsule}
                     />
                   </div>
                 </div>
@@ -783,7 +1121,19 @@ export function WorkspacePage() {
   );
 }
 
-function EmptyState({ way, name }: { way: (typeof WAYS)[WayId]; name: string }) {
+function EmptyState({
+  way,
+  name,
+  demoMode,
+  onSelectDemo,
+  onSelectSuggestion,
+}: {
+  way: (typeof WAYS)[WayId];
+  name: string;
+  demoMode?: boolean;
+  onSelectDemo?: () => void;
+  onSelectSuggestion?: (suggestion: string) => void;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <motion.div
@@ -801,14 +1151,16 @@ function EmptyState({ way, name }: { way: (typeof WAYS)[WayId]; name: string }) 
         Décrivez votre idée. L'escouade {way.agents[0].name}, {way.agents[1].name} et{' '}
         {way.agents[2].name} se charge du reste.
       </p>
+      {!demoMode && (
+        <button onClick={onSelectDemo} className="mt-6 rounded-xl border border-electric-300/30 bg-electric-300/10 px-4 py-3 text-sm font-semibold text-electric-100 transition hover:bg-electric-300/20">
+          Explorer la démo sans compte
+        </button>
+      )}
       <div className="mt-8 grid gap-2.5 sm:grid-cols-2">
         {SUGGESTIONS.map((s) => (
           <button
             key={s}
-            onClick={() => {
-              setInput(s);
-              composerRef.current?.focus();
-            }}
+            onClick={() => onSelectSuggestion?.(s)}
             className="rounded-xl glass-soft px-4 py-3 text-left text-sm text-ink-200 transition hover:bg-white/5 hover:text-white"
           >
             {s}
@@ -819,22 +1171,30 @@ function EmptyState({ way, name }: { way: (typeof WAYS)[WayId]; name: string }) 
   );
 }
 
-function RightPanelContent({ 
-  tab, 
-  way, 
+function RightPanelContent({
+  tab,
+  way,
   schema,
   previousSchema,
   missionId,
+  dna,
   onUpdateSchema,
+  onRestore,
+  onFix,
   onAskAI,
-}: { 
-  tab: RightTab; 
-  way: (typeof WAYS)[WayId]; 
+  onProposeChange,
+}: {
+  tab: RightTab;
+  way: (typeof WAYS)[WayId];
   schema: IdealyUniversalProjectSchema | null;
   previousSchema: IdealyUniversalProjectSchema | null;
   missionId: string | null;
+  dna: import('@/core/mission/contracts').MissionDNA | null;
   onUpdateSchema: (schema: IdealyUniversalProjectSchema | null) => void;
+  onRestore: (snapshot: import('@/core/mission/contracts').MissionSnapshot) => void;
+  onFix: () => void;
   onAskAI?: (prompt: string) => void;
+  onProposeChange?: (capsule: ChangeCapsule) => void;
 }) {
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -881,10 +1241,10 @@ function RightPanelContent({
         {!hasFiles ? (
           <EmptyState way={way} name="Aucun code généré" />
         ) : (
-          <CodeEditor 
-            files={files} 
-            selectedPath={selectedFilePath} 
-            onSelectFile={(path) => setSelectedFilePath(path)} 
+          <CodeEditor
+            files={files}
+            selectedPath={selectedFilePath}
+            onSelectFile={(path) => setSelectedFilePath(path)}
             onSaveFile={(path, newContent) => {
               if (!schema) return;
               const updatedSchema = {
@@ -900,6 +1260,7 @@ function RightPanelContent({
               onUpdateSchema(updatedSchema);
             }}
             onAskAI={onAskAI}
+            onProposeChange={onProposeChange}
           />
         )}
       </div>
@@ -924,7 +1285,7 @@ function RightPanelContent({
                 <>
                   <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
                     <span className="text-xs font-mono text-ink-300">{selectedFilePath}</span>
-                    <button 
+                    <button
                       onClick={() => copyToClipboard(selectedContent)}
                       className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20 transition"
                     >
@@ -955,6 +1316,10 @@ function RightPanelContent({
           onAccept={(paths) => console.log('Accepted:', paths)}
           onReject={(paths) => console.log('Rejected:', paths)}
         />
+      </div>
+
+      <div className={tab === 'mission' ? 'h-full' : 'hidden'}>
+        <MissionStatusPanel dna={dna} onRestore={onRestore} onFix={onFix} />
       </div>
 
       <div className={tab === 'connectors' ? 'h-full' : 'hidden'}>
@@ -1030,6 +1395,7 @@ function IconBtn({ icon: Icon, title, onClick }: { icon: React.ElementType; titl
 }
 
 const TABS: { id: RightTab; label: string; icon: React.ElementType }[] = [
+  { id: 'mission', label: 'Mission', icon: ShieldCheck },
   { id: 'preview', label: 'Aperçu', icon: Eye },
   { id: 'code', label: 'Code', icon: Code2 },
   { id: 'files', label: 'Fichiers', icon: FolderTree },

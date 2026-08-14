@@ -55,9 +55,16 @@ serve(async (req) => {
     };
 
     const config = oauthConfigs[provider];
-    if (!config) {
+    if (!config || !['github', 'figma'].includes(provider)) {
       return new Response(JSON.stringify({ error: 'Invalid provider' }), {
         status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const clientId = Deno.env.get(`${provider.toUpperCase()}_CLIENT_ID`);
+    if (!clientId) {
+      return new Response(JSON.stringify({ error: 'OAuth provider is not configured on the server' }), {
+        status: 503,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -79,7 +86,7 @@ serve(async (req) => {
     const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/integration-callback?provider=${provider}`;
 
     const params = new URLSearchParams({
-      client_id: Deno.env.get(`${provider.toUpperCase()}_CLIENT_ID`) ?? '',
+      client_id: clientId,
       redirect_uri: redirectUri,
       scope: config.scopes,
       state,
