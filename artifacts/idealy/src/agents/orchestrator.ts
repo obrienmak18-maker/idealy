@@ -267,6 +267,7 @@ export async function streamAgentMessage(
   relevantFiles: RelevantVFSFile[] = [],
   idempotencyKey?: string,
 ) {
+  const architectureBlock = architecture || relevantFiles.length > 0 ? buildArchitectureContext(architecture, relevantFiles) : '';
   const systemPrompt = `Tu es ${agent.name} (${agent.role}), un membre incontournable de la voie "${way.name}".
 Ta personnalité profonde (agis EXACTEMENT comme ce personnage sans briser le 4ème mur) : ${agent.personality}.
 Ta spécialité : ${agent.specialty}.
@@ -275,7 +276,7 @@ Ton expression fétiche que tu utilises naturellement : "${agent.catchphrase}".
 L'utilisateur a demandé : "${missionPrompt}".
 Contexte actuel :
 ${contextText}
-${buildArchitectureContext(architecture, relevantFiles)}
+${architectureBlock}
 
 Instructions spécifiques pour cette étape :
 ${instruction}

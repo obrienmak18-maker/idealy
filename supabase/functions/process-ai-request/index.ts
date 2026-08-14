@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { classifyIntent } from './intentRouter.ts';
+import { streamUI, type AgentUIPhase } from './streamUI.ts';
 import {
   consumeManagedCredit,
   isSupportedProvider,
@@ -32,6 +34,10 @@ type LLMRequest = {
   mode?: RequestedMode;
   missionId?: string | null;
   idempotencyKey?: string;
+  intentOnly?: boolean;
+  uiStream?: boolean;
+  uiPhase?: AgentUIPhase;
+  uiProgress?: number;
 };
 
 const DEFAULT_MODELS: Record<Provider, string> = {
@@ -86,6 +92,10 @@ function isValidUUID(value: string): boolean {
   return UUID_PATTERN.test(value);
 }
 
+function isAgentUIPhase(value: unknown): value is AgentUIPhase {
+  return value === 'planning' || value === 'building' || value === 'validating' || value === 'completed' || value === 'needs-fix';
+}
+
 serve(async (req) => {
   const headers = getCorsHeaders(req);
 
@@ -108,15 +118,6 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await anonClient.auth.getUser(authHeader.slice('Bearer '.length));
     if (userError || !user) return jsonError('Unauthorized.', 401, headers);
 
-    const { data: energySnapshot } = await supabaseAdmin
-      .from('user_energy')
-      .select('updated_at')
-      .eq('id', user.id)
-      .maybeSingle();
-    if (energySnapshot?.updated_at && Date.now() - new Date(energySnapshot.updated_at).getTime() < 3_000) {
-      return jsonError('Too many requests. Please wait a few seconds.', 429, headers, 'RATE_LIMIT');
-    }
-
     const body: unknown = await req.json().catch(() => null);
     if (!body || typeof body !== 'object') return jsonError('Invalid JSON request.', 400, headers);
     const input = body as Partial<LLMRequest>;
@@ -131,6 +132,31 @@ serve(async (req) => {
     if (prompt.length > MAX_PROMPT_CHARS) return jsonError('Prompt is too large.', 413, headers);
     if (systemPrompt === null) return jsonError('systemPrompt must be a string.', 400, headers);
     if (systemPrompt && systemPrompt.length > MAX_SYSTEM_PROMPT_CHARS) return jsonError('systemPrompt is too large.', 413, headers);
+    if (input.intentOnly !== undefined && typeof input.intentOnly !== 'boolean') return jsonError('intentOnly must be boolean.', 400, headers);
+    if (input.uiStream !== undefined && typeof input.uiStream !== 'boolean') return jsonError('uiStream must be boolean.', 400, headers);
+
+    if (input.intentOnly === true) {
+      return new Response(JSON.stringify({ intent: classifyIntent(prompt) }), {
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (input.uiStream === true) {
+      if (!isAgentUIPhase(input.uiPhase)) return jsonError('uiPhase is required for uiStream.', 400, headers);
+      if (input.uiProgress !== undefined && (typeof input.uiProgress !== 'number' || !Number.isFinite(input.uiProgress))) {
+        return jsonError('uiProgress must be a finite number.', 400, headers);
+      }
+      return streamUI({ headers, missionId: input.missionId, phase: input.uiPhase, progress: input.uiProgress });
+    }
+
+    const { data: energySnapshot } = await supabaseAdmin
+      .from('user_energy')
+      .select('updated_at')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (energySnapshot?.updated_at && Date.now() - new Date(energySnapshot.updated_at).getTime() < 3_000) {
+      return jsonError('Too many requests. Please wait a few seconds.', 429, headers, 'RATE_LIMIT');
+    }
 
     const provider = input.provider ?? 'groq';
     if (!isSupportedProvider(provider)) return jsonError('Unsupported provider.', 400, headers);
