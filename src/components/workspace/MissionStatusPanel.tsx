@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleAlert, Cloud, GitBranch, History, RotateCcw, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, CircleAlert, Cloud, GitBranch, History, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
 import type { MissionDNA, MissionSnapshot } from '@/core/mission/contracts';
 
 interface MissionStatusPanelProps {
@@ -40,7 +40,22 @@ export function MissionStatusPanel({ dna, onRestore, onFix }: MissionStatusPanel
         <div className="rounded-lg bg-white/5 px-2 py-1 text-[10px] text-ink-400">v{dna.version}</div>
       </div>
 
-      <section className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      {dna.passport && (
+        <section className="mt-4 rounded-xl border border-electric-300/20 bg-electric-300/10 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-electric-300">Passeport de Mission</p>
+          <div className="mt-2 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-white">{dna.passport.codename}</p>
+              <p className="mt-1 text-xs text-electric-100/80">Rang {dna.passport.rank} · {dna.passport.wayName}</p>
+            </div>
+            <span className="rounded-md bg-white/10 px-2 py-1 text-[10px] text-electric-100">IVP</span>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-electric-50">Objectif : {dna.passport.objective}</p>
+          <p className="mt-2 text-[11px] leading-4 text-electric-100/70">Prochaine action : {dna.passport.nextAction}</p>
+        </section>
+      )}
+
+      <section className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">Intention</p>
         <p className="mt-2 text-sm leading-5 text-ink-200">{dna.intention.problem}</p>
         <div className="mt-3 grid gap-2 text-xs text-ink-400">
@@ -102,12 +117,57 @@ export function MissionStatusPanel({ dna, onRestore, onFix }: MissionStatusPanel
       </section>
 
       <section className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={14} className="text-electric-300" />
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">Preflight de preuve</p>
+          </div>
+          <span className="text-[10px] text-ink-500">{dna.preflight?.filter((proof) => proof.status === 'passed').length ?? 0}/{dna.preflight?.length ?? 0} preuves</span>
+        </div>
+        <div className="mt-2 space-y-2">
+          {(dna.preflight ?? []).map((proof) => (
+            <div key={proof.id} className="flex items-start justify-between gap-2 text-xs">
+              <div className="min-w-0">
+                <p className="text-ink-200">{proof.label}</p>
+                <p className="mt-0.5 text-[10px] leading-4 text-ink-500">{proof.detail}</p>
+              </div>
+              <span className={proof.status === 'passed' ? 'text-emerald-400' : proof.status === 'failed' ? 'text-red-300' : proof.status === 'warning' ? 'text-amber-300' : 'text-ink-500'}>{proof.status}</span>
+            </div>
+          ))}
+          {!dna.preflight?.length && <p className="text-xs text-ink-400">Les preuves apparaîtront après le lancement.</p>}
+        </div>
+      </section>
+
+      <section className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
         <div className="flex items-center gap-2">
           <GitBranch size={14} className="text-electric-300" />
           <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">Décisions de mission</p>
         </div>
         <div className="mt-2 space-y-1.5">
           {dna.decisions.length === 0 ? <p className="text-xs text-ink-400">Aucune décision enregistrée.</p> : dna.decisions.map((decision) => <p key={decision} className="text-xs leading-5 text-ink-300">{decision}</p>)}
+        </div>
+      </section>
+
+      <section className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} className="text-electric-300" />
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">Capsules de changement</p>
+          </div>
+          <span className="text-[10px] text-ink-500">{dna.capsules?.length ?? 0}</span>
+        </div>
+        <div className="mt-2 space-y-2">
+          {(dna.capsules ?? []).slice().reverse().slice(0, 3).map((capsule) => (
+            <div key={capsule.id} className="rounded-lg bg-ink-950/70 px-2.5 py-2">
+              <div className="flex items-center justify-between gap-2 text-[10px]">
+                <span className="truncate text-ink-200">{capsule.filePath ?? 'Mission'}</span>
+                <span className="text-electric-300">{capsule.status}</span>
+              </div>
+              <p className="mt-1 text-[11px] leading-4 text-ink-400">{capsule.summary}</p>
+              <p className="mt-1 text-[10px] text-ink-600">Risque {capsule.risk} · Test : {capsule.expectedTest}</p>
+            </div>
+          ))}
+          {!dna.capsules?.length && <p className="text-xs text-ink-400">Une capsule sera créée avant chaque correction ciblée.</p>}
         </div>
       </section>
 

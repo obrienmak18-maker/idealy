@@ -205,10 +205,15 @@ export function LandingPage() {
                   onChange={(e) => onFiles(e.target.files)}
                 />
               </div>
-              <button onClick={launch} className="btn-primary">
-                Lancer la mission
-                <ArrowRight size={15} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => { window.location.assign('/demo'); }} className="btn-outline">
+                  Voir la démo
+                </button>
+                <button onClick={launch} className="btn-primary">
+                  Lancer la mission
+                  <ArrowRight size={15} />
+                </button>
+              </div>
             </div>
           </div>
           <p className="mt-3 text-xs text-ink-400">

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Copy, RotateCcw, Save, Sparkles, Target } from 'lucide-react';
+import { createChangeCapsule } from '@/core/mission/changeCapsule';
+import type { ChangeCapsule } from '@/core/mission/contracts';
 
 interface CodeEditorProps {
   files: Record<string, string>;
@@ -8,6 +10,8 @@ interface CodeEditorProps {
   onSaveFile: (path: string, content: string) => void;
   /** Called when the user wants the AI to refine the current file or a focused selection. */
   onAskAI?: (prompt: string) => void;
+  /** Persists the proposed change capsule in the active mission. */
+  onProposeChange?: (capsule: ChangeCapsule) => void;
 }
 
 interface EditorSelection {
@@ -15,13 +19,14 @@ interface EditorSelection {
   end: number;
 }
 
-export function CodeEditor({ files, selectedPath, onSelectFile, onSaveFile, onAskAI }: CodeEditorProps) {
+export function CodeEditor({ files, selectedPath, onSelectFile, onSaveFile, onAskAI, onProposeChange }: CodeEditorProps) {
   const [content, setContent] = useState('');
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showAiBar, setShowAiBar] = useState(false);
   const [selection, setSelection] = useState<EditorSelection | null>(null);
+  const [pendingCapsule, setPendingCapsule] = useState<ChangeCapsule | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -80,7 +85,16 @@ export function CodeEditor({ files, selectedPath, onSelectFile, onSaveFile, onAs
       ? `Portée autorisée : uniquement la sélection ci-dessous (${selectedLineCount} ligne${selectedLineCount > 1 ? 's' : ''}). Ne modifie pas les autres parties ni les autres fichiers sans l’expliquer.`
       : 'Portée autorisée : le fichier actuel uniquement. Ne modifie pas les autres fichiers sans l’expliquer.';
     const contextPrompt = `Fichier ciblé : \`${currentPath}\`\n${scope}\n\n\`\`\`\n${target}\n\`\`\`\n\nDemande : ${aiPrompt.trim()}\n\nRetourne une correction précise et garde l’intention actuelle de l’application.`;
-
+    const capsule = createChangeCapsule({
+      scope: selectedText.trim() ? 'selection' : 'file',
+      filePath: currentPath,
+      summary: aiPrompt.trim(),
+      reason: selectedText.trim() ? `Amélioration ciblée de ${selectedLineCount} ligne${selectedLineCount > 1 ? 's' : ''}.` : 'Amélioration du fichier actif sans élargir la portée.',
+      selectedLineCount,
+      expectedTest: selectedText.trim() ? 'Relire la sélection, puis exécuter la validation de mission.' : 'Relire le diff du fichier, puis exécuter la validation de mission.',
+    });
+    setPendingCapsule(capsule);
+    onProposeChange?.(capsule);
     onAskAI(contextPrompt);
     setAiPrompt('');
     setShowAiBar(false);
@@ -152,6 +166,15 @@ export function CodeEditor({ files, selectedPath, onSelectFile, onSaveFile, onAs
 
         {showAiBar && (
           <div className="border-b border-electric-500/20 bg-electric-500/5 px-4 py-2.5 shrink-0">
+            {pendingCapsule && (
+              <div className="mb-2 grid gap-1 rounded-lg border border-electric-400/20 bg-electric-400/10 px-2.5 py-2 text-[10px] text-electric-100">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold uppercase tracking-wider text-electric-300">Capsule de changement · {pendingCapsule.risk}</span>
+                  <span>{pendingCapsule.energyEstimate} énergie estimée</span>
+                </div>
+                <span className="text-electric-100/80">Test attendu : {pendingCapsule.expectedTest}</span>
+              </div>
+            )}
             {selectedText && (
               <div className="mb-2 flex items-center gap-2 text-[11px] text-electric-200">
                 <Target size={13} />

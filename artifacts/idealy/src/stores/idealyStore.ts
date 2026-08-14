@@ -33,21 +33,13 @@ export interface MissionHistory {
 }
 
 /**
- * Public browser configuration is kept for Supabase only. Server credentials
- * remain accepted for backwards compatibility with old projects but are never
- * persisted by the store and are not used by the new connector registry.
+ * Only publishable Supabase browser configuration belongs in the frontend store.
+ * OAuth tokens, provider keys and deployment secrets are server-managed and are
+ * intentionally absent from this type.
  */
 export interface IdealyConnectors {
-  vercelToken?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
-  firebaseConfig?: string;
-  githubToken?: string;
-  stripeSecretKey?: string;
-  clerkSecretKey?: string;
-  openAIApiKey?: string;
-  webcontainerKey?: string;
-  collaborationRoom?: string;
 }
 
 export interface IdealyState {

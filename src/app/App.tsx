@@ -34,9 +34,9 @@ function App() {
         (typeof user.user_metadata?.name === 'string' && user.user_metadata.name) ||
         user.email?.split('@')[0] ||
         'Utilisateur';
-      
+
       setProfile({ email: user.email ?? '', displayName, avatarHue: 220 });
-      
+
       if (user.id) {
         const { data: energyData } = await supabase.from('user_energy').select('*').eq('id', user.id).single();
         if (energyData) {
@@ -49,7 +49,7 @@ function App() {
       } else {
         refillEnergy();
       }
-      
+
       const current = useIdealyStore.getState();
       setStage(current.way && current.onboarded ? 'ready' : 'choosing-way');
     };
@@ -69,6 +69,8 @@ function App() {
   // Public routes — accessible without auth
   if (currentPath === '/pricing') {
     page = <PricingPage />;
+  } else if (currentPath === '/demo') {
+    page = <WorkspacePage demoMode />;
   } else if (!onboarded || stage === 'choosing-way' || stage === 'creating-profile') {
     if (stage === 'choosing-way' || stage === 'creating-profile') {
       page = <OnboardingPage />;

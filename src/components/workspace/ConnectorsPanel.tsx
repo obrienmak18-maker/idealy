@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Check, ChevronDown, ExternalLink, LockKeyhole, Plug, ShieldCheck, TestTube2 } from 'lucide-react';
 import { CONNECTOR_REGISTRY, type ConnectorDefinition, type ConnectorEnvironment } from '@/core/connectors/registry';
+import { AZURE_RECIPES } from '@/core/connectors/azureRecipes';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
 
@@ -77,6 +78,11 @@ export function ConnectorsPanel() {
         {CONNECTOR_REGISTRY.map((connector) => {
           const isOpen = expanded === connector.id;
           const isSupabase = connector.id === 'supabase';
+          const readinessLabel = connector.readiness === 'operational'
+            ? 'Connecteur opérationnel'
+            : connector.readiness === 'admin-config'
+              ? 'Configuration administrateur requise'
+              : 'Adaptateur prévu — non activé';
           const stateLabel = serverConnected.has(connector.id) ? 'OAuth connecté côté serveur' : isSupabase && localSupabase.supabaseUrl ? 'Configuration publique enregistrée' : connector.secretHandling === 'oauth' ? (statusLoading ? 'Vérification de la connexion...' : 'Connexion OAuth à autoriser') : connector.secretHandling === 'server-managed' ? 'Secret géré côté serveur' : 'Configuration requise';
 
           return (
@@ -100,6 +106,7 @@ export function ConnectorsPanel() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-medium text-ink-200">{stateLabel}</p>
+                      <p className={`mt-1 text-[10px] ${connector.readiness === 'operational' ? 'text-emerald-300' : connector.readiness === 'admin-config' ? 'text-amber-200' : 'text-ink-400'}`}>{readinessLabel}</p>
                       <p className="mt-1 text-[11px] leading-4 text-ink-500">{connector.capabilities.length} capacité(s) déclarée(s) pour {environment}.</p>
                     </div>
                     <a href={connector.setupUrl} target="_blank" rel="noopener noreferrer" className="flex shrink-0 items-center gap-1 text-[11px] text-electric-300 hover:text-electric-200">Documentation <ExternalLink size={11} /></a>
@@ -129,6 +136,20 @@ export function ConnectorsPanel() {
                   ) : (
                     <div className="mt-4 rounded-lg bg-amber-400/10 px-3 py-2.5 text-xs leading-5 text-amber-100">
                       <div className="flex items-start gap-2"><LockKeyhole size={14} className="mt-0.5 shrink-0 text-amber-300" /><span>La clé privée ne doit pas être saisie dans l’application. Cette connexion passera par OAuth ou par une fonction serveur lorsqu’elle sera activée.</span></div>
+                    </div>
+                  )}
+
+                  {connector.id === 'azure' && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">Recettes précises — non activées</p>
+                      {AZURE_RECIPES.map((recipe) => (
+                        <div key={recipe.id} className="rounded-lg border border-amber-300/15 bg-amber-300/5 p-2.5">
+                          <p className="text-xs font-medium text-amber-100">{recipe.name}</p>
+                          <p className="mt-1 text-[10px] leading-4 text-ink-400">{recipe.purpose}</p>
+                          <p className="mt-1.5 text-[10px] text-amber-200/80">Secrets serveur attendus : {recipe.serverSecretNames.join(', ')}</p>
+                          <p className="mt-1 text-[10px] text-ink-500">Prochaine action : {recipe.nextServerAction}</p>
+                        </div>
+                      ))}
                     </div>
                   )}
 

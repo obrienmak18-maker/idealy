@@ -6,6 +6,7 @@ export type MissionComplexity = 'starter' | 'standard' | 'advanced';
 export interface MissionRoute {
   complexity: MissionComplexity;
   rank: string;
+  estimatedEnergy: number;
   commandCenter: string;
   handoffLabel: string;
   summary: string;
@@ -79,10 +80,12 @@ export function deriveMissionRoute(prompt: string, contracts: MissionContracts, 
   const assignedAgents = way.agents.slice(0, agentCount);
   const copy = routeCopy(complexity, way, rank, assignedAgents);
   const command = COMMAND_CENTERS[way.id];
+  const estimatedEnergy = complexity === 'starter' ? 5 : complexity === 'standard' ? 10 : 20;
 
   return {
     complexity,
     rank,
+    estimatedEnergy,
     commandCenter: command.commandCenter,
     handoffLabel: command.handoffLabel,
     assignedAgents,

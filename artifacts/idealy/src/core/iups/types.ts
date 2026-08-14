@@ -1,4 +1,4 @@
-import type { MissionContracts, ValidationReport } from '@/core/mission/contracts';
+import type { ChangeCapsule, MissionContracts, MissionPassport, PreflightProof, ValidationReport } from '@/core/mission/contracts';
 
 export interface IdealyUniversalProjectSchema {
   project: {
@@ -13,4 +13,8 @@ export interface IdealyUniversalProjectSchema {
   validation?: ValidationReport;
   /** Restorable snapshot associated with the schema. */
   snapshotId?: string;
+  /** Human-readable proof and change metadata carried with the mission version. */
+  preflight?: PreflightProof[];
+  capsules?: ChangeCapsule[];
+  passport?: MissionPassport;
 }

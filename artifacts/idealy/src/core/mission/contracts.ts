@@ -106,6 +106,41 @@ export interface ValidationReport {
   }>;
 }
 
+export type ProofStatus = 'passed' | 'failed' | 'warning' | 'not-run';
+
+export interface PreflightProof {
+  id: string;
+  label: string;
+  status: ProofStatus;
+  detail: string;
+  checkedAt: number;
+  evidence?: string;
+}
+
+export type ChangeCapsuleStatus = 'proposed' | 'applied' | 'rejected' | 'failed';
+
+export interface ChangeCapsule {
+  id: string;
+  createdAt: number;
+  scope: 'selection' | 'file' | 'mission';
+  filePath?: string;
+  summary: string;
+  reason: string;
+  risk: 'low' | 'medium' | 'high';
+  expectedTest: string;
+  energyEstimate: number;
+  status: ChangeCapsuleStatus;
+}
+
+export interface MissionPassport {
+  codename: string;
+  rank: string;
+  wayName: string;
+  objective: string;
+  nextAction: string;
+  generatedAt: number;
+}
+
 export interface MissionSnapshot {
   id: string;
   createdAt: number;
@@ -127,6 +162,9 @@ export interface MissionDNA {
   agents: Array<{ id: string; name: string; role: string }>;
   contracts?: MissionContracts;
   validation?: ValidationReport;
+  preflight?: PreflightProof[];
+  capsules?: ChangeCapsule[];
+  passport?: MissionPassport;
   snapshots: MissionSnapshot[];
   connectors: Array<{ provider: string; environment: string; status: string }>;
   publication?: {

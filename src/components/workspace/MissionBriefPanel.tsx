@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { ArrowRight, Check, CircleHelp, Network, RotateCcw, ShieldCheck, Users } from 'lucide-react';
+import { ArrowRight, Check, CircleHelp, Network, RotateCcw, ShieldCheck, Users, Zap } from 'lucide-react';
 import type { Way } from '@/lore/ways';
 import type { MissionContracts } from '@/core/mission/contracts';
 import { deriveMissionRoute } from '@/core/mission/missionRouting';
@@ -123,9 +123,12 @@ export function MissionBriefPanel({ way, prompt, contracts, onConfirm, onCancel 
           </div>
         </div>
 
-        <p className="border-t border-white/5 px-3.5 py-2.5 text-[11px] leading-5 text-ink-400">
-          {route.summary} Ce classement organise la première version ; il ne bloque pas la génération et n’est pas un devis.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 px-3.5 py-2.5">
+          <p className="text-[11px] leading-5 text-ink-400">{route.summary} Ce classement organise la première version ; il ne bloque pas la génération et n’est pas un devis.</p>
+          <span className={`flex shrink-0 items-center gap-1.5 rounded-full border border-current/20 px-2 py-1 text-[10px] font-semibold ${way.textClass}`} title="Estimation d’énergie de mission, pas un prix">
+            <Zap size={11} /> {route.estimatedEnergy} {way.energyUnit.toLowerCase()} estimés
+          </span>
+        </div>
       </motion.div>
 
       <div className="mt-5 grid gap-2 sm:grid-cols-2">

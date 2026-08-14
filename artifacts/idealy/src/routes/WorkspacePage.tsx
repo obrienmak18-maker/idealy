@@ -57,8 +57,10 @@ import { MissionActivityPanel, type MissionExecutionStage } from '@/components/w
 import { buildMissionContracts } from '@/core/mission/missionContract';
 import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/mission/missionDNA';
 import { validateGeneratedProject } from '@/core/mission/validateMission';
+import { buildPreflightProofs } from '@/core/mission/preflight';
+import { createDemoMission } from '@/core/mission/demoMission';
 import { selectMissionTeam } from '@/core/mission/missionTeam';
-import type { MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
+import type { ChangeCapsule, MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
 type RightTab = 'mission' | 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
 
@@ -110,8 +112,9 @@ const DICTATION_THEME: Record<WayId, { active: string; wave: string; ring: strin
   },
 };
 
-export function WorkspacePage() {
-  const wayId = useIdealyStore((s) => s.way) as WayId;
+export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?: boolean } = {}) {
+  const storedWayId = useIdealyStore((s) => s.way) as WayId | null;
+  const wayId = storedWayId ?? (initialDemoMode ? 'pro' : 'ninja');
   const profile = useIdealyStore((s) => s.profile);
   const energy = useIdealyStore((s) => s.energy);
   const setMissions = useIdealyStore((s) => s.setMissions);
@@ -152,6 +155,7 @@ export function WorkspacePage() {
   const [listening, setListening] = useState(false);
   const [missionActivity, setMissionActivity] = useState<{ missionId: string; stage: MissionExecutionStage } | null>(null);
   const [generationProgress, setGenerationProgress] = useState<number>(0);
+  const [demoMode, setDemoMode] = useState(initialDemoMode);
   const scrollRef = useRef<HTMLDivElement>(null);
   const attachmentRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -168,6 +172,10 @@ export function WorkspacePage() {
       dictationRecognitionRef.current?.stop();
     };
   }, []);
+
+  useEffect(() => {
+    if (initialDemoMode && messages.length === 0) startDemoMode();
+  }, [initialDemoMode]);
 
   // Load missions from Supabase on mount
   useEffect(() => {
@@ -378,6 +386,47 @@ export function WorkspacePage() {
     }
   }
 
+  function startDemoMode() {
+    const demo = createDemoMission(way);
+    const missionId = demo.dna.missionId;
+    setDemoMode(true);
+    setCurrentMissionId(missionId);
+    setActiveMissionId(missionId);
+    setMissionDNA(missionId, demo.dna);
+    setProjectSchema(demo.schema);
+    setPreviousSchema(null);
+    setMessages([
+      { id: crypto.randomUUID(), author: 'Idealy Démo', role: 'Guide de mission', text: 'Mode démo activé : aucune session, clé IA ou connexion externe n’est utilisée.', kind: 'agent', ts: Date.now(), status: 'done' },
+      { id: crypto.randomUUID(), author: way.agents[0].name, agentId: way.agents[0].id, role: way.agents[0].role, text: 'Le brief local est prêt. Le Passeport de Mission et les preuves sont consultables dans l’onglet Mission.', kind: 'agent', ts: Date.now(), status: 'done' },
+    ]);
+    const demoHistory = { id: missionId, title: 'Mission démo sans compte', createdAt: Date.now(), way: wayId, previewReady: true, status: 'ready' as const, validation: demo.dna.validation };
+    setMissions([...useIdealyStore.getState().missions.filter((mission) => !mission.id.startsWith('demo-') && mission.title !== 'Mission démo sans compte'), demoHistory]);
+    setMissionActivity({ missionId, stage: 'completed' });
+    setShowPreview(true);
+    setTab('mission');
+    setToolMessage('Mode démo local activé. Les données sont fictives et clairement marquées.');
+  }
+
+  function proposeChangeCapsule(capsule: ChangeCapsule) {
+    if (!currentMissionId) return;
+    updateMissionDNA(currentMissionId, (dna) => ({
+      ...dna,
+      updatedAt: Date.now(),
+      capsules: [...(dna.capsules ?? []), capsule].slice(-10),
+      passport: dna.passport ? { ...dna.passport, nextAction: 'Examiner la capsule et la validation après la réponse de l’IA.' } : dna.passport,
+    }));
+    const nextDNA = useIdealyStore.getState().missionDNA[currentMissionId];
+    if (projectSchema && nextDNA) {
+      updateProjectSchema({
+        ...projectSchema,
+        capsules: nextDNA.capsules ?? [],
+        passport: nextDNA.passport,
+        preflight: nextDNA.preflight,
+      });
+    }
+    setToolMessage(`Capsule proposée : ${capsule.summary}`);
+  }
+
   async function handleSignOut() {
     try {
       await getSupabaseClient()?.auth.signOut();
@@ -488,6 +537,18 @@ export function WorkspacePage() {
       const msgId = addMessage(orchestrator, '', 'thinking');
       const context = await analyzeIntent(prompt, way);
       context.contracts = initialContracts;
+      if (missionId) {
+        updateMissionDNA(missionId, (dna) => ({
+          ...dna,
+          updatedAt: Date.now(),
+          passport: dna.passport ? {
+            ...dna.passport,
+            rank: context.rank,
+            objective: initialContracts.brief.primaryOutcome,
+            nextAction: `Lancer l’escouade de rang ${context.rank}, puis examiner le preflight.`,
+          } : dna.passport,
+        }));
+      }
       useIdealyStore.getState().consumeEnergy(context.energyCost);
 
       const orchestratorStream = await streamAgentMessage(
@@ -538,10 +599,15 @@ export function WorkspacePage() {
       const validation = validateGeneratedProject(schema, context.contracts);
       const status = validation.status === 'failed' ? 'needs-fix' : 'ready';
       const baseSnapshot = createMissionSnapshot(schema, validation.status === 'passed' ? 'Version validée' : 'Version à corriger', 'generation', validation);
+      const currentDNA = missionId ? useIdealyStore.getState().missionDNA[missionId] : undefined;
+      const preflight = buildPreflightProofs(schema, validation, currentDNA?.snapshots ?? [baseSnapshot]);
       const enrichedSchema = schema ? {
         ...schema,
         contracts: context.contracts,
         validation,
+        preflight,
+        capsules: currentDNA?.capsules ?? [],
+        passport: currentDNA?.passport,
         snapshotId: baseSnapshot.id,
       } : null;
       const snapshot = enrichedSchema ? { ...baseSnapshot, schema: enrichedSchema } : baseSnapshot;
@@ -552,7 +618,10 @@ export function WorkspacePage() {
           status,
           validation,
         });
-        updateMissionDNA(missionId, (dna) => appendSnapshot(dna, snapshot, status, validation));
+        updateMissionDNA(missionId, (dna) => {
+          const capsules = (dna.capsules ?? []).map((capsule, index, all) => index === all.length - 1 && capsule.status === 'proposed' ? { ...capsule, status: 'applied' as const } : capsule);
+          return appendSnapshot({ ...dna, capsules }, snapshot, status, validation);
+        });
         const latestDNA = useIdealyStore.getState().missionDNA[missionId];
         getSupabaseClient()?.from('missions').update({
           status,
@@ -604,7 +673,13 @@ export function WorkspacePage() {
       console.error(error);
       if (missionId) {
         updateStoreMission(missionId, { status: 'needs-fix' });
-        updateMissionDNA(missionId, (dna) => ({ ...dna, status: 'needs-fix', updatedAt: Date.now() }));
+        updateMissionDNA(missionId, (dna) => ({
+          ...dna,
+          status: 'needs-fix',
+          updatedAt: Date.now(),
+          capsules: (dna.capsules ?? []).map((capsule, index, all) => index === all.length - 1 && capsule.status === 'proposed' ? { ...capsule, status: 'failed' as const } : capsule),
+          passport: dna.passport ? { ...dna.passport, nextAction: 'La version stable est conservée ; corriger la capsule puis relancer la validation.' } : dna.passport,
+        }));
         setMissionActivity({ missionId, stage: 'needs-fix' });
       }
       addMessage(orchestrator, `Erreur lors de la communication. La version stable précédente est conservée.`, 'done');
@@ -827,10 +902,12 @@ export function WorkspacePage() {
                   stage={missionActivity?.stage ?? 'planning'}
                   visible={Boolean(missionActivity && missionActivity.missionId === currentMissionId)}
                 />
-                {messages.length === 0 ? (
+                    {messages.length === 0 ? (
                   <EmptyState
                     way={way}
                     name={profile?.displayName ?? 'apprenti'}
+                    demoMode={demoMode}
+                    onSelectDemo={startDemoMode}
                     onSelectSuggestion={(suggestion) => {
                       setInput(suggestion);
                       composerRef.current?.focus();
@@ -1029,6 +1106,7 @@ export function WorkspacePage() {
                         // Inject AI file-context prompt into the chat pipeline
                         void runMission(prompt);
                       }}
+                      onProposeChange={proposeChangeCapsule}
                     />
                   </div>
                 </div>
@@ -1046,10 +1124,14 @@ export function WorkspacePage() {
 function EmptyState({
   way,
   name,
+  demoMode,
+  onSelectDemo,
   onSelectSuggestion,
 }: {
   way: (typeof WAYS)[WayId];
   name: string;
+  demoMode?: boolean;
+  onSelectDemo?: () => void;
   onSelectSuggestion?: (suggestion: string) => void;
 }) {
   return (
@@ -1069,6 +1151,11 @@ function EmptyState({
         Décrivez votre idée. L'escouade {way.agents[0].name}, {way.agents[1].name} et{' '}
         {way.agents[2].name} se charge du reste.
       </p>
+      {!demoMode && (
+        <button onClick={onSelectDemo} className="mt-6 rounded-xl border border-electric-300/30 bg-electric-300/10 px-4 py-3 text-sm font-semibold text-electric-100 transition hover:bg-electric-300/20">
+          Explorer la démo sans compte
+        </button>
+      )}
       <div className="mt-8 grid gap-2.5 sm:grid-cols-2">
         {SUGGESTIONS.map((s) => (
           <button
@@ -1095,6 +1182,7 @@ function RightPanelContent({
   onRestore,
   onFix,
   onAskAI,
+  onProposeChange,
 }: {
   tab: RightTab;
   way: (typeof WAYS)[WayId];
@@ -1106,6 +1194,7 @@ function RightPanelContent({
   onRestore: (snapshot: import('@/core/mission/contracts').MissionSnapshot) => void;
   onFix: () => void;
   onAskAI?: (prompt: string) => void;
+  onProposeChange?: (capsule: ChangeCapsule) => void;
 }) {
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -1171,6 +1260,7 @@ function RightPanelContent({
               onUpdateSchema(updatedSchema);
             }}
             onAskAI={onAskAI}
+            onProposeChange={onProposeChange}
           />
         )}
       </div>

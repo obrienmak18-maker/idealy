@@ -69,6 +69,8 @@ function App() {
   // Public routes — accessible without auth
   if (currentPath === '/pricing') {
     page = <PricingPage />;
+  } else if (currentPath === '/demo') {
+    page = <WorkspacePage demoMode />;
   } else if (!onboarded || stage === 'choosing-way' || stage === 'creating-profile') {
     if (stage === 'choosing-way' || stage === 'creating-profile') {
       page = <OnboardingPage />;

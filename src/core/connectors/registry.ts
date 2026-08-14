@@ -1,5 +1,6 @@
 export type ConnectorEnvironment = 'test' | 'production';
 export type ConnectorStatus = 'available' | 'configured' | 'needs-auth' | 'not-configured' | 'blocked';
+export type ConnectorReadiness = 'operational' | 'admin-config' | 'adapter-planned';
 
 export interface ConnectorCapability {
   id: string;
@@ -10,8 +11,9 @@ export interface ConnectorCapability {
 }
 
 export interface ConnectorDefinition {
-  id: 'supabase' | 'stripe' | 'github' | 'vercel' | 'azure';
+  id: 'supabase' | 'stripe' | 'github' | 'vercel' | 'azure' | 'figma';
   name: string;
+  readiness: ConnectorReadiness;
   description: string;
   setupUrl: string;
   secretHandling: 'public-config' | 'server-managed' | 'oauth';
@@ -31,6 +33,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
   {
     id: 'supabase',
     name: 'Supabase',
+    readiness: 'operational',
     description: 'Données, Auth, Storage et Edge Functions pour les applications générées.',
     setupUrl: 'https://supabase.com/dashboard/project/_/settings/api',
     secretHandling: 'public-config',
@@ -45,6 +48,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
   {
     id: 'stripe',
     name: 'Stripe',
+    readiness: 'admin-config',
     description: 'Checkout, abonnements et événements de paiement vérifiés.',
     setupUrl: 'https://dashboard.stripe.com/test/apikeys',
     secretHandling: 'server-managed',
@@ -58,6 +62,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
   {
     id: 'github',
     name: 'GitHub',
+    readiness: 'operational',
     description: 'Exporter le code, créer un dépôt et suivre la version publiée.',
     setupUrl: 'https://github.com/settings/apps',
     secretHandling: 'oauth',
@@ -70,6 +75,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
   {
     id: 'vercel',
     name: 'Vercel',
+    readiness: 'admin-config',
     description: 'Créer une preview ou publier un projet après les contrôles de mission.',
     setupUrl: 'https://vercel.com/account/tokens',
     secretHandling: 'server-managed',
@@ -82,6 +88,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
   {
     id: 'azure',
     name: 'Azure',
+    readiness: 'adapter-planned',
     description: 'Cible d’exécution avancée à préciser par service avant activation.',
     setupUrl: 'https://portal.azure.com/',
     secretHandling: 'server-managed',
@@ -89,6 +96,18 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     capabilities: [
       { id: 'functions', label: 'Azure Functions', description: 'Exposer une fonction HTTP pour un besoin explicite.', permission: 'functions:invoke' },
       { id: 'storage', label: 'Azure Storage', description: 'Stocker des objets lorsque le projet le demande.', permission: 'storage:use' },
+    ],
+  },
+  {
+    id: 'figma',
+    name: 'Figma',
+    readiness: 'admin-config',
+    description: 'Références de design via OAuth ; l’adaptateur de production reste à configurer.',
+    setupUrl: 'https://www.figma.com/developers/api',
+    secretHandling: 'oauth',
+    environments: ['test', 'production'],
+    capabilities: [
+      { id: 'read-design', label: 'Lire une référence design', description: 'Importer une référence autorisée pour guider le contrat visuel.', permission: 'design:read' },
     ],
   },
 ];
