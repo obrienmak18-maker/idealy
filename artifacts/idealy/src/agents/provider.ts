@@ -10,6 +10,25 @@ import { getSupabaseClient } from '@/supabaseClient';
 
 export type Complexity = 'low' | 'medium' | 'high' | 'fast';
 export type LLMProvider = 'groq' | 'openrouter' | 'deepseek';
+export type AIRequestMode = 'auto' | 'free' | 'trial' | 'byok';
+export type IntentCategory = 'CONVERSATION' | 'IDEATION' | 'EXECUTION';
+
+export interface IntentRoute {
+  category: IntentCategory;
+  confidence: number;
+  reason: string;
+}
+
+export type AgentUIPhase = 'planning' | 'building' | 'validating' | 'completed' | 'needs-fix';
+
+export interface AgentTimelineData {
+  missionId?: string | null;
+  phase: AgentUIPhase;
+  progress: number;
+  strategist: 'queued' | 'active' | 'done';
+  builder: 'queued' | 'active' | 'done';
+  terminal: 'queued' | 'active' | 'done' | 'error';
+}
 
 export interface ModelConfig {
   provider: LLMProvider;
@@ -33,10 +52,32 @@ export interface ProxyCallOptions {
   complexity?: Complexity;
   stream?: boolean;
   maxTokens?: number;
+  mode?: AIRequestMode;
+  missionId?: string;
+  idempotencyKey?: string;
+  intentOnly?: boolean;
+  intentCategory?: IntentCategory;
+  uiStream?: boolean;
+  uiPhase?: AgentUIPhase;
+  uiProgress?: number;
 }
 
 async function createProxyRequest(options: ProxyCallOptions): Promise<Response> {
-  const { prompt, systemPrompt, complexity = 'medium', stream = false, maxTokens = 8000 } = options;
+  const {
+    prompt,
+    systemPrompt,
+    complexity = 'medium',
+    stream = false,
+    maxTokens = 8000,
+    mode = 'auto',
+    missionId,
+    idempotencyKey,
+    intentOnly = false,
+    intentCategory,
+    uiStream = false,
+    uiPhase,
+    uiProgress,
+  } = options;
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase non configuré.');
 
@@ -62,6 +103,14 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
       model: config.model,
       stream,
       maxTokens,
+      mode,
+      missionId,
+      idempotencyKey,
+      intentOnly,
+      intentCategory,
+      uiStream,
+      uiPhase,
+      uiProgress,
     }),
   });
 }
@@ -69,6 +118,62 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
 async function readProxyError(response: Response): Promise<string> {
   const payload = await response.json().catch(() => null) as { error?: string } | null;
   return payload?.error ?? `Erreur IA (${response.status}).`;
+}
+
+/** Route l’intention côté serveur sans consommer de crédit IA ni appeler un fournisseur. */
+export async function streamAgentUI(options: {
+  missionId?: string;
+  phase: AgentUIPhase;
+  progress?: number;
+}): Promise<AgentTimelineData | null> {
+  const response = await createProxyRequest({
+    prompt: 'État UI de l’escouade.',
+    intentOnly: false,
+    uiStream: true,
+    uiPhase: options.phase,
+    uiProgress: options.progress,
+    missionId: options.missionId,
+    maxTokens: 128,
+  });
+  if (!response.ok || !response.body) throw new Error(await readProxyError(response));
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = '';
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      pending += decoder.decode(value, { stream: true });
+      const lines = pending.split('\n');
+      pending = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw || raw === '[DONE]') continue;
+        try {
+          const chunk = JSON.parse(raw) as { type?: string; data?: AgentTimelineData };
+          if (chunk.type === 'data-agent-timeline' && chunk.data) return chunk.data;
+        } catch {
+          // Ignore incomplete SSE frames.
+        }
+      }
+      // La dernière ligne incomplète est conservée pour le prochain chunk.
+      // `lines.pop()` l’a déjà retirée de la boucle ci-dessus.
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+  return null;
+}
+
+export async function routeAIIntent(prompt: string): Promise<IntentRoute> {
+  const response = await createProxyRequest({ prompt, intentOnly: true, maxTokens: 128 });
+  if (!response.ok) throw new Error(await readProxyError(response));
+  const payload = await response.json() as { intent?: IntentRoute };
+  if (!payload.intent || !['CONVERSATION', 'IDEATION', 'EXECUTION'].includes(payload.intent.category)) {
+    return { category: 'CONVERSATION', confidence: 0, reason: 'Route de repli locale.' };
+  }
+  return payload.intent;
 }
 
 /** Appel non-streaming vers l’Edge Function ; aucun secret fournisseur ne traverse le navigateur. */

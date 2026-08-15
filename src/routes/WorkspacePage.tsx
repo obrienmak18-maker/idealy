@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { analyzeIntent, buildIUPS, streamAgentMessage } from '@/agents/orchestrator';
+import { analyzeIntent, streamAgentMessage, streamLiaMessage } from '@/agents/orchestrator';
+import { refundMissionCredits, routeAIIntent, streamAgentUI, type IntentCategory } from '@/agents/provider';
 import { iupsToCode } from '@/core/iups/exporter';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
-import { MessageBubble, type ChatMessage } from '@/components/chat/MessageBubble';
+import type { ChatMessage } from '@/components/chat/MessageBubble';
 import { SettingsModal } from '@/components/SettingsModal';
 import { ConnectorsPanel } from '@/components/workspace/ConnectorsPanel';
 import { PaywallModal } from '@/components/workspace/PaywallModal';
@@ -11,24 +12,27 @@ import { DeployPanel } from '@/components/workspace/DeployPanel';
 import { WebContainerPreview } from '@/components/workspace/WebContainerPreview';
 import { FileExplorer } from '@/components/workspace/FileExplorer';
 import { ComposerPanel } from '@/components/workspace/ComposerPanel';
-import { CodeEditor } from '@/components/workspace/CodeEditor';
+import { CodeEditor, type CodeActionIntent } from '@/components/workspace/CodeEditor';
 import { Terminal as TerminalComponent } from '@/components/workspace/Terminal';
 import { downloadProjectZip } from '@/services/projectDownloader';
 import {
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightOpen,
+  PanelRightClose,
+  Maximize2,
+  Minimize2,
   Plus,
   Send,
+  Square,
   Paperclip,
   Mic,
   Image as ImageIcon,
   Github,
   Figma,
   Eye,
-  Code2,
   FolderTree,
   Plug,
-  Rocket,
   ScrollText,
   Sparkles,
   ChevronDown,
@@ -38,13 +42,10 @@ import {
   Crown,
   Bell,
   Terminal,
-  FileCode2,
   Copy,
   CheckCircle2,
   Loader2,
   Download,
-  GitBranch,
-  ShieldCheck,
 } from 'lucide-react';
 import { Logo } from '@/components/Brand';
 import { WAYS, type WayId } from '@/lore/ways';
@@ -53,12 +54,17 @@ import { getSupabaseClient } from '@/supabaseClient';
 import { useStripe } from '@/hooks/useStripe';
 import { MissionBriefPanel } from '@/components/workspace/MissionBriefPanel';
 import { MissionStatusPanel } from '@/components/workspace/MissionStatusPanel';
-import { MissionActivityPanel, type MissionExecutionStage } from '@/components/workspace/MissionActivityPanel';
+import { type MissionExecutionStage } from '@/components/workspace/MissionActivityPanel';
+import { MissionFlow, type MissionFlowStep } from '@/components/workspace/MissionFlow';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { buildMissionContracts } from '@/core/mission/missionContract';
 import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/mission/missionDNA';
 import { validateGeneratedProject } from '@/core/mission/validateMission';
 import { buildPreflightProofs } from '@/core/mission/preflight';
 import { createDemoMission } from '@/core/mission/demoMission';
+import { buildWithSelfCorrection } from '@/core/webcontainer/selfCorrection';
+import { createArchitectureContext } from '@/core/webcontainer/architectureMemory';
 import { selectMissionTeam } from '@/core/mission/missionTeam';
 import type { ChangeCapsule, MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
@@ -135,6 +141,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const [tab, setTab] = useState<RightTab>('preview');
   const [showPreview, setShowPreview] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [flowSteps, setFlowSteps] = useState<MissionFlowStep[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -143,10 +150,18 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const [isBillingPortalOpen, setIsBillingPortalOpen] = useState(false);
   const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
   const [pendingBrief, setPendingBrief] = useState<{ prompt: string; contracts: MissionContracts } | null>(null);
+  const [queuedInterruptions, setQueuedInterruptions] = useState<string[]>([]);
+  const queuedInterruptionsRef = useRef<string[]>([]);
+  const [stopRequested, setStopRequested] = useState(false);
+  const missionAbortRef = useRef<AbortController | null>(null);
+  const stopRequestedRef = useRef(false);
+  const activeMissionIdRef = useRef<string | null>(null);
+  const consumedMissionEnergyRef = useRef(0);
 
   const { subscription, checkSubscription } = useStripe();
 
   const [projectSchema, setProjectSchema] = useState<IdealyUniversalProjectSchema | null>(null);
+  const [reviewSchema, setReviewSchema] = useState<IdealyUniversalProjectSchema | null>(null);
   const [previousSchema, setPreviousSchema] = useState<IdealyUniversalProjectSchema | null>(null);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -155,23 +170,90 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const [listening, setListening] = useState(false);
   const [missionActivity, setMissionActivity] = useState<{ missionId: string; stage: MissionExecutionStage } | null>(null);
   const [generationProgress, setGenerationProgress] = useState<number>(0);
+  const [activeIntent, setActiveIntent] = useState<IntentCategory>('CONVERSATION');
+  const [codePanelOpen, setCodePanelOpen] = useState(false);
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [demoMode, setDemoMode] = useState(initialDemoMode);
   const scrollRef = useRef<HTMLDivElement>(null);
   const attachmentRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const dictationRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 
+  const summarizeFlowText = (raw: string, fallback: string) => {
+    const visible = raw.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').replace(/<\/think>/gi, '').trim();
+    if (!visible) return fallback;
+    const firstLine = visible.split('\n').map((line) => line.trim()).find(Boolean) ?? fallback;
+    return firstLine.length > 180 ? `${firstLine.slice(0, 177)}…` : firstLine;
+  };
+
+  const upsertFlowStep = (step: MissionFlowStep) => {
+    setFlowSteps((current) => {
+      const existing = current.findIndex((candidate) => candidate.id === step.id);
+      if (existing === -1) return [...current, step];
+      return current.map((candidate, index) => index === existing ? { ...candidate, ...step } : candidate);
+    });
+  };
+
+  const clearMissionFlow = () => setFlowSteps([]);
+
+  const takeQueuedInterruption = (): string | null => {
+    const next = queuedInterruptionsRef.current.shift() ?? null;
+    setQueuedInterruptions([...queuedInterruptionsRef.current]);
+    return next;
+  };
+
+  const stopMission = async () => {
+    if (!busy) return;
+    setStopRequested(true);
+    missionAbortRef.current?.abort();
+    const missionId = activeMissionIdRef.current ?? currentMissionId;
+    const localRefund = consumedMissionEnergyRef.current;
+    if (localRefund > 0) {
+      const state = useIdealyStore.getState();
+      const energyState = state.energy;
+      state.setEnergy({ ...energyState, current: Math.min(energyState.max, energyState.current + localRefund) });
+    }
+    setBusy(false);
+    setToolMessage('Arrêt demandé. Le fichier en cours est conservé dans la version stable.');
+    if (missionId) {
+      upsertFlowStep({ id: `${missionId}:stop`, kind: 'system', agentName: 'Mission', role: 'Arrêt contrôlé', shortText: 'Mission interrompue au prochain point sûr. Le chakra local non consommé est restitué.', status: 'completed', summary: 'Aucun secret ni fichier partiellement validé n’est publié.' });
+      try {
+        await refundMissionCredits({ missionId, debitIdempotencyKey: `${missionId}:strategy`, amount: Math.min(10, Math.max(1, localRefund)) });
+        setToolMessage('Mission arrêtée. Le remboursement serveur a été enregistré dans le ledger.');
+      } catch {
+        setToolMessage('Mission arrêtée. Le chakra local a été restitué ; le débit serveur n’était pas remboursable ou n’était pas encore enregistré.');
+      }
+    }
+  };
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, flowSteps]);
 
   useEffect(() => {
     return () => {
       dictationRecognitionRef.current?.stop();
     };
   }, []);
+
+  useEffect(() => {
+    const onShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && (event.key === '`' || event.key === '~')) {
+        event.preventDefault();
+        setTerminalOpen((open) => !open);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b' && showPreview) {
+        event.preventDefault();
+        setFocusMode((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onShortcut);
+    return () => window.removeEventListener('keydown', onShortcut);
+  }, [showPreview]);
 
   useEffect(() => {
     if (initialDemoMode && messages.length === 0) startDemoMode();
@@ -266,9 +348,136 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     void runMission(repairPrompt, activeDNA.contracts);
   }
 
+  async function routePrompt(finalPrompt: string, forcedCategory?: CodeActionIntent) {
+    setBusy(true);
+    setPendingBrief(null);
+    setToolMessage('Analyse de l’intention…');
+    let route: Awaited<ReturnType<typeof routeAIIntent>> = { category: 'CONVERSATION', confidence: 0, reason: 'Repli conversationnel.' };
+    try {
+      route = forcedCategory
+        ? { category: forcedCategory, confidence: 1, reason: 'Action contextuelle du CodeEditor.' }
+        : await routeAIIntent(finalPrompt);
+    } catch (error) {
+      console.warn('Intent router unavailable; using conversation fallback.', error);
+    }
+
+    setActiveIntent(route.category);
+    const userFlowId = crypto.randomUUID();
+    const liaId = crypto.randomUUID();
+    upsertFlowStep({
+      id: userFlowId,
+      kind: 'user',
+      agentName: profile?.displayName ?? 'Vous',
+      role: 'Mission',
+      shortText: finalPrompt,
+      status: 'completed',
+      summary: 'Demande reçue.',
+    });
+    upsertFlowStep({
+      id: liaId,
+      kind: 'lia',
+      agentName: 'Lia',
+      role: 'Messagère',
+      shortText: '... reçoit votre demande et prépare la transmission ...',
+      status: 'active',
+    });
+    let liaResponse = '';
+    try {
+      const liaStream = await streamLiaMessage(way, finalPrompt, `${userFlowId}:lia`);
+      for await (const delta of liaStream.textStream) {
+        liaResponse += delta;
+        upsertFlowStep({ id: liaId, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: summarizeFlowText(liaResponse, 'Je prépare la transmission à l’Orchestrateur.'), detailText: liaResponse, status: 'active' });
+      }
+    } catch {
+      liaResponse = `Bien reçu. Je transmets votre demande à ${missionTeam.strategist.name} pour planification.`;
+    }
+    upsertFlowStep({
+      id: liaId,
+      kind: 'lia',
+      agentName: 'Lia',
+      role: 'Messagère',
+      shortText: `Transmis à ${missionTeam.strategist.name}.`,
+      summary: summarizeFlowText(liaResponse, `Transmis à ${missionTeam.strategist.name}.`),
+      detailText: liaResponse,
+      status: 'completed',
+    });
+
+    if (route.category === 'EXECUTION') {
+      setBusy(false);
+      setPendingBrief({ prompt: finalPrompt, contracts: buildMissionContracts(finalPrompt, way) });
+      setToolMessage('Mission détectée. Le Canvas sera ouvert après votre validation du brief.');
+      return;
+    }
+
+    setShowPreview(false);
+    setTerminalOpen(false);
+    setToolMessage(route.category === 'IDEATION' ? 'Mode idéation : aucun fichier ne sera modifié.' : null);
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      author: profile?.displayName ?? 'Vous',
+      role: 'Vous',
+      text: finalPrompt,
+      kind: 'user',
+      channel: 'conversation',
+      ts: Date.now(),
+    };
+    const agent = missionTeam.strategist;
+    const agentId = crypto.randomUUID();
+    setMessages((current) => [...current, userMessage, {
+      id: agentId,
+      agentId: agent.id,
+      author: agent.name,
+      role: agent.role,
+      text: '',
+      kind: 'agent',
+      channel: 'conversation',
+      ts: Date.now(),
+      status: 'writing',
+    }]);
+    upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: 'Réflexion en cours.', indicator: { kind: 'thinking' }, status: 'active' });
+    setBusy(true);
+    try {
+      const stream = await streamAgentMessage(
+        agent,
+        way,
+        route.category === 'IDEATION' ? 'Mode idéation : explore sans écrire sur le projet.' : 'Mode conversation : réponds dans le flux central.',
+        finalPrompt,
+        route.category === 'IDEATION'
+          ? 'Propose des pistes concrètes, mais ne demande aucune validation et ne prétends pas avoir modifié le Canvas.'
+          : 'Réponds directement et naturellement dans le flux central. Ne transforme pas une question en mission et ne demande aucune validation.',
+        '',
+        [],
+        agentId,
+        route.category,
+      );
+      let response = '';
+      for await (const delta of stream.textStream) {
+        response += delta;
+        setMessages((current) => current.map((message) => message.id === agentId ? { ...message, text: response, status: 'writing' } : message));
+        upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: summarizeFlowText(response, 'Réflexion en cours.'), indicator: { kind: 'thinking' }, detailText: response, status: 'active' });
+      }
+      setMessages((current) => current.map((message) => message.id === agentId ? { ...message, text: response, status: 'done' } : message));
+      upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: summarizeFlowText(response, 'Réponse terminée.'), summary: summarizeFlowText(response, 'Réponse terminée.'), detailText: response, status: 'completed' });
+    } catch {
+      const fallback = 'Je n’ai pas pu répondre pour le moment. Aucun fichier n’a été modifié.';
+      setMessages((current) => current.map((message) => message.id === agentId ? { ...message, text: fallback, status: 'done' } : message));
+      upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: fallback, summary: 'Aucun fichier n’a été modifié.', detailText: fallback, status: 'completed' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function send() {
     const text = input.trim();
-    if (!text || busy) return;
+    if (!text) return;
+    if (busy) {
+      setInput('');
+      queuedInterruptionsRef.current.push(text);
+      setQueuedInterruptions([...queuedInterruptionsRef.current]);
+      upsertFlowStep({ id: crypto.randomUUID(), kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Relais en attente', shortText: text, summary: 'Votre demande sera injectée entre deux agents.', status: 'appearing' });
+      setToolMessage('Message mis en file : il sera transmis au prochain point de relais.');
+      return;
+    }
 
     setInput('');
     setShowSlashMenu(false);
@@ -288,8 +497,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       return;
     }
 
-    const finalPrompt = text;
-    setPendingBrief({ prompt: finalPrompt, contracts: buildMissionContracts(finalPrompt, way) });
+    void routePrompt(text);
   }
 
   async function uploadAttachments(files: FileList | null) {
@@ -395,9 +603,12 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     setMissionDNA(missionId, demo.dna);
     setProjectSchema(demo.schema);
     setPreviousSchema(null);
-    setMessages([
-      { id: crypto.randomUUID(), author: 'Idealy Démo', role: 'Guide de mission', text: 'Mode démo activé : aucune session, clé IA ou connexion externe n’est utilisée.', kind: 'agent', ts: Date.now(), status: 'done' },
-      { id: crypto.randomUUID(), author: way.agents[0].name, agentId: way.agents[0].id, role: way.agents[0].role, text: 'Le brief local est prêt. Le Passeport de Mission et les preuves sont consultables dans l’onglet Mission.', kind: 'agent', ts: Date.now(), status: 'done' },
+    setMessages([]);
+    setFlowSteps([
+      { id: `${missionId}:user`, kind: 'user', agentName: 'Idealy Démo', role: 'Mission', shortText: 'Explorer le studio avec une mission locale sans compte.', summary: 'Demande de démonstration reçue.', status: 'completed' },
+      { id: `${missionId}:lia`, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: `Transmis à ${way.agents[0].name}.`, summary: 'Aucune connexion externe utilisée.', detailText: 'Mode démo activé : aucune session, clé IA ou connexion externe n’est utilisée.', status: 'completed' },
+      { id: `${missionId}:orchestrator`, kind: 'agent', agent: way.agents[0], agentName: way.agents[0].name, role: way.agents[0].role, shortText: 'Le brief local est prêt.', summary: 'Passeport de Mission et preuves disponibles.', detailText: 'Le Passeport de Mission et les preuves sont consultables dans l’espace Mission.', status: 'completed' },
+      { id: `${missionId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: 'Mission accomplie.', summary: 'Preview locale prête à explorer.', status: 'completed' },
     ]);
     const demoHistory = { id: missionId, title: 'Mission démo sans compte', createdAt: Date.now(), way: wayId, previewReady: true, status: 'ready' as const, validation: demo.dna.validation };
     setMissions([...useIdealyStore.getState().missions.filter((mission) => !mission.id.startsWith('demo-') && mission.title !== 'Mission démo sans compte'), demoHistory]);
@@ -427,6 +638,30 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     setToolMessage(`Capsule proposée : ${capsule.summary}`);
   }
 
+  function acceptReviewSchema(nextSchema: IdealyUniversalProjectSchema) {
+    setPreviousSchema(projectSchema);
+    updateProjectSchema(nextSchema);
+    setReviewSchema(null);
+    setShowPreview(true);
+    setTab('preview');
+    if (currentMissionId) {
+      updateStoreMission(currentMissionId, { previewReady: true, status: 'ready', validation: nextSchema.validation });
+      updateMissionDNA(currentMissionId, (dna) => ({
+        ...dna,
+        status: 'ready',
+        validation: nextSchema.validation ?? dna.validation,
+        updatedAt: Date.now(),
+        capsules: (dna.capsules ?? []).map((capsule, index, all) => index === all.length - 1 && capsule.status === 'proposed' ? { ...capsule, status: 'applied' as const } : capsule),
+      }));
+    }
+    setToolMessage('Proposition acceptée : la nouvelle version est maintenant montée dans la preview.');
+  }
+
+  function rejectReviewSchema() {
+    setReviewSchema(null);
+    setToolMessage('Proposition rejetée : la version stable est conservée.');
+  }
+
   async function handleSignOut() {
     try {
       await getSupabaseClient()?.auth.signOut();
@@ -447,8 +682,23 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     }
   }
 
-  async function runMission(prompt: string, overrideContracts?: MissionContracts) {
+  async function runMission(prompt: string, overrideContracts?: MissionContracts, narrativeReady = false) {
+    setActiveIntent('EXECUTION');
+    stopRequestedRef.current = false;
+    setStopRequested(false);
+    consumedMissionEnergyRef.current = 0;
+    const missionController = new AbortController();
+    missionAbortRef.current = missionController;
+    const flowRunId = crypto.randomUUID();
+    if (!narrativeReady) {
+      setFlowSteps((current) => [...current,
+        { id: `${flowRunId}:user`, kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Mission', shortText: prompt, summary: 'Demande reçue.', status: 'completed' },
+        { id: `${flowRunId}:lia`, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: `Transmis à ${missionTeam.strategist.name}.`, summary: `Transmis à ${missionTeam.strategist.name}.`, detailText: 'Transmission locale vers l’Orchestrateur de la voie active.', status: 'completed' },
+      ]);
+    }
     const initialContracts = overrideContracts ?? buildMissionContracts(prompt, way);
+    const selectedMissionTeam = selectMissionTeam(way, prompt);
+    let missionPrompt = prompt;
     let missionId = currentMissionId;
     if (!missionId) {
       missionId = crypto.randomUUID();
@@ -499,9 +749,8 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     // Save current schema as "previous" before generating a new one (for Composer diff)
     setPreviousSchema(projectSchema);
     setBusy(true);
-    const orchestrator = missionTeam.strategist;
-    const builder = missionTeam.builder;
-    const validator = missionTeam.validator;
+    const orchestrator = selectedMissionTeam.strategist;
+    const builder = selectedMissionTeam.builder;
 
     const addMessage = (agent: (typeof way.agents)[number], text: string, status: ChatMessage['status'] = 'done'): string => {
       const id = crypto.randomUUID();
@@ -514,6 +763,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           role: agent.role,
           text,
           kind: 'agent',
+          channel: 'execution',
           ts: Date.now(),
           status,
         },
@@ -532,10 +782,19 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     }
 
     try {
-      if (missionId) setMissionActivity({ missionId, stage: 'planning' });
+      if (missionId) {
+        setMissionActivity({ missionId, stage: 'planning' });
+        void streamAgentUI({ missionId, phase: 'planning', progress: 8 }).catch(() => undefined);
+      }
       // 1. Orchestrator Phase
       const msgId = addMessage(orchestrator, '', 'thinking');
+      const orchestratorFlowId = `${flowRunId}:orchestrator`;
+      upsertFlowStep({ id: orchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: 'Analyse du plan de mission.', indicator: { kind: 'thinking' }, status: 'active' });
       const context = await analyzeIntent(prompt, way);
+      const architectureContext = createArchitectureContext(projectSchema?.project.files, prompt);
+      context.architecture = architectureContext.architecture;
+      context.relevantFiles = architectureContext.relevantFiles;
+      context.missionId = missionId ?? undefined;
       context.contracts = initialContracts;
       if (missionId) {
         updateMissionDNA(missionId, (dna) => ({
@@ -549,14 +808,51 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           } : dna.passport,
         }));
       }
+      const rankIndex = Math.max(0, way.ranks.indexOf(context.rank));
+      const requiredLevel = rankIndex >= 4 ? 'Jonin' : rankIndex >= 2 ? 'Chunin' : 'Genin';
+      const kageAnnouncement = `Mission rang ${context.rank}. Niveau requis : ${requiredLevel}. Coût estimé : ${context.energyCost}% de ${way.energyUnit.toLowerCase()}. J'appelle l'équipe selon les compétences.`;
+      upsertFlowStep({ id: orchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: kageAnnouncement, summary: `Compétences requises : ${selectedMissionTeam.requiredSkills.join(', ')}.`, status: 'active' });
+      if (rankIndex >= 1 && !subscription) {
+        upsertFlowStep({
+          id: `${flowRunId}:access`,
+          kind: 'system',
+          agentName: 'Accès mission',
+          role: 'Choix utilisateur',
+          shortText: `Cette mission mobilise des compétences de rang ${context.rank}. Vous pouvez continuer avec l'équipe gratuite ou débloquer les Jonin.`,
+          status: 'active',
+          action: { label: 'Débloquer les Jonin →', onClick: () => setIsPaywallOpen(true) },
+        });
+      }
       useIdealyStore.getState().consumeEnergy(context.energyCost);
+      consumedMissionEnergyRef.current = context.energyCost;
+      activeMissionIdRef.current = missionId;
 
+      const summonedAgents = [selectedMissionTeam.strategist, selectedMissionTeam.builder, selectedMissionTeam.validator, selectedMissionTeam.optimizer, ...selectedMissionTeam.supporting].filter((agent): agent is (typeof way.agents)[number] => Boolean(agent));
+      for (const agent of summonedAgents) {
+        upsertFlowStep({ id: `${flowRunId}:summon:${agent.id}`, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: 'Oui chef !', summary: 'Agent convoqué selon les compétences.', status: 'appearing', indent: true });
+      }
+      if (!shouldReduceMotion) await new Promise((resolve) => window.setTimeout(resolve, 320));
+      for (const agent of summonedAgents) {
+        upsertFlowStep({ id: `${flowRunId}:summon:${agent.id}`, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: 'En relais séquentiel.', summary: 'L’agent attend son point de relais.', status: 'completed', indent: true });
+      }
+
+      const firstRelay = takeQueuedInterruption();
+      if (firstRelay) {
+        missionPrompt = `${prompt}\\n\\nRelais utilisateur à intégrer : ${firstRelay}`;
+        context.prompt = missionPrompt;
+        upsertFlowStep({ id: `${flowRunId}:relay:strategy`, kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Relais transmis', shortText: firstRelay, summary: 'Injecté avant le relais vers le Bâtisseur.', status: 'completed' });
+      }
       const orchestratorStream = await streamAgentMessage(
         orchestrator,
         way,
-        `Mission: ${prompt}\nComplexité estimée: ${context.rank}`,
-        prompt,
-        `Analyse le plan global. Appelle explicitement le développeur (${builder.name}) pour la suite.`
+        `Mission: ${missionPrompt}\\nComplexité estimée: ${context.rank}`,
+        missionPrompt,
+        `Analyse le plan global. Appelle explicitement le développeur (${builder.name}) pour la suite.`,
+        context.architecture,
+        context.relevantFiles,
+        missionId ? `${missionId}:strategy` : undefined,
+        'EXECUTION',
+        missionController.signal,
       );
 
       let orchestratorText = '';
@@ -565,42 +861,92 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         updateMessage(msgId, orchestratorText, 'writing');
       }
       updateMessage(msgId, orchestratorText, 'done');
+      upsertFlowStep({ id: orchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: summarizeFlowText(orchestratorText, 'Plan de mission établi.'), summary: 'Plan de mission établi.', detailText: orchestratorText, status: 'completed' });
 
       // 2. Builder Phase
-      if (missionId) setMissionActivity({ missionId, stage: 'building' });
+      if (missionId) {
+        setMissionActivity({ missionId, stage: 'building' });
+        void streamAgentUI({ missionId, phase: 'building', progress: 18 }).catch(() => undefined);
+      }
       const builderId = addMessage(builder, '', 'thinking');
+      const builderFlowId = `${flowRunId}:builder`;
+      upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: 'Préparation des fichiers.', indicator: { kind: 'thinking' }, status: 'active', indent: true });
+      const secondRelay = takeQueuedInterruption();
+      if (secondRelay) {
+        missionPrompt = `${missionPrompt}\\n\\nRelais utilisateur à intégrer avant l’écriture : ${secondRelay}`;
+        context.prompt = missionPrompt;
+        upsertFlowStep({ id: `${flowRunId}:relay:builder`, kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Relais transmis', shortText: secondRelay, summary: 'Injecté avant l’écriture des fichiers.', status: 'completed' });
+      }
       const builderStream = await streamAgentMessage(
         builder,
         way,
-        `Plan de l'architecte: ${orchestratorText}`,
-        prompt,
-        `Tu construis les composants. Parle de ce que tu fais, puis dis que c'est bon et appelle ${validator.name}.`
+        `Plan de l’architecte: ${orchestratorText}`,
+        missionPrompt,
+        'Tu construis les composants. Décris brièvement le chantier et retourne une version complète prête à être exécutée dans le terminal.',
+        context.architecture,
+        context.relevantFiles,
+        missionId ? `${missionId}:builder` : undefined,
+        'EXECUTION',
+        missionController.signal,
       );
 
       let builderText = '';
       for await (const delta of builderStream.textStream) {
         builderText += delta;
         updateMessage(builderId, builderText, 'writing');
+        upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: summarizeFlowText(builderText, 'Je génère les fichiers du projet…'), indicator: { kind: 'thinking' }, detailText: builderText, status: 'active', indent: true });
       }
+      upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: summarizeFlowText(builderText, 'Fichiers du projet générés.'), summary: 'Première version du projet assemblée.', detailText: builderText, status: 'completed', indent: true });
 
-      // Building IUPS with real-time progress (Fix #13)
+      // Self-correction terminalisée : une génération, un build/typecheck, puis au plus deux corrections ciblées.
       setGenerationProgress(0);
-      const schema = await buildIUPS({
-        ...context,
-        onProgress: (tokens) => {
-          // ~8000 max tokens, show progress
-          setGenerationProgress(Math.min(95, Math.round((tokens / 8000) * 100)));
-          updateMessage(builderId, `${builderText}\n\n⚙️ Génération du code... (${Math.min(95, Math.round((tokens / 8000) * 100))}%)`, 'writing');
+      const terminalFlowId = `${flowRunId}:terminal`;
+      upsertFlowStep({ id: terminalFlowId, kind: 'agent', agent: selectedMissionTeam.validator, agentName: selectedMissionTeam.validator.name, role: 'Validation terminalisée', shortText: 'Le terminal vérifie le projet…', indicator: { kind: 'thinking' }, status: 'active', indent: true });
+      const terminalLog: string[] = [];
+      const appendTerminalLog = (line: string) => {
+        terminalLog.push(line);
+        const visibleLog = terminalLog.slice(-40).join('');
+        updateMessage(builderId, `${builderText}\n\n${visibleLog}`, 'writing');
+      };
+      const finalRelay = takeQueuedInterruption();
+      if (finalRelay) {
+        missionPrompt = `${missionPrompt}\\n\\nDernier relais utilisateur : ${finalRelay}`;
+        context.prompt = missionPrompt;
+        upsertFlowStep({ id: `${flowRunId}:relay:validation`, kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Relais transmis', shortText: finalRelay, summary: 'Injecté avant la validation terminalisée.', status: 'completed' });
+      }
+      const selfCorrection = await buildWithSelfCorrection(
+        context,
+        {
+          signal: missionController.signal,
+          onFileCreated: (path) => upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: `Création de ${path}…`, indicator: { kind: 'file', path }, detailText: builderText, status: 'active', indent: true }),
+          onProgress: (tokens) => {
+            // ~8000 max tokens par tour, sans dépasser 95 % avant le preflight.
+            setGenerationProgress(Math.min(95, Math.round((tokens / 8000) * 100)));
+          },
+          onLog: appendTerminalLog,
         },
-      });
+      );
+      const schema = selfCorrection.schema;
       setGenerationProgress(100);
-      updateMessage(builderId, builderText, 'done');
+      const terminalSummary = selfCorrection.status === 'passed'
+        ? `✅ Self-Correction terminalisée réussie en ${selfCorrection.attempts.length} tour(s).`
+        : selfCorrection.status === 'needs-fix'
+          ? `⛔ Trois tours de self-correction atteints ; la validation déterministe reste la source de vérité.`
+          : `⚠️ WebContainer indisponible ; validation déterministe exécutée sans prétendre qu’un build terminal a réussi.`;
+      updateMessage(builderId, `${builderText}\n\n${terminalSummary}`, 'done');
+      upsertFlowStep({ id: terminalFlowId, kind: 'agent', agent: selectedMissionTeam.validator, agentName: selectedMissionTeam.validator.name, role: 'Validation terminalisée', shortText: terminalSummary, summary: terminalSummary, detailText: terminalLog.slice(-12).join(''), status: 'completed', indent: true });
 
       const validation = validateGeneratedProject(schema, context.contracts);
       const status = validation.status === 'failed' ? 'needs-fix' : 'ready';
       const baseSnapshot = createMissionSnapshot(schema, validation.status === 'passed' ? 'Version validée' : 'Version à corriger', 'generation', validation);
       const currentDNA = missionId ? useIdealyStore.getState().missionDNA[missionId] : undefined;
-      const preflight = buildPreflightProofs(schema, validation, currentDNA?.snapshots ?? [baseSnapshot]);
+      const terminalPreflight = {
+        status: selfCorrection.status,
+        attempts: selfCorrection.attempts.length,
+        command: selfCorrection.attempts.at(-1)?.validation.command,
+        output: selfCorrection.attempts.at(-1)?.validation.output,
+      } as const;
+      const preflight = buildPreflightProofs(schema, validation, currentDNA?.snapshots ?? [baseSnapshot], terminalPreflight);
       const enrichedSchema = schema ? {
         ...schema,
         contracts: context.contracts,
@@ -611,7 +957,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         snapshotId: baseSnapshot.id,
       } : null;
       const snapshot = enrichedSchema ? { ...baseSnapshot, schema: enrichedSchema } : baseSnapshot;
-      if (enrichedSchema) setProjectSchema(enrichedSchema);
+      if (enrichedSchema) setReviewSchema(enrichedSchema);
       if (missionId) {
         updateStoreMission(missionId, {
           previewReady: Boolean(schema && validation.status !== 'failed'),
@@ -633,45 +979,50 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         }).eq('id', missionId).then();
       }
 
-      // 3. Validator Phase
-      if (missionId) setMissionActivity({ missionId, stage: 'validating' });
-      const validatorId = addMessage(validator, '', 'thinking');
+      // 3. Validation déterministe finale — aucun appel LLM supplémentaire.
+      if (missionId) {
+        setMissionActivity({ missionId, stage: 'validating' });
+        void streamAgentUI({ missionId, phase: 'validating', progress: 92 }).catch(() => undefined);
+      }
       if (enrichedSchema) {
-        updateProjectSchema(enrichedSchema);
+        setReviewSchema(enrichedSchema);
         setShowPreview(true);
-        setTab('preview');
+        setCodePanelOpen(true);
+        setTab('code');
         if (missionId) {
           updateStoreMission(missionId, { previewReady: validation.status !== 'failed' });
         }
 
-        const validatorStream = await streamAgentMessage(
-          validator,
-          way,
-          `Le code a été construit.`,
-          prompt,
-          `Valide la version générée à partir des contrats. Le rapport déterministe ci-dessous est la source de vérité : ${validation.status}. ${validation.issues.map((issue) => `[${issue.code}] ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join(' ')}. Cite les issues concrètes dans ton compte rendu et indique clairement si une réparation est nécessaire.`
-        );
-
-        let validatorText = '';
-        for await (const delta of validatorStream.textStream) {
-          validatorText += delta;
-          updateMessage(validatorId, validatorText, 'writing');
-        }
         const issueSummary = validation.issues.length > 0
           ? validation.issues.map((issue) => `- [${issue.severity}] ${issue.code}: ${issue.message}${issue.path ? ` (${issue.path})` : ''}`).join('\\n')
           : 'Aucune issue détectée.';
-        updateMessage(validatorId, validation.status === 'failed'
-          ? `${validatorText || 'Validation terminée.'}\\n\\nIssues déterministes :\\n${issueSummary}\\n\\nUtilisez « Corriger avec ces issues » dans l’onglet Mission.`
-          : `${validatorText || 'Validation terminée.'}\\n\\nRapport déterministe : ${validation.status}. ${issueSummary}`, 'done');
-        if (missionId) setMissionActivity({ missionId, stage: validation.status === 'failed' ? 'needs-fix' : 'completed' });
+        updateMessage(builderId, validation.status === 'failed'
+          ? `${builderText}\\n\\n${terminalSummary}\\n\\nIssues déterministes :\\n${issueSummary}\\n\\nUtilisez « Corriger avec ces issues » dans l’onglet Mission.`
+          : `${builderText}\\n\\n${terminalSummary}\\n\\nRapport déterministe : ${validation.status}.\\n${issueSummary}`, 'done');
+        setToolMessage(terminalSummary);
+        if (missionId) {
+          const finalStage = validation.status === 'failed' ? 'needs-fix' : 'completed';
+          setMissionActivity({ missionId, stage: finalStage });
+          void streamAgentUI({ missionId, phase: finalStage, progress: finalStage === 'completed' ? 100 : 92 }).catch(() => undefined);
+          upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: finalStage === 'completed' ? 'Mission accomplie.' : 'La mission nécessite une correction.', summary: validation.status === 'failed' ? `${validation.issues.length} issue(s) déterministe(s) à examiner.` : 'Preview, code et preuves prêts à examiner.', detailText: issueSummary, status: 'completed' });
+        }
       } else {
-        if (missionId) setMissionActivity({ missionId, stage: 'needs-fix' });
-        updateMessage(validatorId, `Attention ! J'ai détecté une anomalie.`, 'done');
+        upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: 'Aucun projet exploitable n’a été généré.', summary: 'La mission doit être relancée après correction.', status: 'completed' });
+        if (missionId) {
+          setMissionActivity({ missionId, stage: 'needs-fix' });
+          void streamAgentUI({ missionId, phase: 'needs-fix', progress: 92 }).catch(() => undefined);
+        }
+        updateMessage(builderId, `${builderText}\\n\\n${terminalSummary}\\n\\nAucun projet exploitable n’a été généré.`, 'done');
       }
 
     } catch (error) {
-      console.error(error);
-      if (missionId) {
+      const interrupted = stopRequestedRef.current || (error instanceof DOMException && error.name === 'AbortError');
+      if (interrupted) {
+        setToolMessage('Mission arrêtée proprement. La dernière version stable est conservée.');
+      } else {
+        console.error(error);
+      }
+      if (!interrupted && missionId) {
         updateStoreMission(missionId, { status: 'needs-fix' });
         updateMissionDNA(missionId, (dna) => ({
           ...dna,
@@ -681,10 +1032,19 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           passport: dna.passport ? { ...dna.passport, nextAction: 'La version stable est conservée ; corriger la capsule puis relancer la validation.' } : dna.passport,
         }));
         setMissionActivity({ missionId, stage: 'needs-fix' });
+        void streamAgentUI({ missionId, phase: 'needs-fix', progress: 0 }).catch(() => undefined);
       }
-      addMessage(orchestrator, `Erreur lors de la communication. La version stable précédente est conservée.`, 'done');
+      if (!interrupted) {
+        const failure = 'Erreur lors de la communication. La version stable précédente est conservée.';
+        addMessage(orchestrator, failure, 'done');
+        upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: failure, summary: 'Aucun fichier n’a été modifié.', detailText: failure, status: 'completed' });
+      }
     }
 
+    if (missionAbortRef.current === missionController) missionAbortRef.current = null;
+    if (activeMissionIdRef.current === missionId) activeMissionIdRef.current = null;
+    consumedMissionEnergyRef.current = 0;
+    setStopRequested(false);
     setBusy(false);
   }
 
@@ -694,7 +1054,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <AnimatePresence initial={false}>
-        {sidebarOpen && (
+        {sidebarOpen && !focusMode && (
           <motion.aside
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 264, opacity: 1 }}
@@ -750,8 +1110,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                     setActiveMissionId(null);
                     setPendingBrief(null);
                     setProjectSchema(null);
+                    setReviewSchema(null);
                     setPreviousSchema(null);
                     setMessages([]);
+                    clearMissionFlow();
                     setMissionActivity(null);
                     setShowPreview(false);
                     setInput('');
@@ -857,6 +1219,17 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {showPreview && (
+              <button
+                onClick={() => setFocusMode((open) => !open)}
+                aria-pressed={focusMode}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition ${focusMode ? `bg-white/10 ${way.textClass}` : 'text-ink-400 hover:bg-white/5 hover:text-white'}`}
+                title={focusMode ? 'Quitter le Focus Mode (Ctrl+B)' : 'Focus Mode (Ctrl+B)'}
+              >
+                {focusMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                <span className="hidden lg:inline">{focusMode ? 'Quitter le focus' : 'Focus'}</span>
+              </button>
+            )}
             <button className="rounded-lg p-2 text-ink-300 transition hover:bg-white/5 hover:text-white" title="Notifications">
               <Bell size={17} />
             </button>
@@ -867,10 +1240,9 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           </div>
         </header>
 
-        {/* Body: chat + right panel */}
+        {/* Body: MissionFlow narratif + Canvas */}
         <div className="flex min-h-0 flex-1">
-          {/* Chat */}
-          <div className="flex min-w-0 flex-1 flex-col">
+          <main className={`relative flex min-w-0 flex-1 flex-col ${showPreview && !focusMode ? 'lg:w-[34%]' : 'w-full'}`}>
             {pendingBrief && (
               <div className="shrink-0 border-b border-white/5 bg-ink-950/40 p-4">
                 <MissionBriefPanel
@@ -881,112 +1253,70 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                   onConfirm={(contracts) => {
                     const brief = pendingBrief;
                     setPendingBrief(null);
-                    setMessages((current) => [...current, {
-                      id: crypto.randomUUID(),
-                      author: profile?.displayName ?? 'Vous',
-                      role: 'Vous',
-                      text: brief.prompt,
-                      kind: 'user',
-                      ts: Date.now(),
-                    }]);
-                    void runMission(brief.prompt, contracts);
+                    void runMission(brief.prompt, contracts, true);
                   }}
                 />
               </div>
             )}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
-              <div className="mx-auto max-w-3xl px-5 py-8">
-                <MissionActivityPanel
+
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
+              <div className="mx-auto min-h-full w-full max-w-3xl px-5 py-4">
+                <MissionFlow
+                  steps={flowSteps}
                   way={way}
-                  team={missionTeam}
-                  stage={missionActivity?.stage ?? 'planning'}
-                  visible={Boolean(missionActivity && missionActivity.missionId === currentMissionId)}
+                  emptyState={(
+                    <EmptyState
+                      way={way}
+                      name={profile?.displayName ?? 'apprenti'}
+                      demoMode={demoMode}
+                      onSelectDemo={startDemoMode}
+                      onSelectSuggestion={(suggestion) => {
+                        setInput(suggestion);
+                        composerRef.current?.focus();
+                      }}
+                    />
+                  )}
                 />
-                    {messages.length === 0 ? (
-                  <EmptyState
-                    way={way}
-                    name={profile?.displayName ?? 'apprenti'}
-                    demoMode={demoMode}
-                    onSelectDemo={startDemoMode}
-                    onSelectSuggestion={(suggestion) => {
-                      setInput(suggestion);
-                      composerRef.current?.focus();
-                    }}
-                  />
-                ) : (
-                  <div className="space-y-5">
-                    {messages.map((m) => (
-                      <MessageBubble key={m.id} msg={m} way={way} />
-                    ))}
-                    {busy && (
-                      <div className="flex items-center gap-2 text-sm text-ink-400">
-                        <span className="flex gap-1">
-                          {[0, 1, 2].map((i) => (
-                            <motion.span
-                              key={i}
-                              className="h-1.5 w-1.5 rounded-full bg-electric-400"
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                            />
-                          ))}
-                        </span>
-                        L'escouade travaille...
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Prompt input */}
-            <div className="shrink-0 border-t border-white/5 bg-ink-900/40 p-4">
+            {/* Barre de commande persistante : aucune conversation n’est rendue ici. */}
+            <div className="sticky bottom-0 z-20 shrink-0 border-t border-white/5 bg-ink-900/90 p-4 backdrop-blur-xl">
               <div className="mx-auto max-w-3xl">
-                <div className="card p-3 relative">
-                  {/* Slash command menu */}
+                <div className="relative rounded-2xl border border-white/8 bg-ink-950/80 p-3 shadow-2xl">
                   <AnimatePresence>
                     {showSlashMenu && (
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 8 }}
-                        className="absolute bottom-full left-0 mb-2 w-72 rounded-xl glass border border-white/10 py-1.5 shadow-2xl z-50"
+                        className="absolute bottom-full left-0 z-50 mb-2 w-72 rounded-xl border border-white/10 bg-ink-950/95 py-1.5 shadow-2xl backdrop-blur-xl"
                       >
-                        <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">
-                          Commandes
-                        </div>
-                        {SLASH_COMMANDS.filter(c =>
-                          c.cmd.startsWith(input.toLowerCase()) || input === '/'
-                        ).map((c) => (
-                          <button
-                            key={c.cmd}
-                            onClick={() => { setInput(c.cmd + ' '); setShowSlashMenu(false); }}
-                            className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-white/5 transition"
-                          >
-                            <span className="font-mono text-xs font-semibold text-electric-400 mt-0.5 shrink-0">{c.label}</span>
-                            <span className="text-xs text-ink-400">{c.desc}</span>
+                        <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">Commandes</div>
+                        {SLASH_COMMANDS.filter((command) => command.cmd.startsWith(input.toLowerCase()) || input === '/').map((command) => (
+                          <button key={command.cmd} onClick={() => { setInput(`${command.cmd} `); setShowSlashMenu(false); }} className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-white/5">
+                            <span className="mt-0.5 shrink-0 font-mono text-xs font-semibold text-electric-400">{command.label}</span>
+                            <span className="text-xs text-ink-400">{command.desc}</span>
                           </button>
                         ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
                   <textarea
+                    ref={composerRef}
                     value={input}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setInput(val);
-                      setShowSlashMenu(val === '/' || (val.startsWith('/') && !val.includes(' ')));
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setInput(value);
+                      setShowSlashMenu(value === '/' || (value.startsWith('/') && !value.includes(' ')));
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') { setShowSlashMenu(false); return; }
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        send();
-                      }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') { setShowSlashMenu(false); return; }
+                      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); }
                     }}
                     placeholder={`Décrivez votre ${way.vocab.task.toLowerCase()}... ou tapez / pour les commandes`}
                     rows={1}
                     className="max-h-40 min-h-[2.5rem] w-full resize-none bg-transparent text-sm text-ink-100 placeholder:text-ink-400 focus:outline-none scrollbar-thin"
-                    style={{ height: 'auto' }}
                   />
                   <div className="mt-2 flex items-center justify-between">
                     <div className="flex items-center gap-0.5">
@@ -1000,114 +1330,132 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                         aria-pressed={listening}
                         aria-label={listening ? 'Arrêter la dictée' : 'Démarrer la dictée'}
                         title={listening ? 'Arrêter la dictée' : 'Dicter votre mission'}
-                        className={`relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-white/30 ${
-                          listening ? dictationTheme.active : 'text-ink-400 hover:bg-white/5 hover:text-white'
-                        }`}
+                        className={`relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-white/30 ${listening ? dictationTheme.active : 'text-ink-400 hover:bg-white/5 hover:text-white'}`}
                       >
-                        {listening && !shouldReduceMotion && (
-                          <motion.span
-                            aria-hidden="true"
-                            className={`pointer-events-none absolute -inset-1 rounded-xl border ${dictationTheme.ring}`}
-                            initial={{ opacity: 0.75, scale: 0.82 }}
-                            animate={{ opacity: 0, scale: 1.35 }}
-                            transition={{ duration: 1.3, repeat: Infinity, ease: 'easeOut' }}
-                          />
-                        )}
+                        {listening && !shouldReduceMotion && <motion.span aria-hidden="true" className={`pointer-events-none absolute -inset-1 rounded-xl border ${dictationTheme.ring}`} initial={{ opacity: 0.75, scale: 0.82 }} animate={{ opacity: 0, scale: 1.35 }} transition={{ duration: 1.3, repeat: Infinity, ease: 'easeOut' }} />}
                         <span className={`absolute inset-0 flex items-center justify-center gap-[2px] transition-opacity ${listening ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
-                          {[0, 1, 2, 3].map((bar) => (
-                            <motion.span
-                              key={bar}
-                              className={`h-3 w-[2px] rounded-full ${dictationTheme.wave}`}
-                              style={{ transformOrigin: 'center' }}
-                              animate={listening && !shouldReduceMotion ? { scaleY: [0.45, 1, 0.55, 0.85, 0.45] } : { scaleY: 0.45 }}
-                              transition={{ duration: 0.72, delay: bar * 0.09, repeat: listening && !shouldReduceMotion ? Infinity : 0, ease: 'easeInOut' }}
-                            />
-                          ))}
+                          {[0, 1, 2, 3].map((bar) => <motion.span key={bar} className={`h-3 w-[2px] rounded-full ${dictationTheme.wave}`} style={{ transformOrigin: 'center' }} animate={listening && !shouldReduceMotion ? { scaleY: [0.45, 1, 0.55, 0.85, 0.45] } : { scaleY: 0.45 }} transition={{ duration: 0.72, delay: bar * 0.09, repeat: listening && !shouldReduceMotion ? Infinity : 0, ease: 'easeInOut' }} />)}
                         </span>
                         <Mic size={16} className={`transition-opacity ${listening ? 'opacity-0' : 'opacity-100'}`} />
                       </button>
                       <input ref={attachmentRef} type="file" multiple className="hidden" onChange={(event) => uploadAttachments(event.target.files)} />
                     </div>
-                    <button
-                      onClick={send}
-                      disabled={!input.trim() || busy || Boolean(pendingBrief)}
-                      className="btn-primary px-3.5"
-                    >
-                      <Send size={15} />
-                    </button>
+                    {busy ? (
+                      <button type="button" onClick={() => { void stopMission(); }} className="inline-flex items-center gap-2 rounded-xl border border-red-300/30 bg-red-400/10 px-3.5 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-400/20" title="Arrêter la mission">
+                        <Square size={13} fill="currentColor" /> Stop
+                      </button>
+                    ) : (
+                      <button onClick={send} disabled={!input.trim() || Boolean(pendingBrief)} className="btn-primary px-3.5"><Send size={15} /></button>
+                    )}
                   </div>
                 </div>
-                {listening && (
-                  <p role="status" aria-live="polite" className={`mt-2 flex items-center gap-2 text-xs ${way.textClass}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${dictationTheme.wave} motion-safe:animate-pulse`} aria-hidden="true" />
-                    {dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.
-                  </p>
-                )}
-                {toolMessage && <p role="status" className="mt-2 text-xs text-electric-300">{isUploading ? 'Import en cours…' : toolMessage}</p>}
-                <p className="mt-2 text-center text-[11px] text-ink-500">
-                  Idealy peut se tromper. Vérifiez le code généré.
-                </p>
+                {queuedInterruptions.length > 0 && <p role="status" className="mt-2 text-xs text-amber-200">{queuedInterruptions.length} message{queuedInterruptions.length > 1 ? 's' : ''} en attente du prochain relais.</p>}
+                {listening && <p role="status" aria-live="polite" className={`mt-2 flex items-center gap-2 text-xs ${way.textClass}`}><span className={`h-1.5 w-1.5 rounded-full ${dictationTheme.wave} motion-safe:animate-pulse`} aria-hidden="true" />{dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.</p>}
+                {toolMessage && <p role="status" className={`mt-2 text-xs ${way.textClass}`}>{isUploading ? 'Import en cours…' : toolMessage}</p>}
+                <p className="mt-2 text-center text-[11px] text-ink-500">Idealy peut se tromper. Vérifiez le code généré.</p>
               </div>
             </div>
-          </div>
+          </main>
 
-          {/* Right panel */}
+          {/* Canvas central : l’aperçu est la surface principale, le code reste latéral. */}
           <AnimatePresence>
             {showPreview && (
               <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: '42%', opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="hidden shrink-0 border-l border-white/5 bg-ink-900/30 md:block"
-                style={{ minWidth: 360 }}
+                layout
+                layoutId="idealy-canvas"
+                initial={{ width: 0, opacity: 0, scale: 0.98 }}
+                animate={{ width: focusMode ? '100%' : '66%', opacity: 1, scale: 1 }}
+                exit={{ width: 0, opacity: 0, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 32, mass: 0.8 }}
+                className={`hidden min-w-0 shrink-0 border-l ${way.borderClass} bg-ink-900/30 md:block`}
+                style={{ minWidth: focusMode ? 0 : 520 }}
               >
-                <div className="flex h-full flex-col">
-                  <div className="flex shrink-0 items-center gap-1 border-b border-white/5 px-3 py-2">
-                    {TABS.map((t) => (
+                <div className="flex h-full min-w-0 flex-col" data-focus-mode={focusMode ? 'true' : 'false'}>
+                  <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/5 px-3 py-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${way.bgClass} ${way.textClass}`}><Eye size={14} /></div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-white">Canvas central</p>
+                        <p className="text-[10px] text-ink-500">Prévisualisation live de l’application</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
                       <button
-                        key={t.id}
-                        onClick={() => setTab(t.id)}
-                        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                          tab === t.id
-                            ? 'bg-white/10 text-white'
-                            : 'text-ink-400 hover:text-white hover:bg-white/5'
-                        }`}
+                        onClick={() => setCodePanelOpen((open) => !open)}
+                        aria-pressed={codePanelOpen}
+                        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition ${codePanelOpen ? 'bg-white/10 text-white' : 'text-ink-400 hover:bg-white/5 hover:text-white'}`}
                       >
-                        <t.icon size={14} />
-                        {t.label}
+                        {codePanelOpen ? <PanelRightClose size={13} /> : <PanelRightOpen size={13} />}
+                        Code
                       </button>
-                    ))}
-                    {/* Download ZIP button */}
-                    {projectSchema && (
                       <button
-                        onClick={handleDownload}
-                        disabled={isDownloading}
-                        title="Télécharger le projet (.zip)"
-                        className="ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-ink-400 hover:text-white hover:bg-white/5 transition disabled:opacity-50"
+                        onClick={() => setTerminalOpen(true)}
+                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-ink-400 transition hover:bg-white/5 hover:text-white"
                       >
-                        {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-                        <span className="hidden lg:block">ZIP</span>
+                        <Terminal size={13} />
+                        Terminal
+                        <kbd className="hidden rounded border border-white/10 px-1 text-[9px] text-ink-500 lg:inline">Ctrl+~</kbd>
                       </button>
-                    )}
+                      {projectSchema && (
+                        <button
+                          onClick={handleDownload}
+                          disabled={isDownloading}
+                          title="Télécharger le projet (.zip)"
+                          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-ink-400 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
+                        >
+                          {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                          <span className="hidden lg:block">ZIP</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1 overflow-hidden">
-                    <RightPanelContent
-                      tab={tab}
-                      way={way}
-                      schema={projectSchema}
-                      previousSchema={previousSchema}
-                      missionId={currentMissionId}
-                      dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
-                      onUpdateSchema={updateProjectSchema}
-          onRestore={restoreMissionSnapshot}
-                      onFix={repairMission}
-                          onAskAI={(prompt) => {
-                        // Inject AI file-context prompt into the chat pipeline
-                        void runMission(prompt);
-                      }}
-                      onProposeChange={proposeChangeCapsule}
-                    />
+                  <div className="min-h-0 flex-1 overflow-hidden">
+                    <ResizablePanelGroup direction="horizontal">
+                      {codePanelOpen && (
+                        <>
+                          <ResizablePanel defaultSize={31} minSize={20} maxSize={45} collapsible collapsedSize={0} className="min-w-0">
+                            <RightPanelContent
+                              tab="code"
+                              way={way}
+                              schema={reviewSchema ?? projectSchema}
+                              baseSchema={projectSchema}
+                              reviewMode={Boolean(reviewSchema)}
+                              previousSchema={previousSchema}
+                              missionId={currentMissionId}
+                              dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
+                              onUpdateSchema={updateProjectSchema}
+                              onRestore={restoreMissionSnapshot}
+                              onFix={repairMission}
+                              onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
+                              onProposeChange={proposeChangeCapsule}
+                              onAcceptReview={acceptReviewSchema}
+                              onRejectReview={rejectReviewSchema}
+                              onUpdateReview={setReviewSchema}
+                              onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
+                            />
+                          </ResizablePanel>
+                          <ResizableHandle withHandle />
+                        </>
+                      )}
+                      <ResizablePanel defaultSize={codePanelOpen ? 69 : 100} minSize={55} className="min-w-0">
+                        <RightPanelContent
+                          tab="preview"
+                          way={way}
+                          schema={projectSchema}
+                          baseSchema={projectSchema}
+                          reviewMode={false}
+                          previousSchema={previousSchema}
+                          missionId={currentMissionId}
+                          dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
+                          onUpdateSchema={updateProjectSchema}
+                          onRestore={restoreMissionSnapshot}
+                          onFix={repairMission}
+                          onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
+                          onProposeChange={proposeChangeCapsule}
+                          onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
+                        />
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
                   </div>
                 </div>
               </motion.div>
@@ -1115,6 +1463,17 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           </AnimatePresence>
         </div>
       </div>
+      <Drawer open={terminalOpen} onOpenChange={setTerminalOpen}>
+        <DrawerContent className="h-[min(70vh,560px)] border-white/10 bg-ink-950 text-white">
+          <DrawerHeader className="border-b border-white/5 px-5 py-3">
+            <DrawerTitle className="flex items-center gap-2 text-sm text-white"><Terminal size={16} className="text-emerald-300" /> Terminal de mission</DrawerTitle>
+            <DrawerDescription className="text-xs text-ink-400">Les commandes de validation et les diagnostics réels apparaissent ici. Raccourci : Ctrl+~.</DrawerDescription>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 overflow-hidden p-4">
+            <TerminalComponent />
+          </div>
+        </DrawerContent>
+      </Drawer>
       <SettingsModal open={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <PaywallModal isOpen={isPaywallOpen} onClose={() => setIsPaywallOpen(false)} />
     </div>
@@ -1175,6 +1534,8 @@ function RightPanelContent({
   tab,
   way,
   schema,
+  baseSchema,
+  reviewMode,
   previousSchema,
   missionId,
   dna,
@@ -1183,18 +1544,28 @@ function RightPanelContent({
   onFix,
   onAskAI,
   onProposeChange,
+  onAcceptReview,
+  onRejectReview,
+  onUpdateReview,
+  onCrashFix,
 }: {
   tab: RightTab;
   way: (typeof WAYS)[WayId];
   schema: IdealyUniversalProjectSchema | null;
+  baseSchema: IdealyUniversalProjectSchema | null;
+  reviewMode: boolean;
   previousSchema: IdealyUniversalProjectSchema | null;
   missionId: string | null;
   dna: import('@/core/mission/contracts').MissionDNA | null;
   onUpdateSchema: (schema: IdealyUniversalProjectSchema | null) => void;
   onRestore: (snapshot: import('@/core/mission/contracts').MissionSnapshot) => void;
   onFix: () => void;
-  onAskAI?: (prompt: string) => void;
+  onAskAI?: (prompt: string, intent?: CodeActionIntent) => void;
   onProposeChange?: (capsule: ChangeCapsule) => void;
+  onAcceptReview?: (schema: IdealyUniversalProjectSchema) => void;
+  onRejectReview?: () => void;
+  onUpdateReview?: (schema: IdealyUniversalProjectSchema | null) => void;
+  onCrashFix?: (logs: string) => void | Promise<void>;
 }) {
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -1218,10 +1589,10 @@ function RightPanelContent({
             <div className="flex items-center gap-1 px-4 py-2 border-b border-white/5">
               <Terminal size={12} className="text-primary" />
               <span className="text-xs text-ink-300 ml-1">WebContainer</span>
-              <span className="ml-2 text-[10px] bg-electric-400/20 text-electric-400 px-1.5 py-0.5 rounded-full">Live</span>
+              <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${way.bgClass} ${way.textClass}`}>Live</span>
             </div>
             <div className="flex-1 overflow-hidden">
-              <WebContainerPreview schema={schema} className="h-full" />
+              <WebContainerPreview schema={schema} way={way} className="h-full" onCrashFix={onCrashFix} />
             </div>
           </div>
         ) : (
@@ -1243,8 +1614,16 @@ function RightPanelContent({
         ) : (
           <CodeEditor
             files={files}
+            baseFiles={baseSchema?.project?.files ?? {}}
             selectedPath={selectedFilePath}
             onSelectFile={(path) => setSelectedFilePath(path)}
+            reviewMode={reviewMode}
+            way={way}
+            onAcceptGhost={(path, newContent) => {
+              if (!schema || !onAcceptReview) return;
+              onAcceptReview({ ...schema, project: { ...schema.project, files: { ...schema.project.files, [path]: newContent } } });
+            }}
+            onRejectGhost={onRejectReview}
             onSaveFile={(path, newContent) => {
               if (!schema) return;
               const updatedSchema = {
@@ -1257,7 +1636,8 @@ function RightPanelContent({
                   }
                 }
               };
-              onUpdateSchema(updatedSchema);
+              if (reviewMode) onUpdateReview?.(updatedSchema);
+              else onUpdateSchema(updatedSchema);
             }}
             onAskAI={onAskAI}
             onProposeChange={onProposeChange}
@@ -1393,17 +1773,6 @@ function IconBtn({ icon: Icon, title, onClick }: { icon: React.ElementType; titl
     </button>
   );
 }
-
-const TABS: { id: RightTab; label: string; icon: React.ElementType }[] = [
-  { id: 'mission', label: 'Mission', icon: ShieldCheck },
-  { id: 'preview', label: 'Aperçu', icon: Eye },
-  { id: 'code', label: 'Code', icon: Code2 },
-  { id: 'files', label: 'Fichiers', icon: FolderTree },
-  { id: 'composer', label: 'Composer', icon: GitBranch },
-  { id: 'connectors', label: 'Connecteurs', icon: Plug },
-  { id: 'deploy', label: 'Déploiement', icon: Rocket },
-  { id: 'logs', label: 'Logs', icon: ScrollText },
-];
 
 const SUGGESTIONS = [
   'Une app de tâches avec auth et dark mode',

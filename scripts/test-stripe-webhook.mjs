@@ -55,6 +55,30 @@ function signatureFor(payload) {
   return `t=${timestamp},v1=${digest}`;
 }
 
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+function checkoutEvent(creditAmount) {
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    id: `evt_idealy_test_${runId}_checkout_completed`,
+    object: 'event',
+    api_version: '2025-02-24.acacia',
+    created: now,
+    livemode: false,
+    pending_webhooks: 1,
+    type: 'checkout.session.completed',
+    data: {
+      object: {
+        id: `cs_idealy_test_${runId}`,
+        object: 'checkout.session',
+        mode: 'payment',
+        payment_status: 'paid',
+        metadata: { user_id: userId, credit_amount: String(creditAmount) },
+      },
+    },
+  };
+}
+
 function subscriptionEvent(type, { status, priceId, cancelAtPeriodEnd = false }) {
   const now = Math.floor(Date.now() / 1000);
   return {
@@ -90,22 +114,32 @@ function subscriptionEvent(type, { status, priceId, cancelAtPeriodEnd = false })
 
 async function sendEvent(event) {
   const payload = JSON.stringify(event);
-  const response = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'stripe-signature': signatureFor(payload),
-      ...(supabaseAnonKey
-        ? { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` }
-        : {}),
-    },
-    body: payload,
-  });
-  const body = await response.text();
-  if (!response.ok) {
-    throw new Error(`Webhook ${event.type} returned ${response.status}: ${body.slice(0, 500)}`);
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'stripe-signature': signatureFor(payload),
+        ...(supabaseAnonKey
+          ? { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` }
+          : {}),
+      },
+      body: payload,
+    });
+    const body = await response.text();
+    if (response.ok) {
+      console.log(`✓ ${event.type} accepted (${response.status})`);
+      return;
+    }
+
+    const retryableWorkerError =
+      (response.status === 500 && body.includes('WORKER_ERROR')) ||
+      (response.status === 502 && body.includes('invalid response'));
+    if (!retryableWorkerError || attempt === 5) {
+      throw new Error(`Webhook ${event.type} returned ${response.status}: ${body.slice(0, 500)}`);
+    }
+    await delay(attempt * 1000);
   }
-  console.log(`✓ ${event.type} accepted (${response.status})`);
 }
 
 async function waitForProfile(userId) {
@@ -117,6 +151,13 @@ async function waitForProfile(userId) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error('The auth trigger did not create a profiles row within 10 seconds.');
+}
+
+async function readCredits(userId) {
+  const rows = await supabaseRequest(
+    `/rest/v1/user_credits?user_id=eq.${encodeURIComponent(userId)}&select=user_id,balance&limit=1`,
+  );
+  return rows[0];
 }
 
 async function readState(userId) {
@@ -154,6 +195,15 @@ try {
     headers: { Prefer: 'return=minimal' },
     body: JSON.stringify({ stripe_customer_id: customerId, plan: 'free' }),
   });
+
+  const checkout = checkoutEvent(25);
+  await sendEvent(checkout);
+  let credits = await readCredits(userId);
+  assertEqual(credits?.balance, 125, 'checkout.credits.balance');
+  await sendEvent(checkout);
+  credits = await readCredits(userId);
+  assertEqual(credits?.balance, 125, 'checkout.retry.balance');
+  console.log('✓ checkout credits refill is idempotent');
 
   await sendEvent(subscriptionEvent('customer.subscription.created', {
     status: 'trialing',

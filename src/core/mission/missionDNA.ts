@@ -7,6 +7,7 @@ import type {
   MissionSnapshot,
   ValidationReport,
 } from './contracts';
+import type { TerminalPreflightResult } from './preflight';
 
 export function createMissionDNA(
   missionId: string,
@@ -41,7 +42,7 @@ export function createMissionDNA(
     preflight: [
       { id: 'schema', label: 'Structure IUPS', status: 'not-run', detail: 'La génération n’a pas encore fourni de projet.', checkedAt: now },
       { id: 'secrets', label: 'Secrets serveur', status: 'not-run', detail: 'Le contrôle sera exécuté après génération.', checkedAt: now },
-      { id: 'build', label: 'Build réel', status: 'not-run', detail: 'Le projet généré n’est pas encore exécuté dans une sandbox.', checkedAt: now },
+      { id: 'build', label: 'Build terminalisé', status: 'not-run', detail: 'Le projet généré sera exécuté dans WebContainer après la génération.', checkedAt: now },
       { id: 'restore', label: 'Version restaurable', status: 'not-run', detail: 'Un snapshot sera créé au premier changement.', checkedAt: now },
     ],
     capsules: [],
@@ -75,17 +76,25 @@ export function appendSnapshot(
   snapshot: MissionSnapshot,
   status: MissionDNA['status'],
   validation?: ValidationReport,
+  terminal?: TerminalPreflightResult,
 ): MissionDNA {
+  const rebuiltPreflight = buildPreflightProofs(
+    snapshot.schema as IdealyUniversalProjectSchema | null,
+    validation ?? dna.validation,
+    [...dna.snapshots, snapshot].slice(-10),
+    terminal,
+  );
+  const previousBuildProof = dna.preflight?.find((proof) => proof.id === 'build');
+  const preflight = terminal || !previousBuildProof
+    ? rebuiltPreflight
+    : rebuiltPreflight.map((proof) => proof.id === 'build' ? previousBuildProof : proof);
+
   return {
     ...dna,
     status,
     updatedAt: Date.now(),
     validation: validation ?? dna.validation,
-    preflight: buildPreflightProofs(
-      snapshot.schema as IdealyUniversalProjectSchema | null,
-      validation ?? dna.validation,
-      [...dna.snapshots, snapshot].slice(-10),
-    ),
+    preflight,
     snapshots: [...dna.snapshots, snapshot].slice(-10),
   };
 }

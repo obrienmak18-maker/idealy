@@ -1,6 +1,14 @@
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 import type { MissionSnapshot, PreflightProof, ValidationReport } from './contracts';
 
+export interface TerminalPreflightResult {
+  status: 'passed' | 'needs-fix' | 'unavailable';
+  attempts: number;
+  command?: string;
+  output?: string;
+}
+
+
 function now(): number {
   return Date.now();
 }
@@ -13,6 +21,7 @@ export function buildPreflightProofs(
   schema: IdealyUniversalProjectSchema | null,
   validation: ValidationReport | undefined,
   snapshots: MissionSnapshot[],
+  terminal?: TerminalPreflightResult,
 ): PreflightProof[] {
   const checkedAt = now();
   const hasSchema = Boolean(schema?.project);
@@ -40,11 +49,21 @@ export function buildPreflightProofs(
     },
     {
       id: 'build',
-      label: 'Build réel',
-      status: 'not-run',
-      detail: 'Le build du projet généré n’est pas encore exécuté dans une sandbox isolée.',
+      label: 'Build terminalisé',
+      status: terminal?.status === 'passed'
+        ? 'passed'
+        : terminal?.status === 'needs-fix'
+          ? 'failed'
+          : 'not-run',
+      detail: terminal?.status === 'passed'
+        ? `${terminal.command ?? 'Commande terminal'} réussi(e) en ${terminal.attempts} tour(s) dans WebContainer.`
+        : terminal?.status === 'needs-fix'
+          ? `La limite de self-correction est atteinte après ${terminal.attempts} tour(s) ; consulter les erreurs terminales avant publication.`
+          : 'Le terminal WebContainer n’a pas pu exécuter le build dans cet environnement.',
       checkedAt,
-      evidence: 'non-exécuté',
+      evidence: terminal
+        ? `${terminal.command ?? 'commande inconnue'} · ${terminal.attempts} tour(s)`
+        : 'non-exécuté',
     },
     {
       id: 'restore',

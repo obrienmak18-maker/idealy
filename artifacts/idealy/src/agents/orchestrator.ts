@@ -1,9 +1,10 @@
-import { callAIProxy, streamAIProxy } from './provider';
+import { callAIProxy, streamAIProxy, type IntentCategory } from './provider';
 import type { Way } from '@/lore/ways';
 import { planMission, type ConnectorProvider, type SkillSlug } from './skillRouter';
 import { buildMissionContracts } from '@/core/mission/missionContract';
 import type { MissionContracts } from '@/core/mission/contracts';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
+import { buildArchitectureContext, type RelevantVFSFile } from '@/core/webcontainer/architectureMemory';
 
 export interface MissionContext {
   prompt: string;
@@ -15,6 +16,25 @@ export interface MissionContext {
   contracts: MissionContracts;
   /** Called during buildIUPS streaming with (tokensGenerated, partialText) */
   onProgress?: (tokens: number, partial: string) => void;
+  /** Persistent project memory injected into every builder call. */
+  architecture?: string;
+  /** At most three existing files selected from the VFS for this mission. */
+  relevantFiles?: RelevantVFSFile[];
+  /** Stable mission identity used for idempotent managed-credit debits. */
+  missionId?: string;
+}
+
+export interface TerminalCorrectionIssue {
+  file: string | null;
+  line: number | null;
+  column: number | null;
+  message: string;
+}
+
+export interface TerminalCorrectionFeedback {
+  command: string;
+  issues: TerminalCorrectionIssue[];
+  iteration?: number;
 }
 
 // ─── Intent Analysis ─────────────────────────────────────────────────────────
@@ -39,6 +59,7 @@ Un projet complexe (ex: un SaaS, un réseau social) coûte plus d'énergie (30-5
       systemPrompt,
       complexity: 'fast',
       maxTokens: 350,
+      intentCategory: 'EXECUTION',
     });
     const clean = text.trim().replace(/^```json?\s*/i, '').replace(/\s*```\s*$/, '');
     const data = JSON.parse(clean);
@@ -95,7 +116,11 @@ function extractJSON(raw: string): Record<string, unknown> | null {
 
 // ─── IUPS Builder (code generation) ──────────────────────────────────────────
 
-export async function buildIUPS(context: MissionContext): Promise<IdealyUniversalProjectSchema | null> {
+export async function buildIUPS(
+  context: MissionContext,
+  correction?: TerminalCorrectionFeedback,
+  onProgress: MissionContext['onProgress'] = context.onProgress,
+): Promise<IdealyUniversalProjectSchema | null> {
   const mobileKeywords = /mobile|android|ios|expo|react.native|app.store|téléphone|smartphone|apk/i;
   const isMobile = mobileKeywords.test(context.prompt);
 
@@ -172,59 +197,102 @@ STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
   }
 }`;
 
-  const systemPrompt = isMobile ? mobileSystemPrompt : webSystemPrompt;
+  const architectureContext = buildArchitectureContext(context.architecture ?? '', context.relevantFiles ?? []);
+  const correctionSystemPrompt = correction
+    ? `
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      let accumulated = '';
-      let tokenCount = 0;
+SELF-CORRECTION TERMINALISÉE — TOUR SUIVANT
+Le projet précédent a été exécuté dans WebContainer. Corrige uniquement les erreurs réelles ci-dessous.
+N'invente pas d'autres erreurs, ne change pas l'intention du produit et retourne le projet complet au même format JSON.
+${correction.issues.map((issue) => {
+  const location = issue.file
+    ? `Fichier concerné : ${issue.file}.`
+    : 'Fichier concerné : emplacement non déterminé.';
+  return `- ${location} Message d'erreur : ${issue.message}`;
+}).join('\n')}
+`
+    : '';
+  const systemPrompt = `${isMobile ? mobileSystemPrompt : webSystemPrompt}${architectureContext}${correctionSystemPrompt}`;
 
-      // Stream tokens in real-time via the authenticated server proxy.
-      const textStream = await streamAIProxy({
-        systemPrompt,
-        prompt: attempt === 1
-          ? "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication."
-          : "Réponds UNIQUEMENT avec un objet JSON valide commençant par { et terminant par }. Pas de texte avant ou après.",
-        complexity: 'high',
-        maxTokens: 8000,
-      });
+  try {
+    let accumulated = '';
+    let tokenCount = 0;
 
-      for await (const delta of textStream) {
-        accumulated += delta;
-        tokenCount += delta.length;
-        // Notify every ~50 chars
-        if (context.onProgress && tokenCount % 50 < delta.length) {
-          context.onProgress(tokenCount, accumulated);
-        }
+    // Un seul appel LLM par tour : la boucle de correction est pilotée par le terminal.
+    const textStream = await streamAIProxy({
+      systemPrompt,
+      prompt: correction
+        ? "Corrige les fichiers signalés par le terminal. Réponds UNIQUEMENT avec le JSON complet, sans markdown ni explication."
+        : "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication.",
+      complexity: 'high',
+      maxTokens: 8000,
+      missionId: context.missionId,
+      idempotencyKey: context.missionId
+        ? `${context.missionId}:build:${correction ? `fix-${correction.iteration ?? 1}` : 'initial'}`
+        : undefined,
+      intentCategory: 'EXECUTION',
+    });
+
+    for await (const delta of textStream) {
+      accumulated += delta;
+      tokenCount += delta.length;
+      // Notify every ~50 chars
+      if (onProgress && tokenCount % 50 < delta.length) {
+        onProgress(tokenCount, accumulated);
       }
-
-      const parsed = extractJSON(accumulated);
-      if (parsed && typeof parsed === 'object' && 'project' in parsed) {
-        return {
-          ...(parsed as unknown as IdealyUniversalProjectSchema),
-          contracts: context.contracts,
-        };
-      }
-      console.warn(`[buildIUPS] Attempt ${attempt}: JSON extraction failed, raw length=${accumulated.length}`);
-    } catch (error) {
-      console.error(`[buildIUPS] Attempt ${attempt} threw:`, error);
-      if (attempt === 2) return null;
     }
+
+    const parsed = extractJSON(accumulated);
+    if (parsed && typeof parsed === 'object' && 'project' in parsed) {
+      return {
+        ...(parsed as unknown as IdealyUniversalProjectSchema),
+        contracts: context.contracts,
+      };
+    }
+    console.warn(`[buildIUPS] JSON extraction failed, raw length=${accumulated.length}`);
+  } catch (error) {
+    console.error('[buildIUPS] Generation threw:', error);
   }
 
-  console.error('[buildIUPS] All attempts failed — returning null');
   return null;
 }
 
 // ─── Agent Message Streamer ───────────────────────────────────────────────────
+
+export async function streamLiaMessage(
+  way: Way,
+  missionPrompt: string,
+  idempotencyKey?: string,
+) {
+  const strategist = way.agents[0];
+  const systemPrompt = `Tu es Lia, la Messagère d’Idealy pour la voie "${way.name}".
+Ton rôle est uniquement narratif : accuse réception de la demande en une seule phrase naturelle, résume l’intention et annonce sa transmission à ${strategist.name}, l’Orchestrateur de cette voie.
+Ne génère jamais de code, ne propose aucune action, ne demande aucune validation et ne prétends pas avoir modifié un fichier.
+Réponds uniquement avec la phrase visible par l’utilisateur, sans balise <think>, sans markdown et sans liste.`;
+  return {
+    textStream: await streamAIProxy({
+      systemPrompt,
+      prompt: missionPrompt,
+      complexity: 'fast',
+      maxTokens: 180,
+      idempotencyKey,
+      intentCategory: 'CONVERSATION',
+    }),
+  };
+}
 
 export async function streamAgentMessage(
   agent: Way['agents'][number],
   way: Way,
   contextText: string,
   missionPrompt: string,
-  instruction: string
+  instruction: string,
+  architecture = '',
+  relevantFiles: RelevantVFSFile[] = [],
+  idempotencyKey?: string,
+  intentCategory: IntentCategory = 'EXECUTION',
 ) {
+  const architectureBlock = architecture || relevantFiles.length > 0 ? buildArchitectureContext(architecture, relevantFiles) : '';
   const systemPrompt = `Tu es ${agent.name} (${agent.role}), un membre incontournable de la voie "${way.name}".
 Ta personnalité profonde (agis EXACTEMENT comme ce personnage sans briser le 4ème mur) : ${agent.personality}.
 Ta spécialité : ${agent.specialty}.
@@ -233,6 +301,7 @@ Ton expression fétiche que tu utilises naturellement : "${agent.catchphrase}".
 L'utilisateur a demandé : "${missionPrompt}".
 Contexte actuel :
 ${contextText}
+${architectureBlock}
 
 Instructions spécifiques pour cette étape :
 ${instruction}
@@ -247,6 +316,8 @@ RÈGLE ABSOLUE : Tu dois TOUJOURS structurer ta réponse ainsi :
       prompt: 'À toi de jouer.',
       complexity: 'fast',
       maxTokens: 900,
+      idempotencyKey,
+      intentCategory,
     }),
   };
 }

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Check, CircleAlert, Clock3, Hammer, ScanSearch, Sparkles, UserRoundPlus } from 'lucide-react';
+import { Check, CircleAlert, Clock3, Hammer, ScanSearch, Sparkles, Terminal, UserRoundPlus } from 'lucide-react';
 import type { Way, WayAgent } from '@/lore/ways';
 import type { MissionTeam } from '@/core/mission/missionTeam';
 
@@ -47,10 +47,10 @@ export function MissionActivityPanel({ way, team, stage, visible }: MissionActiv
     },
     {
       id: 'validating',
-      label: 'Validation',
-      detail: `${team.validator.name} vérifie les contrats et la version générée.`,
+      label: 'Self-Correction',
+      detail: 'Le terminal exécute le build/typecheck et renvoie uniquement les erreurs réelles au Bâtisseur.',
       agent: team.validator,
-      icon: Check,
+      icon: Terminal,
     },
   ];
 
@@ -146,7 +146,7 @@ export function MissionActivityPanel({ way, team, stage, visible }: MissionActiv
               >
                 {needsFix ? <CircleAlert size={14} className="text-amber-300" /> : <Clock3 size={14} className={way.textClass} />}
                 <p className="text-[11px] text-ink-300">
-                  {needsFix ? 'La validation a trouvé des points à corriger. Le rapport dans l’onglet Mission indique la suite.' : 'La version générée est prête à être examinée dans l’aperçu et dans l’onglet Mission.'}
+                  {needsFix ? 'Le terminal ou les contrats ont trouvé des points à corriger. Le rapport dans l’onglet Mission indique la suite.' : 'La version générée est prête à être examinée dans l’aperçu et dans l’onglet Mission.'}
                 </p>
               </motion.div>
             )}

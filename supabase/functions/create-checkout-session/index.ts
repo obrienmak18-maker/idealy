@@ -10,11 +10,18 @@ const corsHeaders = {
 };
 
 const PRICE_IDS = {
-  pro: Deno.env.get("STRIPE_PRICE_ID_PRO") ?? "price_1U0iWlFEtyiGNczlURsFnwVh",
-  business: Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ?? "price_1U0iWsFEtyiGNczlz95WCoUz",
+  pro: {
+    monthly: Deno.env.get("STRIPE_PRICE_ID_PRO_MONTHLY") ?? Deno.env.get("STRIPE_PRICE_ID_PRO") ?? "",
+    yearly: Deno.env.get("STRIPE_PRICE_ID_PRO_YEARLY") ?? Deno.env.get("STRIPE_PRICE_ID_PRO") ?? "",
+  },
+  business: {
+    monthly: Deno.env.get("STRIPE_PRICE_ID_BUSINESS_MONTHLY") ?? Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ?? "",
+    yearly: Deno.env.get("STRIPE_PRICE_ID_BUSINESS_YEARLY") ?? Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ?? "",
+  },
 } as const;
 
 type Plan = keyof typeof PRICE_IDS;
+type BillingCycle = keyof typeof PRICE_IDS.pro;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -42,8 +49,12 @@ Deno.serve(async (req) => {
     if (userError || !user) return json({ error: "Unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
-    const plan = body?.plan as Plan;
+    const plan = (body?.planId ?? body?.plan) as Plan;
+    const billingCycle = body?.billingCycle as BillingCycle;
     if (plan !== "pro" && plan !== "business") return json({ error: "Invalid plan" }, 400);
+    if (billingCycle !== "monthly" && billingCycle !== "yearly") return json({ error: "Invalid billing cycle" }, 400);
+    const priceId = PRICE_IDS[plan][billingCycle];
+    if (!priceId) return json({ error: "Stripe price is not configured for this plan and billing cycle" }, 503);
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
       apiVersion: "2025-02-24.acacia",
@@ -80,10 +91,10 @@ Deno.serve(async (req) => {
       mode: "subscription",
       customer: customerId,
       client_reference_id: user.id,
-      line_items: [{ price: PRICE_IDS[plan], quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
         trial_period_days: 14,
-        metadata: { user_id: user.id, plan },
+        metadata: { user_id: user.id, plan, billing_cycle: billingCycle },
       },
       allow_promotion_codes: true,
       success_url: `${origin}/settings?billing=success`,
