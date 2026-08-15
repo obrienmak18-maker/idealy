@@ -6,10 +6,16 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2025-02-24.acacia",
 });
 
-const PRICE_TO_PLAN: Record<string, "pro" | "business"> = {
-  [Deno.env.get("STRIPE_PRICE_ID_PRO") ?? "price_1U0iWlFEtyiGNczlURsFnwVh"]: "pro",
-  [Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ?? "price_1U0iWsFEtyiGNczlz95WCoUz"]: "business",
-};
+const PRICE_TO_PLAN: Record<string, "pro" | "business"> = Object.fromEntries(
+  [
+    [Deno.env.get("STRIPE_PRICE_ID_PRO_MONTHLY"), "pro"],
+    [Deno.env.get("STRIPE_PRICE_ID_PRO_YEARLY"), "pro"],
+    [Deno.env.get("STRIPE_PRICE_ID_BUSINESS_MONTHLY"), "business"],
+    [Deno.env.get("STRIPE_PRICE_ID_BUSINESS_YEARLY"), "business"],
+    [Deno.env.get("STRIPE_PRICE_ID_PRO"), "pro"],
+    [Deno.env.get("STRIPE_PRICE_ID_BUSINESS"), "business"],
+  ].filter(([priceId]): priceId is string => typeof priceId === "string" && priceId.length > 0),
+);
 
 const SUBSCRIPTION_EVENTS = new Set([
   "customer.subscription.created",
