@@ -132,7 +132,9 @@ async function sendEvent(event) {
       return;
     }
 
-    const retryableWorkerError = response.status === 500 && body.includes('WORKER_ERROR');
+    const retryableWorkerError =
+      (response.status === 500 && body.includes('WORKER_ERROR')) ||
+      (response.status === 502 && body.includes('invalid response'));
     if (!retryableWorkerError || attempt === 5) {
       throw new Error(`Webhook ${event.type} returned ${response.status}: ${body.slice(0, 500)}`);
     }
