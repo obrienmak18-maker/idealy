@@ -1,6 +1,6 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCreditRefillFromCheckout } from "./stripe-webhook.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2025-02-24.acacia",
@@ -10,6 +10,12 @@ const PRICE_TO_PLAN: Record<string, "pro" | "business"> = {
   [Deno.env.get("STRIPE_PRICE_ID_PRO") ?? "price_1U0iWlFEtyiGNczlURsFnwVh"]: "pro",
   [Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ?? "price_1U0iWsFEtyiGNczlz95WCoUz"]: "business",
 };
+
+const SUBSCRIPTION_EVENTS = new Set([
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+]);
 
 function response(body: string, status = 200) {
   return new Response(body, { status, headers: { "Content-Type": "text/plain" } });
@@ -28,14 +34,28 @@ Deno.serve(async (req) => {
       Deno.env.get("STRIPE_WEBHOOK_SECRET")!,
     );
 
-    if (
-      ![
-        "customer.subscription.created",
-        "customer.subscription.updated",
-        "customer.subscription.deleted",
-      ].includes(event.type)
-    ) {
+    if (!SUBSCRIPTION_EVENTS.has(event.type) && event.type !== "checkout.session.completed") {
       return response("ignored");
+    }
+
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const refill = getCreditRefillFromCheckout(event, session);
+      if (!refill) return response("ignored");
+
+      const { error } = await admin.rpc("grant_user_credits", {
+        p_user_id: refill.userId,
+        p_idempotency_key: `stripe:event:${refill.eventId}`,
+        p_amount: refill.amount,
+        p_reason: refill.reason,
+      });
+      if (error) throw error;
+      return response("ok");
     }
 
     const subscription = event.data.object as Stripe.Subscription;
@@ -47,10 +67,6 @@ Deno.serve(async (req) => {
     const isDeleted = event.type === "customer.subscription.deleted";
     const plan = isDeleted ? "free" : (PRICE_TO_PLAN[priceId] ?? "free");
 
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
     const { data: profile, error: profileError } = await admin
       .from("profiles")
       .select("id")

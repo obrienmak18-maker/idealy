@@ -1,4 +1,4 @@
-import { callAIProxy, streamAIProxy } from './provider';
+import { callAIProxy, streamAIProxy, type IntentCategory } from './provider';
 import type { Way } from '@/lore/ways';
 import { planMission, type ConnectorProvider, type SkillSlug } from './skillRouter';
 import { buildMissionContracts } from '@/core/mission/missionContract';
@@ -59,6 +59,7 @@ Un projet complexe (ex: un SaaS, un réseau social) coûte plus d'énergie (30-5
       systemPrompt,
       complexity: 'fast',
       maxTokens: 350,
+      intentCategory: 'EXECUTION',
     });
     const clean = text.trim().replace(/^```json?\s*/i, '').replace(/\s*```\s*$/, '');
     const data = JSON.parse(clean);
@@ -229,6 +230,7 @@ ${correction.issues.map((issue) => {
       idempotencyKey: context.missionId
         ? `${context.missionId}:build:${correction ? `fix-${correction.iteration ?? 1}` : 'initial'}`
         : undefined,
+      intentCategory: 'EXECUTION',
     });
 
     for await (const delta of textStream) {
@@ -266,6 +268,7 @@ export async function streamAgentMessage(
   architecture = '',
   relevantFiles: RelevantVFSFile[] = [],
   idempotencyKey?: string,
+  intentCategory: IntentCategory = 'EXECUTION',
 ) {
   const architectureBlock = architecture || relevantFiles.length > 0 ? buildArchitectureContext(architecture, relevantFiles) : '';
   const systemPrompt = `Tu es ${agent.name} (${agent.role}), un membre incontournable de la voie "${way.name}".
@@ -292,6 +295,7 @@ RÈGLE ABSOLUE : Tu dois TOUJOURS structurer ta réponse ainsi :
       complexity: 'fast',
       maxTokens: 900,
       idempotencyKey,
+      intentCategory,
     }),
   };
 }

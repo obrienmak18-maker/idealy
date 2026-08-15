@@ -56,6 +56,7 @@ export interface ProxyCallOptions {
   missionId?: string;
   idempotencyKey?: string;
   intentOnly?: boolean;
+  intentCategory?: IntentCategory;
   uiStream?: boolean;
   uiPhase?: AgentUIPhase;
   uiProgress?: number;
@@ -72,6 +73,7 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
     missionId,
     idempotencyKey,
     intentOnly = false,
+    intentCategory,
     uiStream = false,
     uiPhase,
     uiProgress,
@@ -105,6 +107,7 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
       missionId,
       idempotencyKey,
       intentOnly,
+      intentCategory,
       uiStream,
       uiPhase,
       uiProgress,

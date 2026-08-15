@@ -12,7 +12,7 @@ import { DeployPanel } from '@/components/workspace/DeployPanel';
 import { WebContainerPreview } from '@/components/workspace/WebContainerPreview';
 import { FileExplorer } from '@/components/workspace/FileExplorer';
 import { ComposerPanel } from '@/components/workspace/ComposerPanel';
-import { CodeEditor } from '@/components/workspace/CodeEditor';
+import { CodeEditor, type CodeActionIntent } from '@/components/workspace/CodeEditor';
 import { Terminal as TerminalComponent } from '@/components/workspace/Terminal';
 import { downloadProjectZip } from '@/services/projectDownloader';
 import {
@@ -292,13 +292,15 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     void runMission(repairPrompt, activeDNA.contracts);
   }
 
-  async function routePrompt(finalPrompt: string) {
+  async function routePrompt(finalPrompt: string, forcedCategory?: CodeActionIntent) {
     setBusy(true);
     setPendingBrief(null);
     setToolMessage('Analyse de l’intention…');
     let route: Awaited<ReturnType<typeof routeAIIntent>> = { category: 'CONVERSATION', confidence: 0, reason: 'Repli conversationnel.' };
     try {
-      route = await routeAIIntent(finalPrompt);
+      route = forcedCategory
+        ? { category: forcedCategory, confidence: 1, reason: 'Action contextuelle du CodeEditor.' }
+        : await routeAIIntent(finalPrompt);
     } catch (error) {
       console.warn('Intent router unavailable; using conversation fallback.', error);
     }
@@ -346,6 +348,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         route.category === 'IDEATION'
           ? 'Propose des pistes concrètes, mais ne demande aucune validation et ne prétends pas avoir modifié le Canvas.'
           : 'Réponds directement et naturellement. Ne transforme pas une question en mission et ne demande aucune validation.',
+        '',
+        [],
+        agentId,
+        route.category,
       );
       let response = '';
       for await (const delta of stream.textStream) {
@@ -685,6 +691,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         context.architecture,
         context.relevantFiles,
         missionId ? `${missionId}:strategy` : undefined,
+        'EXECUTION',
       );
 
       let orchestratorText = '';
@@ -709,6 +716,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         context.architecture,
         context.relevantFiles,
         missionId ? `${missionId}:builder` : undefined,
+        'EXECUTION',
       );
 
       let builderText = '';
@@ -1298,7 +1306,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                               onUpdateSchema={updateProjectSchema}
                               onRestore={restoreMissionSnapshot}
                               onFix={repairMission}
-                              onAskAI={(prompt) => void runMission(prompt)}
+                              onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
                               onProposeChange={proposeChangeCapsule}
                               onAcceptReview={acceptReviewSchema}
                               onRejectReview={rejectReviewSchema}
@@ -1322,7 +1330,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                           onUpdateSchema={updateProjectSchema}
                           onRestore={restoreMissionSnapshot}
                           onFix={repairMission}
-                          onAskAI={(prompt) => void runMission(prompt)}
+                          onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
                           onProposeChange={proposeChangeCapsule}
                           onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
                         />
@@ -1432,7 +1440,7 @@ function RightPanelContent({
   onUpdateSchema: (schema: IdealyUniversalProjectSchema | null) => void;
   onRestore: (snapshot: import('@/core/mission/contracts').MissionSnapshot) => void;
   onFix: () => void;
-  onAskAI?: (prompt: string) => void;
+  onAskAI?: (prompt: string, intent?: CodeActionIntent) => void;
   onProposeChange?: (capsule: ChangeCapsule) => void;
   onAcceptReview?: (schema: IdealyUniversalProjectSchema) => void;
   onRejectReview?: () => void;

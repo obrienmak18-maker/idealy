@@ -35,6 +35,7 @@ type LLMRequest = {
   missionId?: string | null;
   idempotencyKey?: string;
   intentOnly?: boolean;
+  intentCategory?: 'CONVERSATION' | 'IDEATION' | 'EXECUTION';
   uiStream?: boolean;
   uiPhase?: AgentUIPhase;
   uiProgress?: number;
@@ -133,6 +134,7 @@ serve(async (req) => {
     if (systemPrompt === null) return jsonError('systemPrompt must be a string.', 400, headers);
     if (systemPrompt && systemPrompt.length > MAX_SYSTEM_PROMPT_CHARS) return jsonError('systemPrompt is too large.', 413, headers);
     if (input.intentOnly !== undefined && typeof input.intentOnly !== 'boolean') return jsonError('intentOnly must be boolean.', 400, headers);
+    if (input.intentCategory !== undefined && !['CONVERSATION', 'IDEATION', 'EXECUTION'].includes(input.intentCategory as string)) return jsonError('Invalid intentCategory.', 400, headers);
     if (input.uiStream !== undefined && typeof input.uiStream !== 'boolean') return jsonError('uiStream must be boolean.', 400, headers);
 
     if (input.intentOnly === true) {
@@ -185,23 +187,27 @@ serve(async (req) => {
 
     const resolution = await resolveAIProvider(user.id, supabaseAdmin, { provider, model, mode });
     const managed = resolution.mode !== 'byok';
+    const intentCategory = input.intentCategory ?? 'EXECUTION';
     let energyRemaining: number | null = null;
 
-    if (managed) {
+    // Conversation is intentionally free of the managed usage gate. IDEATION
+    // and EXECUTION are the only costly pathways; BYOK bypasses managed credits.
+    if (managed && intentCategory !== 'CONVERSATION') {
       const idempotencyKey = input.idempotencyKey?.trim() || `${user.id}:${crypto.randomUUID()}`;
+      const amount = intentCategory === 'IDEATION' ? 3 : 10;
       try {
         const debit = await consumeManagedCredit(supabaseAdmin, {
           userId: user.id,
           missionId: input.missionId,
           idempotencyKey,
-          amount: 10,
-          reason: `ai:${provider}:${model}`,
+          amount,
+          reason: `ai:${intentCategory.toLowerCase()}:${provider}:${model}`,
         });
         energyRemaining = debit.energyRemaining;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (/insufficient|energy|credit/i.test(message)) {
-          return jsonError('Insufficient energy for a managed AI request.', 402, headers, 'ENERGY_DEPLETED');
+          return jsonError('Credits insuffisants pour cette action IA gérée.', 402, headers, 'CREDITS_REQUIRED');
         }
         throw error;
       }
@@ -253,6 +259,7 @@ serve(async (req) => {
       mode: resolution.mode,
       model: resolution.model,
       provider: resolution.provider,
+      intentCategory,
     }), {
       headers: { ...headers, 'Content-Type': 'application/json' },
     });
