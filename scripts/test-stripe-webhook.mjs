@@ -55,6 +55,8 @@ function signatureFor(payload) {
   return `t=${timestamp},v1=${digest}`;
 }
 
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
 function checkoutEvent(creditAmount) {
   const now = Math.floor(Date.now() / 1000);
   return {
@@ -112,22 +114,30 @@ function subscriptionEvent(type, { status, priceId, cancelAtPeriodEnd = false })
 
 async function sendEvent(event) {
   const payload = JSON.stringify(event);
-  const response = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'stripe-signature': signatureFor(payload),
-      ...(supabaseAnonKey
-        ? { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` }
-        : {}),
-    },
-    body: payload,
-  });
-  const body = await response.text();
-  if (!response.ok) {
-    throw new Error(`Webhook ${event.type} returned ${response.status}: ${body.slice(0, 500)}`);
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'stripe-signature': signatureFor(payload),
+        ...(supabaseAnonKey
+          ? { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` }
+          : {}),
+      },
+      body: payload,
+    });
+    const body = await response.text();
+    if (response.ok) {
+      console.log(`✓ ${event.type} accepted (${response.status})`);
+      return;
+    }
+
+    const retryableWorkerError = response.status === 500 && body.includes('WORKER_ERROR');
+    if (!retryableWorkerError || attempt === 5) {
+      throw new Error(`Webhook ${event.type} returned ${response.status}: ${body.slice(0, 500)}`);
+    }
+    await delay(attempt * 1000);
   }
-  console.log(`✓ ${event.type} accepted (${response.status})`);
 }
 
 async function waitForProfile(userId) {
