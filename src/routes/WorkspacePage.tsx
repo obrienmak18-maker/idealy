@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { analyzeIntent, streamAgentMessage } from '@/agents/orchestrator';
+import { analyzeIntent, streamAgentMessage, streamLiaMessage } from '@/agents/orchestrator';
 import { routeAIIntent, streamAgentUI, type IntentCategory } from '@/agents/provider';
 import { iupsToCode } from '@/core/iups/exporter';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
-import { MessageBubble, type ChatMessage } from '@/components/chat/MessageBubble';
+import type { ChatMessage } from '@/components/chat/MessageBubble';
 import { SettingsModal } from '@/components/SettingsModal';
 import { ConnectorsPanel } from '@/components/workspace/ConnectorsPanel';
 import { PaywallModal } from '@/components/workspace/PaywallModal';
@@ -54,7 +54,7 @@ import { useStripe } from '@/hooks/useStripe';
 import { MissionBriefPanel } from '@/components/workspace/MissionBriefPanel';
 import { MissionStatusPanel } from '@/components/workspace/MissionStatusPanel';
 import { type MissionExecutionStage } from '@/components/workspace/MissionActivityPanel';
-import { AgentThinkingTimeline } from '@/components/workspace/AgentThinkingTimeline';
+import { MissionFlow, type MissionFlowStep } from '@/components/workspace/MissionFlow';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { buildMissionContracts } from '@/core/mission/missionContract';
@@ -140,6 +140,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const [tab, setTab] = useState<RightTab>('preview');
   const [showPreview, setShowPreview] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [flowSteps, setFlowSteps] = useState<MissionFlowStep[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -171,11 +172,28 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const dictationRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 
+  const summarizeFlowText = (raw: string, fallback: string) => {
+    const visible = raw.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').replace(/<\/think>/gi, '').trim();
+    if (!visible) return fallback;
+    const firstLine = visible.split('\n').map((line) => line.trim()).find(Boolean) ?? fallback;
+    return firstLine.length > 180 ? `${firstLine.slice(0, 177)}…` : firstLine;
+  };
+
+  const upsertFlowStep = (step: MissionFlowStep) => {
+    setFlowSteps((current) => {
+      const existing = current.findIndex((candidate) => candidate.id === step.id);
+      if (existing === -1) return [...current, step];
+      return current.map((candidate, index) => index === existing ? { ...candidate, ...step } : candidate);
+    });
+  };
+
+  const clearMissionFlow = () => setFlowSteps([]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, flowSteps]);
 
   useEffect(() => {
     return () => {
@@ -306,6 +324,46 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     }
 
     setActiveIntent(route.category);
+    const userFlowId = crypto.randomUUID();
+    const liaId = crypto.randomUUID();
+    upsertFlowStep({
+      id: userFlowId,
+      kind: 'user',
+      agentName: profile?.displayName ?? 'Vous',
+      role: 'Mission',
+      shortText: finalPrompt,
+      status: 'completed',
+      summary: 'Demande reçue.',
+    });
+    upsertFlowStep({
+      id: liaId,
+      kind: 'lia',
+      agentName: 'Lia',
+      role: 'Messagère',
+      shortText: '... reçoit votre demande et prépare la transmission ...',
+      status: 'active',
+    });
+    let liaResponse = '';
+    try {
+      const liaStream = await streamLiaMessage(way, finalPrompt, `${userFlowId}:lia`);
+      for await (const delta of liaStream.textStream) {
+        liaResponse += delta;
+        upsertFlowStep({ id: liaId, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: summarizeFlowText(liaResponse, 'Je prépare la transmission à l’Orchestrateur.'), detailText: liaResponse, status: 'active' });
+      }
+    } catch {
+      liaResponse = `Bien reçu. Je transmets votre demande à ${missionTeam.strategist.name} pour planification.`;
+    }
+    upsertFlowStep({
+      id: liaId,
+      kind: 'lia',
+      agentName: 'Lia',
+      role: 'Messagère',
+      shortText: `Transmis à ${missionTeam.strategist.name}.`,
+      summary: summarizeFlowText(liaResponse, `Transmis à ${missionTeam.strategist.name}.`),
+      detailText: liaResponse,
+      status: 'completed',
+    });
+
     if (route.category === 'EXECUTION') {
       setBusy(false);
       setPendingBrief({ prompt: finalPrompt, contracts: buildMissionContracts(finalPrompt, way) });
@@ -338,16 +396,17 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       ts: Date.now(),
       status: 'writing',
     }]);
+    upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: '... réfléchit à la prochaine étape ...', status: 'active' });
     setBusy(true);
     try {
       const stream = await streamAgentMessage(
         agent,
         way,
-        route.category === 'IDEATION' ? 'Mode idéation : explore sans écrire sur le projet.' : 'Mode conversation : réponds dans la sidebar.',
+        route.category === 'IDEATION' ? 'Mode idéation : explore sans écrire sur le projet.' : 'Mode conversation : réponds dans le flux central.',
         finalPrompt,
         route.category === 'IDEATION'
           ? 'Propose des pistes concrètes, mais ne demande aucune validation et ne prétends pas avoir modifié le Canvas.'
-          : 'Réponds directement et naturellement. Ne transforme pas une question en mission et ne demande aucune validation.',
+          : 'Réponds directement et naturellement dans le flux central. Ne transforme pas une question en mission et ne demande aucune validation.',
         '',
         [],
         agentId,
@@ -357,10 +416,14 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       for await (const delta of stream.textStream) {
         response += delta;
         setMessages((current) => current.map((message) => message.id === agentId ? { ...message, text: response, status: 'writing' } : message));
+        upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: summarizeFlowText(response, '... réfléchit ...'), detailText: response, status: 'active' });
       }
       setMessages((current) => current.map((message) => message.id === agentId ? { ...message, text: response, status: 'done' } : message));
+      upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: summarizeFlowText(response, 'Réponse terminée.'), summary: summarizeFlowText(response, 'Réponse terminée.'), detailText: response, status: 'completed' });
     } catch {
-      setMessages((current) => current.map((message) => message.id === agentId ? { ...message, text: 'Je n’ai pas pu répondre pour le moment. Aucun fichier n’a été modifié.', status: 'done' } : message));
+      const fallback = 'Je n’ai pas pu répondre pour le moment. Aucun fichier n’a été modifié.';
+      setMessages((current) => current.map((message) => message.id === agentId ? { ...message, text: fallback, status: 'done' } : message));
+      upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: fallback, summary: 'Aucun fichier n’a été modifié.', detailText: fallback, status: 'completed' });
     } finally {
       setBusy(false);
     }
@@ -494,9 +557,12 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     setMissionDNA(missionId, demo.dna);
     setProjectSchema(demo.schema);
     setPreviousSchema(null);
-    setMessages([
-      { id: crypto.randomUUID(), author: 'Idealy Démo', role: 'Guide de mission', text: 'Mode démo activé : aucune session, clé IA ou connexion externe n’est utilisée.', kind: 'agent', ts: Date.now(), status: 'done' },
-      { id: crypto.randomUUID(), author: way.agents[0].name, agentId: way.agents[0].id, role: way.agents[0].role, text: 'Le brief local est prêt. Le Passeport de Mission et les preuves sont consultables dans l’onglet Mission.', kind: 'agent', ts: Date.now(), status: 'done' },
+    setMessages([]);
+    setFlowSteps([
+      { id: `${missionId}:user`, kind: 'user', agentName: 'Idealy Démo', role: 'Mission', shortText: 'Explorer le studio avec une mission locale sans compte.', summary: 'Demande de démonstration reçue.', status: 'completed' },
+      { id: `${missionId}:lia`, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: `Transmis à ${way.agents[0].name}.`, summary: 'Aucune connexion externe utilisée.', detailText: 'Mode démo activé : aucune session, clé IA ou connexion externe n’est utilisée.', status: 'completed' },
+      { id: `${missionId}:orchestrator`, kind: 'agent', agent: way.agents[0], agentName: way.agents[0].name, role: way.agents[0].role, shortText: 'Le brief local est prêt.', summary: 'Passeport de Mission et preuves disponibles.', detailText: 'Le Passeport de Mission et les preuves sont consultables dans l’espace Mission.', status: 'completed' },
+      { id: `${missionId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: 'Mission accomplie.', summary: 'Preview locale prête à explorer.', status: 'completed' },
     ]);
     const demoHistory = { id: missionId, title: 'Mission démo sans compte', createdAt: Date.now(), way: wayId, previewReady: true, status: 'ready' as const, validation: demo.dna.validation };
     setMissions([...useIdealyStore.getState().missions.filter((mission) => !mission.id.startsWith('demo-') && mission.title !== 'Mission démo sans compte'), demoHistory]);
@@ -570,8 +636,15 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     }
   }
 
-  async function runMission(prompt: string, overrideContracts?: MissionContracts) {
+  async function runMission(prompt: string, overrideContracts?: MissionContracts, narrativeReady = false) {
     setActiveIntent('EXECUTION');
+    const flowRunId = crypto.randomUUID();
+    if (!narrativeReady) {
+      setFlowSteps((current) => [...current,
+        { id: `${flowRunId}:user`, kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Mission', shortText: prompt, summary: 'Demande reçue.', status: 'completed' },
+        { id: `${flowRunId}:lia`, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: `Transmis à ${missionTeam.strategist.name}.`, summary: `Transmis à ${missionTeam.strategist.name}.`, detailText: 'Transmission locale vers l’Orchestrateur de la voie active.', status: 'completed' },
+      ]);
+    }
     const initialContracts = overrideContracts ?? buildMissionContracts(prompt, way);
     let missionId = currentMissionId;
     if (!missionId) {
@@ -662,6 +735,8 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       }
       // 1. Orchestrator Phase
       const msgId = addMessage(orchestrator, '', 'thinking');
+      const orchestratorFlowId = `${flowRunId}:orchestrator`;
+      upsertFlowStep({ id: orchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: '... réfléchit au plan de mission ...', status: 'active' });
       const context = await analyzeIntent(prompt, way);
       const architectureContext = createArchitectureContext(projectSchema?.project.files, prompt);
       context.architecture = architectureContext.architecture;
@@ -700,6 +775,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         updateMessage(msgId, orchestratorText, 'writing');
       }
       updateMessage(msgId, orchestratorText, 'done');
+      upsertFlowStep({ id: orchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: summarizeFlowText(orchestratorText, 'Plan de mission établi.'), summary: 'Plan de mission établi.', detailText: orchestratorText, status: 'completed' });
 
       // 2. Builder Phase
       if (missionId) {
@@ -707,6 +783,8 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         void streamAgentUI({ missionId, phase: 'building', progress: 18 }).catch(() => undefined);
       }
       const builderId = addMessage(builder, '', 'thinking');
+      const builderFlowId = `${flowRunId}:builder`;
+      upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: '... assemble les composants ...', status: 'active', indent: true });
       const builderStream = await streamAgentMessage(
         builder,
         way,
@@ -723,10 +801,14 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       for await (const delta of builderStream.textStream) {
         builderText += delta;
         updateMessage(builderId, builderText, 'writing');
+        upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: summarizeFlowText(builderText, 'Je génère les fichiers du projet…'), detailText: builderText, status: 'active', indent: true });
       }
+      upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: summarizeFlowText(builderText, 'Fichiers du projet générés.'), summary: 'Première version du projet assemblée.', detailText: builderText, status: 'completed', indent: true });
 
       // Self-correction terminalisée : une génération, un build/typecheck, puis au plus deux corrections ciblées.
       setGenerationProgress(0);
+      const terminalFlowId = `${flowRunId}:terminal`;
+      upsertFlowStep({ id: terminalFlowId, kind: 'agent', agent: missionTeam.validator, agentName: missionTeam.validator.name, role: 'Validation terminalisée', shortText: 'Le terminal vérifie le projet…', status: 'active', indent: true });
       const terminalLog: string[] = [];
       const appendTerminalLog = (line: string) => {
         terminalLog.push(line);
@@ -751,6 +833,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           ? `⛔ Trois tours de self-correction atteints ; la validation déterministe reste la source de vérité.`
           : `⚠️ WebContainer indisponible ; validation déterministe exécutée sans prétendre qu’un build terminal a réussi.`;
       updateMessage(builderId, `${builderText}\n\n${terminalSummary}`, 'done');
+      upsertFlowStep({ id: terminalFlowId, kind: 'agent', agent: missionTeam.validator, agentName: missionTeam.validator.name, role: 'Validation terminalisée', shortText: terminalSummary, summary: terminalSummary, detailText: terminalLog.slice(-12).join(''), status: 'completed', indent: true });
 
       const validation = validateGeneratedProject(schema, context.contracts);
       const status = validation.status === 'failed' ? 'needs-fix' : 'ready';
@@ -820,8 +903,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           const finalStage = validation.status === 'failed' ? 'needs-fix' : 'completed';
           setMissionActivity({ missionId, stage: finalStage });
           void streamAgentUI({ missionId, phase: finalStage, progress: finalStage === 'completed' ? 100 : 92 }).catch(() => undefined);
+          upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: finalStage === 'completed' ? 'Mission accomplie.' : 'La mission nécessite une correction.', summary: validation.status === 'failed' ? `${validation.issues.length} issue(s) déterministe(s) à examiner.` : 'Preview, code et preuves prêts à examiner.', detailText: issueSummary, status: 'completed' });
         }
       } else {
+        upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: 'Aucun projet exploitable n’a été généré.', summary: 'La mission doit être relancée après correction.', status: 'completed' });
         if (missionId) {
           setMissionActivity({ missionId, stage: 'needs-fix' });
           void streamAgentUI({ missionId, phase: 'needs-fix', progress: 92 }).catch(() => undefined);
@@ -843,7 +928,9 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         setMissionActivity({ missionId, stage: 'needs-fix' });
         void streamAgentUI({ missionId, phase: 'needs-fix', progress: 0 }).catch(() => undefined);
       }
-      addMessage(orchestrator, `Erreur lors de la communication. La version stable précédente est conservée.`, 'done');
+      const failure = 'Erreur lors de la communication. La version stable précédente est conservée.';
+      addMessage(orchestrator, failure, 'done');
+      upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: failure, summary: 'Aucun fichier n’a été modifié.', detailText: failure, status: 'completed' });
     }
 
     setBusy(false);
@@ -914,6 +1001,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                     setReviewSchema(null);
                     setPreviousSchema(null);
                     setMessages([]);
+                    clearMissionFlow();
                     setMissionActivity(null);
                     setShowPreview(false);
                     setInput('');
@@ -1040,20 +1128,9 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           </div>
         </header>
 
-        {/* Body: chat + right panel */}
+        {/* Body: MissionFlow narratif + Canvas */}
         <div className="flex min-h-0 flex-1">
-          {/* Chat : la sidebar se retire avec le Canvas, pas avec un simple display:none. */}
-          <AnimatePresence initial={false} mode="popLayout">
-            {!focusMode && (
-              <motion.div
-                key="chat-pane"
-                layout="position"
-                initial={{ opacity: 0, x: -24, scale: 0.985 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -32, scale: 0.985 }}
-                transition={{ type: 'spring', stiffness: 360, damping: 34, mass: 0.7 }}
-                className="flex min-w-0 flex-1 flex-col"
-              >
+          <main className={`relative flex min-w-0 flex-1 flex-col ${showPreview && !focusMode ? 'lg:w-[34%]' : 'w-full'}`}>
             {pendingBrief && (
               <div className="shrink-0 border-b border-white/5 bg-ink-950/40 p-4">
                 <MissionBriefPanel
@@ -1064,113 +1141,70 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                   onConfirm={(contracts) => {
                     const brief = pendingBrief;
                     setPendingBrief(null);
-                    setMessages((current) => [...current, {
-                      id: crypto.randomUUID(),
-                      author: profile?.displayName ?? 'Vous',
-                      role: 'Vous',
-                      text: brief.prompt,
-                      kind: 'user',
-                      ts: Date.now(),
-                    }]);
-                    void runMission(brief.prompt, contracts);
+                    void runMission(brief.prompt, contracts, true);
                   }}
                 />
               </div>
             )}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
-              <div className="mx-auto max-w-3xl px-5 py-8">
-                <AgentThinkingTimeline
+
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
+              <div className="mx-auto min-h-full w-full max-w-3xl px-5 py-4">
+                <MissionFlow
+                  steps={flowSteps}
                   way={way}
-                  team={missionTeam}
-                  stage={missionActivity?.stage ?? 'planning'}
-                  progress={generationProgress}
-                  visible={Boolean(activeIntent === 'EXECUTION' && missionActivity && missionActivity.missionId === currentMissionId)}
+                  emptyState={(
+                    <EmptyState
+                      way={way}
+                      name={profile?.displayName ?? 'apprenti'}
+                      demoMode={demoMode}
+                      onSelectDemo={startDemoMode}
+                      onSelectSuggestion={(suggestion) => {
+                        setInput(suggestion);
+                        composerRef.current?.focus();
+                      }}
+                    />
+                  )}
                 />
-                    {messages.length === 0 ? (
-                  <EmptyState
-                    way={way}
-                    name={profile?.displayName ?? 'apprenti'}
-                    demoMode={demoMode}
-                    onSelectDemo={startDemoMode}
-                    onSelectSuggestion={(suggestion) => {
-                      setInput(suggestion);
-                      composerRef.current?.focus();
-                    }}
-                  />
-                ) : (
-                  <div className="space-y-5">
-                    {messages.map((m) => (
-                      <MessageBubble key={m.id} msg={m} way={way} />
-                    ))}
-                    {busy && (
-                      <div className="flex items-center gap-2 text-sm text-ink-400">
-                        <span className="flex gap-1">
-                          {[0, 1, 2].map((i) => (
-                            <motion.span
-                              key={i}
-                              className="h-1.5 w-1.5 rounded-full bg-electric-400"
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                            />
-                          ))}
-                        </span>
-                        L'escouade travaille...
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Prompt input */}
-            <div className="shrink-0 border-t border-white/5 bg-ink-900/40 p-4">
+            {/* Barre de commande persistante : aucune conversation n’est rendue ici. */}
+            <div className="sticky bottom-0 z-20 shrink-0 border-t border-white/5 bg-ink-900/90 p-4 backdrop-blur-xl">
               <div className="mx-auto max-w-3xl">
-                <div className="card p-3 relative">
-                  {/* Slash command menu */}
+                <div className="relative rounded-2xl border border-white/8 bg-ink-950/80 p-3 shadow-2xl">
                   <AnimatePresence>
                     {showSlashMenu && (
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 8 }}
-                        className="absolute bottom-full left-0 mb-2 w-72 rounded-xl glass border border-white/10 py-1.5 shadow-2xl z-50"
+                        className="absolute bottom-full left-0 z-50 mb-2 w-72 rounded-xl border border-white/10 bg-ink-950/95 py-1.5 shadow-2xl backdrop-blur-xl"
                       >
-                        <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">
-                          Commandes
-                        </div>
-                        {SLASH_COMMANDS.filter(c =>
-                          c.cmd.startsWith(input.toLowerCase()) || input === '/'
-                        ).map((c) => (
-                          <button
-                            key={c.cmd}
-                            onClick={() => { setInput(c.cmd + ' '); setShowSlashMenu(false); }}
-                            className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-white/5 transition"
-                          >
-                            <span className="font-mono text-xs font-semibold text-electric-400 mt-0.5 shrink-0">{c.label}</span>
-                            <span className="text-xs text-ink-400">{c.desc}</span>
+                        <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">Commandes</div>
+                        {SLASH_COMMANDS.filter((command) => command.cmd.startsWith(input.toLowerCase()) || input === '/').map((command) => (
+                          <button key={command.cmd} onClick={() => { setInput(`${command.cmd} `); setShowSlashMenu(false); }} className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-white/5">
+                            <span className="mt-0.5 shrink-0 font-mono text-xs font-semibold text-electric-400">{command.label}</span>
+                            <span className="text-xs text-ink-400">{command.desc}</span>
                           </button>
                         ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
                   <textarea
+                    ref={composerRef}
                     value={input}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setInput(val);
-                      setShowSlashMenu(val === '/' || (val.startsWith('/') && !val.includes(' ')));
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setInput(value);
+                      setShowSlashMenu(value === '/' || (value.startsWith('/') && !value.includes(' ')));
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') { setShowSlashMenu(false); return; }
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        send();
-                      }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') { setShowSlashMenu(false); return; }
+                      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); }
                     }}
                     placeholder={`Décrivez votre ${way.vocab.task.toLowerCase()}... ou tapez / pour les commandes`}
                     rows={1}
                     className="max-h-40 min-h-[2.5rem] w-full resize-none bg-transparent text-sm text-ink-100 placeholder:text-ink-400 focus:outline-none scrollbar-thin"
-                    style={{ height: 'auto' }}
                   />
                   <div className="mt-2 flex items-center justify-between">
                     <div className="flex items-center gap-0.5">
@@ -1184,58 +1218,25 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                         aria-pressed={listening}
                         aria-label={listening ? 'Arrêter la dictée' : 'Démarrer la dictée'}
                         title={listening ? 'Arrêter la dictée' : 'Dicter votre mission'}
-                        className={`relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-white/30 ${
-                          listening ? dictationTheme.active : 'text-ink-400 hover:bg-white/5 hover:text-white'
-                        }`}
+                        className={`relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-white/30 ${listening ? dictationTheme.active : 'text-ink-400 hover:bg-white/5 hover:text-white'}`}
                       >
-                        {listening && !shouldReduceMotion && (
-                          <motion.span
-                            aria-hidden="true"
-                            className={`pointer-events-none absolute -inset-1 rounded-xl border ${dictationTheme.ring}`}
-                            initial={{ opacity: 0.75, scale: 0.82 }}
-                            animate={{ opacity: 0, scale: 1.35 }}
-                            transition={{ duration: 1.3, repeat: Infinity, ease: 'easeOut' }}
-                          />
-                        )}
+                        {listening && !shouldReduceMotion && <motion.span aria-hidden="true" className={`pointer-events-none absolute -inset-1 rounded-xl border ${dictationTheme.ring}`} initial={{ opacity: 0.75, scale: 0.82 }} animate={{ opacity: 0, scale: 1.35 }} transition={{ duration: 1.3, repeat: Infinity, ease: 'easeOut' }} />}
                         <span className={`absolute inset-0 flex items-center justify-center gap-[2px] transition-opacity ${listening ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
-                          {[0, 1, 2, 3].map((bar) => (
-                            <motion.span
-                              key={bar}
-                              className={`h-3 w-[2px] rounded-full ${dictationTheme.wave}`}
-                              style={{ transformOrigin: 'center' }}
-                              animate={listening && !shouldReduceMotion ? { scaleY: [0.45, 1, 0.55, 0.85, 0.45] } : { scaleY: 0.45 }}
-                              transition={{ duration: 0.72, delay: bar * 0.09, repeat: listening && !shouldReduceMotion ? Infinity : 0, ease: 'easeInOut' }}
-                            />
-                          ))}
+                          {[0, 1, 2, 3].map((bar) => <motion.span key={bar} className={`h-3 w-[2px] rounded-full ${dictationTheme.wave}`} style={{ transformOrigin: 'center' }} animate={listening && !shouldReduceMotion ? { scaleY: [0.45, 1, 0.55, 0.85, 0.45] } : { scaleY: 0.45 }} transition={{ duration: 0.72, delay: bar * 0.09, repeat: listening && !shouldReduceMotion ? Infinity : 0, ease: 'easeInOut' }} />)}
                         </span>
                         <Mic size={16} className={`transition-opacity ${listening ? 'opacity-0' : 'opacity-100'}`} />
                       </button>
                       <input ref={attachmentRef} type="file" multiple className="hidden" onChange={(event) => uploadAttachments(event.target.files)} />
                     </div>
-                    <button
-                      onClick={send}
-                      disabled={!input.trim() || busy || Boolean(pendingBrief)}
-                      className="btn-primary px-3.5"
-                    >
-                      <Send size={15} />
-                    </button>
+                    <button onClick={send} disabled={!input.trim() || busy || Boolean(pendingBrief)} className="btn-primary px-3.5"><Send size={15} /></button>
                   </div>
                 </div>
-                {listening && (
-                  <p role="status" aria-live="polite" className={`mt-2 flex items-center gap-2 text-xs ${way.textClass}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${dictationTheme.wave} motion-safe:animate-pulse`} aria-hidden="true" />
-                    {dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.
-                  </p>
-                )}
+                {listening && <p role="status" aria-live="polite" className={`mt-2 flex items-center gap-2 text-xs ${way.textClass}`}><span className={`h-1.5 w-1.5 rounded-full ${dictationTheme.wave} motion-safe:animate-pulse`} aria-hidden="true" />{dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.</p>}
                 {toolMessage && <p role="status" className={`mt-2 text-xs ${way.textClass}`}>{isUploading ? 'Import en cours…' : toolMessage}</p>}
-                <p className="mt-2 text-center text-[11px] text-ink-500">
-                  Idealy peut se tromper. Vérifiez le code généré.
-                </p>
+                <p className="mt-2 text-center text-[11px] text-ink-500">Idealy peut se tromper. Vérifiez le code généré.</p>
               </div>
             </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          </main>
 
           {/* Canvas central : l’aperçu est la surface principale, le code reste latéral. */}
           <AnimatePresence>

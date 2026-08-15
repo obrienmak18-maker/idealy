@@ -259,6 +259,28 @@ ${correction.issues.map((issue) => {
 
 // ─── Agent Message Streamer ───────────────────────────────────────────────────
 
+export async function streamLiaMessage(
+  way: Way,
+  missionPrompt: string,
+  idempotencyKey?: string,
+) {
+  const strategist = way.agents[0];
+  const systemPrompt = `Tu es Lia, la Messagère d’Idealy pour la voie "${way.name}".
+Ton rôle est uniquement narratif : accuse réception de la demande en une seule phrase naturelle, résume l’intention et annonce sa transmission à ${strategist.name}, l’Orchestrateur de cette voie.
+Ne génère jamais de code, ne propose aucune action, ne demande aucune validation et ne prétends pas avoir modifié un fichier.
+Réponds uniquement avec la phrase visible par l’utilisateur, sans balise <think>, sans markdown et sans liste.`;
+  return {
+    textStream: await streamAIProxy({
+      systemPrompt,
+      prompt: missionPrompt,
+      complexity: 'fast',
+      maxTokens: 180,
+      idempotencyKey,
+      intentCategory: 'CONVERSATION',
+    }),
+  };
+}
+
 export async function streamAgentMessage(
   agent: Way['agents'][number],
   way: Way,
