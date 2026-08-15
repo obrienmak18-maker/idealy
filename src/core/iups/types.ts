@@ -1,11 +1,22 @@
 import type { ChangeCapsule, MissionContracts, MissionPassport, PreflightProof, ValidationReport } from '@/core/mission/contracts';
 
+export type IUPSFileType = 'tsx' | 'ts' | 'jsx' | 'js' | 'css' | 'scss' | 'html' | 'json' | 'md' | 'py' | 'asset' | 'other';
+
+export interface IUPSFileEntry {
+  path: string;
+  content: string;
+  type: IUPSFileType;
+}
+
 export interface IdealyUniversalProjectSchema {
   project: {
     name: string;
     description?: string;
     stack?: 'react-vite-typescript' | 'expo-react-native' | string;
-    files: Record<string, string>; // Maps file paths (e.g. 'src/App.tsx') to file content
+    /** Compatibility map consumed by the editor, preview and ZIP exporter. */
+    files: Record<string, string>;
+    /** Canonical ordered file tree emitted by the builder. */
+    fileTree?: IUPSFileEntry[];
   };
   /** Versioned mission intent and implementation contracts used to generate this project. */
   contracts?: MissionContracts;

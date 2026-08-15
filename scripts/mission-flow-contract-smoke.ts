@@ -6,9 +6,11 @@ const orchestrator = readFileSync('../src/agents/orchestrator.ts', 'utf8');
 
 for (const marker of [
   "export type MissionFlowStatus = 'appearing' | 'active' | 'completed'",
-  'Voir le détail',
+  'Voir la réflexion',
   'height: 0',
-  'h-10 w-10',
+  'h-7 w-7',
+  'UserPromptBubble',
+  'ThinkingIndicator',
 ]) {
   if (!flow.includes(marker)) throw new Error(`Missing MissionFlow marker: ${marker}`);
 }

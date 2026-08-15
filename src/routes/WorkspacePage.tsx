@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { analyzeIntent, streamAgentMessage, streamLiaMessage } from '@/agents/orchestrator';
-import { routeAIIntent, streamAgentUI, type IntentCategory } from '@/agents/provider';
+import { refundMissionCredits, routeAIIntent, streamAgentUI, type IntentCategory } from '@/agents/provider';
 import { iupsToCode } from '@/core/iups/exporter';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 import type { ChatMessage } from '@/components/chat/MessageBubble';
@@ -24,6 +24,7 @@ import {
   Minimize2,
   Plus,
   Send,
+  Square,
   Paperclip,
   Mic,
   Image as ImageIcon,
@@ -149,6 +150,13 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const [isBillingPortalOpen, setIsBillingPortalOpen] = useState(false);
   const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
   const [pendingBrief, setPendingBrief] = useState<{ prompt: string; contracts: MissionContracts } | null>(null);
+  const [queuedInterruptions, setQueuedInterruptions] = useState<string[]>([]);
+  const queuedInterruptionsRef = useRef<string[]>([]);
+  const [stopRequested, setStopRequested] = useState(false);
+  const missionAbortRef = useRef<AbortController | null>(null);
+  const stopRequestedRef = useRef(false);
+  const activeMissionIdRef = useRef<string | null>(null);
+  const consumedMissionEnergyRef = useRef(0);
 
   const { subscription, checkSubscription } = useStripe();
 
@@ -188,6 +196,36 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   };
 
   const clearMissionFlow = () => setFlowSteps([]);
+
+  const takeQueuedInterruption = (): string | null => {
+    const next = queuedInterruptionsRef.current.shift() ?? null;
+    setQueuedInterruptions([...queuedInterruptionsRef.current]);
+    return next;
+  };
+
+  const stopMission = async () => {
+    if (!busy) return;
+    setStopRequested(true);
+    missionAbortRef.current?.abort();
+    const missionId = activeMissionIdRef.current ?? currentMissionId;
+    const localRefund = consumedMissionEnergyRef.current;
+    if (localRefund > 0) {
+      const state = useIdealyStore.getState();
+      const energyState = state.energy;
+      state.setEnergy({ ...energyState, current: Math.min(energyState.max, energyState.current + localRefund) });
+    }
+    setBusy(false);
+    setToolMessage('Arrêt demandé. Le fichier en cours est conservé dans la version stable.');
+    if (missionId) {
+      upsertFlowStep({ id: `${missionId}:stop`, kind: 'system', agentName: 'Mission', role: 'Arrêt contrôlé', shortText: 'Mission interrompue au prochain point sûr. Le chakra local non consommé est restitué.', status: 'completed', summary: 'Aucun secret ni fichier partiellement validé n’est publié.' });
+      try {
+        await refundMissionCredits({ missionId, debitIdempotencyKey: `${missionId}:strategy`, amount: Math.min(10, Math.max(1, localRefund)) });
+        setToolMessage('Mission arrêtée. Le remboursement serveur a été enregistré dans le ledger.');
+      } catch {
+        setToolMessage('Mission arrêtée. Le chakra local a été restitué ; le débit serveur n’était pas remboursable ou n’était pas encore enregistré.');
+      }
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -396,7 +434,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       ts: Date.now(),
       status: 'writing',
     }]);
-    upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: '... réfléchit à la prochaine étape ...', status: 'active' });
+    upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: 'Réflexion en cours.', indicator: { kind: 'thinking' }, status: 'active' });
     setBusy(true);
     try {
       const stream = await streamAgentMessage(
@@ -416,7 +454,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       for await (const delta of stream.textStream) {
         response += delta;
         setMessages((current) => current.map((message) => message.id === agentId ? { ...message, text: response, status: 'writing' } : message));
-        upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: summarizeFlowText(response, '... réfléchit ...'), detailText: response, status: 'active' });
+        upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: summarizeFlowText(response, 'Réflexion en cours.'), indicator: { kind: 'thinking' }, detailText: response, status: 'active' });
       }
       setMessages((current) => current.map((message) => message.id === agentId ? { ...message, text: response, status: 'done' } : message));
       upsertFlowStep({ id: agentId, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: summarizeFlowText(response, 'Réponse terminée.'), summary: summarizeFlowText(response, 'Réponse terminée.'), detailText: response, status: 'completed' });
@@ -431,7 +469,15 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
 
   function send() {
     const text = input.trim();
-    if (!text || busy) return;
+    if (!text) return;
+    if (busy) {
+      setInput('');
+      queuedInterruptionsRef.current.push(text);
+      setQueuedInterruptions([...queuedInterruptionsRef.current]);
+      upsertFlowStep({ id: crypto.randomUUID(), kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Relais en attente', shortText: text, summary: 'Votre demande sera injectée entre deux agents.', status: 'appearing' });
+      setToolMessage('Message mis en file : il sera transmis au prochain point de relais.');
+      return;
+    }
 
     setInput('');
     setShowSlashMenu(false);
@@ -638,6 +684,11 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
 
   async function runMission(prompt: string, overrideContracts?: MissionContracts, narrativeReady = false) {
     setActiveIntent('EXECUTION');
+    stopRequestedRef.current = false;
+    setStopRequested(false);
+    consumedMissionEnergyRef.current = 0;
+    const missionController = new AbortController();
+    missionAbortRef.current = missionController;
     const flowRunId = crypto.randomUUID();
     if (!narrativeReady) {
       setFlowSteps((current) => [...current,
@@ -646,6 +697,8 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       ]);
     }
     const initialContracts = overrideContracts ?? buildMissionContracts(prompt, way);
+    const selectedMissionTeam = selectMissionTeam(way, prompt);
+    let missionPrompt = prompt;
     let missionId = currentMissionId;
     if (!missionId) {
       missionId = crypto.randomUUID();
@@ -696,8 +749,8 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     // Save current schema as "previous" before generating a new one (for Composer diff)
     setPreviousSchema(projectSchema);
     setBusy(true);
-    const orchestrator = missionTeam.strategist;
-    const builder = missionTeam.builder;
+    const orchestrator = selectedMissionTeam.strategist;
+    const builder = selectedMissionTeam.builder;
 
     const addMessage = (agent: (typeof way.agents)[number], text: string, status: ChatMessage['status'] = 'done'): string => {
       const id = crypto.randomUUID();
@@ -736,7 +789,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       // 1. Orchestrator Phase
       const msgId = addMessage(orchestrator, '', 'thinking');
       const orchestratorFlowId = `${flowRunId}:orchestrator`;
-      upsertFlowStep({ id: orchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: '... réfléchit au plan de mission ...', status: 'active' });
+      upsertFlowStep({ id: orchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: 'Analyse du plan de mission.', indicator: { kind: 'thinking' }, status: 'active' });
       const context = await analyzeIntent(prompt, way);
       const architectureContext = createArchitectureContext(projectSchema?.project.files, prompt);
       context.architecture = architectureContext.architecture;
@@ -755,18 +808,51 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           } : dna.passport,
         }));
       }
+      const rankIndex = Math.max(0, way.ranks.indexOf(context.rank));
+      const requiredLevel = rankIndex >= 4 ? 'Jonin' : rankIndex >= 2 ? 'Chunin' : 'Genin';
+      const kageAnnouncement = `Mission rang ${context.rank}. Niveau requis : ${requiredLevel}. Coût estimé : ${context.energyCost}% de ${way.energyUnit.toLowerCase()}. J'appelle l'équipe selon les compétences.`;
+      upsertFlowStep({ id: orchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: kageAnnouncement, summary: `Compétences requises : ${selectedMissionTeam.requiredSkills.join(', ')}.`, status: 'active' });
+      if (rankIndex >= 1 && !subscription) {
+        upsertFlowStep({
+          id: `${flowRunId}:access`,
+          kind: 'system',
+          agentName: 'Accès mission',
+          role: 'Choix utilisateur',
+          shortText: `Cette mission mobilise des compétences de rang ${context.rank}. Vous pouvez continuer avec l'équipe gratuite ou débloquer les Jonin.`,
+          status: 'active',
+          action: { label: 'Débloquer les Jonin →', onClick: () => setIsPaywallOpen(true) },
+        });
+      }
       useIdealyStore.getState().consumeEnergy(context.energyCost);
+      consumedMissionEnergyRef.current = context.energyCost;
+      activeMissionIdRef.current = missionId;
 
+      const summonedAgents = [selectedMissionTeam.strategist, selectedMissionTeam.builder, selectedMissionTeam.validator, selectedMissionTeam.optimizer, ...selectedMissionTeam.supporting].filter((agent): agent is (typeof way.agents)[number] => Boolean(agent));
+      for (const agent of summonedAgents) {
+        upsertFlowStep({ id: `${flowRunId}:summon:${agent.id}`, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: 'Oui chef !', summary: 'Agent convoqué selon les compétences.', status: 'appearing', indent: true });
+      }
+      if (!shouldReduceMotion) await new Promise((resolve) => window.setTimeout(resolve, 320));
+      for (const agent of summonedAgents) {
+        upsertFlowStep({ id: `${flowRunId}:summon:${agent.id}`, kind: 'agent', agent, agentName: agent.name, role: agent.role, shortText: 'En relais séquentiel.', summary: 'L’agent attend son point de relais.', status: 'completed', indent: true });
+      }
+
+      const firstRelay = takeQueuedInterruption();
+      if (firstRelay) {
+        missionPrompt = `${prompt}\\n\\nRelais utilisateur à intégrer : ${firstRelay}`;
+        context.prompt = missionPrompt;
+        upsertFlowStep({ id: `${flowRunId}:relay:strategy`, kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Relais transmis', shortText: firstRelay, summary: 'Injecté avant le relais vers le Bâtisseur.', status: 'completed' });
+      }
       const orchestratorStream = await streamAgentMessage(
         orchestrator,
         way,
-        `Mission: ${prompt}\nComplexité estimée: ${context.rank}`,
-        prompt,
+        `Mission: ${missionPrompt}\\nComplexité estimée: ${context.rank}`,
+        missionPrompt,
         `Analyse le plan global. Appelle explicitement le développeur (${builder.name}) pour la suite.`,
         context.architecture,
         context.relevantFiles,
         missionId ? `${missionId}:strategy` : undefined,
         'EXECUTION',
+        missionController.signal,
       );
 
       let orchestratorText = '';
@@ -784,40 +870,55 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       }
       const builderId = addMessage(builder, '', 'thinking');
       const builderFlowId = `${flowRunId}:builder`;
-      upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: '... assemble les composants ...', status: 'active', indent: true });
+      upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: 'Préparation des fichiers.', indicator: { kind: 'thinking' }, status: 'active', indent: true });
+      const secondRelay = takeQueuedInterruption();
+      if (secondRelay) {
+        missionPrompt = `${missionPrompt}\\n\\nRelais utilisateur à intégrer avant l’écriture : ${secondRelay}`;
+        context.prompt = missionPrompt;
+        upsertFlowStep({ id: `${flowRunId}:relay:builder`, kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Relais transmis', shortText: secondRelay, summary: 'Injecté avant l’écriture des fichiers.', status: 'completed' });
+      }
       const builderStream = await streamAgentMessage(
         builder,
         way,
-        `Plan de l'architecte: ${orchestratorText}`,
-        prompt,
+        `Plan de l’architecte: ${orchestratorText}`,
+        missionPrompt,
         'Tu construis les composants. Décris brièvement le chantier et retourne une version complète prête à être exécutée dans le terminal.',
         context.architecture,
         context.relevantFiles,
         missionId ? `${missionId}:builder` : undefined,
         'EXECUTION',
+        missionController.signal,
       );
 
       let builderText = '';
       for await (const delta of builderStream.textStream) {
         builderText += delta;
         updateMessage(builderId, builderText, 'writing');
-        upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: summarizeFlowText(builderText, 'Je génère les fichiers du projet…'), detailText: builderText, status: 'active', indent: true });
+        upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: summarizeFlowText(builderText, 'Je génère les fichiers du projet…'), indicator: { kind: 'thinking' }, detailText: builderText, status: 'active', indent: true });
       }
       upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: summarizeFlowText(builderText, 'Fichiers du projet générés.'), summary: 'Première version du projet assemblée.', detailText: builderText, status: 'completed', indent: true });
 
       // Self-correction terminalisée : une génération, un build/typecheck, puis au plus deux corrections ciblées.
       setGenerationProgress(0);
       const terminalFlowId = `${flowRunId}:terminal`;
-      upsertFlowStep({ id: terminalFlowId, kind: 'agent', agent: missionTeam.validator, agentName: missionTeam.validator.name, role: 'Validation terminalisée', shortText: 'Le terminal vérifie le projet…', status: 'active', indent: true });
+      upsertFlowStep({ id: terminalFlowId, kind: 'agent', agent: selectedMissionTeam.validator, agentName: selectedMissionTeam.validator.name, role: 'Validation terminalisée', shortText: 'Le terminal vérifie le projet…', indicator: { kind: 'thinking' }, status: 'active', indent: true });
       const terminalLog: string[] = [];
       const appendTerminalLog = (line: string) => {
         terminalLog.push(line);
         const visibleLog = terminalLog.slice(-40).join('');
         updateMessage(builderId, `${builderText}\n\n${visibleLog}`, 'writing');
       };
+      const finalRelay = takeQueuedInterruption();
+      if (finalRelay) {
+        missionPrompt = `${missionPrompt}\\n\\nDernier relais utilisateur : ${finalRelay}`;
+        context.prompt = missionPrompt;
+        upsertFlowStep({ id: `${flowRunId}:relay:validation`, kind: 'user', agentName: profile?.displayName ?? 'Vous', role: 'Relais transmis', shortText: finalRelay, summary: 'Injecté avant la validation terminalisée.', status: 'completed' });
+      }
       const selfCorrection = await buildWithSelfCorrection(
         context,
         {
+          signal: missionController.signal,
+          onFileCreated: (path) => upsertFlowStep({ id: builderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: `Création de ${path}…`, indicator: { kind: 'file', path }, detailText: builderText, status: 'active', indent: true }),
           onProgress: (tokens) => {
             // ~8000 max tokens par tour, sans dépasser 95 % avant le preflight.
             setGenerationProgress(Math.min(95, Math.round((tokens / 8000) * 100)));
@@ -833,7 +934,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           ? `⛔ Trois tours de self-correction atteints ; la validation déterministe reste la source de vérité.`
           : `⚠️ WebContainer indisponible ; validation déterministe exécutée sans prétendre qu’un build terminal a réussi.`;
       updateMessage(builderId, `${builderText}\n\n${terminalSummary}`, 'done');
-      upsertFlowStep({ id: terminalFlowId, kind: 'agent', agent: missionTeam.validator, agentName: missionTeam.validator.name, role: 'Validation terminalisée', shortText: terminalSummary, summary: terminalSummary, detailText: terminalLog.slice(-12).join(''), status: 'completed', indent: true });
+      upsertFlowStep({ id: terminalFlowId, kind: 'agent', agent: selectedMissionTeam.validator, agentName: selectedMissionTeam.validator.name, role: 'Validation terminalisée', shortText: terminalSummary, summary: terminalSummary, detailText: terminalLog.slice(-12).join(''), status: 'completed', indent: true });
 
       const validation = validateGeneratedProject(schema, context.contracts);
       const status = validation.status === 'failed' ? 'needs-fix' : 'ready';
@@ -915,8 +1016,13 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       }
 
     } catch (error) {
-      console.error(error);
-      if (missionId) {
+      const interrupted = stopRequestedRef.current || (error instanceof DOMException && error.name === 'AbortError');
+      if (interrupted) {
+        setToolMessage('Mission arrêtée proprement. La dernière version stable est conservée.');
+      } else {
+        console.error(error);
+      }
+      if (!interrupted && missionId) {
         updateStoreMission(missionId, { status: 'needs-fix' });
         updateMissionDNA(missionId, (dna) => ({
           ...dna,
@@ -928,11 +1034,17 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
         setMissionActivity({ missionId, stage: 'needs-fix' });
         void streamAgentUI({ missionId, phase: 'needs-fix', progress: 0 }).catch(() => undefined);
       }
-      const failure = 'Erreur lors de la communication. La version stable précédente est conservée.';
-      addMessage(orchestrator, failure, 'done');
-      upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: failure, summary: 'Aucun fichier n’a été modifié.', detailText: failure, status: 'completed' });
+      if (!interrupted) {
+        const failure = 'Erreur lors de la communication. La version stable précédente est conservée.';
+        addMessage(orchestrator, failure, 'done');
+        upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: failure, summary: 'Aucun fichier n’a été modifié.', detailText: failure, status: 'completed' });
+      }
     }
 
+    if (missionAbortRef.current === missionController) missionAbortRef.current = null;
+    if (activeMissionIdRef.current === missionId) activeMissionIdRef.current = null;
+    consumedMissionEnergyRef.current = 0;
+    setStopRequested(false);
     setBusy(false);
   }
 
@@ -1228,9 +1340,16 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                       </button>
                       <input ref={attachmentRef} type="file" multiple className="hidden" onChange={(event) => uploadAttachments(event.target.files)} />
                     </div>
-                    <button onClick={send} disabled={!input.trim() || busy || Boolean(pendingBrief)} className="btn-primary px-3.5"><Send size={15} /></button>
+                    {busy ? (
+                      <button type="button" onClick={() => { void stopMission(); }} className="inline-flex items-center gap-2 rounded-xl border border-red-300/30 bg-red-400/10 px-3.5 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-400/20" title="Arrêter la mission">
+                        <Square size={13} fill="currentColor" /> Stop
+                      </button>
+                    ) : (
+                      <button onClick={send} disabled={!input.trim() || Boolean(pendingBrief)} className="btn-primary px-3.5"><Send size={15} /></button>
+                    )}
                   </div>
                 </div>
+                {queuedInterruptions.length > 0 && <p role="status" className="mt-2 text-xs text-amber-200">{queuedInterruptions.length} message{queuedInterruptions.length > 1 ? 's' : ''} en attente du prochain relais.</p>}
                 {listening && <p role="status" aria-live="polite" className={`mt-2 flex items-center gap-2 text-xs ${way.textClass}`}><span className={`h-1.5 w-1.5 rounded-full ${dictationTheme.wave} motion-safe:animate-pulse`} aria-hidden="true" />{dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.</p>}
                 {toolMessage && <p role="status" className={`mt-2 text-xs ${way.textClass}`}>{isUploading ? 'Import en cours…' : toolMessage}</p>}
                 <p className="mt-2 text-center text-[11px] text-ink-500">Idealy peut se tromper. Vérifiez le code généré.</p>

@@ -60,6 +60,7 @@ export interface ProxyCallOptions {
   uiStream?: boolean;
   uiPhase?: AgentUIPhase;
   uiProgress?: number;
+  signal?: AbortSignal;
 }
 
 async function createProxyRequest(options: ProxyCallOptions): Promise<Response> {
@@ -77,6 +78,7 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
     uiStream = false,
     uiPhase,
     uiProgress,
+    signal,
   } = options;
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase non configuré.');
@@ -96,6 +98,7 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
       apikey: anonKey,
       'Content-Type': 'application/json',
     },
+    signal,
     body: JSON.stringify({
       prompt,
       systemPrompt,
@@ -189,6 +192,33 @@ export async function callAIProxy(options: ProxyCallOptions): Promise<string> {
  * Flux de texte via l’Edge Function. Le proxy renvoie des événements SSE
  * OpenAI-compatibles et ce lecteur expose seulement les fragments texte.
  */
+export async function refundMissionCredits(options: { missionId: string; debitIdempotencyKey: string; amount: number }): Promise<{ balance: number | null; alreadyRefunded: boolean }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error('Supabase non configuré.');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Connectez-vous avant de rembourser une mission.');
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+  if (!supabaseUrl || !anonKey) throw new Error('Configuration publique Supabase incomplète.');
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/refund-ai-credit`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: anonKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      missionId: options.missionId,
+      debitIdempotencyKey: options.debitIdempotencyKey,
+      refundIdempotencyKey: `${options.debitIdempotencyKey}:refund`,
+      amount: options.amount,
+    }),
+  });
+  if (!response.ok) throw new Error(await readProxyError(response));
+  return await response.json() as { balance: number | null; alreadyRefunded: boolean };
+}
+
 export async function streamAIProxy(options: ProxyCallOptions): Promise<AsyncIterable<string>> {
   const response = await createProxyRequest({ ...options, stream: true });
   if (!response.ok || !response.body) throw new Error(await readProxyError(response));
