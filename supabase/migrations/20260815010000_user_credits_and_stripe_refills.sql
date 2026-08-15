@@ -178,12 +178,6 @@ BEGIN
          updated_at = now()
    WHERE user_id = p_user_id;
 
-  INSERT INTO public.user_energy (id, current_energy, max_energy)
-  VALUES (p_user_id, current_balance + p_amount, current_balance + p_amount)
-  ON CONFLICT (id) DO UPDATE
-    SET current_energy = EXCLUDED.current_energy,
-        max_energy = EXCLUDED.max_energy,
-        updated_at = now();
 
   INSERT INTO public.credit_ledger(user_id, mission_id, idempotency_key, amount, reason)
   VALUES (p_user_id, NULL, p_idempotency_key, p_amount, left(p_reason, 200));
