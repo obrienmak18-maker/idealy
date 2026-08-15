@@ -14,8 +14,8 @@ const PRICE_TO_PLAN: Record<string, "pro" | "business"> = Object.fromEntries(
     [Deno.env.get("STRIPE_PRICE_ID_BUSINESS_YEARLY"), "business"],
     [Deno.env.get("STRIPE_PRICE_ID_PRO"), "pro"],
     [Deno.env.get("STRIPE_PRICE_ID_BUSINESS"), "business"],
-  ].filter(([priceId]): priceId is string => typeof priceId === "string" && priceId.length > 0),
-);
+  ].filter(([priceId]) => typeof priceId === "string" && priceId.length > 0),
+) as Record<string, "pro" | "business">;
 
 const SUBSCRIPTION_EVENTS = new Set([
   "customer.subscription.created",
