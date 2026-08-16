@@ -47,9 +47,9 @@ function FlowAvatar({ step, way, active }: { step: MissionFlowStep; way: Way; ac
     <motion.div
       animate={active ? { scale: [1, 1.04, 1], opacity: [0.86, 1, 0.86] } : { scale: 1, opacity: step.status === 'completed' ? 0.6 : 1 }}
       transition={active ? { duration: way.id === 'mage' ? 1.8 : 1.15, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.25 }}
-      className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 text-xs font-bold ${step.kind === 'user' ? 'bg-white/10 text-white' : accent.marker} ${active ? accent.glow : ''}`}
+      className={`relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 text-[10px] font-bold ${step.kind === 'user' ? 'bg-white/10 text-white' : accent.marker} ${active ? accent.glow : ''}`}
     >
-      {step.agent?.avatar ? <img src={step.agent.avatar} alt="" className="h-full w-full object-cover" /> : step.kind === 'lia' ? <Sparkles size={17} /> : avatarFallback(step)}
+      {step.agent?.avatar ? <img src={step.agent.avatar} alt="" className="h-full w-full object-cover" /> : step.kind === 'lia' ? <Sparkles size={13} /> : avatarFallback(step)}
     </motion.div>
   );
 }
@@ -61,44 +61,63 @@ function FlowStep({ step, way, index }: { step: MissionFlowStep; way: Way; index
   const isActive = step.status === 'active' || step.status === 'appearing';
   const detail = visibleText(step.detailText ?? '');
   const summary = visibleText(step.summary ?? '');
+  const isUser = step.kind === 'user';
 
   return (
     <motion.article
       layout={!shouldReduceMotion}
       initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
-      animate={{ opacity: step.status === 'completed' ? 0.78 : 1, y: 0 }}
+      animate={{ opacity: step.status === 'completed' ? 0.8 : 1, y: 0 }}
       transition={{ duration: 0.3, delay: Math.min(index * 0.025, 0.15), ease: [0.22, 1, 0.36, 1] }}
-      className={`relative flex gap-3 ${step.indent ? 'ml-5' : ''}`}
+      className={`relative flex gap-2.5 ${isUser ? 'justify-end' : ''} ${step.indent ? 'ml-5' : ''}`}
     >
-      <FlowAvatar step={step} way={way} active={isActive} />
-      <div className="min-w-0 flex-1 pt-0.5">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-xs font-bold text-white">{step.agentName}</span>
-          <span className={`text-[10px] uppercase tracking-[0.12em] ${way.textClass}`}>{step.role}</span>
-          {step.status === 'active' && <span className="inline-flex items-center gap-1 text-[10px] text-ink-500"><Loader2 size={10} className="animate-spin" /> en cours</span>}
-          {step.status === 'completed' && <CircleCheck size={12} className="text-emerald-300" />}
-          {step.status === 'appearing' && <CircleDot size={12} className="text-ink-500" />}
-        </div>
-        <p className={`mt-1 max-w-2xl text-sm leading-6 ${step.status === 'completed' ? 'text-ink-400' : 'text-ink-200'}`}>{visibleText(step.shortText)}</p>
-        {step.status === 'completed' && summary && <p className="mt-1 truncate text-xs text-ink-500">{summary}</p>}
-        {step.status === 'completed' && (detail || step.code) && (
-          <div className="mt-2">
-            <button type="button" onClick={() => setExpanded((value) => !value)} className={`inline-flex items-center gap-1 text-[11px] ${way.textClass} transition hover:text-white`} aria-expanded={expanded}>
-              Voir le détail <ChevronDown size={12} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
-            </button>
-            <AnimatePresence initial={false}>
-              {expanded && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: shouldReduceMotion ? 0 : 0.24 }} className="overflow-hidden">
-                  <div className="mt-2 rounded-xl border border-white/8 bg-ink-950/65 p-3 text-xs leading-5 text-ink-300">
-                    {detail && <p className="whitespace-pre-wrap">{detail}</p>}
-                    {step.code && <pre className="mt-3 max-h-80 overflow-auto rounded-lg bg-black/30 p-3 font-mono text-[11px] text-emerald-100"><code>{step.code}</code></pre>}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+      {isUser ? (
+        <div className="max-w-[86%] rounded-2xl bg-[linear-gradient(100deg,rgba(139,92,246,0.92),rgba(249,115,22,0.88))] p-px shadow-[0_0_24px_rgba(139,92,246,0.12)]">
+          <div className="rounded-[15px] bg-[#151321]/95 px-4 py-3 text-left">
+            <div className="mb-1 flex items-center justify-end gap-2 text-[10px] uppercase tracking-[0.12em] text-violet-200/80">
+              <span>{step.agentName}</span>
+              <span className="h-1 w-1 rounded-full bg-orange-300" />
+              <span>Mission</span>
+            </div>
+            <p className="text-sm leading-6 text-white">{visibleText(step.shortText)}</p>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <>
+          <FlowAvatar step={step} way={way} active={isActive} />
+          <div className="min-w-0 flex-1 pt-0.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-xs font-bold text-white">{step.agentName}</span>
+              <span className={`text-[10px] uppercase tracking-[0.12em] ${way.textClass}`}>{step.role}</span>
+              {isActive && <span className="inline-flex items-center gap-1 text-[10px] text-ink-500"><Loader2 size={10} className="animate-spin" /> {step.kind === 'lia' ? 'transmet' : 'réfléchit'}</span>}
+              {step.status === 'completed' && <CircleCheck size={12} className="text-emerald-300" />}
+              {step.status === 'appearing' && <CircleDot size={12} className="text-ink-500" />}
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              {isActive && <span aria-hidden="true" className="h-1 w-10 rounded-full bg-[linear-gradient(90deg,#22c55e,#eab308,#3b82f6)] motion-safe:animate-pulse" />}
+              <p className={`max-w-2xl text-sm leading-6 ${isActive ? 'shimmer-text' : step.status === 'completed' ? 'text-ink-400' : 'text-ink-200'}`}>{visibleText(step.shortText)}</p>
+            </div>
+            {step.status === 'completed' && summary && <p className="mt-1 truncate text-xs text-ink-500">{summary}</p>}
+            {step.status === 'completed' && (detail || step.code) && (
+              <div className="mt-2">
+                <button type="button" onClick={() => setExpanded((value) => !value)} className={`inline-flex items-center gap-1 text-[11px] ${way.textClass} transition hover:text-white`} aria-expanded={expanded}>
+                  Voir le détail <ChevronDown size={12} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence initial={false}>
+                  {expanded && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: shouldReduceMotion ? 0 : 0.24 }} className="overflow-hidden">
+                      <div className="mt-2 rounded-xl border border-white/8 bg-ink-950/65 p-3 text-xs leading-5 text-ink-300">
+                        {detail && <p className="whitespace-pre-wrap">{detail}</p>}
+                        {step.code && <pre className="mt-3 max-h-80 overflow-auto rounded-lg bg-black/30 p-3 font-mono text-[11px] text-emerald-100"><code>{step.code}</code></pre>}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </motion.article>
   );
 }
