@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
 import { AuthModal } from '@/components/AuthModal';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const LandingPage = lazy(() => import('@/routes/LandingPage').then((module) => ({ default: module.LandingPage })));
 const OnboardingPage = lazy(() => import('@/routes/OnboardingPage').then((module) => ({ default: module.OnboardingPage })));
@@ -81,10 +82,12 @@ function App() {
     page = <WorkspacePage />;
   }
 
-  return <>
-    <Suspense fallback={<main className="min-h-screen bg-ink-950" aria-busy="true" />}>{page}</Suspense>
-    <AuthModal open={recoveryOpen} onClose={() => setRecoveryOpen(false)} mode="recovery" />
-  </>;
+  return (
+    <TooltipProvider delayDuration={180}>
+      <Suspense fallback={<main className="min-h-screen bg-ink-950" aria-busy="true" />}>{page}</Suspense>
+      <AuthModal open={recoveryOpen} onClose={() => setRecoveryOpen(false)} mode="recovery" />
+    </TooltipProvider>
+  );
 }
 
 export default App;

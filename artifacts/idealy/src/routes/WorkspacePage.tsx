@@ -35,6 +35,7 @@ import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
 import { useStripe } from '@/hooks/useStripe';
 import { MissionBriefPanel } from '@/components/workspace/MissionBriefPanel';
+import { JoninGateModal } from '@/components/workspace/JoninGateModal';
 import { MissionStatusPanel } from '@/components/workspace/MissionStatusPanel';
 import { type MissionExecutionStage } from '@/components/workspace/MissionActivityPanel';
 import { MissionFlow, type MissionFlowStep } from '@/components/workspace/MissionFlow';
@@ -45,13 +46,15 @@ import { buildMissionContracts } from '@/core/mission/missionContract';
 import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/mission/missionDNA';
 import { validateGeneratedProject } from '@/core/mission/validateMission';
 import { buildPreflightProofs } from '@/core/mission/preflight';
-import { createDemoMission } from '@/core/mission/demoMission';
+import { createDemoMission, createDemoPizzeriaMission } from '@/core/mission/demoMission';
+import { deriveMissionRoute, type MissionComplexity } from '@/core/mission/missionRouting';
 import { buildWithSelfCorrection } from '@/core/webcontainer/selfCorrection';
 import { createArchitectureContext } from '@/core/webcontainer/architectureMemory';
 import { selectMissionTeam } from '@/core/mission/missionTeam';
 import type { ChangeCapsule, MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
 type RightTab = 'mission' | 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
+type JoninGateState = { prompt: string; contracts: MissionContracts; rank: string; complexity: MissionComplexity };
 
 const KageOrb = lazy(() => import('@/components/workspace/KageOrb'));
 const LazyWebContainerPreview = lazy(() => import('@/components/workspace/WebContainerPreview').then(({ WebContainerPreview }) => ({ default: WebContainerPreview })));
@@ -140,8 +143,14 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const [isBillingPortalOpen, setIsBillingPortalOpen] = useState(false);
   const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
   const [pendingBrief, setPendingBrief] = useState<{ prompt: string; contracts: MissionContracts } | null>(null);
+  const [joninGate, setJoninGate] = useState<JoninGateState | null>(null);
 
   const { subscription, checkSubscription } = useStripe();
+  const hasProAccess = Boolean(subscription?.active && (subscription.planId === 'pro' || subscription.planId === 'business'));
+
+  useEffect(() => {
+    if (profile && !initialDemoMode) void checkSubscription();
+  }, [profile, initialDemoMode, checkSubscription]);
 
   const [projectSchema, setProjectSchema] = useState<IdealyUniversalProjectSchema | null>(null);
   const [reviewSchema, setReviewSchema] = useState<IdealyUniversalProjectSchema | null>(null);
@@ -306,9 +315,11 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     setToolMessage('Analyse de l’intention…');
     let route: Awaited<ReturnType<typeof routeAIIntent>> = { category: 'CONVERSATION', confidence: 0, reason: 'Repli conversationnel.' };
     try {
-      route = forcedCategory
-        ? { category: forcedCategory, confidence: 1, reason: 'Action contextuelle du CodeEditor.' }
-        : await routeAIIntent(finalPrompt);
+      route = demoMode
+        ? { category: 'EXECUTION', confidence: 1, reason: 'Mode démo local : exécution déterministe sans service externe.' }
+        : forcedCategory
+          ? { category: forcedCategory, confidence: 1, reason: 'Action contextuelle du CodeEditor.' }
+          : await routeAIIntent(finalPrompt);
     } catch (error) {
       console.warn('Intent router unavailable; using conversation fallback.', error);
     }
@@ -334,14 +345,19 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       status: 'active',
     });
     let liaResponse = '';
-    try {
-      const liaStream = await streamLiaMessage(way, finalPrompt, `${userFlowId}:lia`);
-      for await (const delta of liaStream.textStream) {
-        liaResponse += delta;
-        upsertFlowStep({ id: liaId, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: summarizeFlowText(liaResponse, 'Je prépare la transmission à l’Orchestrateur.'), detailText: liaResponse, status: 'active' });
+    if (demoMode) {
+      liaResponse = `Mode démo local. Je transmets votre demande à ${missionTeam.strategist.name} sans connexion externe.`;
+      upsertFlowStep({ id: liaId, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: liaResponse, detailText: liaResponse, status: 'active' });
+    } else {
+      try {
+        const liaStream = await streamLiaMessage(way, finalPrompt, `${userFlowId}:lia`);
+        for await (const delta of liaStream.textStream) {
+          liaResponse += delta;
+          upsertFlowStep({ id: liaId, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: summarizeFlowText(liaResponse, 'Je prépare la transmission à l’Orchestrateur.'), detailText: liaResponse, status: 'active' });
+        }
+      } catch {
+        liaResponse = `Bien reçu. Je transmets votre demande à ${missionTeam.strategist.name} pour planification.`;
       }
-    } catch {
-      liaResponse = `Bien reçu. Je transmets votre demande à ${missionTeam.strategist.name} pour planification.`;
     }
     upsertFlowStep({
       id: liaId,
@@ -355,8 +371,16 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     });
 
     if (route.category === 'EXECUTION') {
+      const executionContracts = buildMissionContracts(finalPrompt, way);
+      const executionRoute = deriveMissionRoute(finalPrompt, executionContracts, way);
+      if (!demoMode && executionRoute.complexity === 'advanced' && !hasProAccess) {
+        setJoninGate({ prompt: finalPrompt, contracts: executionContracts, rank: executionRoute.rank, complexity: executionRoute.complexity });
+        setBusy(false);
+        setToolMessage(`Mission de rang ${executionRoute.rank} : choisissez comment continuer.`);
+        return;
+      }
       setBusy(false);
-      setPendingBrief({ prompt: finalPrompt, contracts: buildMissionContracts(finalPrompt, way) });
+      setPendingBrief({ prompt: finalPrompt, contracts: executionContracts });
       setToolMessage('Mission détectée. Le Canvas sera ouvert après votre validation du brief.');
       return;
     }
@@ -628,7 +652,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
 
   async function runMission(prompt: string, overrideContracts?: MissionContracts, narrativeReady = false) {
     setActiveIntent('EXECUTION');
-    setPreviewEnabled(true);
+    if (!demoMode) setPreviewEnabled(true);
     const flowRunId = crypto.randomUUID();
     if (!narrativeReady) {
       setFlowSteps((current) => [...current,
@@ -716,6 +740,71 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     if (energy.current <= 0) {
       addMessage(orchestrator, `Désolé, nous sommes à court de ${way.energyUnit.toLowerCase()} pour aujourd'hui. L'équipe a besoin de se reposer. Passez au rang supérieur pour continuer la mission ou revenez demain !`, 'done');
       setBusy(false);
+      return;
+    }
+
+    if (demoMode) {
+      try {
+        const localRoute = deriveMissionRoute(prompt, initialContracts, way);
+        const localMissionId = missionId ?? 'demo-pizzeria-local';
+        const demoBundle = createDemoPizzeriaMission(way, prompt, localMissionId);
+        const localSchema = demoBundle.schema;
+        const localDNA = demoBundle.dna;
+        const pause = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+        const localOrchestratorId = addMessage(orchestrator, '', 'thinking');
+        const localOrchestratorFlowId = `${flowRunId}:orchestrator`;
+        setMissionActivity({ missionId: localMissionId, stage: 'planning' });
+        upsertFlowStep({ id: localOrchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: `${orchestrator.name} prépare une mission locale de rang ${localRoute.rank}…`, status: 'active' });
+        await pause(220);
+        const planText = `Mission locale ${localRoute.rank} · ${localRoute.complexity}. ${orchestrator.name} définit la structure, le menu, la galerie et le contact sans connexion externe.`;
+        updateMessage(localOrchestratorId, planText, 'done');
+        upsertFlowStep({ id: localOrchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: `${orchestrator.name} annonce le rang ${localRoute.rank} · ${localRoute.estimatedEnergy} ${way.energyUnit.toLowerCase()}.`, summary: 'Plan local établi.', detailText: planText, status: 'completed' });
+
+        useIdealyStore.getState().consumeEnergy(localRoute.estimatedEnergy);
+        const localBuilderId = addMessage(builder, '', 'thinking');
+        const localBuilderFlowId = `${flowRunId}:builder`;
+        setMissionActivity({ missionId: localMissionId, stage: 'building' });
+        upsertFlowStep({ id: localBuilderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: `@${builder.name} prend le relais et assemble la landing page…`, summary: `@${builder.name} construit la première version.`, status: 'active', indent: true });
+        const visibleFiles = Object.keys(localSchema.project.files).filter((path) => path.startsWith('src/'));
+        for (const [index, path] of visibleFiles.entries()) {
+          await pause(90);
+          upsertFlowStep({ id: `${flowRunId}:file:${path}`, kind: 'agent', agent: builder, agentName: builder.name, role: 'Bâtisseur', shortText: `création de ${path}…`, summary: `${path} créé localement.`, status: 'completed', indent: true });
+          setGenerationProgress(Math.round(((index + 1) / visibleFiles.length) * 60));
+        }
+        updateMessage(localBuilderId, `${builder.name} a créé ${visibleFiles.length} fichiers de l’application Forno.`, 'done');
+        upsertFlowStep({ id: localBuilderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: `${builder.name} termine la version Forno avec menu, photos et contact.`, summary: 'Version locale assemblée.', detailText: `@${missionTeam.validator.name} reçoit maintenant la version pour validation.`, status: 'completed', indent: true });
+
+        const localValidatorId = addMessage(missionTeam.validator, '', 'thinking');
+        const localValidatorFlowId = `${flowRunId}:terminal`;
+        setMissionActivity({ missionId: localMissionId, stage: 'validating' });
+        upsertFlowStep({ id: localValidatorFlowId, kind: 'agent', agent: missionTeam.validator, agentName: missionTeam.validator.name, role: 'Validation locale', shortText: `@${missionTeam.validator.name} vérifie les contrats et les chemins d’entrée…`, status: 'active', indent: true });
+        await pause(180);
+        const localValidation = localSchema.validation ?? validateGeneratedProject(localSchema, initialContracts);
+        setGenerationProgress(100);
+        const localSummary = localValidation.status === 'failed' ? '⛔ La validation locale demande une correction.' : '✅ Validation locale réussie : la preview Forno est prête.';
+        updateMessage(localValidatorId, localSummary, 'done');
+        upsertFlowStep({ id: localValidatorFlowId, kind: 'agent', agent: missionTeam.validator, agentName: missionTeam.validator.name, role: 'Validation locale', shortText: localSummary, summary: 'Contrats et structure vérifiés sans serveur.', detailText: `${localValidation.issues.length} issue(s) déterministe(s).`, status: 'completed', indent: true });
+
+        const localSnapshot = createMissionSnapshot(localSchema, 'Landing pizzeria validée', 'generation', localValidation);
+        const enrichedLocalSchema = { ...localSchema, validation: localValidation, snapshotId: localSnapshot.id };
+        setProjectSchema(enrichedLocalSchema);
+        setPreviewEnabled(true);
+        setReviewSchema(enrichedLocalSchema);
+        setPreviousSchema(projectSchema);
+        setMissionDNA(localMissionId, { ...localDNA, status: localValidation.status === 'failed' ? 'needs-fix' : 'ready', validation: localValidation, updatedAt: Date.now() });
+        updateStoreMission(localMissionId, { status: localValidation.status === 'failed' ? 'needs-fix' : 'ready', previewReady: localValidation.status !== 'failed', validation: localValidation });
+        setMissionActivity({ missionId: localMissionId, stage: localValidation.status === 'failed' ? 'needs-fix' : 'completed' });
+        setShowPreview(true);
+        setCodePanelOpen(true);
+        setTab('code');
+        upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: localValidation.status === 'failed' ? 'La mission nécessite une correction.' : 'Mission accomplie : ouvrez la preview Forno.', summary: localValidation.status === 'failed' ? 'Validation locale à examiner.' : 'Landing pizzeria locale prête à explorer.', detailText: 'Mode démo : aucun appel IA, Supabase ou Stripe n’a été effectué.', status: 'completed' });
+        setToolMessage(localSummary);
+      } catch (error) {
+        console.error('Local demo mission failed:', error);
+        addMessage(orchestrator, 'La démo locale n’a pas pu préparer la version pizzeria. Aucun service externe n’a été appelé.', 'done');
+      } finally {
+        setBusy(false);
+      }
       return;
     }
 
@@ -989,10 +1078,11 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/5 px-4">
+          <header className={`flex h-14 shrink-0 items-center justify-between border-b px-4 ${hasProAccess ? 'border-amber-200/20 bg-amber-200/[0.02]' : 'border-white/5'}`}>
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-2 text-sm text-ink-400 md:flex">
               <span className={way.textClass}>{way.name}</span>
+              {hasProAccess && <span className="rounded-full border border-amber-200/25 bg-amber-200/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-amber-100">Mode Ermite</span>}
               <span className="text-ink-600">·</span>
               <span>{missions.find(m => m.id === currentMissionId)?.title ?? 'Nouvelle mission'}</span>
             </div>
@@ -1198,6 +1288,22 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           </LazyTerminalDrawer>
         </Suspense>
       )}
+      <JoninGateModal
+        open={Boolean(joninGate)}
+        rank={joninGate?.rank ?? 'B'}
+        complexity={joninGate?.complexity ?? 'advanced'}
+        onClose={() => setJoninGate(null)}
+        onContinue={() => {
+          if (!joninGate) return;
+          setPendingBrief({ prompt: joninGate.prompt, contracts: joninGate.contracts });
+          setJoninGate(null);
+          setToolMessage('Vous continuez en gratuit avec les agents disponibles.');
+        }}
+        onUnlock={() => {
+          setJoninGate(null);
+          setIsPaywallOpen(true);
+        }}
+      />
       <SettingsModal open={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <PaywallModal isOpen={isPaywallOpen} onClose={() => setIsPaywallOpen(false)} />
     </div>
