@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { lazy, Suspense, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { analyzeIntent, streamAgentMessage, streamLiaMessage } from '@/agents/orchestrator';
 import { routeAIIntent, streamAgentUI, type IntentCategory } from '@/agents/provider';
@@ -57,6 +57,8 @@ import { selectMissionTeam } from '@/core/mission/missionTeam';
 import type { ChangeCapsule, MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
 type RightTab = 'mission' | 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
+
+const KageOrb = lazy(() => import('@/components/workspace/KageOrb'));
 
 type BrowserSpeechRecognition = {
   lang: string;
@@ -1218,6 +1220,9 @@ function EmptyState({
   return (
     <div className="relative flex min-h-[min(62vh,580px)] flex-col items-center justify-center overflow-hidden px-2 py-12 text-center">
       <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-[min(38rem,90vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.12),rgba(249,115,22,0.06),transparent_72%)] blur-3xl" />
+      <Suspense fallback={<div className="relative mb-4 h-[104px] w-[104px] rounded-full bg-violet-500/10 shadow-[0_0_60px_rgba(139,92,246,0.18)]" aria-label="Chargement de l’orbe du Kage" />}>
+        <KageOrb />
+      </Suspense>
       <motion.div
         initial={{ opacity: 0, y: 12, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1488,18 +1493,6 @@ function RightPanelContent({
         <TerminalComponent />
       </div>
     </>
-  );
-}
-
-function IconBtn({ icon: Icon, title, onClick }: { icon: React.ElementType; title: string; onClick?: () => void }) {
-  return (
-    <button
-      className="rounded-lg p-2 text-ink-400 transition hover:bg-white/5 hover:text-white"
-      title={title}
-      onClick={onClick}
-    >
-      <Icon size={17} />
-    </button>
   );
 }
 

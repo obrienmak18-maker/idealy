@@ -50,6 +50,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "catalog:",
     "@webcontainer/api": "^1.6.4",
     "@workspace/api-client-react": "workspace:*",

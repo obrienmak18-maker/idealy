@@ -18,6 +18,7 @@ import {
 import { Logo, RotatingWords } from '@/components/Brand';
 import { AuthModal } from '@/components/AuthModal';
 import { useIdealyStore } from '@/stores/idealyStore';
+import { useLandingGsap } from '@/components/landing/LandingGsapEffects';
 
 type BrowserSpeechRecognition = {
   lang: string;
@@ -38,7 +39,9 @@ export function LandingPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const stage = useIdealyStore((s) => s.stage);
+  useLandingGsap(rootRef);
 
   function launch() {
     if (stage === 'guest' || stage === 'authenticated') {
@@ -93,13 +96,13 @@ export function LandingPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
+    <div ref={rootRef} className="relative min-h-screen overflow-x-hidden">
       {notice && <p role="status" className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-ink-900 px-3 py-2 text-xs text-electric-300 shadow-lg">{notice}</p>}
       {/* Ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-40 left-1/2 h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-electric-600/10 blur-[120px] animate-drift" />
-        <div className="absolute top-1/3 -right-20 h-[30rem] w-[30rem] rounded-full bg-ember-500/10 blur-[120px] animate-drift" style={{ animationDelay: '6s' }} />
-        <div className="absolute bottom-0 left-0 h-[25rem] w-[25rem] rounded-full bg-electric-500/8 blur-[100px] animate-drift" style={{ animationDelay: '3s' }} />
+        <div data-gsap="ambient" className="absolute -top-40 left-1/2 h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-electric-600/10 blur-[120px] animate-drift" />
+        <div data-gsap="ambient" className="absolute top-1/3 -right-20 h-[30rem] w-[30rem] rounded-full bg-ember-500/10 blur-[120px] animate-drift" style={{ animationDelay: '6s' }} />
+        <div data-gsap="ambient" className="absolute bottom-0 left-0 h-[25rem] w-[25rem] rounded-full bg-electric-500/8 blur-[100px] animate-drift" style={{ animationDelay: '3s' }} />
       </div>
 
       {/* Nav */}
@@ -131,13 +134,14 @@ export function LandingPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
+          data-gsap="hero-kicker"
           className="mb-6 inline-flex items-center gap-2 rounded-full glass-soft px-4 py-1.5 text-xs text-ink-200"
         >
           <Sparkles size={13} className="text-ember-400" />
           Studio de développement IA multi-agents
         </motion.div>
 
-        <h1 className="text-balance text-5xl font-semibold leading-[1.05] text-white md:text-7xl">
+        <h1 data-gsap="hero-title" className="text-balance text-5xl font-semibold leading-[1.05] text-white md:text-7xl">
           Qu'allons-nous <RotatingWords words={['construire', 'explorer', 'déployer', 'inventer']} /> aujourd'hui ?
         </h1>
 
@@ -156,6 +160,7 @@ export function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.6 }}
+          data-gsap="hero-prompt"
           className="mx-auto mt-10 max-w-2xl"
         >
           <div className="card p-4 text-left">

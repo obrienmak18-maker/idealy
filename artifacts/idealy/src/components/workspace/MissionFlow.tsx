@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronDown, CircleCheck, CircleDot, Loader2, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import type { Way, WayAgent } from '@/lore/ways';
+import { MissionLottie } from '@/components/workspace/MissionLottie';
 
 export type MissionFlowStatus = 'appearing' | 'active' | 'completed';
 export type MissionFlowKind = 'user' | 'lia' | 'agent' | 'system' | 'result';
@@ -94,6 +95,8 @@ function FlowStep({ step, way, index }: { step: MissionFlowStep; way: Way; index
               {step.status === 'appearing' && <CircleDot size={12} className="text-ink-500" />}
             </div>
             <div className="mt-1 flex items-center gap-2">
+              {isActive && <MissionLottie variant={step.kind === 'lia' ? 'chief' : 'thinking'} size={28} />}
+              {step.kind === 'result' && <MissionLottie variant="success" size={28} />}
               {isActive && <span aria-hidden="true" className="h-1 w-10 rounded-full bg-[linear-gradient(90deg,#22c55e,#eab308,#3b82f6)] motion-safe:animate-pulse" />}
               <p className={`max-w-2xl text-sm leading-6 ${isActive ? 'shimmer-text' : step.status === 'completed' ? 'text-ink-400' : 'text-ink-200'}`}>{visibleText(step.shortText)}</p>
             </div>
