@@ -45,6 +45,18 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('three') || id.includes('@react-three')) return 'three';
+          if (id.includes('gsap')) return 'gsap';
+          if (id.includes('lottie-react') || id.includes('lottie-web')) return 'lottie';
+          if (id.includes('framer-motion')) return 'framer-motion';
+          return undefined;
+        },
+      },
+    },
   },
   server: {
     port,
