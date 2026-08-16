@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { lazy, Suspense, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { analyzeIntent, streamAgentMessage, streamLiaMessage } from '@/agents/orchestrator';
 import { routeAIIntent, streamAgentUI, type IntentCategory } from '@/agents/provider';
@@ -9,36 +9,20 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { ConnectorsPanel } from '@/components/workspace/ConnectorsPanel';
 import { PaywallModal } from '@/components/workspace/PaywallModal';
 import { DeployPanel } from '@/components/workspace/DeployPanel';
-import { WebContainerPreview } from '@/components/workspace/WebContainerPreview';
 import { FileExplorer } from '@/components/workspace/FileExplorer';
-import { ComposerPanel } from '@/components/workspace/ComposerPanel';
-import { CodeEditor, type CodeActionIntent } from '@/components/workspace/CodeEditor';
-import { Terminal as TerminalComponent } from '@/components/workspace/Terminal';
+import type { CodeActionIntent } from '@/components/workspace/CodeEditor';
 import { downloadProjectZip } from '@/services/projectDownloader';
 import {
-  PanelLeftClose,
-  PanelLeftOpen,
   PanelRightOpen,
   PanelRightClose,
   Maximize2,
   Minimize2,
-  Plus,
-  Send,
-  Paperclip,
-  Mic,
-  Image as ImageIcon,
-  Github,
-  Figma,
+  ArrowRight,
+  Crown,
+  MessageCircle,
   Eye,
   FolderTree,
-  Plug,
-  ScrollText,
   Sparkles,
-  ChevronDown,
-  Settings,
-  LogOut,
-  Zap,
-  Crown,
   Bell,
   Terminal,
   Copy,
@@ -46,28 +30,39 @@ import {
   Loader2,
   Download,
 } from 'lucide-react';
-import { Logo } from '@/components/Brand';
 import { WAYS, type WayId } from '@/lore/ways';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
 import { useStripe } from '@/hooks/useStripe';
 import { MissionBriefPanel } from '@/components/workspace/MissionBriefPanel';
+import { JoninGateModal } from '@/components/workspace/JoninGateModal';
 import { MissionStatusPanel } from '@/components/workspace/MissionStatusPanel';
 import { type MissionExecutionStage } from '@/components/workspace/MissionActivityPanel';
 import { MissionFlow, type MissionFlowStep } from '@/components/workspace/MissionFlow';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
+import { CommandBar } from '@/components/workspace/CommandBar';
+import { IconRail, type RailDestination } from '@/components/workspace/IconRail';
+import { EnergyGauge } from '@/components/workspace/EnergyGauge';
 import { buildMissionContracts } from '@/core/mission/missionContract';
 import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/mission/missionDNA';
 import { validateGeneratedProject } from '@/core/mission/validateMission';
 import { buildPreflightProofs } from '@/core/mission/preflight';
-import { createDemoMission } from '@/core/mission/demoMission';
+import { createDemoMission, createDemoPizzeriaMission } from '@/core/mission/demoMission';
+import { deriveMissionRoute, type MissionComplexity } from '@/core/mission/missionRouting';
 import { buildWithSelfCorrection } from '@/core/webcontainer/selfCorrection';
 import { createArchitectureContext } from '@/core/webcontainer/architectureMemory';
 import { selectMissionTeam } from '@/core/mission/missionTeam';
 import type { ChangeCapsule, MissionContracts, MissionDNA, ValidationReport } from '@/core/mission/contracts';
 
 type RightTab = 'mission' | 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
+type JoninGateState = { prompt: string; contracts: MissionContracts; rank: string; complexity: MissionComplexity };
+
+const KageOrb = lazy(() => import('@/components/workspace/KageOrb'));
+const LazyWebContainerPreview = lazy(() => import('@/components/workspace/WebContainerPreview').then(({ WebContainerPreview }) => ({ default: WebContainerPreview })));
+const LazyComposerPanel = lazy(() => import('@/components/workspace/ComposerPanel').then(({ ComposerPanel }) => ({ default: ComposerPanel })));
+const LazyCodeEditor = lazy(() => import('@/components/workspace/CodeEditor').then(({ CodeEditor }) => ({ default: CodeEditor })));
+const LazyTerminal = lazy(() => import('@/components/workspace/Terminal').then(({ Terminal }) => ({ default: Terminal })));
+const LazyCanvasPanelLayout = lazy(() => import('@/components/workspace/CanvasPanelLayout').then(({ CanvasPanelLayout }) => ({ default: CanvasPanelLayout })));
+const LazyTerminalDrawer = lazy(() => import('@/components/workspace/TerminalDrawer').then(({ TerminalDrawer }) => ({ default: TerminalDrawer })));
 
 type BrowserSpeechRecognition = {
   lang: string;
@@ -136,21 +131,26 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const missionTeam = selectMissionTeam(way);
   const dictationTheme = DICTATION_THEME[wayId];
   const shouldReduceMotion = useReducedMotion();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tab, setTab] = useState<RightTab>('preview');
   const [showPreview, setShowPreview] = useState(false);
+  const [previewEnabled, setPreviewEnabled] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [flowSteps, setFlowSteps] = useState<MissionFlowStep[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [isBillingPortalOpen, setIsBillingPortalOpen] = useState(false);
   const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
   const [pendingBrief, setPendingBrief] = useState<{ prompt: string; contracts: MissionContracts } | null>(null);
+  const [joninGate, setJoninGate] = useState<JoninGateState | null>(null);
 
   const { subscription, checkSubscription } = useStripe();
+  const hasProAccess = Boolean(subscription?.active && (subscription.planId === 'pro' || subscription.planId === 'business'));
+
+  useEffect(() => {
+    if (profile && !initialDemoMode) void checkSubscription();
+  }, [profile, initialDemoMode, checkSubscription]);
 
   const [projectSchema, setProjectSchema] = useState<IdealyUniversalProjectSchema | null>(null);
   const [reviewSchema, setReviewSchema] = useState<IdealyUniversalProjectSchema | null>(null);
@@ -168,8 +168,6 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const [focusMode, setFocusMode] = useState(false);
   const [demoMode, setDemoMode] = useState(initialDemoMode);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const attachmentRef = useRef<HTMLInputElement>(null);
-  const composerRef = useRef<HTMLTextAreaElement>(null);
   const dictationRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 
   const summarizeFlowText = (raw: string, fallback: string) => {
@@ -266,6 +264,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
 
   const restoreMissionSnapshot = (snapshot: import('@/core/mission/contracts').MissionSnapshot) => {
     if (!currentMissionId || !snapshot.schema) return;
+    setPreviewEnabled(true);
     setPreviousSchema(projectSchema);
     updateProjectSchema(snapshot.schema as IdealyUniversalProjectSchema);
     updateStoreMission(currentMissionId, { previewReady: true, status: 'ready', validation: snapshot.validation });
@@ -316,9 +315,11 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     setToolMessage('Analyse de l’intention…');
     let route: Awaited<ReturnType<typeof routeAIIntent>> = { category: 'CONVERSATION', confidence: 0, reason: 'Repli conversationnel.' };
     try {
-      route = forcedCategory
-        ? { category: forcedCategory, confidence: 1, reason: 'Action contextuelle du CodeEditor.' }
-        : await routeAIIntent(finalPrompt);
+      route = demoMode
+        ? { category: 'EXECUTION', confidence: 1, reason: 'Mode démo local : exécution déterministe sans service externe.' }
+        : forcedCategory
+          ? { category: forcedCategory, confidence: 1, reason: 'Action contextuelle du CodeEditor.' }
+          : await routeAIIntent(finalPrompt);
     } catch (error) {
       console.warn('Intent router unavailable; using conversation fallback.', error);
     }
@@ -344,14 +345,19 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
       status: 'active',
     });
     let liaResponse = '';
-    try {
-      const liaStream = await streamLiaMessage(way, finalPrompt, `${userFlowId}:lia`);
-      for await (const delta of liaStream.textStream) {
-        liaResponse += delta;
-        upsertFlowStep({ id: liaId, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: summarizeFlowText(liaResponse, 'Je prépare la transmission à l’Orchestrateur.'), detailText: liaResponse, status: 'active' });
+    if (demoMode) {
+      liaResponse = `Mode démo local. Je transmets votre demande à ${missionTeam.strategist.name} sans connexion externe.`;
+      upsertFlowStep({ id: liaId, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: liaResponse, detailText: liaResponse, status: 'active' });
+    } else {
+      try {
+        const liaStream = await streamLiaMessage(way, finalPrompt, `${userFlowId}:lia`);
+        for await (const delta of liaStream.textStream) {
+          liaResponse += delta;
+          upsertFlowStep({ id: liaId, kind: 'lia', agentName: 'Lia', role: 'Messagère', shortText: summarizeFlowText(liaResponse, 'Je prépare la transmission à l’Orchestrateur.'), detailText: liaResponse, status: 'active' });
+        }
+      } catch {
+        liaResponse = `Bien reçu. Je transmets votre demande à ${missionTeam.strategist.name} pour planification.`;
       }
-    } catch {
-      liaResponse = `Bien reçu. Je transmets votre demande à ${missionTeam.strategist.name} pour planification.`;
     }
     upsertFlowStep({
       id: liaId,
@@ -365,8 +371,16 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     });
 
     if (route.category === 'EXECUTION') {
+      const executionContracts = buildMissionContracts(finalPrompt, way);
+      const executionRoute = deriveMissionRoute(finalPrompt, executionContracts, way);
+      if (!demoMode && executionRoute.complexity === 'advanced' && !hasProAccess) {
+        setJoninGate({ prompt: finalPrompt, contracts: executionContracts, rank: executionRoute.rank, complexity: executionRoute.complexity });
+        setBusy(false);
+        setToolMessage(`Mission de rang ${executionRoute.rank} : choisissez comment continuer.`);
+        return;
+      }
       setBusy(false);
-      setPendingBrief({ prompt: finalPrompt, contracts: buildMissionContracts(finalPrompt, way) });
+      setPendingBrief({ prompt: finalPrompt, contracts: executionContracts });
       setToolMessage('Mission détectée. Le Canvas sera ouvert après votre validation du brief.');
       return;
     }
@@ -638,6 +652,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
 
   async function runMission(prompt: string, overrideContracts?: MissionContracts, narrativeReady = false) {
     setActiveIntent('EXECUTION');
+    if (!demoMode) setPreviewEnabled(true);
     const flowRunId = crypto.randomUUID();
     if (!narrativeReady) {
       setFlowSteps((current) => [...current,
@@ -725,6 +740,71 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
     if (energy.current <= 0) {
       addMessage(orchestrator, `Désolé, nous sommes à court de ${way.energyUnit.toLowerCase()} pour aujourd'hui. L'équipe a besoin de se reposer. Passez au rang supérieur pour continuer la mission ou revenez demain !`, 'done');
       setBusy(false);
+      return;
+    }
+
+    if (demoMode) {
+      try {
+        const localRoute = deriveMissionRoute(prompt, initialContracts, way);
+        const localMissionId = missionId ?? 'demo-pizzeria-local';
+        const demoBundle = createDemoPizzeriaMission(way, prompt, localMissionId);
+        const localSchema = demoBundle.schema;
+        const localDNA = demoBundle.dna;
+        const pause = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+        const localOrchestratorId = addMessage(orchestrator, '', 'thinking');
+        const localOrchestratorFlowId = `${flowRunId}:orchestrator`;
+        setMissionActivity({ missionId: localMissionId, stage: 'planning' });
+        upsertFlowStep({ id: localOrchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: `${orchestrator.name} prépare une mission locale de rang ${localRoute.rank}…`, status: 'active' });
+        await pause(220);
+        const planText = `Mission locale ${localRoute.rank} · ${localRoute.complexity}. ${orchestrator.name} définit la structure, le menu, la galerie et le contact sans connexion externe.`;
+        updateMessage(localOrchestratorId, planText, 'done');
+        upsertFlowStep({ id: localOrchestratorFlowId, kind: 'agent', agent: orchestrator, agentName: orchestrator.name, role: orchestrator.role, shortText: `${orchestrator.name} annonce le rang ${localRoute.rank} · ${localRoute.estimatedEnergy} ${way.energyUnit.toLowerCase()}.`, summary: 'Plan local établi.', detailText: planText, status: 'completed' });
+
+        useIdealyStore.getState().consumeEnergy(localRoute.estimatedEnergy);
+        const localBuilderId = addMessage(builder, '', 'thinking');
+        const localBuilderFlowId = `${flowRunId}:builder`;
+        setMissionActivity({ missionId: localMissionId, stage: 'building' });
+        upsertFlowStep({ id: localBuilderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: `@${builder.name} prend le relais et assemble la landing page…`, summary: `@${builder.name} construit la première version.`, status: 'active', indent: true });
+        const visibleFiles = Object.keys(localSchema.project.files).filter((path) => path.startsWith('src/'));
+        for (const [index, path] of visibleFiles.entries()) {
+          await pause(90);
+          upsertFlowStep({ id: `${flowRunId}:file:${path}`, kind: 'agent', agent: builder, agentName: builder.name, role: 'Bâtisseur', shortText: `création de ${path}…`, summary: `${path} créé localement.`, status: 'completed', indent: true });
+          setGenerationProgress(Math.round(((index + 1) / visibleFiles.length) * 60));
+        }
+        updateMessage(localBuilderId, `${builder.name} a créé ${visibleFiles.length} fichiers de l’application Forno.`, 'done');
+        upsertFlowStep({ id: localBuilderFlowId, kind: 'agent', agent: builder, agentName: builder.name, role: builder.role, shortText: `${builder.name} termine la version Forno avec menu, photos et contact.`, summary: 'Version locale assemblée.', detailText: `@${missionTeam.validator.name} reçoit maintenant la version pour validation.`, status: 'completed', indent: true });
+
+        const localValidatorId = addMessage(missionTeam.validator, '', 'thinking');
+        const localValidatorFlowId = `${flowRunId}:terminal`;
+        setMissionActivity({ missionId: localMissionId, stage: 'validating' });
+        upsertFlowStep({ id: localValidatorFlowId, kind: 'agent', agent: missionTeam.validator, agentName: missionTeam.validator.name, role: 'Validation locale', shortText: `@${missionTeam.validator.name} vérifie les contrats et les chemins d’entrée…`, status: 'active', indent: true });
+        await pause(180);
+        const localValidation = localSchema.validation ?? validateGeneratedProject(localSchema, initialContracts);
+        setGenerationProgress(100);
+        const localSummary = localValidation.status === 'failed' ? '⛔ La validation locale demande une correction.' : '✅ Validation locale réussie : la preview Forno est prête.';
+        updateMessage(localValidatorId, localSummary, 'done');
+        upsertFlowStep({ id: localValidatorFlowId, kind: 'agent', agent: missionTeam.validator, agentName: missionTeam.validator.name, role: 'Validation locale', shortText: localSummary, summary: 'Contrats et structure vérifiés sans serveur.', detailText: `${localValidation.issues.length} issue(s) déterministe(s).`, status: 'completed', indent: true });
+
+        const localSnapshot = createMissionSnapshot(localSchema, 'Landing pizzeria validée', 'generation', localValidation);
+        const enrichedLocalSchema = { ...localSchema, validation: localValidation, snapshotId: localSnapshot.id };
+        setProjectSchema(enrichedLocalSchema);
+        setPreviewEnabled(true);
+        setReviewSchema(enrichedLocalSchema);
+        setPreviousSchema(projectSchema);
+        setMissionDNA(localMissionId, { ...localDNA, status: localValidation.status === 'failed' ? 'needs-fix' : 'ready', validation: localValidation, updatedAt: Date.now() });
+        updateStoreMission(localMissionId, { status: localValidation.status === 'failed' ? 'needs-fix' : 'ready', previewReady: localValidation.status !== 'failed', validation: localValidation });
+        setMissionActivity({ missionId: localMissionId, stage: localValidation.status === 'failed' ? 'needs-fix' : 'completed' });
+        setShowPreview(true);
+        setCodePanelOpen(true);
+        setTab('code');
+        upsertFlowStep({ id: `${flowRunId}:result`, kind: 'result', agentName: 'Mission', role: 'Résultat', shortText: localValidation.status === 'failed' ? 'La mission nécessite une correction.' : 'Mission accomplie : ouvrez la preview Forno.', summary: localValidation.status === 'failed' ? 'Validation locale à examiner.' : 'Landing pizzeria locale prête à explorer.', detailText: 'Mode démo : aucun appel IA, Supabase ou Stripe n’a été effectué.', status: 'completed' });
+        setToolMessage(localSummary);
+      } catch (error) {
+        console.error('Local demo mission failed:', error);
+        addMessage(orchestrator, 'La démo locale n’a pas pu préparer la version pizzeria. Aucun service externe n’a été appelé.', 'done');
+      } finally {
+        setBusy(false);
+      }
       return;
     }
 
@@ -937,173 +1017,74 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   }
 
   const energyPct = Math.round((energy.current / energy.max) * 100);
+  const railDestination: RailDestination = tab === 'preview'
+    ? 'preview'
+    : tab === 'connectors'
+      ? 'connectors'
+      : tab === 'logs'
+        ? 'activity'
+        : 'missions';
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <AnimatePresence initial={false}>
-        {sidebarOpen && !focusMode && (
-          <motion.aside
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 264, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="shrink-0 overflow-hidden border-r border-white/5 bg-ink-900/40"
-          >
-            <div className="flex h-full w-[264px] flex-col">
-              {/* Workspace switcher */}
-              <div className="p-3">
-                <button
-                  onClick={() => setMenuOpen((v) => !v)}
-                  className="flex w-full items-center gap-2 rounded-xl glass-soft px-3 py-2.5 text-left transition hover:bg-white/5"
-                >
-                  <div
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold text-ink-950"
-                    style={{ background: `hsl(${profile?.avatarHue ?? 200} 70% 60%)` }}
-                  >
-                    {(profile?.displayName ?? 'I')[0].toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-white">
-                      {profile?.displayName ?? 'Invité'}
-                    </div>
-                    <div className={`truncate text-xs ${way.textClass}`}>
-                      {way.grades[0]} · {way.name}
-                    </div>
-                  </div>
-                  <ChevronDown size={15} className="text-ink-400" />
-                </button>
-                <AnimatePresence>
-                  {menuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      className="mt-2 rounded-xl glass p-1.5"
-                    >
-                      <MenuItem icon={Crown} label="Passer supérieur" accent onClick={() => { setIsPaywallOpen(true); setMenuOpen(false); }} />
-                      <MenuItem icon={Settings} label="Paramètres" onClick={() => { setIsSettingsOpen(true); setMenuOpen(false); }} />
-                      <MenuItem icon={LogOut} label="Se déconnecter" onClick={() => void handleSignOut()} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* New mission */}
-              <div className="px-3">
-                <button
-                  className="btn-primary w-full justify-center"
-                  onClick={() => {
-                    setCurrentMissionId(null);
-                    setActiveMissionId(null);
-                    setPendingBrief(null);
-                    setProjectSchema(null);
-                    setReviewSchema(null);
-                    setPreviousSchema(null);
-                    setMessages([]);
-                    clearMissionFlow();
-                    setMissionActivity(null);
-                    setShowPreview(false);
-                    setInput('');
-                  }}
-                >
-                  <Plus size={16} />
-                  Nouvelle mission
-                </button>
-              </div>
-
-              {/* Nav */}
-              <nav className="mt-4 space-y-0.5 px-2 text-sm">
-                <NavItem icon={Sparkles} label="Missions" active />
-                <NavItem icon={Eye} label="Aperçus" />
-                <NavItem icon={ScrollText} label="Activité" />
-                <NavItem icon={Plug} label="Connecteurs" />
-              </nav>
-
-              <div className="mx-3 my-3 h-px bg-white/5" />
-
-              {/* Gamification Area */}
-              <div
-                className="mt-6 space-y-4 cursor-pointer hover:opacity-90 transition-opacity px-3"
-                onClick={() => setIsPaywallOpen(true)}
-              >
-                <div className="rounded-xl border border-white/5 bg-ink-950/50 p-4">
-                  <div className="flex items-center gap-2 text-ember-400 mb-2">
-                    <Crown size={16} />
-                    <span className="text-xs font-semibold">Passer Pro</span>
-                  </div>
-                  <p className="text-[11px] text-ink-400">Accédez à des agents spécialisés et illimités.</p>
-                </div>
-              </div>
-
-              {/* Recent missions */}
-              <div className="px-3 mt-4">
-                <div className="mb-2 px-1 text-xs font-medium text-ink-400">
-                  Missions récentes
-                </div>
-                <div className="space-y-0.5 max-h-[150px] overflow-y-auto scrollbar-thin">
-                  {missions.length === 0 ? (
-                    <div className="px-2.5 py-2 text-xs text-ink-500">Aucune mission</div>
-                  ) : (
-                    missions.map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => { setCurrentMissionId(m.id); setActiveMissionId(m.id); }}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-white/5 ${currentMissionId === m.id ? 'bg-white/10 text-white' : 'text-ink-300 hover:text-white'}`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${m.previewReady ? 'bg-emerald-500' : 'bg-ink-500'}`} />
-                        <span className="truncate">{m.title}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Energy + upgrade */}
-              <div className="mt-auto p-3">
-                <div className="card p-3.5">
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="text-ink-300">{way.energy}</span>
-                    <span className="text-ink-400">{energy.current}/{energy.max}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                    <motion.div
-                      className={`h-full rounded-full ${way.primaryClass}`}
-                      animate={{ width: `${energyPct}%` }}
-                      transition={{ duration: 0.5 }}
-                    />
-                  </div>
-                  <p className="mt-2.5 text-[11px] text-ink-400">
-                    Se réinitialise chaque jour. Passez supérieur pour plus de {way.energyUnit}.
-                  </p>
-                  <button onClick={() => setIsPaywallOpen(true)} className="btn-outline mt-3 w-full justify-center text-xs">
-                    <Crown size={13} />
-                    Passer supérieur
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      <IconRail
+        wayId={wayId}
+        displayName={profile?.displayName ?? 'Invité'}
+        avatarHue={profile?.avatarHue ?? 200}
+        missions={missions}
+        currentMissionId={currentMissionId}
+        activeDestination={railDestination}
+        hidden={focusMode}
+        onNewMission={() => {
+          setCurrentMissionId(null);
+          setActiveMissionId(null);
+          setPendingBrief(null);
+          setProjectSchema(null);
+          setReviewSchema(null);
+          setPreviousSchema(null);
+          setMessages([]);
+          clearMissionFlow();
+          setMissionActivity(null);
+          setShowPreview(false);
+          setTab('mission');
+          setInput('');
+        }}
+        onSelectMission={(missionId) => {
+          setCurrentMissionId(missionId);
+          setActiveMissionId(missionId);
+          setTab('mission');
+        }}
+        onSelectDestination={(destination) => {
+          if (destination === 'preview') {
+            setShowPreview(true);
+            setTab('preview');
+            return;
+          }
+          if (destination === 'connectors') {
+            setTab('connectors');
+            return;
+          }
+          if (destination === 'activity') {
+            setTab('logs');
+            return;
+          }
+          setTab('mission');
+        }}
+        onUpgrade={() => setIsPaywallOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onSignOut={() => void handleSignOut()}
+      />
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/5 px-4">
+          <header className={`flex h-14 shrink-0 items-center justify-between border-b px-4 ${hasProAccess ? 'border-amber-200/20 bg-amber-200/[0.02]' : 'border-white/5'}`}>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="rounded-lg p-2 text-ink-300 transition hover:bg-white/5 hover:text-white"
-              title={sidebarOpen ? 'Réduire' : 'Agrandir'}
-            >
-              {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-            </button>
-            {!sidebarOpen && <Logo size={24} />}
             <div className="hidden items-center gap-2 text-sm text-ink-400 md:flex">
               <span className={way.textClass}>{way.name}</span>
+              {hasProAccess && <span className="rounded-full border border-amber-200/25 bg-amber-200/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-amber-100">Mode Ermite</span>}
               <span className="text-ink-600">·</span>
-              <span>{missions.find(m => m.id === currentMissionId)?.title ?? 'Mission sans titre'}</span>
+              <span>{missions.find(m => m.id === currentMissionId)?.title ?? 'Nouvelle mission'}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1121,10 +1102,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
             <button className="rounded-lg p-2 text-ink-300 transition hover:bg-white/5 hover:text-white" title="Notifications">
               <Bell size={17} />
             </button>
-            <button className="btn-outline text-xs">
-              <Zap size={13} />
-              {way.energy} {energy.current}
-            </button>
+            <EnergyGauge wayId={wayId} current={energy.current} max={energy.max} onUpgrade={() => setIsPaywallOpen(true)} />
           </div>
         </header>
 
@@ -1155,12 +1133,11 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                   emptyState={(
                     <EmptyState
                       way={way}
-                      name={profile?.displayName ?? 'apprenti'}
+                      name={profile?.displayName ?? 'Apprenti'}
                       demoMode={demoMode}
                       onSelectDemo={startDemoMode}
                       onSelectSuggestion={(suggestion) => {
                         setInput(suggestion);
-                        composerRef.current?.focus();
                       }}
                     />
                   )}
@@ -1168,74 +1145,32 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
               </div>
             </div>
 
-            {/* Barre de commande persistante : aucune conversation n’est rendue ici. */}
-            <div className="sticky bottom-0 z-20 shrink-0 border-t border-white/5 bg-ink-900/90 p-4 backdrop-blur-xl">
-              <div className="mx-auto max-w-3xl">
-                <div className="relative rounded-2xl border border-white/8 bg-ink-950/80 p-3 shadow-2xl">
-                  <AnimatePresence>
-                    {showSlashMenu && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 8 }}
-                        className="absolute bottom-full left-0 z-50 mb-2 w-72 rounded-xl border border-white/10 bg-ink-950/95 py-1.5 shadow-2xl backdrop-blur-xl"
-                      >
-                        <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">Commandes</div>
-                        {SLASH_COMMANDS.filter((command) => command.cmd.startsWith(input.toLowerCase()) || input === '/').map((command) => (
-                          <button key={command.cmd} onClick={() => { setInput(`${command.cmd} `); setShowSlashMenu(false); }} className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-white/5">
-                            <span className="mt-0.5 shrink-0 font-mono text-xs font-semibold text-electric-400">{command.label}</span>
-                            <span className="text-xs text-ink-400">{command.desc}</span>
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <textarea
-                    ref={composerRef}
-                    value={input}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setInput(value);
-                      setShowSlashMenu(value === '/' || (value.startsWith('/') && !value.includes(' ')));
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Escape') { setShowSlashMenu(false); return; }
-                      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); }
-                    }}
-                    placeholder={`Décrivez votre ${way.vocab.task.toLowerCase()}... ou tapez / pour les commandes`}
-                    rows={1}
-                    className="max-h-40 min-h-[2.5rem] w-full resize-none bg-transparent text-sm text-ink-100 placeholder:text-ink-400 focus:outline-none scrollbar-thin"
-                  />
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-0.5">
-                      <IconBtn icon={Paperclip} title="Ajouter un fichier" onClick={() => attachmentRef.current?.click()} />
-                      <IconBtn icon={ImageIcon} title="Ajouter une image" onClick={() => attachmentRef.current?.click()} />
-                      <IconBtn icon={Figma} title="Figma" onClick={() => { setTab('connectors'); setToolMessage('La connexion Figma sera disponible après la configuration OAuth Figma.'); }} />
-                      <IconBtn icon={Github} title="Connecter GitHub" onClick={connectGitHub} />
-                      <button
-                        type="button"
-                        onClick={startDictation}
-                        aria-pressed={listening}
-                        aria-label={listening ? 'Arrêter la dictée' : 'Démarrer la dictée'}
-                        title={listening ? 'Arrêter la dictée' : 'Dicter votre mission'}
-                        className={`relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-white/30 ${listening ? dictationTheme.active : 'text-ink-400 hover:bg-white/5 hover:text-white'}`}
-                      >
-                        {listening && !shouldReduceMotion && <motion.span aria-hidden="true" className={`pointer-events-none absolute -inset-1 rounded-xl border ${dictationTheme.ring}`} initial={{ opacity: 0.75, scale: 0.82 }} animate={{ opacity: 0, scale: 1.35 }} transition={{ duration: 1.3, repeat: Infinity, ease: 'easeOut' }} />}
-                        <span className={`absolute inset-0 flex items-center justify-center gap-[2px] transition-opacity ${listening ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
-                          {[0, 1, 2, 3].map((bar) => <motion.span key={bar} className={`h-3 w-[2px] rounded-full ${dictationTheme.wave}`} style={{ transformOrigin: 'center' }} animate={listening && !shouldReduceMotion ? { scaleY: [0.45, 1, 0.55, 0.85, 0.45] } : { scaleY: 0.45 }} transition={{ duration: 0.72, delay: bar * 0.09, repeat: listening && !shouldReduceMotion ? Infinity : 0, ease: 'easeInOut' }} />)}
-                        </span>
-                        <Mic size={16} className={`transition-opacity ${listening ? 'opacity-0' : 'opacity-100'}`} />
-                      </button>
-                      <input ref={attachmentRef} type="file" multiple className="hidden" onChange={(event) => uploadAttachments(event.target.files)} />
-                    </div>
-                    <button onClick={send} disabled={!input.trim() || busy || Boolean(pendingBrief)} className="btn-primary px-3.5"><Send size={15} /></button>
-                  </div>
-                </div>
-                {listening && <p role="status" aria-live="polite" className={`mt-2 flex items-center gap-2 text-xs ${way.textClass}`}><span className={`h-1.5 w-1.5 rounded-full ${dictationTheme.wave} motion-safe:animate-pulse`} aria-hidden="true" />{dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.</p>}
-                {toolMessage && <p role="status" className={`mt-2 text-xs ${way.textClass}`}>{isUploading ? 'Import en cours…' : toolMessage}</p>}
-                <p className="mt-2 text-center text-[11px] text-ink-500">Idealy peut se tromper. Vérifiez le code généré.</p>
-              </div>
-            </div>
+            <CommandBar
+              value={input}
+              busy={busy}
+              pendingBrief={Boolean(pendingBrief)}
+              showSlashMenu={showSlashMenu}
+              commands={SLASH_COMMANDS}
+              dictationTheme={dictationTheme}
+              listening={listening}
+              shouldReduceMotion={shouldReduceMotion}
+              isUploading={isUploading}
+              toolMessage={toolMessage}
+              onChange={setInput}
+              onSubmit={send}
+              onSlashMenuChange={setShowSlashMenu}
+              onSelectCommand={(command) => {
+                setInput(command.cmd + ' ');
+                setShowSlashMenu(false);
+              }}
+              onUpload={(files) => void uploadAttachments(files)}
+              onToggleDictation={startDictation}
+              onOpenFigma={() => {
+                setTab('connectors');
+                setToolMessage('La connexion Figma sera disponible après la configuration OAuth Figma.');
+              }}
+              onConnectGitHub={() => void connectGitHub()}
+            />
           </main>
 
           {/* Canvas central : l’aperçu est la surface principale, le code reste latéral. */}
@@ -1291,52 +1226,52 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                     </div>
                   </div>
                   <div className="min-h-0 flex-1 overflow-hidden">
-                    <ResizablePanelGroup direction="horizontal">
-                      {codePanelOpen && (
-                        <>
-                          <ResizablePanel defaultSize={31} minSize={20} maxSize={45} collapsible collapsedSize={0} className="min-w-0">
-                            <RightPanelContent
-                              tab="code"
-                              way={way}
-                              schema={reviewSchema ?? projectSchema}
-                              baseSchema={projectSchema}
-                              reviewMode={Boolean(reviewSchema)}
-                              previousSchema={previousSchema}
-                              missionId={currentMissionId}
-                              dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
-                              onUpdateSchema={updateProjectSchema}
-                              onRestore={restoreMissionSnapshot}
-                              onFix={repairMission}
-                              onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
-                              onProposeChange={proposeChangeCapsule}
-                              onAcceptReview={acceptReviewSchema}
-                              onRejectReview={rejectReviewSchema}
-                              onUpdateReview={setReviewSchema}
-                              onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
-                            />
-                          </ResizablePanel>
-                          <ResizableHandle withHandle />
-                        </>
-                      )}
-                      <ResizablePanel defaultSize={codePanelOpen ? 69 : 100} minSize={55} className="min-w-0">
-                        <RightPanelContent
-                          tab="preview"
-                          way={way}
-                          schema={projectSchema}
-                          baseSchema={projectSchema}
-                          reviewMode={false}
-                          previousSchema={previousSchema}
-                          missionId={currentMissionId}
-                          dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
-                          onUpdateSchema={updateProjectSchema}
-                          onRestore={restoreMissionSnapshot}
-                          onFix={repairMission}
-                          onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
-                          onProposeChange={proposeChangeCapsule}
-                          onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
-                        />
-                      </ResizablePanel>
-                    </ResizablePanelGroup>
+                    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Préparation du canvas…</div>}>
+                      <LazyCanvasPanelLayout
+                        codeOpen={codePanelOpen}
+                        code={
+                          <RightPanelContent
+                            tab="code"
+                            way={way}
+                            schema={reviewSchema ?? projectSchema}
+                            baseSchema={projectSchema}
+                            reviewMode={Boolean(reviewSchema)}
+                            previousSchema={previousSchema}
+                            missionId={currentMissionId}
+                            dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
+                            previewEnabled={previewEnabled}
+                            onUpdateSchema={updateProjectSchema}
+                            onRestore={restoreMissionSnapshot}
+                            onFix={repairMission}
+                            onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
+                            onProposeChange={proposeChangeCapsule}
+                            onAcceptReview={acceptReviewSchema}
+                            onRejectReview={rejectReviewSchema}
+                            onUpdateReview={setReviewSchema}
+                            onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
+                          />
+                        }
+                        preview={
+                          <RightPanelContent
+                            tab="preview"
+                            way={way}
+                            schema={projectSchema}
+                            baseSchema={projectSchema}
+                            reviewMode={false}
+                            previousSchema={previousSchema}
+                            missionId={currentMissionId}
+                            dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
+                            previewEnabled={previewEnabled}
+                            onUpdateSchema={updateProjectSchema}
+                            onRestore={restoreMissionSnapshot}
+                            onFix={repairMission}
+                            onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
+                            onProposeChange={proposeChangeCapsule}
+                            onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
+                          />
+                        }
+                      />
+                    </Suspense>
                   </div>
                 </div>
               </motion.div>
@@ -1344,17 +1279,31 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           </AnimatePresence>
         </div>
       </div>
-      <Drawer open={terminalOpen} onOpenChange={setTerminalOpen}>
-        <DrawerContent className="h-[min(70vh,560px)] border-white/10 bg-ink-950 text-white">
-          <DrawerHeader className="border-b border-white/5 px-5 py-3">
-            <DrawerTitle className="flex items-center gap-2 text-sm text-white"><Terminal size={16} className="text-emerald-300" /> Terminal de mission</DrawerTitle>
-            <DrawerDescription className="text-xs text-ink-400">Les commandes de validation et les diagnostics réels apparaissent ici. Raccourci : Ctrl+~.</DrawerDescription>
-          </DrawerHeader>
-          <div className="min-h-0 flex-1 overflow-hidden p-4">
-            <TerminalComponent />
-          </div>
-        </DrawerContent>
-      </Drawer>
+      {terminalOpen && (
+        <Suspense fallback={<div className="fixed inset-x-0 bottom-0 z-50 h-24 border-t border-white/10 bg-ink-950/95 p-4 text-xs text-ink-400">Ouverture du terminal…</div>}>
+          <LazyTerminalDrawer open={terminalOpen} onOpenChange={setTerminalOpen}>
+            <div className="h-[min(58vh,420px)] min-h-0 overflow-hidden">
+              <LazyTerminal />
+            </div>
+          </LazyTerminalDrawer>
+        </Suspense>
+      )}
+      <JoninGateModal
+        open={Boolean(joninGate)}
+        rank={joninGate?.rank ?? 'B'}
+        complexity={joninGate?.complexity ?? 'advanced'}
+        onClose={() => setJoninGate(null)}
+        onContinue={() => {
+          if (!joninGate) return;
+          setPendingBrief({ prompt: joninGate.prompt, contracts: joninGate.contracts });
+          setJoninGate(null);
+          setToolMessage('Vous continuez en gratuit avec les agents disponibles.');
+        }}
+        onUnlock={() => {
+          setJoninGate(null);
+          setIsPaywallOpen(true);
+        }}
+      />
       <SettingsModal open={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <PaywallModal isOpen={isPaywallOpen} onClose={() => setIsPaywallOpen(false)} />
     </div>
@@ -1374,39 +1323,96 @@ function EmptyState({
   onSelectDemo?: () => void;
   onSelectSuggestion?: (suggestion: string) => void;
 }) {
+  const team = way.agents.slice(0, 3);
+
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
+    <div className="relative flex min-h-[min(62vh,580px)] flex-col items-center justify-center overflow-hidden px-2 py-12 text-center">
+      <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-[min(38rem,90vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.12),rgba(249,115,22,0.06),transparent_72%)] blur-3xl" />
+      <Suspense fallback={<div className="relative mb-4 h-[104px] w-[104px] rounded-full bg-violet-500/10 shadow-[0_0_60px_rgba(139,92,246,0.18)]" aria-label="Chargement de l’orbe du Kage" />}>
+        <KageOrb />
+      </Suspense>
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className={`mb-6 h-16 w-16 rounded-2xl ${way.primaryClass} flex items-center justify-center`}
+        initial={{ opacity: 0, y: 12, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+        className="relative flex max-w-2xl flex-col items-center"
       >
-        <Sparkles size={28} className="text-ink-950" />
+        <div className="mb-5 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">
+          <MessageCircle size={13} className={way.textClass} /> Lia est prête à transmettre
+        </div>
+        <h2 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+          {name}, que voulez-vous créer ?
+        </h2>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-ink-300 md:text-base">
+          Décrivez votre idée en quelques mots. Lia la transmettra au Kage, puis votre escouade construira une première version vérifiable.
+        </p>
       </motion.div>
-      <h2 className="text-2xl font-semibold text-white">
-        {name}, que voulons-nous construire aujourd'hui ?
-      </h2>
-      <p className="mt-3 max-w-md text-ink-300">
-        Décrivez votre idée. L'escouade {way.agents[0].name}, {way.agents[1].name} et{' '}
-        {way.agents[2].name} se charge du reste.
-      </p>
-      {!demoMode && (
-        <button onClick={onSelectDemo} className="mt-6 rounded-xl border border-electric-300/30 bg-electric-300/10 px-4 py-3 text-sm font-semibold text-electric-100 transition hover:bg-electric-300/20">
-          Explorer la démo sans compte
-        </button>
-      )}
-      <div className="mt-8 grid gap-2.5 sm:grid-cols-2">
-        {SUGGESTIONS.map((s) => (
-          <button
-            key={s}
-            onClick={() => onSelectSuggestion?.(s)}
-            className="rounded-xl glass-soft px-4 py-3 text-left text-sm text-ink-200 transition hover:bg-white/5 hover:text-white"
+
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+        className="relative mt-8 flex w-full max-w-2xl items-center gap-2 rounded-2xl border border-violet-400/20 bg-violet-400/[0.06] px-4 py-3 text-left"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-orange-400 text-white shadow-lg shadow-violet-950/30">
+          <Crown size={15} />
+        </span>
+        <p className="text-xs leading-5 text-ink-200 md:text-sm">
+          <span className="font-semibold text-white">Kage :</span> « Je coordonne la mission. Choisissez votre idée, je convoque les bons spécialistes. »
+        </p>
+      </motion.div>
+
+      <div className="relative mt-5 grid w-full max-w-2xl gap-2 sm:grid-cols-3">
+        {team.map((agent, index) => (
+          <motion.div
+            key={agent.id}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.14 + index * 0.05, duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
+            className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-3 text-left"
           >
-            {s}
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${way.bgClass} ${way.textClass} text-xs font-bold`}>
+              {agent.name.slice(0, 1)}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-semibold text-white">{agent.name}</span>
+              <span className="block truncate text-[10px] text-ink-500">{agent.role}</span>
+            </span>
+          </motion.div>
+        ))}
+      </div>
+
+      <motion.button
+        type="button"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.28, duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
+        onClick={() => onSelectSuggestion?.(SUGGESTIONS[0])}
+        className="relative mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-orange-500 px-6 text-sm font-semibold text-white shadow-xl shadow-violet-950/30 transition hover:from-violet-400 hover:to-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300/70 active:scale-[0.98]"
+      >
+        <Sparkles size={16} />
+        Lancer ma première mission
+        <ArrowRight size={16} />
+      </motion.button>
+
+      <div className="relative mt-6 flex w-full max-w-2xl flex-wrap justify-center gap-2">
+        {SUGGESTIONS.slice(1).map((suggestion) => (
+          <button
+            type="button"
+            key={suggestion}
+            onClick={() => onSelectSuggestion?.(suggestion)}
+            className="rounded-full border border-white/8 bg-white/[0.025] px-3 py-2 text-xs text-ink-300 transition hover:border-white/15 hover:bg-white/[0.06] hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-400/60"
+          >
+            {suggestion}
           </button>
         ))}
       </div>
+
+      {!demoMode && (
+        <button type="button" onClick={onSelectDemo} className="relative mt-5 text-xs text-ink-500 underline-offset-4 transition hover:text-white hover:underline">
+          Explorer la démo locale sans compte
+        </button>
+      )}
     </div>
   );
 }
@@ -1420,6 +1426,7 @@ function RightPanelContent({
   previousSchema,
   missionId,
   dna,
+  previewEnabled,
   onUpdateSchema,
   onRestore,
   onFix,
@@ -1438,6 +1445,7 @@ function RightPanelContent({
   previousSchema: IdealyUniversalProjectSchema | null;
   missionId: string | null;
   dna: import('@/core/mission/contracts').MissionDNA | null;
+  previewEnabled: boolean;
   onUpdateSchema: (schema: IdealyUniversalProjectSchema | null) => void;
   onRestore: (snapshot: import('@/core/mission/contracts').MissionSnapshot) => void;
   onFix: () => void;
@@ -1465,7 +1473,7 @@ function RightPanelContent({
   return (
     <>
       <div className={tab === 'preview' ? 'h-full flex flex-col' : 'hidden'}>
-        {hasFiles ? (
+        {tab === 'preview' && (hasFiles ? (
           <div className="flex flex-col h-full">
             <div className="flex items-center gap-1 px-4 py-2 border-b border-white/5">
               <Terminal size={12} className="text-primary" />
@@ -1473,7 +1481,9 @@ function RightPanelContent({
               <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${way.bgClass} ${way.textClass}`}>Live</span>
             </div>
             <div className="flex-1 overflow-hidden">
-              <WebContainerPreview schema={schema} way={way} className="h-full" onCrashFix={onCrashFix} />
+              <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Chargement de la preview…</div>}>
+                <LazyWebContainerPreview enabled={previewEnabled} schema={schema} way={way} className="h-full" onCrashFix={onCrashFix} />
+              </Suspense>
             </div>
           </div>
         ) : (
@@ -1486,44 +1496,46 @@ function RightPanelContent({
               La prévisualisation WebContainer apparaîtra ici dès que la génération commencera.
             </p>
           </div>
-        )}
+        ))}
       </div>
 
       <div className={tab === 'code' ? 'h-full' : 'hidden'}>
-        {!hasFiles ? (
+        {tab === 'code' && (!hasFiles ? (
           <EmptyState way={way} name="Aucun code généré" />
         ) : (
-          <CodeEditor
-            files={files}
-            baseFiles={baseSchema?.project?.files ?? {}}
-            selectedPath={selectedFilePath}
-            onSelectFile={(path) => setSelectedFilePath(path)}
-            reviewMode={reviewMode}
-            way={way}
-            onAcceptGhost={(path, newContent) => {
-              if (!schema || !onAcceptReview) return;
-              onAcceptReview({ ...schema, project: { ...schema.project, files: { ...schema.project.files, [path]: newContent } } });
-            }}
-            onRejectGhost={onRejectReview}
-            onSaveFile={(path, newContent) => {
-              if (!schema) return;
-              const updatedSchema = {
-                ...schema,
-                project: {
-                  ...schema.project,
-                  files: {
-                    ...schema.project.files,
-                    [path]: newContent
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Chargement de l’éditeur…</div>}>
+            <LazyCodeEditor
+              files={files}
+              baseFiles={baseSchema?.project?.files ?? {}}
+              selectedPath={selectedFilePath}
+              onSelectFile={(path) => setSelectedFilePath(path)}
+              reviewMode={reviewMode}
+              way={way}
+              onAcceptGhost={(path, newContent) => {
+                if (!schema || !onAcceptReview) return;
+                onAcceptReview({ ...schema, project: { ...schema.project, files: { ...schema.project.files, [path]: newContent } } });
+              }}
+              onRejectGhost={onRejectReview}
+              onSaveFile={(path, newContent) => {
+                if (!schema) return;
+                const updatedSchema = {
+                  ...schema,
+                  project: {
+                    ...schema.project,
+                    files: {
+                      ...schema.project.files,
+                      [path]: newContent
+                    }
                   }
-                }
-              };
-              if (reviewMode) onUpdateReview?.(updatedSchema);
-              else onUpdateSchema(updatedSchema);
-            }}
-            onAskAI={onAskAI}
-            onProposeChange={onProposeChange}
-          />
-        )}
+                };
+                if (reviewMode) onUpdateReview?.(updatedSchema);
+                else onUpdateSchema(updatedSchema);
+              }}
+              onAskAI={onAskAI}
+              onProposeChange={onProposeChange}
+            />
+          </Suspense>
+        ))}
       </div>
 
       <div className={tab === 'files' ? 'h-full' : 'hidden'}>
@@ -1571,12 +1583,16 @@ function RightPanelContent({
       </div>
 
       <div className={tab === 'composer' ? 'h-full' : 'hidden'}>
-        <ComposerPanel
-          currentSchema={schema ?? null}
-          previousSchema={previousSchema ?? null}
-          onAccept={(paths) => console.log('Accepted:', paths)}
-          onReject={(paths) => console.log('Rejected:', paths)}
-        />
+        {tab === 'composer' && (
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Chargement du Composer…</div>}>
+            <LazyComposerPanel
+              currentSchema={schema ?? null}
+              previousSchema={previousSchema ?? null}
+              onAccept={(paths) => console.log('Accepted:', paths)}
+              onReject={(paths) => console.log('Rejected:', paths)}
+            />
+          </Suspense>
+        )}
       </div>
 
       <div className={tab === 'mission' ? 'h-full' : 'hidden'}>
@@ -1592,66 +1608,13 @@ function RightPanelContent({
       </div>
 
       <div className={tab === 'logs' ? 'h-full' : 'hidden'}>
-        <TerminalComponent />
+        {tab === 'logs' && (
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Chargement du terminal…</div>}>
+            <LazyTerminal />
+          </Suspense>
+        )}
       </div>
     </>
-  );
-}
-
-function MenuItem({
-  icon: Icon,
-  label,
-  accent,
-  onClick,
-}: {
-  icon: React.ElementType;
-  label: string;
-  accent?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-white/5 ${
-        accent ? 'text-ember-400' : 'text-ink-200'
-      }`}
-    >
-      <Icon size={15} />
-      {label}
-    </button>
-  );
-}
-
-function NavItem({
-  icon: Icon,
-  label,
-  active,
-}: {
-  icon: React.ElementType;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
-        active ? 'bg-white/10 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
-      }`}
-    >
-      <Icon size={16} />
-      {label}
-    </button>
-  );
-}
-
-function IconBtn({ icon: Icon, title, onClick }: { icon: React.ElementType; title: string; onClick?: () => void }) {
-  return (
-    <button
-      className="rounded-lg p-2 text-ink-400 transition hover:bg-white/5 hover:text-white"
-      title={title}
-      onClick={onClick}
-    >
-      <Icon size={17} />
-    </button>
   );
 }
 

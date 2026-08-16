@@ -147,7 +147,7 @@ export function OnboardingPage() {
                 <div className="mb-8 text-center">
                   <div className={`mx-auto mb-4 h-1 w-12 rounded-full ${WAYS[selected].primaryClass}`} />
                   <h1 className="text-3xl font-semibold text-white">
-                    Bienvenue, {WAYS[selected].vocab.task === 'Mission' ? 'Genin' : 'apprenti'}
+                    Bienvenue, {WAYS[selected].vocab.task === 'Mission' ? 'Genin' : 'Apprenti'}
                   </h1>
                   <p className="mt-3 text-ink-300">
                     Donnez un nom à votre spécialiste. Vos agents vous appelleront ainsi.

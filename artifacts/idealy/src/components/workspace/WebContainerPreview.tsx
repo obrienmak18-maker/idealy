@@ -17,6 +17,7 @@ import { CrashOverlay } from './CrashOverlay';
 import { appendCrashLog, isFatalWebContainerLog, summarizeCrashLogs } from '@/core/webcontainer/crashDiagnostics';
 
 interface WebContainerPreviewProps {
+  enabled?: boolean;
   schema: IdealyUniversalProjectSchema | null;
   way: Way;
   className?: string;
@@ -26,6 +27,14 @@ interface WebContainerPreviewProps {
 type Status = 'idle' | 'booting' | 'installing' | 'running' | 'error';
 type FileSystemTree = Record<string, FileSystemEntry>;
 type FileSystemEntry = { file: { contents: string | Uint8Array } } | { directory: FileSystemTree };
+
+const LOCAL_DEMO_PREVIEW_HTML = `<!doctype html>
+<html lang="fr">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Forno — Pizza & partage</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#27201c;background:#f7f1e8}*{box-sizing:border-box}body{margin:0}.page{max-width:1080px;margin:auto;padding:24px 44px}.nav{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #d9cdbc;padding-bottom:20px}.brand{font-weight:900;letter-spacing:.18em}.brand span{color:#c25532}.nav a{color:#766b61;text-decoration:none;font-size:.85rem}.hero{display:grid;grid-template-columns:1fr .8fr;gap:54px;align-items:center;padding:72px 0}.eyebrow{color:#c25532;font-size:.7rem;font-weight:900;letter-spacing:.18em}.hero h1{font-size:clamp(3rem,6vw,6rem);line-height:.94;letter-spacing:-.07em;margin:16px 0}.hero em{color:#c25532;font-style:normal}.lead{color:#766b61;line-height:1.7}.hero img{width:100%;height:430px;object-fit:cover;border-radius:200px 200px 12px 12px}.button{display:inline-block;margin-top:20px;border-radius:999px;background:#c25532;color:white;padding:13px 18px;font-weight:800;text-decoration:none}.section{border-top:1px solid #d9cdbc;padding:60px 0}.section h2{font-size:clamp(2rem,4vw,4rem);line-height:1;letter-spacing:-.06em}.menu{display:grid;grid-template-columns:.7fr 1.3fr;gap:60px}.item{display:flex;justify-content:space-between;border-top:1px solid #d9cdbc;padding:18px 0}.item p{color:#766b61;margin:6px 0}.item strong{color:#c25532}@media(max-width:700px){.page{padding:18px 20px}.hero,.menu{grid-template-columns:1fr}.hero{padding:48px 0}.hero img{height:300px}}
+</style></head>
+<body><main class="page"><nav class="nav"><span class="brand">FORNO<span>•</span></span><div><a href="#menu">Le menu</a> &nbsp; <a href="#contact">Contact</a></div></nav><section class="hero"><div><p class="eyebrow">PIZZA · FEU · PARTAGE</p><h1>La pâte prend son temps. <em>Vous aussi.</em></h1><p class="lead">Des pizzas au feu de bois, des produits simples et une salle où l’on vient comme on est.</p><a class="button" href="#menu">Découvrir le menu ↗</a></div><img src="https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=900&q=85" alt="Pizza fraîche sortie du four" /></section><section class="section" id="menu"><p class="eyebrow">À LA CARTE</p><h2>Les classiques du four.</h2><div class="item"><div><strong>Margherita</strong><p>Tomate, fior di latte, basilic frais</p></div><strong>9,50 €</strong></div><div class="item"><div><strong>Diavola</strong><p>Tomate, mozzarella, salami piquant, miel</p></div><strong>12,00 €</strong></div><div class="item"><div><strong>Verdure</strong><p>Courgette grillée, poivron, olives, roquette</p></div><strong>11,50 €</strong></div></section><section class="section" id="contact"><p class="eyebrow">ON SE RETROUVE ?</p><h2>Votre table est à deux clics.</h2><p class="lead">18 rue des Oliviers · Ouvert du mardi au dimanche, 18h30—23h.</p><a class="button" href="mailto:bonjour@forno.demo">Nous contacter</a></section></main></body></html>`;
 
 function recordToTree(files: Record<string, string>): FileSystemTree {
   const tree: FileSystemTree = {};
@@ -46,7 +55,7 @@ function recordToTree(files: Record<string, string>): FileSystemTree {
   return tree;
 }
 
-export function WebContainerPreview({ schema, way, className, onCrashFix }: WebContainerPreviewProps) {
+export function WebContainerPreview({ enabled = false, schema, way, className, onCrashFix }: WebContainerPreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [logs, setLogs] = useState<string[]>([]);
@@ -54,10 +63,12 @@ export function WebContainerPreview({ schema, way, className, onCrashFix }: WebC
   const [device, setDevice] = useState<PreviewDevice>('desktop');
   const [crashOpen, setCrashOpen] = useState(false);
   const [crashResolving, setCrashResolving] = useState(false);
+  const [demoFallback, setDemoFallback] = useState(false);
   const crashHandledRef = useRef(false);
   const logsRef = useRef<string[]>([]);
   const prevFiles = useRef<Record<string, string>>({});
   const hasBooted = useRef(false);
+  const statusRef = useRef<Status>('idle');
 
   const addLog = (line: string) => {
     const nextLogs = appendCrashLog(logsRef.current, line);
@@ -74,7 +85,7 @@ export function WebContainerPreview({ schema, way, className, onCrashFix }: WebC
   };
 
   const boot = useCallback(async () => {
-    if (!schema?.project.files || hasBooted.current) return;
+    if (!enabled || !schema?.project.files || hasBooted.current) return;
     hasBooted.current = true;
     setStatus('booting');
     setUrl(null);
@@ -119,10 +130,15 @@ export function WebContainerPreview({ schema, way, className, onCrashFix }: WebC
       setStatus('error');
       hasBooted.current = false;
     }
-  }, [schema]);
+  }, [enabled, schema]);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const refresh = useCallback(() => {
     hasBooted.current = false;
+    setDemoFallback(false);
     setStatus('idle');
   }, []);
 
@@ -157,10 +173,22 @@ export function WebContainerPreview({ schema, way, className, onCrashFix }: WebC
   }, [schema?.project.files, status]);
 
   useEffect(() => {
-    if (schema && status === 'idle' && !hasBooted.current) void boot();
-  }, [schema, status, boot]);
+    if (enabled && schema && status === 'idle' && !hasBooted.current) void boot();
+  }, [enabled, schema, status, boot]);
 
-  const loading = status !== 'running' && status !== 'error';
+  const isLocalDemo = schema?.project.name.startsWith('Forno') ?? false;
+  useEffect(() => {
+    if (!enabled || !isLocalDemo || demoFallback) return;
+    const timeoutId = window.setTimeout(() => {
+      if (statusRef.current === 'running') return;
+      setDemoFallback(true);
+      setStatus('error');
+      addLog('ℹ️ WebContainer reste indisponible dans ce navigateur. Fallback visuel local activé pour la démo.');
+    }, 10000);
+    return () => window.clearTimeout(timeoutId);
+  }, [enabled, isLocalDemo, demoFallback]);
+
+  const loading = !enabled || (status !== 'running' && status !== 'error');
   const crashLogs = summarizeCrashLogs(logs);
   const handleCrashAnalyze = () => {
     if (crashHandledRef.current) return;
@@ -176,12 +204,14 @@ export function WebContainerPreview({ schema, way, className, onCrashFix }: WebC
         url={url}
         device={device}
         loading={loading}
-        error={status === 'error'}
+        error={status === 'error' && !demoFallback}
         onDeviceChange={setDevice}
         onRefresh={refresh}
       >
         <div className="relative h-full min-h-0">
-        {status === 'error' ? (
+        {demoFallback ? (
+          <iframe srcDoc={LOCAL_DEMO_PREVIEW_HTML} className="h-full w-full border-0 bg-[#f7f1e8]" title="Preview locale Forno" />
+        ) : status === 'error' ? (
           <div className="flex h-full flex-col bg-[#0d1117]">
             <div className="flex items-center gap-2 border-b border-red-500/20 bg-red-500/5 px-3 py-2">
               <AlertTriangle className="h-4 w-4 shrink-0 text-red-400" />
