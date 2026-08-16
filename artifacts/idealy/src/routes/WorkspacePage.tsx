@@ -20,12 +20,9 @@ import {
   PanelRightClose,
   Maximize2,
   Minimize2,
-  Send,
-  Paperclip,
-  Mic,
-  Image as ImageIcon,
-  Github,
-  Figma,
+  ArrowRight,
+  Crown,
+  MessageCircle,
   Eye,
   FolderTree,
   Sparkles,
@@ -44,6 +41,7 @@ import { MissionBriefPanel } from '@/components/workspace/MissionBriefPanel';
 import { MissionStatusPanel } from '@/components/workspace/MissionStatusPanel';
 import { type MissionExecutionStage } from '@/components/workspace/MissionActivityPanel';
 import { MissionFlow, type MissionFlowStep } from '@/components/workspace/MissionFlow';
+import { CommandBar } from '@/components/workspace/CommandBar';
 import { IconRail, type RailDestination } from '@/components/workspace/IconRail';
 import { EnergyGauge } from '@/components/workspace/EnergyGauge';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -157,8 +155,6 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const [focusMode, setFocusMode] = useState(false);
   const [demoMode, setDemoMode] = useState(initialDemoMode);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const attachmentRef = useRef<HTMLInputElement>(null);
-  const composerRef = useRef<HTMLTextAreaElement>(null);
   const dictationRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 
   const summarizeFlowText = (raw: string, fallback: string) => {
@@ -1046,7 +1042,6 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                       onSelectDemo={startDemoMode}
                       onSelectSuggestion={(suggestion) => {
                         setInput(suggestion);
-                        composerRef.current?.focus();
                       }}
                     />
                   )}
@@ -1054,74 +1049,32 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
               </div>
             </div>
 
-            {/* Barre de commande persistante : aucune conversation n’est rendue ici. */}
-            <div className="sticky bottom-0 z-20 shrink-0 border-t border-white/5 bg-ink-900/90 p-4 backdrop-blur-xl">
-              <div className="mx-auto max-w-3xl">
-                <div className="relative rounded-2xl border border-white/8 bg-ink-950/80 p-3 shadow-2xl">
-                  <AnimatePresence>
-                    {showSlashMenu && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 8 }}
-                        className="absolute bottom-full left-0 z-50 mb-2 w-72 rounded-xl border border-white/10 bg-ink-950/95 py-1.5 shadow-2xl backdrop-blur-xl"
-                      >
-                        <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">Commandes</div>
-                        {SLASH_COMMANDS.filter((command) => command.cmd.startsWith(input.toLowerCase()) || input === '/').map((command) => (
-                          <button key={command.cmd} onClick={() => { setInput(`${command.cmd} `); setShowSlashMenu(false); }} className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-white/5">
-                            <span className="mt-0.5 shrink-0 font-mono text-xs font-semibold text-electric-400">{command.label}</span>
-                            <span className="text-xs text-ink-400">{command.desc}</span>
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <textarea
-                    ref={composerRef}
-                    value={input}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setInput(value);
-                      setShowSlashMenu(value === '/' || (value.startsWith('/') && !value.includes(' ')));
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Escape') { setShowSlashMenu(false); return; }
-                      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); }
-                    }}
-                    placeholder={`Décrivez votre ${way.vocab.task.toLowerCase()}... ou tapez / pour les commandes`}
-                    rows={1}
-                    className="max-h-40 min-h-[2.5rem] w-full resize-none bg-transparent text-sm text-ink-100 placeholder:text-ink-400 focus:outline-none scrollbar-thin"
-                  />
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-0.5">
-                      <IconBtn icon={Paperclip} title="Ajouter un fichier" onClick={() => attachmentRef.current?.click()} />
-                      <IconBtn icon={ImageIcon} title="Ajouter une image" onClick={() => attachmentRef.current?.click()} />
-                      <IconBtn icon={Figma} title="Figma" onClick={() => { setTab('connectors'); setToolMessage('La connexion Figma sera disponible après la configuration OAuth Figma.'); }} />
-                      <IconBtn icon={Github} title="Connecter GitHub" onClick={connectGitHub} />
-                      <button
-                        type="button"
-                        onClick={startDictation}
-                        aria-pressed={listening}
-                        aria-label={listening ? 'Arrêter la dictée' : 'Démarrer la dictée'}
-                        title={listening ? 'Arrêter la dictée' : 'Dicter votre mission'}
-                        className={`relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-white/30 ${listening ? dictationTheme.active : 'text-ink-400 hover:bg-white/5 hover:text-white'}`}
-                      >
-                        {listening && !shouldReduceMotion && <motion.span aria-hidden="true" className={`pointer-events-none absolute -inset-1 rounded-xl border ${dictationTheme.ring}`} initial={{ opacity: 0.75, scale: 0.82 }} animate={{ opacity: 0, scale: 1.35 }} transition={{ duration: 1.3, repeat: Infinity, ease: 'easeOut' }} />}
-                        <span className={`absolute inset-0 flex items-center justify-center gap-[2px] transition-opacity ${listening ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
-                          {[0, 1, 2, 3].map((bar) => <motion.span key={bar} className={`h-3 w-[2px] rounded-full ${dictationTheme.wave}`} style={{ transformOrigin: 'center' }} animate={listening && !shouldReduceMotion ? { scaleY: [0.45, 1, 0.55, 0.85, 0.45] } : { scaleY: 0.45 }} transition={{ duration: 0.72, delay: bar * 0.09, repeat: listening && !shouldReduceMotion ? Infinity : 0, ease: 'easeInOut' }} />)}
-                        </span>
-                        <Mic size={16} className={`transition-opacity ${listening ? 'opacity-0' : 'opacity-100'}`} />
-                      </button>
-                      <input ref={attachmentRef} type="file" multiple className="hidden" onChange={(event) => uploadAttachments(event.target.files)} />
-                    </div>
-                    <button onClick={send} disabled={!input.trim() || busy || Boolean(pendingBrief)} className="btn-primary px-3.5"><Send size={15} /></button>
-                  </div>
-                </div>
-                {listening && <p role="status" aria-live="polite" className={`mt-2 flex items-center gap-2 text-xs ${way.textClass}`}><span className={`h-1.5 w-1.5 rounded-full ${dictationTheme.wave} motion-safe:animate-pulse`} aria-hidden="true" />{dictationTheme.label} — parlez, puis appuyez à nouveau sur le micro pour arrêter.</p>}
-                {toolMessage && <p role="status" className={`mt-2 text-xs ${way.textClass}`}>{isUploading ? 'Import en cours…' : toolMessage}</p>}
-                <p className="mt-2 text-center text-[11px] text-ink-500">Idealy peut se tromper. Vérifiez le code généré.</p>
-              </div>
-            </div>
+            <CommandBar
+              value={input}
+              busy={busy}
+              pendingBrief={Boolean(pendingBrief)}
+              showSlashMenu={showSlashMenu}
+              commands={SLASH_COMMANDS}
+              dictationTheme={dictationTheme}
+              listening={listening}
+              shouldReduceMotion={shouldReduceMotion}
+              isUploading={isUploading}
+              toolMessage={toolMessage}
+              onChange={setInput}
+              onSubmit={send}
+              onSlashMenuChange={setShowSlashMenu}
+              onSelectCommand={(command) => {
+                setInput(command.cmd + ' ');
+                setShowSlashMenu(false);
+              }}
+              onUpload={(files) => void uploadAttachments(files)}
+              onToggleDictation={startDictation}
+              onOpenFigma={() => {
+                setTab('connectors');
+                setToolMessage('La connexion Figma sera disponible après la configuration OAuth Figma.');
+              }}
+              onConnectGitHub={() => void connectGitHub()}
+            />
           </main>
 
           {/* Canvas central : l’aperçu est la surface principale, le code reste latéral. */}
@@ -1260,39 +1213,93 @@ function EmptyState({
   onSelectDemo?: () => void;
   onSelectSuggestion?: (suggestion: string) => void;
 }) {
+  const team = way.agents.slice(0, 3);
+
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
+    <div className="relative flex min-h-[min(62vh,580px)] flex-col items-center justify-center overflow-hidden px-2 py-12 text-center">
+      <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-[min(38rem,90vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.12),rgba(249,115,22,0.06),transparent_72%)] blur-3xl" />
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className={`mb-6 h-16 w-16 rounded-2xl ${way.primaryClass} flex items-center justify-center`}
+        initial={{ opacity: 0, y: 12, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+        className="relative flex max-w-2xl flex-col items-center"
       >
-        <Sparkles size={28} className="text-ink-950" />
+        <div className="mb-5 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">
+          <MessageCircle size={13} className={way.textClass} /> Lia est prête à transmettre
+        </div>
+        <h2 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+          {name}, que voulez-vous créer ?
+        </h2>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-ink-300 md:text-base">
+          Décrivez votre idée en quelques mots. Lia la transmettra au Kage, puis votre escouade construira une première version vérifiable.
+        </p>
       </motion.div>
-      <h2 className="text-2xl font-semibold text-white">
-        {name}, que voulons-nous construire aujourd'hui ?
-      </h2>
-      <p className="mt-3 max-w-md text-ink-300">
-        Décrivez votre idée. L'escouade {way.agents[0].name}, {way.agents[1].name} et{' '}
-        {way.agents[2].name} se charge du reste.
-      </p>
-      {!demoMode && (
-        <button onClick={onSelectDemo} className="mt-6 rounded-xl border border-electric-300/30 bg-electric-300/10 px-4 py-3 text-sm font-semibold text-electric-100 transition hover:bg-electric-300/20">
-          Explorer la démo sans compte
-        </button>
-      )}
-      <div className="mt-8 grid gap-2.5 sm:grid-cols-2">
-        {SUGGESTIONS.map((s) => (
-          <button
-            key={s}
-            onClick={() => onSelectSuggestion?.(s)}
-            className="rounded-xl glass-soft px-4 py-3 text-left text-sm text-ink-200 transition hover:bg-white/5 hover:text-white"
+
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+        className="relative mt-8 flex w-full max-w-2xl items-center gap-2 rounded-2xl border border-violet-400/20 bg-violet-400/[0.06] px-4 py-3 text-left"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-orange-400 text-white shadow-lg shadow-violet-950/30">
+          <Crown size={15} />
+        </span>
+        <p className="text-xs leading-5 text-ink-200 md:text-sm">
+          <span className="font-semibold text-white">Kage :</span> « Je coordonne la mission. Choisissez votre idée, je convoque les bons spécialistes. »
+        </p>
+      </motion.div>
+
+      <div className="relative mt-5 grid w-full max-w-2xl gap-2 sm:grid-cols-3">
+        {team.map((agent, index) => (
+          <motion.div
+            key={agent.id}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.14 + index * 0.05, duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
+            className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-3 text-left"
           >
-            {s}
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${way.bgClass} ${way.textClass} text-xs font-bold`}>
+              {agent.name.slice(0, 1)}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-semibold text-white">{agent.name}</span>
+              <span className="block truncate text-[10px] text-ink-500">{agent.role}</span>
+            </span>
+          </motion.div>
+        ))}
+      </div>
+
+      <motion.button
+        type="button"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.28, duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
+        onClick={() => onSelectSuggestion?.(SUGGESTIONS[0])}
+        className="relative mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-orange-500 px-6 text-sm font-semibold text-white shadow-xl shadow-violet-950/30 transition hover:from-violet-400 hover:to-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-300/70 active:scale-[0.98]"
+      >
+        <Sparkles size={16} />
+        Lancer ma première mission
+        <ArrowRight size={16} />
+      </motion.button>
+
+      <div className="relative mt-6 flex w-full max-w-2xl flex-wrap justify-center gap-2">
+        {SUGGESTIONS.slice(1).map((suggestion) => (
+          <button
+            type="button"
+            key={suggestion}
+            onClick={() => onSelectSuggestion?.(suggestion)}
+            className="rounded-full border border-white/8 bg-white/[0.025] px-3 py-2 text-xs text-ink-300 transition hover:border-white/15 hover:bg-white/[0.06] hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-400/60"
+          >
+            {suggestion}
           </button>
         ))}
       </div>
+
+      {!demoMode && (
+        <button type="button" onClick={onSelectDemo} className="relative mt-5 text-xs text-ink-500 underline-offset-4 transition hover:text-white hover:underline">
+          Explorer la démo locale sans compte
+        </button>
+      )}
     </div>
   );
 }
