@@ -16,13 +16,10 @@ import { CodeEditor, type CodeActionIntent } from '@/components/workspace/CodeEd
 import { Terminal as TerminalComponent } from '@/components/workspace/Terminal';
 import { downloadProjectZip } from '@/services/projectDownloader';
 import {
-  PanelLeftClose,
-  PanelLeftOpen,
   PanelRightOpen,
   PanelRightClose,
   Maximize2,
   Minimize2,
-  Plus,
   Send,
   Paperclip,
   Mic,
@@ -31,14 +28,7 @@ import {
   Figma,
   Eye,
   FolderTree,
-  Plug,
-  ScrollText,
   Sparkles,
-  ChevronDown,
-  Settings,
-  LogOut,
-  Zap,
-  Crown,
   Bell,
   Terminal,
   Copy,
@@ -46,7 +36,6 @@ import {
   Loader2,
   Download,
 } from 'lucide-react';
-import { Logo } from '@/components/Brand';
 import { WAYS, type WayId } from '@/lore/ways';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
@@ -55,6 +44,8 @@ import { MissionBriefPanel } from '@/components/workspace/MissionBriefPanel';
 import { MissionStatusPanel } from '@/components/workspace/MissionStatusPanel';
 import { type MissionExecutionStage } from '@/components/workspace/MissionActivityPanel';
 import { MissionFlow, type MissionFlowStep } from '@/components/workspace/MissionFlow';
+import { IconRail, type RailDestination } from '@/components/workspace/IconRail';
+import { EnergyGauge } from '@/components/workspace/EnergyGauge';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { buildMissionContracts } from '@/core/mission/missionContract';
@@ -136,14 +127,12 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const missionTeam = selectMissionTeam(way);
   const dictationTheme = DICTATION_THEME[wayId];
   const shouldReduceMotion = useReducedMotion();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tab, setTab] = useState<RightTab>('preview');
   const [showPreview, setShowPreview] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [flowSteps, setFlowSteps] = useState<MissionFlowStep[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [isBillingPortalOpen, setIsBillingPortalOpen] = useState(false);
@@ -937,173 +926,73 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   }
 
   const energyPct = Math.round((energy.current / energy.max) * 100);
+  const railDestination: RailDestination = tab === 'preview'
+    ? 'preview'
+    : tab === 'connectors'
+      ? 'connectors'
+      : tab === 'logs'
+        ? 'activity'
+        : 'missions';
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <AnimatePresence initial={false}>
-        {sidebarOpen && !focusMode && (
-          <motion.aside
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 264, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="shrink-0 overflow-hidden border-r border-white/5 bg-ink-900/40"
-          >
-            <div className="flex h-full w-[264px] flex-col">
-              {/* Workspace switcher */}
-              <div className="p-3">
-                <button
-                  onClick={() => setMenuOpen((v) => !v)}
-                  className="flex w-full items-center gap-2 rounded-xl glass-soft px-3 py-2.5 text-left transition hover:bg-white/5"
-                >
-                  <div
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold text-ink-950"
-                    style={{ background: `hsl(${profile?.avatarHue ?? 200} 70% 60%)` }}
-                  >
-                    {(profile?.displayName ?? 'I')[0].toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-white">
-                      {profile?.displayName ?? 'Invité'}
-                    </div>
-                    <div className={`truncate text-xs ${way.textClass}`}>
-                      {way.grades[0]} · {way.name}
-                    </div>
-                  </div>
-                  <ChevronDown size={15} className="text-ink-400" />
-                </button>
-                <AnimatePresence>
-                  {menuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      className="mt-2 rounded-xl glass p-1.5"
-                    >
-                      <MenuItem icon={Crown} label="Passer supérieur" accent onClick={() => { setIsPaywallOpen(true); setMenuOpen(false); }} />
-                      <MenuItem icon={Settings} label="Paramètres" onClick={() => { setIsSettingsOpen(true); setMenuOpen(false); }} />
-                      <MenuItem icon={LogOut} label="Se déconnecter" onClick={() => void handleSignOut()} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* New mission */}
-              <div className="px-3">
-                <button
-                  className="btn-primary w-full justify-center"
-                  onClick={() => {
-                    setCurrentMissionId(null);
-                    setActiveMissionId(null);
-                    setPendingBrief(null);
-                    setProjectSchema(null);
-                    setReviewSchema(null);
-                    setPreviousSchema(null);
-                    setMessages([]);
-                    clearMissionFlow();
-                    setMissionActivity(null);
-                    setShowPreview(false);
-                    setInput('');
-                  }}
-                >
-                  <Plus size={16} />
-                  Nouvelle mission
-                </button>
-              </div>
-
-              {/* Nav */}
-              <nav className="mt-4 space-y-0.5 px-2 text-sm">
-                <NavItem icon={Sparkles} label="Missions" active />
-                <NavItem icon={Eye} label="Aperçus" />
-                <NavItem icon={ScrollText} label="Activité" />
-                <NavItem icon={Plug} label="Connecteurs" />
-              </nav>
-
-              <div className="mx-3 my-3 h-px bg-white/5" />
-
-              {/* Gamification Area */}
-              <div
-                className="mt-6 space-y-4 cursor-pointer hover:opacity-90 transition-opacity px-3"
-                onClick={() => setIsPaywallOpen(true)}
-              >
-                <div className="rounded-xl border border-white/5 bg-ink-950/50 p-4">
-                  <div className="flex items-center gap-2 text-ember-400 mb-2">
-                    <Crown size={16} />
-                    <span className="text-xs font-semibold">Passer Pro</span>
-                  </div>
-                  <p className="text-[11px] text-ink-400">Accédez à des agents spécialisés et illimités.</p>
-                </div>
-              </div>
-
-              {/* Recent missions */}
-              <div className="px-3 mt-4">
-                <div className="mb-2 px-1 text-xs font-medium text-ink-400">
-                  Missions récentes
-                </div>
-                <div className="space-y-0.5 max-h-[150px] overflow-y-auto scrollbar-thin">
-                  {missions.length === 0 ? (
-                    <div className="px-2.5 py-2 text-xs text-ink-500">Aucune mission</div>
-                  ) : (
-                    missions.map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => { setCurrentMissionId(m.id); setActiveMissionId(m.id); }}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-white/5 ${currentMissionId === m.id ? 'bg-white/10 text-white' : 'text-ink-300 hover:text-white'}`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${m.previewReady ? 'bg-emerald-500' : 'bg-ink-500'}`} />
-                        <span className="truncate">{m.title}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Energy + upgrade */}
-              <div className="mt-auto p-3">
-                <div className="card p-3.5">
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="text-ink-300">{way.energy}</span>
-                    <span className="text-ink-400">{energy.current}/{energy.max}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                    <motion.div
-                      className={`h-full rounded-full ${way.primaryClass}`}
-                      animate={{ width: `${energyPct}%` }}
-                      transition={{ duration: 0.5 }}
-                    />
-                  </div>
-                  <p className="mt-2.5 text-[11px] text-ink-400">
-                    Se réinitialise chaque jour. Passez supérieur pour plus de {way.energyUnit}.
-                  </p>
-                  <button onClick={() => setIsPaywallOpen(true)} className="btn-outline mt-3 w-full justify-center text-xs">
-                    <Crown size={13} />
-                    Passer supérieur
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      <IconRail
+        wayId={wayId}
+        displayName={profile?.displayName ?? 'Invité'}
+        avatarHue={profile?.avatarHue ?? 200}
+        missions={missions}
+        currentMissionId={currentMissionId}
+        activeDestination={railDestination}
+        hidden={focusMode}
+        onNewMission={() => {
+          setCurrentMissionId(null);
+          setActiveMissionId(null);
+          setPendingBrief(null);
+          setProjectSchema(null);
+          setReviewSchema(null);
+          setPreviousSchema(null);
+          setMessages([]);
+          clearMissionFlow();
+          setMissionActivity(null);
+          setShowPreview(false);
+          setTab('mission');
+          setInput('');
+        }}
+        onSelectMission={(missionId) => {
+          setCurrentMissionId(missionId);
+          setActiveMissionId(missionId);
+          setTab('mission');
+        }}
+        onSelectDestination={(destination) => {
+          if (destination === 'preview') {
+            setShowPreview(true);
+            setTab('preview');
+            return;
+          }
+          if (destination === 'connectors') {
+            setTab('connectors');
+            return;
+          }
+          if (destination === 'activity') {
+            setTab('logs');
+            return;
+          }
+          setTab('mission');
+        }}
+        onUpgrade={() => setIsPaywallOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onSignOut={() => void handleSignOut()}
+      />
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/5 px-4">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="rounded-lg p-2 text-ink-300 transition hover:bg-white/5 hover:text-white"
-              title={sidebarOpen ? 'Réduire' : 'Agrandir'}
-            >
-              {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-            </button>
-            {!sidebarOpen && <Logo size={24} />}
             <div className="hidden items-center gap-2 text-sm text-ink-400 md:flex">
               <span className={way.textClass}>{way.name}</span>
               <span className="text-ink-600">·</span>
-              <span>{missions.find(m => m.id === currentMissionId)?.title ?? 'Mission sans titre'}</span>
+              <span>{missions.find(m => m.id === currentMissionId)?.title ?? 'Nouvelle mission'}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1121,10 +1010,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
             <button className="rounded-lg p-2 text-ink-300 transition hover:bg-white/5 hover:text-white" title="Notifications">
               <Bell size={17} />
             </button>
-            <button className="btn-outline text-xs">
-              <Zap size={13} />
-              {way.energy} {energy.current}
-            </button>
+            <EnergyGauge wayId={wayId} current={energy.current} max={energy.max} onUpgrade={() => setIsPaywallOpen(true)} />
           </div>
         </header>
 
@@ -1155,7 +1041,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                   emptyState={(
                     <EmptyState
                       way={way}
-                      name={profile?.displayName ?? 'apprenti'}
+                      name={profile?.displayName ?? 'Apprenti'}
                       demoMode={demoMode}
                       onSelectDemo={startDemoMode}
                       onSelectSuggestion={(suggestion) => {
@@ -1595,51 +1481,6 @@ function RightPanelContent({
         <TerminalComponent />
       </div>
     </>
-  );
-}
-
-function MenuItem({
-  icon: Icon,
-  label,
-  accent,
-  onClick,
-}: {
-  icon: React.ElementType;
-  label: string;
-  accent?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-white/5 ${
-        accent ? 'text-ember-400' : 'text-ink-200'
-      }`}
-    >
-      <Icon size={15} />
-      {label}
-    </button>
-  );
-}
-
-function NavItem({
-  icon: Icon,
-  label,
-  active,
-}: {
-  icon: React.ElementType;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
-        active ? 'bg-white/10 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
-      }`}
-    >
-      <Icon size={16} />
-      {label}
-    </button>
   );
 }
 
