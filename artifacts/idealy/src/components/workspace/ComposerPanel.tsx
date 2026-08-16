@@ -4,9 +4,8 @@
  * Affiche les fichiers avec leur diff depuis la dernière version,
  * permet d'accepter/rejeter les changements par fichier.
  */
-import { useState } from 'react';
+import { lazy, Suspense, useState, type ComponentProps } from 'react';
 import { CheckCircle2, XCircle, ChevronDown, ChevronRight, FileCode2, Sparkles } from 'lucide-react';
-import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer-continued';
 import type { IdealyUniversalProjectSchema } from '@/core/iups/types';
 
 interface FileChange {
@@ -41,43 +40,53 @@ function computeChanges(
   return changes;
 }
 
+const LazyReactDiffViewer = lazy(() => import('react-diff-viewer-continued').then((module) => {
+  const DiffViewer = module.default;
+  return {
+    default: (props: Omit<ComponentProps<typeof DiffViewer>, 'compareMethod'>) => (
+      <DiffViewer {...props} compareMethod={module.DiffMethod.WORDS} />
+    ),
+  };
+}));
+
 function DiffView({ oldContent, newContent }: { oldContent?: string; newContent: string }) {
   return (
     <div className="rounded-lg overflow-hidden border border-white/10 text-xs">
-      <ReactDiffViewer
-        oldValue={oldContent ?? ''}
-        newValue={newContent}
-        splitView={false}
-        useDarkTheme={true}
-        compareMethod={DiffMethod.WORDS}
-        hideLineNumbers={false}
-        styles={{
-          variables: {
-            dark: {
-              diffViewerBackground: '#0d1117',
-              addedBackground: 'rgba(46, 160, 67, 0.15)',
-              addedColor: '#7ee787',
-              removedBackground: 'rgba(248, 81, 73, 0.15)',
-              removedColor: '#ff7b72',
-              wordAddedBackground: 'rgba(46, 160, 67, 0.3)',
-              wordRemovedBackground: 'rgba(248, 81, 73, 0.3)',
-              addedGutterBackground: 'rgba(46, 160, 67, 0.15)',
-              removedGutterBackground: 'rgba(248, 81, 73, 0.15)',
-              gutterBackground: '#0d1117',
-              gutterBackgroundDark: '#0d1117',
-              highlightBackground: '#0d1117',
-              highlightGutterBackground: '#0d1117',
-              codeFoldGutterBackground: '#0d1117',
-              codeFoldBackground: '#0d1117',
-              emptyLineBackground: '#0d1117',
-              gutterColor: '#8b949e',
-              addedGutterColor: '#8b949e',
-              removedGutterColor: '#8b949e',
-              codeFoldContentColor: '#8b949e',
+      <Suspense fallback={<div className="h-48 animate-pulse bg-white/5" aria-label="Chargement de la comparaison" />}>
+        <LazyReactDiffViewer
+          oldValue={oldContent ?? ''}
+          newValue={newContent}
+          splitView={false}
+          useDarkTheme={true}
+          hideLineNumbers={false}
+          styles={{
+            variables: {
+              dark: {
+                diffViewerBackground: '#0d1117',
+                addedBackground: 'rgba(46, 160, 67, 0.15)',
+                addedColor: '#7ee787',
+                removedBackground: 'rgba(248, 81, 73, 0.15)',
+                removedColor: '#ff7b72',
+                wordAddedBackground: 'rgba(46, 160, 67, 0.3)',
+                wordRemovedBackground: 'rgba(248, 81, 73, 0.3)',
+                addedGutterBackground: 'rgba(46, 160, 67, 0.15)',
+                removedGutterBackground: 'rgba(248, 81, 73, 0.15)',
+                gutterBackground: '#0d1117',
+                gutterBackgroundDark: '#0d1117',
+                highlightBackground: '#0d1117',
+                highlightGutterBackground: '#0d1117',
+                codeFoldGutterBackground: '#0d1117',
+                codeFoldBackground: '#0d1117',
+                emptyLineBackground: '#0d1117',
+                gutterColor: '#8b949e',
+                addedGutterColor: '#8b949e',
+                removedGutterColor: '#8b949e',
+                codeFoldContentColor: '#8b949e',
+              }
             }
-          }
-        }}
-      />
+          }}
+        />
+      </Suspense>
     </div>
   );
 }

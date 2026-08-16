@@ -9,11 +9,8 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { ConnectorsPanel } from '@/components/workspace/ConnectorsPanel';
 import { PaywallModal } from '@/components/workspace/PaywallModal';
 import { DeployPanel } from '@/components/workspace/DeployPanel';
-import { WebContainerPreview } from '@/components/workspace/WebContainerPreview';
 import { FileExplorer } from '@/components/workspace/FileExplorer';
-import { ComposerPanel } from '@/components/workspace/ComposerPanel';
-import { CodeEditor, type CodeActionIntent } from '@/components/workspace/CodeEditor';
-import { Terminal as TerminalComponent } from '@/components/workspace/Terminal';
+import type { CodeActionIntent } from '@/components/workspace/CodeEditor';
 import { downloadProjectZip } from '@/services/projectDownloader';
 import {
   PanelRightOpen,
@@ -44,8 +41,6 @@ import { MissionFlow, type MissionFlowStep } from '@/components/workspace/Missio
 import { CommandBar } from '@/components/workspace/CommandBar';
 import { IconRail, type RailDestination } from '@/components/workspace/IconRail';
 import { EnergyGauge } from '@/components/workspace/EnergyGauge';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { buildMissionContracts } from '@/core/mission/missionContract';
 import { appendSnapshot, createMissionDNA, createMissionSnapshot } from '@/core/mission/missionDNA';
 import { validateGeneratedProject } from '@/core/mission/validateMission';
@@ -59,6 +54,12 @@ import type { ChangeCapsule, MissionContracts, MissionDNA, ValidationReport } fr
 type RightTab = 'mission' | 'preview' | 'code' | 'files' | 'composer' | 'connectors' | 'deploy' | 'logs';
 
 const KageOrb = lazy(() => import('@/components/workspace/KageOrb'));
+const LazyWebContainerPreview = lazy(() => import('@/components/workspace/WebContainerPreview').then(({ WebContainerPreview }) => ({ default: WebContainerPreview })));
+const LazyComposerPanel = lazy(() => import('@/components/workspace/ComposerPanel').then(({ ComposerPanel }) => ({ default: ComposerPanel })));
+const LazyCodeEditor = lazy(() => import('@/components/workspace/CodeEditor').then(({ CodeEditor }) => ({ default: CodeEditor })));
+const LazyTerminal = lazy(() => import('@/components/workspace/Terminal').then(({ Terminal }) => ({ default: Terminal })));
+const LazyCanvasPanelLayout = lazy(() => import('@/components/workspace/CanvasPanelLayout').then(({ CanvasPanelLayout }) => ({ default: CanvasPanelLayout })));
+const LazyTerminalDrawer = lazy(() => import('@/components/workspace/TerminalDrawer').then(({ TerminalDrawer }) => ({ default: TerminalDrawer })));
 
 type BrowserSpeechRecognition = {
   lang: string;
@@ -129,6 +130,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const shouldReduceMotion = useReducedMotion();
   const [tab, setTab] = useState<RightTab>('preview');
   const [showPreview, setShowPreview] = useState(false);
+  const [previewEnabled, setPreviewEnabled] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [flowSteps, setFlowSteps] = useState<MissionFlowStep[]>([]);
   const [input, setInput] = useState('');
@@ -253,6 +255,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
 
   const restoreMissionSnapshot = (snapshot: import('@/core/mission/contracts').MissionSnapshot) => {
     if (!currentMissionId || !snapshot.schema) return;
+    setPreviewEnabled(true);
     setPreviousSchema(projectSchema);
     updateProjectSchema(snapshot.schema as IdealyUniversalProjectSchema);
     updateStoreMission(currentMissionId, { previewReady: true, status: 'ready', validation: snapshot.validation });
@@ -625,6 +628,7 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
 
   async function runMission(prompt: string, overrideContracts?: MissionContracts, narrativeReady = false) {
     setActiveIntent('EXECUTION');
+    setPreviewEnabled(true);
     const flowRunId = crypto.randomUUID();
     if (!narrativeReady) {
       setFlowSteps((current) => [...current,
@@ -1132,52 +1136,52 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
                     </div>
                   </div>
                   <div className="min-h-0 flex-1 overflow-hidden">
-                    <ResizablePanelGroup direction="horizontal">
-                      {codePanelOpen && (
-                        <>
-                          <ResizablePanel defaultSize={31} minSize={20} maxSize={45} collapsible collapsedSize={0} className="min-w-0">
-                            <RightPanelContent
-                              tab="code"
-                              way={way}
-                              schema={reviewSchema ?? projectSchema}
-                              baseSchema={projectSchema}
-                              reviewMode={Boolean(reviewSchema)}
-                              previousSchema={previousSchema}
-                              missionId={currentMissionId}
-                              dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
-                              onUpdateSchema={updateProjectSchema}
-                              onRestore={restoreMissionSnapshot}
-                              onFix={repairMission}
-                              onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
-                              onProposeChange={proposeChangeCapsule}
-                              onAcceptReview={acceptReviewSchema}
-                              onRejectReview={rejectReviewSchema}
-                              onUpdateReview={setReviewSchema}
-                              onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
-                            />
-                          </ResizablePanel>
-                          <ResizableHandle withHandle />
-                        </>
-                      )}
-                      <ResizablePanel defaultSize={codePanelOpen ? 69 : 100} minSize={55} className="min-w-0">
-                        <RightPanelContent
-                          tab="preview"
-                          way={way}
-                          schema={projectSchema}
-                          baseSchema={projectSchema}
-                          reviewMode={false}
-                          previousSchema={previousSchema}
-                          missionId={currentMissionId}
-                          dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
-                          onUpdateSchema={updateProjectSchema}
-                          onRestore={restoreMissionSnapshot}
-                          onFix={repairMission}
-                          onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
-                          onProposeChange={proposeChangeCapsule}
-                          onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
-                        />
-                      </ResizablePanel>
-                    </ResizablePanelGroup>
+                    <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Préparation du canvas…</div>}>
+                      <LazyCanvasPanelLayout
+                        codeOpen={codePanelOpen}
+                        code={
+                          <RightPanelContent
+                            tab="code"
+                            way={way}
+                            schema={reviewSchema ?? projectSchema}
+                            baseSchema={projectSchema}
+                            reviewMode={Boolean(reviewSchema)}
+                            previousSchema={previousSchema}
+                            missionId={currentMissionId}
+                            dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
+                            previewEnabled={previewEnabled}
+                            onUpdateSchema={updateProjectSchema}
+                            onRestore={restoreMissionSnapshot}
+                            onFix={repairMission}
+                            onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
+                            onProposeChange={proposeChangeCapsule}
+                            onAcceptReview={acceptReviewSchema}
+                            onRejectReview={rejectReviewSchema}
+                            onUpdateReview={setReviewSchema}
+                            onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
+                          />
+                        }
+                        preview={
+                          <RightPanelContent
+                            tab="preview"
+                            way={way}
+                            schema={projectSchema}
+                            baseSchema={projectSchema}
+                            reviewMode={false}
+                            previousSchema={previousSchema}
+                            missionId={currentMissionId}
+                            dna={currentMissionId ? missionDNA[currentMissionId] ?? null : null}
+                            previewEnabled={previewEnabled}
+                            onUpdateSchema={updateProjectSchema}
+                            onRestore={restoreMissionSnapshot}
+                            onFix={repairMission}
+                            onAskAI={(prompt, intent) => void routePrompt(prompt, intent)}
+                            onProposeChange={proposeChangeCapsule}
+                            onCrashFix={(logs) => runMission(`RÉPARATION DE CRASH WEBContainer\n\nAnalyse cette anomalie réelle puis propose une correction complète. Ne modifie aucun fichier avant validation utilisateur.\n\nLogs bruts :\n${logs.slice(-6000)}`)}
+                          />
+                        }
+                      />
+                    </Suspense>
                   </div>
                 </div>
               </motion.div>
@@ -1185,17 +1189,15 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           </AnimatePresence>
         </div>
       </div>
-      <Drawer open={terminalOpen} onOpenChange={setTerminalOpen}>
-        <DrawerContent className="h-[min(70vh,560px)] border-white/10 bg-ink-950 text-white">
-          <DrawerHeader className="border-b border-white/5 px-5 py-3">
-            <DrawerTitle className="flex items-center gap-2 text-sm text-white"><Terminal size={16} className="text-emerald-300" /> Terminal de mission</DrawerTitle>
-            <DrawerDescription className="text-xs text-ink-400">Les commandes de validation et les diagnostics réels apparaissent ici. Raccourci : Ctrl+~.</DrawerDescription>
-          </DrawerHeader>
-          <div className="min-h-0 flex-1 overflow-hidden p-4">
-            <TerminalComponent />
-          </div>
-        </DrawerContent>
-      </Drawer>
+      {terminalOpen && (
+        <Suspense fallback={<div className="fixed inset-x-0 bottom-0 z-50 h-24 border-t border-white/10 bg-ink-950/95 p-4 text-xs text-ink-400">Ouverture du terminal…</div>}>
+          <LazyTerminalDrawer open={terminalOpen} onOpenChange={setTerminalOpen}>
+            <div className="h-[min(58vh,420px)] min-h-0 overflow-hidden">
+              <LazyTerminal />
+            </div>
+          </LazyTerminalDrawer>
+        </Suspense>
+      )}
       <SettingsModal open={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <PaywallModal isOpen={isPaywallOpen} onClose={() => setIsPaywallOpen(false)} />
     </div>
@@ -1318,6 +1320,7 @@ function RightPanelContent({
   previousSchema,
   missionId,
   dna,
+  previewEnabled,
   onUpdateSchema,
   onRestore,
   onFix,
@@ -1336,6 +1339,7 @@ function RightPanelContent({
   previousSchema: IdealyUniversalProjectSchema | null;
   missionId: string | null;
   dna: import('@/core/mission/contracts').MissionDNA | null;
+  previewEnabled: boolean;
   onUpdateSchema: (schema: IdealyUniversalProjectSchema | null) => void;
   onRestore: (snapshot: import('@/core/mission/contracts').MissionSnapshot) => void;
   onFix: () => void;
@@ -1363,7 +1367,7 @@ function RightPanelContent({
   return (
     <>
       <div className={tab === 'preview' ? 'h-full flex flex-col' : 'hidden'}>
-        {hasFiles ? (
+        {tab === 'preview' && (hasFiles ? (
           <div className="flex flex-col h-full">
             <div className="flex items-center gap-1 px-4 py-2 border-b border-white/5">
               <Terminal size={12} className="text-primary" />
@@ -1371,7 +1375,9 @@ function RightPanelContent({
               <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${way.bgClass} ${way.textClass}`}>Live</span>
             </div>
             <div className="flex-1 overflow-hidden">
-              <WebContainerPreview schema={schema} way={way} className="h-full" onCrashFix={onCrashFix} />
+              <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Chargement de la preview…</div>}>
+                <LazyWebContainerPreview enabled={previewEnabled} schema={schema} way={way} className="h-full" onCrashFix={onCrashFix} />
+              </Suspense>
             </div>
           </div>
         ) : (
@@ -1384,44 +1390,46 @@ function RightPanelContent({
               La prévisualisation WebContainer apparaîtra ici dès que la génération commencera.
             </p>
           </div>
-        )}
+        ))}
       </div>
 
       <div className={tab === 'code' ? 'h-full' : 'hidden'}>
-        {!hasFiles ? (
+        {tab === 'code' && (!hasFiles ? (
           <EmptyState way={way} name="Aucun code généré" />
         ) : (
-          <CodeEditor
-            files={files}
-            baseFiles={baseSchema?.project?.files ?? {}}
-            selectedPath={selectedFilePath}
-            onSelectFile={(path) => setSelectedFilePath(path)}
-            reviewMode={reviewMode}
-            way={way}
-            onAcceptGhost={(path, newContent) => {
-              if (!schema || !onAcceptReview) return;
-              onAcceptReview({ ...schema, project: { ...schema.project, files: { ...schema.project.files, [path]: newContent } } });
-            }}
-            onRejectGhost={onRejectReview}
-            onSaveFile={(path, newContent) => {
-              if (!schema) return;
-              const updatedSchema = {
-                ...schema,
-                project: {
-                  ...schema.project,
-                  files: {
-                    ...schema.project.files,
-                    [path]: newContent
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Chargement de l’éditeur…</div>}>
+            <LazyCodeEditor
+              files={files}
+              baseFiles={baseSchema?.project?.files ?? {}}
+              selectedPath={selectedFilePath}
+              onSelectFile={(path) => setSelectedFilePath(path)}
+              reviewMode={reviewMode}
+              way={way}
+              onAcceptGhost={(path, newContent) => {
+                if (!schema || !onAcceptReview) return;
+                onAcceptReview({ ...schema, project: { ...schema.project, files: { ...schema.project.files, [path]: newContent } } });
+              }}
+              onRejectGhost={onRejectReview}
+              onSaveFile={(path, newContent) => {
+                if (!schema) return;
+                const updatedSchema = {
+                  ...schema,
+                  project: {
+                    ...schema.project,
+                    files: {
+                      ...schema.project.files,
+                      [path]: newContent
+                    }
                   }
-                }
-              };
-              if (reviewMode) onUpdateReview?.(updatedSchema);
-              else onUpdateSchema(updatedSchema);
-            }}
-            onAskAI={onAskAI}
-            onProposeChange={onProposeChange}
-          />
-        )}
+                };
+                if (reviewMode) onUpdateReview?.(updatedSchema);
+                else onUpdateSchema(updatedSchema);
+              }}
+              onAskAI={onAskAI}
+              onProposeChange={onProposeChange}
+            />
+          </Suspense>
+        ))}
       </div>
 
       <div className={tab === 'files' ? 'h-full' : 'hidden'}>
@@ -1469,12 +1477,16 @@ function RightPanelContent({
       </div>
 
       <div className={tab === 'composer' ? 'h-full' : 'hidden'}>
-        <ComposerPanel
-          currentSchema={schema ?? null}
-          previousSchema={previousSchema ?? null}
-          onAccept={(paths) => console.log('Accepted:', paths)}
-          onReject={(paths) => console.log('Rejected:', paths)}
-        />
+        {tab === 'composer' && (
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Chargement du Composer…</div>}>
+            <LazyComposerPanel
+              currentSchema={schema ?? null}
+              previousSchema={previousSchema ?? null}
+              onAccept={(paths) => console.log('Accepted:', paths)}
+              onReject={(paths) => console.log('Rejected:', paths)}
+            />
+          </Suspense>
+        )}
       </div>
 
       <div className={tab === 'mission' ? 'h-full' : 'hidden'}>
@@ -1490,7 +1502,11 @@ function RightPanelContent({
       </div>
 
       <div className={tab === 'logs' ? 'h-full' : 'hidden'}>
-        <TerminalComponent />
+        {tab === 'logs' && (
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-ink-500">Chargement du terminal…</div>}>
+            <LazyTerminal />
+          </Suspense>
+        )}
       </div>
     </>
   );

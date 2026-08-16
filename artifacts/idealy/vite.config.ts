@@ -53,6 +53,9 @@ export default defineConfig({
           if (id.includes('gsap')) return 'gsap';
           if (id.includes('lottie-react') || id.includes('lottie-web')) return 'lottie';
           if (id.includes('framer-motion')) return 'framer-motion';
+          if (id.includes('@xterm')) return 'xterm';
+          if (id.includes('yjs') || id.includes('y-webrtc') || id.includes('simple-peer') || id.includes('lib0')) return 'yjs-collab';
+          if (id.includes('react-diff-viewer')) return 'diff-viewer';
           return undefined;
         },
       },

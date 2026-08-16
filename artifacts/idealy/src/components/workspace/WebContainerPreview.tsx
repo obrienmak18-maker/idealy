@@ -17,6 +17,7 @@ import { CrashOverlay } from './CrashOverlay';
 import { appendCrashLog, isFatalWebContainerLog, summarizeCrashLogs } from '@/core/webcontainer/crashDiagnostics';
 
 interface WebContainerPreviewProps {
+  enabled?: boolean;
   schema: IdealyUniversalProjectSchema | null;
   way: Way;
   className?: string;
@@ -46,7 +47,7 @@ function recordToTree(files: Record<string, string>): FileSystemTree {
   return tree;
 }
 
-export function WebContainerPreview({ schema, way, className, onCrashFix }: WebContainerPreviewProps) {
+export function WebContainerPreview({ enabled = false, schema, way, className, onCrashFix }: WebContainerPreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [logs, setLogs] = useState<string[]>([]);
@@ -74,7 +75,7 @@ export function WebContainerPreview({ schema, way, className, onCrashFix }: WebC
   };
 
   const boot = useCallback(async () => {
-    if (!schema?.project.files || hasBooted.current) return;
+    if (!enabled || !schema?.project.files || hasBooted.current) return;
     hasBooted.current = true;
     setStatus('booting');
     setUrl(null);
@@ -119,7 +120,7 @@ export function WebContainerPreview({ schema, way, className, onCrashFix }: WebC
       setStatus('error');
       hasBooted.current = false;
     }
-  }, [schema]);
+  }, [enabled, schema]);
 
   const refresh = useCallback(() => {
     hasBooted.current = false;
@@ -157,10 +158,10 @@ export function WebContainerPreview({ schema, way, className, onCrashFix }: WebC
   }, [schema?.project.files, status]);
 
   useEffect(() => {
-    if (schema && status === 'idle' && !hasBooted.current) void boot();
-  }, [schema, status, boot]);
+    if (enabled && schema && status === 'idle' && !hasBooted.current) void boot();
+  }, [enabled, schema, status, boot]);
 
-  const loading = status !== 'running' && status !== 'error';
+  const loading = !enabled || (status !== 'running' && status !== 'error');
   const crashLogs = summarizeCrashLogs(logs);
   const handleCrashAnalyze = () => {
     if (crashHandledRef.current) return;
