@@ -69,8 +69,8 @@ export function IdealyV2Page() {
   const [mission, setMission] = useState('');
   const [way, setWay] = useState<Way>('pro');
   const [notice, setNotice] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [attachmentOpen, setAttachmentOpen] = useState(false);
   const [promptHelperOpen, setPromptHelperOpen] = useState(false);
   const [conversationMenuOpen, setConversationMenuOpen] = useState(false);
@@ -141,7 +141,6 @@ export function IdealyV2Page() {
       setHistory((items) => [mission, ...items.filter((item) => item !== mission)].slice(0, 6));
     }
     setMission(value);
-    setSidebarCollapsed(true);
     setWorkspaceTab('preview');
     setConsoleOpen(false);
     setPhase('thinking');
@@ -196,7 +195,7 @@ export function IdealyV2Page() {
         </AnimatePresence>
 
         <aside
-          className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-[#1f1f2a] bg-[#0d0d14] transition-[width,transform] duration-200 lg:static lg:translate-x-0 ${sidebarCollapsed ? 'w-0 border-r-0' : 'w-[248px]'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-hidden`}
+          className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-[#2d2833] bg-[#111018] transition-[width,transform] duration-200 ${sidebarCollapsed ? 'w-0 border-r-0' : 'w-[248px]'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-hidden lg:static lg:translate-x-0`}
         >
           <div className="flex h-14 items-center justify-between border-b border-[#1f1f2a] px-4">
                           <a href="/" aria-label="Retour à Idealy" className="overflow-hidden transition-opacity">
@@ -222,7 +221,6 @@ export function IdealyV2Page() {
                 setPhase('idle');
                 setMission('');
                 setPrompt('');
-                setSidebarCollapsed(true);
                 setWorkspaceTab('preview');
                 setConsoleOpen(false);
               }}

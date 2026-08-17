@@ -94,3 +94,19 @@ La réflexion apparaît dans le flux sans carte de message complète : le statut
 
 
 Le test de défilement global ne déplace pas la page : le navigateur a dû cibler un conteneur interne de conversation. La preview reste fixe et aucune barre de défilement n’est visible dans l’interface. Cette vérification correspond à la demande de laisser le clavier et le fil de messages gérer le défilement, sans ajouter de lignes ou rails visibles.
+
+
+## Vérification visuelle de la sidebar et du parcours
+
+La preview V2 affiche désormais la sidebar dans l’état vide, tandis que la top bar du workspace est absente. Cela correspond à la correction demandée.
+
+La route `/onboarding` publique reste la landing page marketing ; le parcours `OnboardingPage` est déclenché par l’état d’authentification du store après connexion. Le test complet doit donc passer par un état local `stage: choosing-way` ou `creating-profile`, sans modifier Supabase ni l’authentification réelle.
+
+
+Le test local de l’état `choosing-way` ouvre correctement `OnboardingPage` à la racine. L’écran affiche `Ton espace prend forme`, la progression `1 / 3`, le battement visuel du cœur, les quatre voies et le bouton Continuer désactivé tant qu’aucune voie n’est choisie. Aucun backend n’a été appelé pour ce test.
+
+
+Le parcours local a été parcouru jusqu’à l’étape `3 / 3` : sélection Ninja, saisie du nom `Amina`, puis écran avec les trois questions demandées. L’interface affiche bien les choix de taille d’équipe, rôle et source de découverte, avec le bouton final désactivé tant que les trois réponses ne sont pas sélectionnées.
+
+
+Les trois réponses ont été sélectionnées avec leurs états actifs : `Moi seul`, `Fondateur ou dirigeant` et `Une recommandation`. Le bouton final s’est activé. Après validation, le store local est passé à `ready` et l’application a ouvert le quartier général existant avec `Amina`, `Voie du Ninja`, `Chakra 100%` et les premières missions. Le flux réel de l’interface est donc préservé après l’onboarding enrichi.
