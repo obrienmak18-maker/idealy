@@ -59,3 +59,38 @@ La lumière de souris et les particules restent discrètes au repos. Les effets 
 7. Ajouter ensuite les animations de voie, uniquement après validation de la structure.
 
 Cette direction ne touche ni à l’authentification, ni au backend, ni aux connecteurs réels. Elle vise d’abord une expérience visuelle crédible et cohérente avec la référence fournie.
+
+## Retour utilisateur et recherche complémentaire — août 2026
+
+### Corrections obligatoires
+
+Avant toute mission, l’écran doit rester un état vide respirant : pas de top bar de workspace, pas de Preview/Code/Data/Console, pas de titre de conversation ni de split. Ces éléments doivent apparaître seulement après le premier message envoyé ou l’ouverture d’une conversation existante.
+
+Après le début d’une conversation, la top bar doit être moins serrée. Le titre court de la conversation reste à gauche, tandis que les contrôles de preview et de workspace restent séparés et regroupés dans leur propre zone. Les libellés inutiles `FR`, `Site` et les actions qui ne concernent pas Idealy doivent disparaître. `Ouvrir dans un nouvel onglet` doit être déplacé vers les actions du workspace ; le menu voisin du titre doit rester réservé aux actions de conversation comme renommer, favori et suppression.
+
+La sidebar invisible au repos est validée et doit être conservée.
+
+### Constat officiel v0
+
+La documentation v0 décrit Design mode comme une couche visuelle au-dessus de l’application en cours dans la vue Preview. Il permet de sélectionner un élément, de modifier typographie, couleur, fond, layout, bordure, apparence, ombre et contenu, puis d’appliquer les changements au code. Le mode est activé depuis la barre du prompt, et les modifications restent en attente jusqu’à `Apply`. Les commandes Inspect, désélection, annuler, refaire, reset et comparaison avant/après font partie du modèle documenté.
+
+La documentation v0 décrit aussi un agent capable de recherche web, usage du navigateur, commandes terminal et correction automatique d’erreurs. La correction est alimentée par les logs d’erreur et couvre notamment dépendances manquantes, syntaxe, erreurs runtime et imports/exports. Pour Idealy, cela confirme qu’un panneau de réflexion utile doit montrer des états réels — recherche, fichiers, build, erreurs, correction — et non une animation décorative prétendant avoir exécuté des opérations inexistantes.
+
+
+### Fonctions IDE confirmées par VS Code
+
+La documentation officielle VS Code structure un workspace autour d’un éditeur principal, d’une sidebar primaire pour l’explorateur et les vues, d’une sidebar secondaire pour le chat, d’une barre d’activité, d’une barre de statut et d’un panneau inférieur pour la sortie, les erreurs, les avertissements et le terminal. Elle met aussi en avant le split d’éditeur, les groupes d’éditeurs, la palette de commandes, les onglets, l’outline, la timeline et l’historique local.
+
+La documentation officielle du contrôle de source confirme les fonctions de base suivantes : revoir les changements, stage et commit, synchroniser avec les remotes, résoudre les conflits, gérer branches/worktrees/stash, voir l’historique et collaborer avec GitHub. Pour Idealy, ces fonctions doivent apparaître comme une surface de confiance dans l’application générée, pas comme une deuxième barre permanente qui encombre le premier écran.
+
+
+## Vérification de la passe palette et layout conditionnel
+
+L’état vide charge maintenant sans top bar, sans Preview/Code/Data/Console et sans split conversation/preview. Les suggestions et le compositeur restent seuls au centre.
+
+Après envoi, la top bar apparaît avec les outils Preview, Code, Data, Console et l’action `Ouvrir dans un nouvel onglet` regroupée avec les outils de preview. Les libellés `Site` et `FR` ne sont plus visibles ; `Publier` et `Équipe` les remplacent comme actions Idealy explicites.
+
+La réflexion apparaît dans le flux sans carte de message complète : le statut reste lisible, mais l’espace autour est plus ouvert. Le fil de conversation garde son conteneur de scroll clavier avec scrollbar masquée ; le composer reste ancré en bas.
+
+
+Le test de défilement global ne déplace pas la page : le navigateur a dû cibler un conteneur interne de conversation. La preview reste fixe et aucune barre de défilement n’est visible dans l’interface. Cette vérification correspond à la demande de laisser le clavier et le fil de messages gérer le défilement, sans ajouter de lignes ou rails visibles.

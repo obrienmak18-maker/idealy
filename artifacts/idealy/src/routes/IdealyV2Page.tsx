@@ -171,15 +171,15 @@ export function IdealyV2Page() {
 
   return (
     <div
-      className="relative min-h-screen overflow-hidden bg-[#0a0a0f] text-[#f4f4f5] selection:bg-violet-500/30"
+      className="relative min-h-screen overflow-hidden bg-[#0d0c12] text-[#f4f4f5] selection:bg-[#f6b2d4]/30"
       onPointerMove={(event) => {
         document.documentElement.style.setProperty('--idealy-pointer-x', `${event.clientX}px`);
         document.documentElement.style.setProperty('--idealy-pointer-y', `${event.clientY}px`);
       }}
     >
-      <div className="pointer-events-none fixed inset-0 z-0 opacity-80" style={{ background: 'radial-gradient(420px circle at var(--idealy-pointer-x, 50%) var(--idealy-pointer-y, 35%), rgba(139,92,246,0.11), transparent 68%)' }} />
-      <div className="pointer-events-none fixed left-[24%] top-[18%] z-0 h-1 w-1 rounded-full bg-violet-300/50 shadow-[0_0_22px_8px_rgba(139,92,246,0.12)] motion-safe:animate-pulse" />
-      <div className="pointer-events-none fixed bottom-[24%] right-[28%] z-0 h-1 w-1 rounded-full bg-orange-300/40 shadow-[0_0_18px_7px_rgba(249,115,22,0.1)] motion-safe:animate-pulse" />
+      <div className="pointer-events-none fixed inset-0 z-0 opacity-80" style={{ background: 'radial-gradient(420px circle at var(--idealy-pointer-x, 50%) var(--idealy-pointer-y, 35%), rgba(246,178,212,0.12), transparent 68%)' }} />
+      <div className="pointer-events-none fixed left-[24%] top-[18%] z-0 h-1 w-1 rounded-full bg-[#8edee2]/60 shadow-[0_0_22px_8px_rgba(142,222,226,0.12)] motion-safe:animate-pulse" />
+      <div className="pointer-events-none fixed bottom-[24%] right-[28%] z-0 h-1 w-1 rounded-full bg-[#f3d27a]/50 shadow-[0_0_18px_7px_rgba(243,210,122,0.1)] motion-safe:animate-pulse" />
       <div className="flex min-h-screen">
         <AnimatePresence>
           {sidebarOpen && (
@@ -254,7 +254,7 @@ export function IdealyV2Page() {
 
           <div className="mt-auto border-t border-[#1f1f2a] p-3">
             <div className={`flex items-center gap-2 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-orange-300 text-[10px] font-semibold text-[#0a0a0f]" title="Profil local">I</div>
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f6b2d4] to-[#f3d27a] text-[10px] font-semibold text-[#1a1219]" title="Profil local">I</div>
               <div className={sidebarCollapsed ? 'sr-only' : ''}>
                 <p className="text-xs text-[#d4d4d8]">Profil local</p>
                 <p className="text-[10px] text-[#71717a]">Aperçu V2</p>
@@ -266,7 +266,7 @@ export function IdealyV2Page() {
         </aside>
 
         <main className="relative flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center justify-between border-b border-[#1f1f2a] bg-[#0a0a0f]/95 px-2 backdrop-blur sm:px-3">
+          {hasMission && <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center justify-between border-b border-[#2b2733] bg-[#111018]/95 px-2 backdrop-blur sm:px-3">
             <div className="flex min-w-0 items-center gap-1">
               <button type="button" onClick={toggleSidebar} className="rounded-md p-1.5 text-[#a1a1aa] hover:bg-white/5 hover:text-white" aria-label={sidebarCollapsed ? 'Afficher la sidebar' : 'Masquer la sidebar'} title={sidebarCollapsed ? 'Afficher la sidebar' : 'Masquer la sidebar'}
 >
@@ -285,7 +285,6 @@ export function IdealyV2Page() {
                         { label: 'Renommer', icon: WandSparkles },
                         { label: 'Ajouter aux favoris', icon: Heart },
                         { label: 'Dupliquer', icon: Copy },
-                        { label: 'Ouvrir dans un nouvel onglet', icon: ArrowUpRight },
                         { label: 'Télécharger en ZIP', icon: Download },
                       ].map((item) => (
                         <button key={item.label} type="button" onClick={() => { setConversationMenuOpen(false); showNotice(`${item.label} sera activé après validation de la coque.`); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-[#d4d4d8] hover:bg-white/5"><item.icon className="h-3.5 w-3.5 text-[#a78bfa]" />{item.label}</button>
@@ -302,38 +301,39 @@ export function IdealyV2Page() {
                   )}
                 </AnimatePresence>
               </div>
-              <div className="ml-1 flex min-w-0 items-center gap-0.5 border-l border-[#292938] pl-2">
-                <button type="button" onClick={() => showNotice('Le mode Design sera activé après validation visuelle.')} aria-label="Design" title="Design" className="rounded-md p-1.5 text-[#a1a1aa] hover:bg-white/5 hover:text-white"><WandSparkles className="h-3.5 w-3.5" /></button>
-                <button type="button" onClick={() => setWorkspaceTab('preview')} aria-label="Preview" title="Preview" className={`rounded-md p-1.5 hover:bg-white/5 ${workspaceTab === 'preview' ? 'text-white' : 'text-[#71717a]'}`}><PanelRight className="h-3.5 w-3.5" /></button>
-                <button type="button" onClick={() => setWorkspaceTab('code')} aria-label="Code" title="Code" className={`rounded-md p-1.5 hover:bg-white/5 ${workspaceTab === 'code' ? 'text-white' : 'text-[#71717a]'}`}><Code2 className="h-3.5 w-3.5" /></button>
-                <button type="button" onClick={() => setWorkspaceTab('data')} aria-label="Data" title="Data" className={`rounded-md p-1.5 hover:bg-white/5 ${workspaceTab === 'data' ? 'text-white' : 'text-[#71717a]'}`}><Database className="h-3.5 w-3.5" /></button>
-                <button type="button" onClick={() => { setConsoleTab('terminal'); setConsoleOpen(true); }} aria-label="Console" title="Console" className={`rounded-md p-1.5 hover:bg-white/5 ${consoleOpen ? 'text-white' : 'text-[#71717a]'}`}><TerminalSquare className="h-3.5 w-3.5" /></button>
-              </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-0.5 text-[#71717a]">
+              <div className="hidden min-w-0 items-center gap-0.5 border-r border-[#2b2733] pr-2 md:flex">
+                <button type="button" onClick={() => showNotice('Le mode Design sera activé après validation visuelle.')} aria-label="Design" title="Design" className="rounded-md p-1.5 text-[#f6b2d4] hover:bg-white/5 hover:text-white"><WandSparkles className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setWorkspaceTab('preview')} aria-label="Preview" title="Preview" className={`rounded-md p-1.5 hover:bg-white/5 ${workspaceTab === 'preview' ? 'text-white' : 'text-[#8edee2]'}`}><PanelRight className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setWorkspaceTab('code')} aria-label="Code" title="Code" className={`rounded-md p-1.5 hover:bg-white/5 ${workspaceTab === 'code' ? 'text-white' : 'text-[#8a8a9f]'}`}><Code2 className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setWorkspaceTab('data')} aria-label="Data" title="Data" className={`rounded-md p-1.5 hover:bg-white/5 ${workspaceTab === 'data' ? 'text-white' : 'text-[#f3d27a]'}`}><Database className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => { setConsoleTab('terminal'); setConsoleOpen(true); }} aria-label="Console" title="Console" className={`rounded-md p-1.5 hover:bg-white/5 ${consoleOpen ? 'text-white' : 'text-[#8a8a9f]'}`}><TerminalSquare className="h-3.5 w-3.5" /></button>
+              </div>
+              <button type="button" onClick={() => showNotice('Ouvre la preview dans un nouvel onglet quand elle sera connectée.')} aria-label="Ouvrir la preview dans un nouvel onglet" title="Ouvrir dans un nouvel onglet" className="hidden rounded-md p-1.5 hover:bg-white/5 hover:text-white sm:inline-flex"><ArrowUpRight className="h-3.5 w-3.5" /></button>
               <button type="button" aria-label="Preview précédente" title="Preview précédente" className="hidden rounded-md p-1.5 hover:bg-white/5 hover:text-white sm:inline-flex"><ChevronLeft className="h-3.5 w-3.5" /></button>
               <button type="button" aria-label="Preview suivante" title="Preview suivante" className="hidden rounded-md p-1.5 hover:bg-white/5 hover:text-white sm:inline-flex"><ChevronRight className="h-3.5 w-3.5" /></button>
-              <div className="hidden items-center gap-1 rounded-md border border-[#242432] bg-[#101017] px-2 py-1 text-[10px] sm:flex"><Globe2 className="h-3 w-3" /> /</div>
+              <div className="hidden items-center gap-1 rounded-md border border-[#2b2733] bg-[#18151e] px-2 py-1 text-[10px] sm:flex"><Globe2 className="h-3 w-3 text-[#8edee2]" /> preview.local</div>
               <button type="button" aria-label="Version actuelle" title="Version actuelle" className="hidden items-center gap-1 rounded-md px-2 py-1.5 text-xs text-[#a1a1aa] hover:bg-white/5 hover:text-white sm:flex">Latest <ChevronDown className="h-3 w-3" /></button>
               <button type="button" onClick={() => showNotice('Les actions du projet apparaîtront ici.')} aria-label="Plus d’actions" title="Plus d’actions" className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><MoreHorizontal className="h-4 w-4" /></button>
               <button type="button" onClick={() => showNotice('Le partage sera activé après validation de la coque.')} aria-label="Partager" title="Partager" className="hidden rounded-md p-1.5 hover:bg-white/5 hover:text-white sm:inline-flex"><Share2 className="h-3.5 w-3.5" /></button>
-              <span className="hidden items-center gap-1 px-2 text-[10px] text-[#a1a1aa] sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Site</span>
-              <button type="button" onClick={() => showNotice('La publication sera activée après validation de la coque.')} className="hidden rounded-md bg-[#18181f] px-2 py-1.5 text-[10px] font-medium text-[#e4e4e7] hover:bg-[#23232d] sm:inline-flex">Merge PR</button>
+              <button type="button" onClick={() => showNotice('La publication sera activée après validation de la coque.')} className="hidden rounded-md bg-gradient-to-r from-[#f06a9b] to-[#f6a86d] px-2.5 py-1.5 text-[10px] font-semibold text-[#191219] shadow-[0_0_18px_rgba(240,106,155,0.2)] hover:brightness-110 sm:inline-flex">Publier</button>
+              <button type="button" onClick={() => showNotice('Les espaces d’équipe seront activés après la validation de la coque.')} className="hidden rounded-md border border-[#2f6d70] bg-[#143237] px-2.5 py-1.5 text-[10px] font-medium text-[#9ce6e5] hover:bg-[#19464a] sm:inline-flex">Équipe</button>
             </div>
-          </header>
+          </header>}
 
-          <AnimatePresence initial={false}>
+          {hasMission && <AnimatePresence initial={false}>
             {consoleOpen && (
               <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="absolute right-3 top-12 z-40 h-60 w-[min(92vw,420px)] overflow-hidden rounded-xl border border-[#2a2a38] bg-[#0b0b10] shadow-2xl">
                 <ConsolePanel phase={phase} consoleTab={consoleTab} setConsoleTab={setConsoleTab} onClose={() => setConsoleOpen(false)} showNotice={showNotice} />
               </motion.div>
             )}
-          </AnimatePresence>
+          </AnimatePresence>}
 
           <div className={`flex min-h-0 flex-1 flex-col ${hasMission ? 'lg:flex-row' : ''}`}>
             <section className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${hasMission ? 'lg:w-[46%] lg:border-r lg:border-[#1f1f2a]' : ''}`}>
-              <div className={`flex-1 overflow-y-auto px-4 sm:px-8 ${hasMission ? 'pb-36 pt-8' : 'pb-40'}`}>
+              <div tabIndex={hasMission ? 0 : undefined} className={`flex-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-4 sm:px-8 ${hasMission ? 'pb-36 pt-8' : 'pb-40'}`}>
                 <div className={`mx-auto flex w-full flex-col ${hasMission ? 'max-w-2xl' : 'max-w-3xl'}`}>
                   {!hasMission ? (
                     <motion.div
@@ -342,10 +342,10 @@ export function IdealyV2Page() {
                       animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
                       transition={{ duration: 0.35 }}
                     >
-                      <div className="mb-6 flex h-9 w-9 items-center justify-center rounded-full border border-[#2b2b3a] bg-[#12121a] text-[#a78bfa]">
+                      <div className="mb-6 flex h-9 w-9 items-center justify-center rounded-full border border-[#3a3341] bg-[#18151e] text-[#f6b2d4] shadow-[0_0_24px_rgba(246,178,212,0.12)]">
                         <Sparkles className="h-4 w-4" />
                       </div>
-                      <h1 className="text-balance text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">Qu’allons-nous construire&nbsp;?</h1>
+                      <h1 className="text-balance text-3xl font-semibold tracking-[-0.03em] text-[#fff8fc] sm:text-4xl">Qu’allons-nous construire&nbsp;?</h1>
                       <p className="mt-3 max-w-md text-pretty text-sm leading-6 text-[#a1a1aa]">Décris ton idée. Idealy la transforme en mission, puis te montre ce qui se construit.</p>
 
                       <div className="mt-9 grid w-full max-w-2xl gap-2 sm:grid-cols-2">
@@ -364,7 +364,7 @@ export function IdealyV2Page() {
                     </motion.div>
                   ) : (
                     <div className="space-y-8">
-                      <div className="flex items-start gap-3 border-b border-[#1f1f2a] pb-7">
+                      <div className="flex items-start gap-3 pb-5">
                         <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f4f4f5] text-[10px] font-semibold text-[#0a0a0f]">Toi</div>
                         <p className="pt-1 text-sm leading-6 text-[#e4e4e7]">{mission}</p>
                       </div>
@@ -373,11 +373,11 @@ export function IdealyV2Page() {
                         <motion.div
                           initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
                           animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
-                          className="flex items-center gap-3 border-t border-[#1f1f2a] pt-5 text-xs text-[#a1a1aa]"
+                          className="flex items-center gap-3 pt-2 text-xs text-[#a1a1aa]"
                         >
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300"><Check className="h-3.5 w-3.5" /></div>
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#8edee2]/10 text-[#8edee2]"><Check className="h-3.5 w-3.5" /></div>
                           <span>Une première version est prête à être explorée.</span>
-                          <button type="button" onClick={() => showNotice('Les actions de publication seront branchées après validation de cette coque.')} className="ml-auto text-[#a78bfa] hover:text-white">Continuer</button>
+                          <button type="button" onClick={() => showNotice('Les actions de publication seront branchées après validation de cette coque.')} className="ml-auto text-[#f6b2d4] hover:text-white">Continuer</button>
                         </motion.div>
                       )}
                     </div>
@@ -408,8 +408,9 @@ export function IdealyV2Page() {
                     <span className="hidden sm:inline">Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span>
                   </div>
 
-                  <div className={`rounded-2xl p-px ${phase === 'thinking' ? 'bg-gradient-to-r from-violet-500 via-amber-400 to-blue-500' : 'bg-[#2a2a38]'}`}>
-                    <div className="rounded-[calc(1rem-1px)] bg-[#12121a] p-3">
+                                      <div className={`rounded-2xl p-px ${phase === 'thinking' ? 'bg-gradient-to-r from-[#f6b2d4] via-[#f3d27a] to-[#8edee2]' : 'bg-[#3a3341]'}`}>
+                      <div className="rounded-[calc(1rem-1px)] bg-[#17141c] p-3">
+
                       <textarea
                         id="idealy-v2-composer"
                         value={prompt}
@@ -532,7 +533,7 @@ function AgentTimeline({ phase, way, reducedMotion }: { phase: Phase; way: { lab
 
   return (
     <div aria-live="polite" className="space-y-2">
-      <button type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded} className="flex w-full items-center gap-3 rounded-lg border border-[#1f1f2a] bg-[#101017]/70 px-3 py-2.5 text-left transition-colors hover:border-[#3a3158]">
+      <button type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded} className="flex w-full items-center gap-3 px-1 py-2 text-left text-[#d4d4d8] transition-colors hover:text-white">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#3a3158] bg-[#171326] text-[10px] font-semibold" style={{ color: way.accent }}>I</div>
         <span className="min-w-0 flex-1"><span className="flex items-center gap-2 text-xs font-medium text-[#f4f4f5]">{headline}<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#a78bfa]" /></span><span className="mt-0.5 block truncate text-[11px] text-[#71717a]">{detail}</span></span>
         <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-[#71717a] transition-transform ${expanded ? 'rotate-180' : ''}`} />
@@ -542,7 +543,7 @@ function AgentTimeline({ phase, way, reducedMotion }: { phase: Phase; way: { lab
           <motion.div initial={reducedMotion ? undefined : { opacity: 0, height: 0 }} animate={reducedMotion ? undefined : { opacity: 1, height: 'auto' }} exit={reducedMotion ? undefined : { opacity: 0, height: 0 }} className="overflow-hidden border-l border-[#292938] pl-4">
             <div className="space-y-1 py-1">
               {steps.map((step, index) => (
-                <div key={step.label} className="flex items-start gap-2.5 rounded-md px-2 py-2">
+                <div key={step.label} className="flex items-start gap-2.5 px-2 py-2">
                   <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${step.done ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-300' : 'border-[#3a3158] bg-[#171326] text-[#a78bfa]'}`}>{step.done ? <Check className="h-2.5 w-2.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}</span>
                   <span className="min-w-0"><span className="block text-[11px] font-medium text-[#d4d4d8]">{step.label}</span><span className="mt-0.5 block text-[11px] leading-5 text-[#71717a]">{step.detail}</span></span>
                   {index === 0 && phase === 'thinking' && <span className="ml-auto mt-1 text-[10px] text-[#a78bfa]">en cours</span>}
