@@ -264,7 +264,7 @@ export default function LandingHero() {
               style={{ background: ACCENT_GRADIENT }}
             >
               <img
-                src="/images/kage-avatar.png"
+                src="/agents/avatar_pro_daniel_1785476092067.jpg"
                 alt=""
                 aria-hidden="true"
                 width={28}
@@ -308,14 +308,22 @@ export default function LandingHero() {
                 idealy.app/workspace
               </span>
             </div>
-            {/* TODO: replace with a real screenshot of the workspace */}
-            <img
-              src="/images/workspace-preview.png"
-              alt="Le workspace Idealy : conversation avec l'agent à gauche, aperçu de l'application générée à droite"
-              className="block w-full"
-              width={1280}
-              height={720}
-            />
+            <div
+              role="img"
+              aria-label="Aperçu du workspace Idealy avec conversation, plan et prévisualisation"
+              className="grid min-h-64 grid-cols-[0.8fr_1.2fr] bg-[#0a0a0f] sm:min-h-96"
+            >
+              <div className="flex flex-col gap-4 border-r border-[#1f1f2a] p-5">
+                <div className="flex items-center gap-2 text-xs text-[#a1a1aa]"><span className="h-2 w-2 rounded-full bg-[#8b5cf6]" />Mission en cours</div>
+                <div className="h-2 w-4/5 rounded bg-[#1f1f2a]" />
+                <div className="h-2 w-3/5 rounded bg-[#1f1f2a]" />
+                <div className="mt-auto rounded-lg border border-[#1f1f2a] bg-[#12121a] p-3 text-xs text-[#a1a1aa]">Construisons une expérience simple et rapide.</div>
+              </div>
+              <div className="flex flex-col gap-4 p-5">
+                <div className="flex items-center justify-between"><span className="text-xs text-[#a1a1aa]">Preview</span><span className="rounded-full bg-[#8b5cf6]/15 px-2 py-1 text-[10px] text-[#c4b5fd]">Live</span></div>
+                <div className="flex-1 rounded-lg border border-[#1f1f2a] bg-[#12121a] p-4"><div className="h-3 w-2/5 rounded bg-[#8b5cf6]/40" /><div className="mt-5 h-16 rounded bg-[#1f1f2a]" /><div className="mt-4 grid grid-cols-3 gap-2"><div className="h-10 rounded bg-[#1f1f2a]" /><div className="h-10 rounded bg-[#1f1f2a]" /><div className="h-10 rounded bg-[#1f1f2a]" /></div></div>
+              </div>
+            </div>
           </div>
         </section>
 
