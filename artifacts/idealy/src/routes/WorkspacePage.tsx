@@ -216,7 +216,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   }, [showPreview]);
 
   useEffect(() => {
-    if (initialDemoMode && messages.length === 0) startDemoMode();
+    if (!initialDemoMode || messages.length > 0) return;
+    startDemoMode();
+    const prompt = new URLSearchParams(window.location.search).get('prompt');
+    if (prompt) setInput(prompt);
   }, [initialDemoMode]);
 
   // Load missions from Supabase on mount

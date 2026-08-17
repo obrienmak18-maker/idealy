@@ -42,7 +42,7 @@ export function CommandBar({
   const submit = () => {
     const trimmed = value.trim();
     if (!trimmed) return;
-    onSubmit?.(trimmed); // TODO: route to workspace / create mission
+    onSubmit?.(trimmed);
     setValue('');
   };
 
@@ -284,8 +284,7 @@ export default function LandingHero() {
             <div className="w-full text-left">
               <CommandBar
                 onSubmit={(prompt) => {
-                  // TODO: persist prompt then redirect to signup/workspace
-                  console.log('prompt:', prompt);
+                  window.location.assign(`/demo?prompt=${encodeURIComponent(prompt)}`);
                 }}
               />
             </div>
