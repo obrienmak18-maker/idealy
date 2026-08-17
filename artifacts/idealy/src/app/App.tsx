@@ -8,6 +8,7 @@ const LandingPage = lazy(() => import('@/routes/LandingPage').then((module) => (
 const OnboardingPage = lazy(() => import('@/routes/OnboardingPage').then((module) => ({ default: module.OnboardingPage })));
 const WorkspacePage = lazy(() => import('@/routes/WorkspacePage').then((module) => ({ default: module.WorkspacePage })));
 const PricingPage = lazy(() => import('@/routes/PricingPage').then((module) => ({ default: module.PricingPage })));
+const IdealyV2Page = lazy(() => import('@/routes/IdealyV2Page').then((module) => ({ default: module.IdealyV2Page })));
 
 // Simple path-based routing without React Router
 const currentPath = window.location.pathname;
@@ -72,6 +73,8 @@ function App() {
     page = <PricingPage />;
   } else if (currentPath === '/demo') {
     page = <WorkspacePage demoMode />;
+  } else if (currentPath === '/v2') {
+    page = <IdealyV2Page />;
   } else if (!onboarded || stage === 'choosing-way' || stage === 'creating-profile') {
     if (stage === 'choosing-way' || stage === 'creating-profile') {
       page = <OnboardingPage />;
