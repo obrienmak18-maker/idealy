@@ -1,0 +1,344 @@
+'use client';
+
+/**
+ * LandingHero — minimal, Claude/ChatGPT-inspired landing hero for Idealy.
+ * Tokens: bg #0a0a0f | surface #12121a | border #1f1f2a | text-1 #f4f4f5 | text-2 #a1a1aa
+ * Accent gradient (CTA + command bar border only): #8b5cf6 → #f97316
+ */
+
+import { useState, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+  ArrowUp,
+  Command,
+  Paperclip,
+  Mic,
+  PenLine,
+  ListChecks,
+  Rocket,
+  Menu,
+  X,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+const ACCENT_GRADIENT = 'linear-gradient(90deg, #8b5cf6, #f97316)';
+
+/* ------------------------------------------------------------------ */
+/* Command bar (shared pattern — duplicated in WorkspaceEmptyState)    */
+/* ------------------------------------------------------------------ */
+
+export function CommandBar({
+  placeholder = 'Décrivez ce que vous voulez construire…',
+  onSubmit,
+  autoFocus = false,
+}: {
+  placeholder?: string;
+  onSubmit?: (value: string) => void;
+  autoFocus?: boolean;
+}) {
+  const [value, setValue] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const submit = () => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    onSubmit?.(trimmed); // TODO: route to workspace / create mission
+    setValue('');
+  };
+
+  return (
+    <div
+      className="rounded-2xl p-px"
+      style={{ background: ACCENT_GRADIENT }}
+    >
+      <div className="flex flex-col gap-2 rounded-[calc(1rem-1px)] bg-[#12121a] p-3">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            // CJK IME protection: never submit mid-composition
+            if (
+              e.key === 'Enter' &&
+              !e.shiftKey &&
+              !e.nativeEvent.isComposing &&
+              e.keyCode !== 229
+            ) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          placeholder={placeholder}
+          aria-label="Décrivez votre projet"
+          rows={2}
+          autoFocus={autoFocus}
+          className="w-full resize-none bg-transparent text-sm leading-6 text-[#f4f4f5] placeholder:text-[#a1a1aa]/70 focus:outline-none"
+        />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Commandes slash"
+              title="Commandes slash (/)"
+              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+            >
+              <Command className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Joindre un fichier"
+              title="Joindre un fichier"
+              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+            >
+              <Paperclip className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Dicter au micro"
+              title="Dicter au micro"
+              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+            >
+              <Mic className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!value.trim()}
+            aria-label="Envoyer"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-opacity disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8b5cf6]"
+            style={{ background: ACCENT_GRADIENT }}
+          >
+            <ArrowUp className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Landing hero                                                        */
+/* ------------------------------------------------------------------ */
+
+const STEPS = [
+  {
+    icon: PenLine,
+    title: 'Décrivez',
+    description: 'Expliquez votre idée en une phrase, en langage naturel.',
+  },
+  {
+    icon: ListChecks,
+    title: 'Planifiez',
+    description: 'L’équipe d’agents propose un plan clair que vous validez.',
+  },
+  {
+    icon: Rocket,
+    title: 'Déployez',
+    description: 'Votre app est construite, prévisualisée et mise en ligne.',
+  },
+];
+
+const NAV_LINKS = [
+  { label: 'Produit', href: '#produit' },
+  { label: 'Tarifs', href: '/pricing' },
+  { label: 'Docs', href: '/docs' },
+];
+
+export default function LandingHero() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const reducedMotion = useReducedMotion();
+
+  const fadeUp = reducedMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 12 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.4, ease: 'easeOut' as const },
+      };
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] text-[#f4f4f5]">
+      {/* Header */}
+      <header className="border-b border-[#1f1f2a]">
+        <nav
+          aria-label="Navigation principale"
+          className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4"
+        >
+          <a
+            href="/"
+            className="font-semibold tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+          >
+            Idealy
+          </a>
+
+          {/* Desktop nav */}
+          <div className="hidden items-center gap-6 md:flex">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="text-sm text-[#a1a1aa] transition-colors hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+              >
+                {link.label}
+              </a>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[#a1a1aa] hover:bg-white/5 hover:text-[#f4f4f5]"
+              asChild
+            >
+              {/* TODO: connect to Supabase auth (sign in) */}
+              <a href="/login">Connexion</a>
+            </Button>
+            <Button
+              size="sm"
+              className="border-0 text-white"
+              style={{ background: ACCENT_GRADIENT }}
+              asChild
+            >
+              {/* TODO: connect to Supabase auth (sign up) */}
+              <a href="/signup">Commencer</a>
+            </Button>
+          </div>
+
+          {/* Mobile menu toggle */}
+          <button
+            type="button"
+            className="rounded-lg p-2 text-[#a1a1aa] hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6] md:hidden"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-menu"
+            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            onClick={() => setMobileMenuOpen((o) => !o)}
+          >
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+        </nav>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div
+            id="mobile-menu"
+            className="border-t border-[#1f1f2a] px-4 py-3 md:hidden"
+          >
+            <div className="flex flex-col gap-1">
+              {NAV_LINKS.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className="rounded-lg px-3 py-2 text-sm text-[#a1a1aa] hover:bg-white/5 hover:text-[#f4f4f5]"
+                >
+                  {link.label}
+                </a>
+              ))}
+              <a
+                href="/login"
+                className="rounded-lg px-3 py-2 text-sm text-[#a1a1aa] hover:bg-white/5 hover:text-[#f4f4f5]"
+              >
+                Connexion
+              </a>
+              <a
+                href="/signup"
+                className="mt-1 rounded-lg px-3 py-2 text-center text-sm font-medium text-white"
+                style={{ background: ACCENT_GRADIENT }}
+              >
+                Commencer
+              </a>
+            </div>
+          </div>
+        )}
+      </header>
+
+      <main>
+        {/* Hero */}
+        <section className="mx-auto flex max-w-2xl flex-col items-center px-4 pb-16 pt-20 text-center">
+          <motion.div {...fadeUp} className="flex flex-col items-center gap-5 w-full">
+            {/* Avatar with subtle ring */}
+            <div
+              className="rounded-full p-px"
+              style={{ background: ACCENT_GRADIENT }}
+            >
+              <img
+                src="/images/kage-avatar.png"
+                alt=""
+                aria-hidden="true"
+                width={28}
+                height={28}
+                className="block h-7 w-7 rounded-full bg-[#12121a] object-cover"
+              />
+            </div>
+
+            <h1 className="text-balance font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
+              Que construisons-nous aujourd&apos;hui&nbsp;?
+            </h1>
+            <p className="max-w-md text-pretty text-sm leading-6 text-[#a1a1aa]">
+              Décrivez votre idée. Une équipe d&apos;agents la conçoit, la code
+              et la déploie — vous gardez la main à chaque étape.
+            </p>
+
+            <div className="w-full text-left">
+              <CommandBar
+                onSubmit={(prompt) => {
+                  // TODO: persist prompt then redirect to signup/workspace
+                  console.log('prompt:', prompt);
+                }}
+              />
+            </div>
+          </motion.div>
+        </section>
+
+        {/* Real workspace preview */}
+        <section
+          id="produit"
+          className="mx-auto max-w-5xl px-4 pb-20"
+          aria-label="Aperçu du workspace"
+        >
+          <div className="overflow-hidden rounded-xl border border-[#1f1f2a] bg-[#12121a]">
+            {/* Fake browser chrome */}
+            <div className="flex items-center gap-1.5 border-b border-[#1f1f2a] px-4 py-2.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#1f1f2a]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#1f1f2a]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#1f1f2a]" />
+              <span className="ml-3 text-xs text-[#a1a1aa]">
+                idealy.app/workspace
+              </span>
+            </div>
+            {/* TODO: replace with a real screenshot of the workspace */}
+            <img
+              src="/images/workspace-preview.png"
+              alt="Le workspace Idealy : conversation avec l'agent à gauche, aperçu de l'application générée à droite"
+              className="block w-full"
+              width={1280}
+              height={720}
+            />
+          </div>
+        </section>
+
+        {/* 3 steps */}
+        <section className="border-t border-[#1f1f2a]">
+          <div className="mx-auto grid max-w-5xl gap-8 px-4 py-16 sm:grid-cols-3">
+            {STEPS.map((step) => (
+              <div key={step.title} className="flex flex-col gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1f1f2a] bg-[#12121a]">
+                  <step.icon
+                    className="h-4 w-4 text-[#a1a1aa]"
+                    aria-hidden="true"
+                  />
+                </div>
+                <h2 className="text-sm font-semibold">{step.title}</h2>
+                <p className="text-sm leading-6 text-[#a1a1aa]">
+                  {step.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
