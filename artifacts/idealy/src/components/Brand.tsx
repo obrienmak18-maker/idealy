@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-export function Logo({ size = 32 }: { size?: number }) {
+export function Logo({ size = 32, markOnly = false }: { size?: number; markOnly?: boolean }) {
   return (
     <div className="flex items-center gap-2.5 select-none">
       <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className="shrink-0">
@@ -14,9 +14,11 @@ export function Logo({ size = 32 }: { size?: number }) {
         <rect width="32" height="32" rx="8" fill="#0a0c1c" stroke="url(#logo-g)" strokeWidth="1.5" />
         <path d="M9 7h3v18H9zM16 7h3l6 18h-3l-1.2-3.6h-5.6L14 25h-3zm1.5 5.2L16 16h3z" fill="url(#logo-g)" />
       </svg>
-      <span className="font-display font-semibold text-lg tracking-tight text-white">
-        Idealy
-      </span>
+      {!markOnly && (
+        <span className="font-display font-semibold text-lg tracking-tight text-white">
+          Idealy
+        </span>
+      )}
     </div>
   );
 }

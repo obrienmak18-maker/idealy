@@ -1,14 +1,19 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowUp,
+  ChevronLeft,
+  ChevronRight,
   Check,
   ChevronDown,
   Code2,
-  Command,
+  Database,
   FileCode2,
+  ExternalLink,
+  EyeOff,
   FolderOpen,
   History,
   Menu,
+  MoreHorizontal,
   Mic,
   Paperclip,
   PanelLeftClose,
@@ -16,8 +21,10 @@ import {
   Plug,
   Puzzle,
   Settings,
+  Share2,
   Upload,
   PanelRight,
+  RefreshCw,
   Plus,
   Rocket,
   Sparkles,
@@ -55,11 +62,15 @@ export function IdealyV2Page() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [attachmentOpen, setAttachmentOpen] = useState(false);
+  const [promptHelperOpen, setPromptHelperOpen] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
-  const [canvasTab, setCanvasTab] = useState<'preview' | 'code' | 'terminal'>('preview');
+  const [workspaceTab, setWorkspaceTab] = useState<'preview' | 'code' | 'data'>('preview');
+  const [terminalOpen, setTerminalOpen] = useState(false);
   const [canvasWidth, setCanvasWidth] = useState(54);
   const [resizing, setResizing] = useState(false);
   const timers = useRef<number[]>([]);
+  const attachmentRef = useRef<HTMLDivElement>(null);
+  const promptHelperRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
 
   const clearTimers = () => {
@@ -68,6 +79,27 @@ export function IdealyV2Page() {
   };
 
   useEffect(() => clearTimers, []);
+
+  useEffect(() => {
+    const closeMenus = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!attachmentRef.current?.contains(target)) setAttachmentOpen(false);
+      if (!promptHelperRef.current?.contains(target)) setPromptHelperOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setAttachmentOpen(false);
+        setPromptHelperOpen(false);
+        setTerminalOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', closeMenus);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeMenus);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, []);
 
   useEffect(() => {
     if (!resizing) return;
@@ -95,6 +127,9 @@ export function IdealyV2Page() {
       setHistory((items) => [mission, ...items.filter((item) => item !== mission)].slice(0, 6));
     }
     setMission(value);
+    setSidebarCollapsed(true);
+    setWorkspaceTab('preview');
+    setTerminalOpen(false);
     setPhase('thinking');
     timers.current.push(window.setTimeout(() => setPhase('building'), 900));
     timers.current.push(window.setTimeout(() => setPhase('ready'), 2400));
@@ -144,8 +179,9 @@ export function IdealyV2Page() {
           className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-[#1f1f2a] bg-[#0d0d14] transition-[width,transform] duration-200 lg:static lg:translate-x-0 ${sidebarCollapsed ? 'w-[68px]' : 'w-[248px]'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           <div className="flex h-14 items-center justify-between border-b border-[#1f1f2a] px-4">
-            <a href="/" aria-label="Retour à Idealy" className={`overflow-hidden transition-opacity ${sidebarCollapsed ? 'w-7' : ''}`}>
-              <Logo size={26} />
+                          <a href="/" aria-label="Retour à Idealy" className="overflow-hidden transition-opacity">
+                <Logo size={26} markOnly />
+
             </a>
             <button
               type="button"
@@ -166,6 +202,9 @@ export function IdealyV2Page() {
                 setPhase('idle');
                 setMission('');
                 setPrompt('');
+                setSidebarCollapsed(false);
+                setWorkspaceTab('preview');
+                setTerminalOpen(false);
                 setSidebarOpen(false);
               }}
               className={`flex w-full items-center gap-2 rounded-lg border border-[#292938] px-3 py-2.5 text-left text-sm text-[#f4f4f5] transition-colors hover:border-[#8b5cf6]/60 hover:bg-white/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6] ${sidebarCollapsed ? 'justify-center px-2' : ''}`}
@@ -228,23 +267,12 @@ export function IdealyV2Page() {
                 {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
               </button>
 
-              <span className="text-xs text-[#71717a]">Nouvelle mission</span>
-              {hasMission && (
-                <>
-                  <span className="text-[#3f3f46]">/</span>
-                  <span className="max-w-[220px] truncate text-xs text-[#a1a1aa]">{mission}</span>
-                </>
-              )}
+              <span className="max-w-[280px] truncate text-xs text-[#71717a]">{hasMission ? (mission.length > 46 ? `${mission.slice(0, 46)}…` : mission) : 'Nouvelle idée'}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="hidden text-[11px] text-[#71717a] sm:inline">Aperçu sans connexion</span>
-              <button
-                type="button"
-                onClick={() => showNotice('La connexion sera activée après validation de la nouvelle interface.')}
-                className="rounded-md px-2.5 py-1.5 text-xs text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
-              >
-                Se connecter
-              </button>
+              <button type="button" onClick={() => showNotice('La connexion sera activée après validation de la nouvelle interface.')} className="rounded-md px-2.5 py-1.5 text-xs text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]">Se connecter</button>
+              <button type="button" onClick={() => showNotice('La création de compte sera activée après validation de la nouvelle interface.')} className="hidden rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-[#0a0a0f] transition-opacity hover:opacity-90 sm:inline-flex">S’inscrire</button>
             </div>
           </header>
 
@@ -344,7 +372,7 @@ export function IdealyV2Page() {
                       />
                       <div className="mt-2 flex items-center justify-between">
                         <div className="flex items-center gap-0.5">
-                          <div className="relative">
+                          <div ref={attachmentRef} className="relative">
                             <button type="button" onClick={() => setAttachmentOpen((value) => !value)} title="Joindre, importer ou connecter" aria-label="Joindre, importer ou connecter" aria-expanded={attachmentOpen} className={`rounded-md p-2 text-[#71717a] hover:bg-white/5 hover:text-[#f4f4f5] ${attachmentOpen ? 'bg-white/5 text-white' : ''}`}><Paperclip className="h-4 w-4" /></button>
                             <AnimatePresence>
                               {attachmentOpen && (
@@ -356,7 +384,24 @@ export function IdealyV2Page() {
                               )}
                             </AnimatePresence>
                           </div>
-                          <button type="button" onClick={() => showNotice('Commandes rapides : bientôt dans cette coque.')} title="Commandes rapides" aria-label="Commandes rapides" className="rounded-md p-2 text-[#71717a] hover:bg-white/5 hover:text-[#f4f4f5]"><Command className="h-4 w-4" /></button>
+                          <div ref={promptHelperRef} className="relative">
+                            <button type="button" onClick={() => setPromptHelperOpen((value) => !value)} title="Améliorer l’idée" aria-label="Améliorer l’idée" aria-expanded={promptHelperOpen} className={`rounded-md p-2 text-[#71717a] hover:bg-white/5 hover:text-[#f4f4f5] ${promptHelperOpen ? 'bg-white/5 text-white' : ''}`}><Sparkles className="h-4 w-4" /></button>
+                            <AnimatePresence>
+                              {promptHelperOpen && (
+                                <motion.div initial={{ opacity: 0, y: 5, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.97 }} className="absolute bottom-11 left-0 z-30 w-64 rounded-xl border border-[#2a2a38] bg-[#171722] p-1.5 shadow-2xl">
+                                  <p className="px-2.5 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.14em] text-[#71717a]">Améliorer l’idée</p>
+                                  {[
+                                    ['Préciser le résultat', 'Ajoute le résultat attendu et les utilisateurs visés.'],
+                                    ['Structurer les écrans', 'Propose les pages principales et leur navigation.'],
+                                    ['Définir le style', 'Suggère une direction visuelle cohérente et accessible.'],
+                                    ['Réduire le périmètre', 'Transforme cette idée en première version réalisable.'],
+                                  ].map(([label, addition]) => (
+                                    <button key={label} type="button" onClick={() => { setPrompt((value) => `${value.trim()}${value.trim() ? '\\n\\n' : ''}${addition}`); setPromptHelperOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-[#d4d4d8] hover:bg-white/5"><Sparkles className="h-3.5 w-3.5 text-[#a78bfa]" />{label}</button>
+                                  ))}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
                         </div>
                         <div className="flex items-center gap-1">
                           <button type="button" onClick={() => showNotice('La dictée sera activée dans la prochaine passe.')} title="Dicter" aria-label="Dicter" className="rounded-md p-2 text-[#71717a] hover:bg-white/5 hover:text-[#f4f4f5]"><Mic className="h-4 w-4" /></button>
@@ -375,7 +420,7 @@ export function IdealyV2Page() {
             {hasMission && (
               <div
                 role="separator"
-                aria-label="Redimensionner le Canvas"
+                aria-label="Redimensionner l’espace de travail"
                 aria-valuemin={34}
                 aria-valuemax={66}
                 aria-valuenow={canvasWidth}
@@ -401,7 +446,7 @@ export function IdealyV2Page() {
                   className="min-h-[420px] w-full flex-none bg-[#0d0d14] lg:min-h-0 lg:w-[var(--idealy-canvas-width)]"
                   style={{ '--idealy-canvas-width': `${canvasWidth}%` } as CSSProperties}
                 >
-                  <PreviewSurface phase={phase} mission={mission} canvasTab={canvasTab} setCanvasTab={setCanvasTab} />
+                  <PreviewSurface phase={phase} mission={mission} workspaceTab={workspaceTab} setWorkspaceTab={setWorkspaceTab} terminalOpen={terminalOpen} setTerminalOpen={setTerminalOpen} showNotice={showNotice} />
                 </motion.aside>
               )}
             </AnimatePresence>
@@ -421,84 +466,124 @@ export function IdealyV2Page() {
 }
 
 function AgentTimeline({ phase, way, reducedMotion }: { phase: Phase; way: { label: string; accent: string; description: string }; reducedMotion: boolean }) {
+  const [expanded, setExpanded] = useState(false);
   const steps = [
-    { label: 'Comprendre', detail: `${way.label} reformule ton intention`, done: phase !== 'thinking' },
-    { label: 'Planifier', detail: 'Une première structure prend forme', done: phase === 'ready' },
-    { label: 'Construire', detail: 'Le Bâtisseur prépare les fichiers', done: phase === 'ready' },
+    { label: 'Intention comprise', detail: `${way.label} reformule le résultat attendu`, done: phase !== 'thinking' },
+    { label: 'Structure préparée', detail: 'Les écrans et les fichiers principaux prennent forme', done: phase === 'ready' },
+    { label: 'Preview construite', detail: 'Une première version est prête à être explorée', done: phase === 'ready' },
   ];
+  const headline = phase === 'thinking' ? 'Réflexion en cours' : phase === 'building' ? 'Construction en cours' : 'Première version prête';
+  const detail = phase === 'thinking' ? 'Je mets ton idée en structure…' : phase === 'building' ? 'Les premiers fichiers sont en préparation…' : 'Tu peux maintenant explorer le résultat.';
 
   return (
-    <div aria-live="polite" className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[#3a3158] bg-[#171326] text-[10px] font-semibold" style={{ color: way.accent }}>I</div>
-        <div>
-          <p className="text-sm font-medium text-[#f4f4f5]">On donne forme à ton idée</p>
-          <p className="mt-0.5 text-xs text-[#71717a]">{phase === 'thinking' ? 'Lecture de ton idée…' : phase === 'building' ? 'La mission se construit…' : 'La mission est prête.'}</p>
-        </div>
-      </div>
-      <div className="ml-3 border-l border-[#292938] pl-7">
-        {steps.map((step, index) => (
-          <motion.div key={step.label} initial={reducedMotion ? undefined : { opacity: 0.4 }} animate={reducedMotion ? undefined : { opacity: step.done || (phase === 'thinking' && index === 0) ? 1 : 0.55 }} className="relative pb-5 last:pb-0">
-            <span className={`absolute -left-[34px] top-0.5 flex h-4 w-4 items-center justify-center rounded-full border ${step.done ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-300' : 'border-[#3a3158] bg-[#171326] text-[#a78bfa]'}`}>
-              {step.done ? <Check className="h-2.5 w-2.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
-            </span>
-            <p className="text-xs font-medium text-[#d4d4d8]">{step.label}</p>
-            <p className="mt-1 text-xs leading-5 text-[#71717a]">{step.detail}</p>
+    <div aria-live="polite" className="space-y-2">
+      <button type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded} className="flex w-full items-center gap-3 rounded-lg border border-[#1f1f2a] bg-[#101017]/70 px-3 py-2.5 text-left transition-colors hover:border-[#3a3158]">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#3a3158] bg-[#171326] text-[10px] font-semibold" style={{ color: way.accent }}>I</div>
+        <span className="min-w-0 flex-1"><span className="flex items-center gap-2 text-xs font-medium text-[#f4f4f5]">{headline}<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#a78bfa]" /></span><span className="mt-0.5 block truncate text-[11px] text-[#71717a]">{detail}</span></span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-[#71717a] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div initial={reducedMotion ? undefined : { opacity: 0, height: 0 }} animate={reducedMotion ? undefined : { opacity: 1, height: 'auto' }} exit={reducedMotion ? undefined : { opacity: 0, height: 0 }} className="overflow-hidden border-l border-[#292938] pl-4">
+            <div className="space-y-1 py-1">
+              {steps.map((step, index) => (
+                <div key={step.label} className="flex items-start gap-2.5 rounded-md px-2 py-2">
+                  <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${step.done ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-300' : 'border-[#3a3158] bg-[#171326] text-[#a78bfa]'}`}>{step.done ? <Check className="h-2.5 w-2.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}</span>
+                  <span className="min-w-0"><span className="block text-[11px] font-medium text-[#d4d4d8]">{step.label}</span><span className="mt-0.5 block text-[11px] leading-5 text-[#71717a]">{step.detail}</span></span>
+                  {index === 0 && phase === 'thinking' && <span className="ml-auto mt-1 text-[10px] text-[#a78bfa]">en cours</span>}
+                </div>
+              ))}
+            </div>
           </motion.div>
-        ))}
-      </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function PreviewSurface({ phase, mission, canvasTab, setCanvasTab }: { phase: Phase; mission: string; canvasTab: 'preview' | 'code' | 'terminal'; setCanvasTab: (tab: 'preview' | 'code' | 'terminal') => void }) {
-  return (
-    <div className="flex h-full min-h-[420px] flex-col">
-      <div className="flex h-12 shrink-0 items-center justify-between border-b border-[#1f1f2a] px-4">
-        <div className="flex items-center gap-2 text-xs text-[#a1a1aa]"><PanelRight className="h-3.5 w-3.5" /> Canvas</div>
-        <div className="flex items-center gap-1.5 text-[10px] text-[#71717a]"><span className={`h-1.5 w-1.5 rounded-full ${phase === 'ready' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />{phase === 'ready' ? 'Preview prête' : 'Construction en cours'}</div>
-      </div>
-      <div className="flex flex-1 flex-col p-4 sm:p-6">
-        <div className="mb-4 flex items-center justify-between text-[11px] text-[#71717a]">
-          <div className="flex items-center gap-1 rounded-lg border border-[#1f1f2a] bg-[#101017] p-0.5">
-            {([
-              { id: 'code' as const, label: 'Code', icon: Code2 },
-              { id: 'preview' as const, label: 'Preview', icon: PanelRight },
-              { id: 'terminal' as const, label: 'Terminal', icon: TerminalSquare },
-            ]).map((tab) => (
-              <button key={tab.id} type="button" onClick={() => setCanvasTab(tab.id)} className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors ${canvasTab === tab.id ? 'bg-white/[0.08] text-[#f4f4f5]' : 'text-[#71717a] hover:text-[#d4d4d8]'}`}>
-                <tab.icon className="h-3.5 w-3.5" /> {tab.label}
-              </button>
-            ))}
-          </div>
-          <span className="hidden sm:inline">{FILES.length} fichiers</span>
-        </div>
+function PreviewSurface({ phase, mission, workspaceTab, setWorkspaceTab, terminalOpen, setTerminalOpen, showNotice }: { phase: Phase; mission: string; workspaceTab: 'preview' | 'code' | 'data'; setWorkspaceTab: (tab: 'preview' | 'code' | 'data') => void; terminalOpen: boolean; setTerminalOpen: (open: boolean) => void; showNotice: (message: string) => void }) {
+  const [previewHidden, setPreviewHidden] = useState(false);
+  const tabs = [
+    { id: 'preview' as const, label: 'Preview', icon: PanelRight },
+    { id: 'code' as const, label: 'Code', icon: Code2 },
+    { id: 'data' as const, label: 'Data', icon: Database },
+  ];
 
-        {canvasTab === 'preview' && (phase === 'building' || phase === 'thinking') ? (
-          <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-[#1f1f2a] bg-[#11111a] text-center">
+  return (
+    <div className="relative flex h-full min-h-[420px] flex-col bg-[#0d0d14]">
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-[#1f1f2a] px-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2 text-xs text-[#a1a1aa]"><span className="truncate">{mission.length > 34 ? `${mission.slice(0, 34)}…` : mission}</span><span className="text-[#52525b]">·</span><span className="text-[#71717a]">Latest</span></div>
+        <div className="flex items-center gap-0.5 text-[#71717a]">
+          <button type="button" aria-label={previewHidden ? 'Afficher la preview' : 'Masquer la preview'} title={previewHidden ? 'Afficher la preview' : 'Masquer la preview'} onClick={() => setPreviewHidden((value) => !value)} className="rounded-md p-1.5 hover:bg-white/5 hover:text-white">{previewHidden ? <PanelRight className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}</button>
+          <button type="button" aria-label="Partager" title="Partager" onClick={() => showNotice('Le partage sera activé après validation de la coque.')} className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><Share2 className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Ouvrir dans un nouvel onglet" title="Ouvrir dans un nouvel onglet" onClick={() => showNotice('La preview pourra être ouverte dans un nouvel onglet après connexion.')} className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><ExternalLink className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Plus d’actions" title="Plus d’actions" onClick={() => showNotice('Les actions du projet apparaîtront ici.')} className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><MoreHorizontal className="h-3.5 w-3.5" /></button>
+        </div>
+      </div>
+
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-[#1f1f2a] px-3 text-[11px] text-[#71717a]">
+        <div role="tablist" aria-label="Vues du projet" className="flex items-center gap-1">
+          {tabs.map((tab) => (
+            <button key={tab.id} type="button" role="tab" aria-selected={workspaceTab === tab.id} onClick={() => setWorkspaceTab(tab.id)} className={`flex items-center gap-1.5 border-b-2 px-2.5 py-2.5 transition-colors ${workspaceTab === tab.id ? 'border-[#a78bfa] text-[#f4f4f5]' : 'border-transparent hover:text-[#d4d4d8]'}`}>
+              <tab.icon className="h-3.5 w-3.5" /> {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button type="button" aria-label="Preview précédente" title="Preview précédente" className="rounded-md p-1 hover:bg-white/5 hover:text-white"><ChevronLeft className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Preview suivante" title="Preview suivante" className="rounded-md p-1 hover:bg-white/5 hover:text-white"><ChevronRight className="h-3.5 w-3.5" /></button>
+          <div className="hidden items-center gap-1 rounded-md border border-[#242432] bg-[#101017] px-2 py-1 sm:flex"><span className={`h-1.5 w-1.5 rounded-full ${phase === 'ready' ? 'bg-emerald-400' : 'animate-pulse bg-amber-400'}`} /> preview.local</div>
+          <button type="button" aria-label="Actualiser la preview" title="Actualiser la preview" className="rounded-md p-1 hover:bg-white/5 hover:text-white"><RefreshCw className="h-3.5 w-3.5" /></button>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 p-3 sm:p-4">
+        {previewHidden ? (
+          <CanvasPlaceholder icon={<PanelRight className="h-4 w-4" />} label="Preview masquée. Utilise l’icône en haut pour l’afficher." />
+        ) : workspaceTab === 'preview' && (phase === 'building' || phase === 'thinking') ? (
+          <div className="flex h-full min-h-[280px] flex-col items-center justify-center rounded-xl border border-[#1f1f2a] bg-[#11111a] text-center">
             <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-[#3a3158] bg-[#171326] text-[#a78bfa]"><Sparkles className="h-4 w-4 animate-pulse" /></div>
             <p className="text-sm text-[#d4d4d8]">Préparation de la preview</p>
-            <p className="mt-2 max-w-xs text-xs leading-5 text-[#71717a]">Le canvas apparaît dès que la structure de ton idée est prête.</p>
+            <p className="mt-2 max-w-xs text-xs leading-5 text-[#71717a]">La première version prend forme dans cet espace.</p>
             <div className="mt-5 h-1 w-40 overflow-hidden rounded-full bg-[#242432]"><motion.div className="h-full w-1/2 rounded-full bg-gradient-to-r from-violet-500 to-orange-400" animate={{ x: ['-100%', '200%'] }} transition={{ repeat: Infinity, duration: 1.25, ease: 'easeInOut' }} /></div>
           </div>
-        ) : canvasTab === 'preview' ? (
-          <motion.div initial={{ opacity: 0.8 }} animate={{ opacity: 1 }} className="flex flex-1 flex-col overflow-hidden rounded-xl border border-[#2a2a38] bg-[#f8fafc] text-slate-900 shadow-2xl">
-            <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-slate-200 bg-white px-3"><span className="h-2 w-2 rounded-full bg-slate-200" /><span className="h-2 w-2 rounded-full bg-slate-200" /><span className="h-2 w-2 rounded-full bg-slate-200" /><span className="ml-2 flex items-center gap-1 text-[9px] text-slate-400"><FolderOpen className="h-3 w-3" /> preview.local</span></div>
-            <div className="flex flex-1 flex-col justify-between p-6 sm:p-10">
-              <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">Forno · pizzeria artisanale</p><h2 className="mt-3 max-w-md text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">La pâte, le feu, le moment.</h2><p className="mt-3 max-w-sm text-sm leading-6 text-slate-500">Une expérience simple pour découvrir les pizzas qui sortent du four ce soir.</p><div className="mt-6 flex gap-2"><span className="rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white">Commander</span><span className="rounded-full border border-slate-200 px-4 py-2 text-xs text-slate-600">Voir le menu</span></div></div>
-              <div className="mt-10 grid grid-cols-3 gap-2"><div className="h-20 rounded-lg bg-gradient-to-br from-orange-200 to-rose-300" /><div className="h-20 rounded-lg bg-gradient-to-br from-amber-100 to-orange-300" /><div className="h-20 rounded-lg bg-gradient-to-br from-red-100 to-orange-200" /></div>
-            </div>
-          </motion.div>
-        ) : canvasTab === 'code' ? (
+        ) : workspaceTab === 'preview' ? (
+          <PreviewCard />
+        ) : workspaceTab === 'code' ? (
           <CodeSurface phase={phase} />
         ) : (
-          <TerminalSurface phase={phase} />
+          <DataSurface phase={phase} />
         )}
-
-        <div className="mt-4 flex items-center justify-between text-[10px] text-[#52525b]"><div className="flex items-center gap-3"><span className="flex items-center gap-1"><FileCode2 className="h-3 w-3" /> {mission.length > 42 ? `${mission.slice(0, 42)}…` : mission}</span></div><span className="flex items-center gap-1"><Rocket className="h-3 w-3" /> Local</span></div>
       </div>
+
+      <div className="flex h-9 shrink-0 items-center justify-between border-t border-[#1f1f2a] px-3 text-[10px] text-[#52525b]">
+        <span className="flex min-w-0 items-center gap-1.5 truncate"><FileCode2 className="h-3 w-3 shrink-0" /> {FILES.length} fichiers</span>
+        <button type="button" onClick={() => setTerminalOpen(!terminalOpen)} aria-expanded={terminalOpen} className={`flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors ${terminalOpen ? 'bg-white/[0.08] text-[#f4f4f5]' : 'hover:bg-white/5 hover:text-[#d4d4d8]'}`}><TerminalSquare className="h-3 w-3" /> Terminal</button>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {terminalOpen && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} className="absolute inset-x-3 bottom-12 z-20 h-44 overflow-hidden rounded-xl border border-[#2a2a38] bg-[#0b0b10] shadow-2xl">
+            <TerminalSurface phase={phase} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+function PreviewCard() {
+  return (
+    <motion.div initial={{ opacity: 0.8 }} animate={{ opacity: 1 }} className="flex h-full min-h-[280px] flex-col overflow-hidden rounded-xl border border-[#2a2a38] bg-[#f8fafc] text-slate-900 shadow-2xl">
+      <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-slate-200 bg-white px-3"><span className="h-2 w-2 rounded-full bg-slate-200" /><span className="h-2 w-2 rounded-full bg-slate-200" /><span className="h-2 w-2 rounded-full bg-slate-200" /><span className="ml-2 flex items-center gap-1 text-[9px] text-slate-400"><FolderOpen className="h-3 w-3" /> preview.local</span></div>
+      <div className="flex flex-1 flex-col justify-between p-6 sm:p-10"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">Forno · pizzeria artisanale</p><h2 className="mt-3 max-w-md text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">La pâte, le feu, le moment.</h2><p className="mt-3 max-w-sm text-sm leading-6 text-slate-500">Une expérience simple pour découvrir les pizzas qui sortent du four ce soir.</p><div className="mt-6 flex gap-2"><span className="rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white">Commander</span><span className="rounded-full border border-slate-200 px-4 py-2 text-xs text-slate-600">Voir le menu</span></div></div><div className="mt-10 grid grid-cols-3 gap-2"><div className="h-20 rounded-lg bg-gradient-to-br from-orange-200 to-rose-300" /><div className="h-20 rounded-lg bg-gradient-to-br from-amber-100 to-orange-300" /><div className="h-20 rounded-lg bg-gradient-to-br from-red-100 to-orange-200" /></div></div>
+    </motion.div>
+  );
+}
+
+function DataSurface({ phase }: { phase: Phase }) {
+  if (phase !== 'ready') return <CanvasPlaceholder icon={<Database className="h-4 w-4" />} label="Les données apparaîtront après la construction." />;
+  return <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-[#2a2a38] bg-[#101017] p-4 text-xs text-[#d4d4d8]"><div className="flex items-center justify-between border-b border-[#1f1f2a] pb-3"><span className="font-medium text-[#f4f4f5]">Sources du projet</span><span className="text-[10px] text-[#71717a]">0 connectée</span></div><div className="space-y-2 py-3"><div className="flex items-center justify-between rounded-lg border border-[#1f1f2a] px-3 py-2.5"><span className="flex items-center gap-2"><Database className="h-3.5 w-3.5 text-[#60a5fa]" /> Supabase</span><span className="text-[10px] text-[#71717a]">À connecter</span></div><div className="flex items-center justify-between rounded-lg border border-[#1f1f2a] px-3 py-2.5"><span className="flex items-center gap-2"><Plug className="h-3.5 w-3.5 text-[#a78bfa]" /> Autre service</span><span className="text-[10px] text-[#71717a]">À connecter</span></div></div></div>;
 }
 
 function CodeSurface({ phase }: { phase: Phase }) {
