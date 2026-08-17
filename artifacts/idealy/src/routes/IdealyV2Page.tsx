@@ -1,27 +1,35 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowUp,
+  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
   Check,
   ChevronDown,
   Code2,
+  Copy,
   Database,
+  Download,
   FileCode2,
   ExternalLink,
   EyeOff,
   FolderOpen,
   History,
+  Heart,
+  Globe2,
   Menu,
   MoreHorizontal,
   Mic,
   Paperclip,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelLeft,
   Plug,
   Puzzle,
   Settings,
+  Settings2,
   Share2,
+  Star,
   Upload,
   PanelRight,
   RefreshCw,
@@ -29,6 +37,8 @@ import {
   Rocket,
   Sparkles,
   TerminalSquare,
+  Trash2,
+  WandSparkles,
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -60,17 +70,20 @@ export function IdealyV2Page() {
   const [way, setWay] = useState<Way>('pro');
   const [notice, setNotice] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [attachmentOpen, setAttachmentOpen] = useState(false);
   const [promptHelperOpen, setPromptHelperOpen] = useState(false);
+  const [conversationMenuOpen, setConversationMenuOpen] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [workspaceTab, setWorkspaceTab] = useState<'preview' | 'code' | 'data'>('preview');
-  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [consoleOpen, setConsoleOpen] = useState(false);
+  const [consoleTab, setConsoleTab] = useState<'logs' | 'terminal'>('terminal');
   const [canvasWidth, setCanvasWidth] = useState(54);
   const [resizing, setResizing] = useState(false);
   const timers = useRef<number[]>([]);
   const attachmentRef = useRef<HTMLDivElement>(null);
   const promptHelperRef = useRef<HTMLDivElement>(null);
+  const conversationMenuRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
 
   const clearTimers = () => {
@@ -85,12 +98,13 @@ export function IdealyV2Page() {
       const target = event.target as Node;
       if (!attachmentRef.current?.contains(target)) setAttachmentOpen(false);
       if (!promptHelperRef.current?.contains(target)) setPromptHelperOpen(false);
+      if (!conversationMenuRef.current?.contains(target)) setConversationMenuOpen(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setAttachmentOpen(false);
         setPromptHelperOpen(false);
-        setTerminalOpen(false);
+        setConsoleOpen(false);
       }
     };
     document.addEventListener('pointerdown', closeMenus);
@@ -129,7 +143,7 @@ export function IdealyV2Page() {
     setMission(value);
     setSidebarCollapsed(true);
     setWorkspaceTab('preview');
-    setTerminalOpen(false);
+    setConsoleOpen(false);
     setPhase('thinking');
     timers.current.push(window.setTimeout(() => setPhase('building'), 900));
     timers.current.push(window.setTimeout(() => setPhase('ready'), 2400));
@@ -139,6 +153,12 @@ export function IdealyV2Page() {
   const selectStarter = (value: string) => {
     setPrompt(value);
     window.setTimeout(() => document.getElementById('idealy-v2-composer')?.focus(), 0);
+  };
+
+  const toggleSidebar = () => {
+    const opening = sidebarCollapsed;
+    setSidebarCollapsed(!opening);
+    setSidebarOpen(opening);
   };
 
   const showNotice = (message: string) => {
@@ -176,7 +196,7 @@ export function IdealyV2Page() {
         </AnimatePresence>
 
         <aside
-          className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-[#1f1f2a] bg-[#0d0d14] transition-[width,transform] duration-200 lg:static lg:translate-x-0 ${sidebarCollapsed ? 'w-[68px]' : 'w-[248px]'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-[#1f1f2a] bg-[#0d0d14] transition-[width,transform] duration-200 lg:static lg:translate-x-0 ${sidebarCollapsed ? 'w-0 border-r-0' : 'w-[248px]'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-hidden`}
         >
           <div className="flex h-14 items-center justify-between border-b border-[#1f1f2a] px-4">
                           <a href="/" aria-label="Retour à Idealy" className="overflow-hidden transition-opacity">
@@ -202,10 +222,9 @@ export function IdealyV2Page() {
                 setPhase('idle');
                 setMission('');
                 setPrompt('');
-                setSidebarCollapsed(false);
+                setSidebarCollapsed(true);
                 setWorkspaceTab('preview');
-                setTerminalOpen(false);
-                setSidebarOpen(false);
+                setConsoleOpen(false);
               }}
               className={`flex w-full items-center gap-2 rounded-lg border border-[#292938] px-3 py-2.5 text-left text-sm text-[#f4f4f5] transition-colors hover:border-[#8b5cf6]/60 hover:bg-white/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6] ${sidebarCollapsed ? 'justify-center px-2' : ''}`}
               title={sidebarCollapsed ? 'Nouvelle mission' : undefined}
@@ -247,34 +266,70 @@ export function IdealyV2Page() {
         </aside>
 
         <main className="relative flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#1f1f2a] px-4 sm:px-6">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                className="rounded-md p-2 text-[#a1a1aa] hover:bg-white/5 hover:text-white lg:hidden"
-                aria-label="Ouvrir l’historique"
-              >
-                <Menu className="h-4 w-4" />
+          <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center justify-between border-b border-[#1f1f2a] bg-[#0a0a0f]/95 px-2 backdrop-blur sm:px-3">
+            <div className="flex min-w-0 items-center gap-1">
+              <button type="button" onClick={toggleSidebar} className="rounded-md p-1.5 text-[#a1a1aa] hover:bg-white/5 hover:text-white" aria-label={sidebarCollapsed ? 'Afficher la sidebar' : 'Masquer la sidebar'} title={sidebarCollapsed ? 'Afficher la sidebar' : 'Masquer la sidebar'}
+>
+                <PanelLeft className="h-4 w-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed((value) => !value)}
-                className="hidden rounded-md p-2 text-[#a1a1aa] hover:bg-white/5 hover:text-white lg:inline-flex"
-                aria-label={sidebarCollapsed ? 'Déplier la barre latérale' : 'Réduire la barre latérale'}
-                title={sidebarCollapsed ? 'Déplier la barre latérale' : 'Réduire la barre latérale'}
-              >
-                {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-              </button>
-
-              <span className="max-w-[280px] truncate text-xs text-[#71717a]">{hasMission ? (mission.length > 46 ? `${mission.slice(0, 46)}…` : mission) : 'Nouvelle idée'}</span>
+              <button type="button" onClick={() => showNotice('Ajoute cette conversation à tes favoris depuis son menu.')} className="hidden rounded-md p-1.5 text-[#71717a] hover:bg-white/5 hover:text-amber-300 sm:inline-flex" aria-label="Ajouter aux favoris" title="Ajouter aux favoris"><Star className="h-3.5 w-3.5" /></button>
+              <div ref={conversationMenuRef} className="relative min-w-0">
+                <button type="button" onClick={() => setConversationMenuOpen((value) => !value)} aria-expanded={conversationMenuOpen} className="flex max-w-[210px] items-center gap-1 rounded-md px-2 py-1.5 text-xs text-[#d4d4d8] hover:bg-white/5 hover:text-white sm:max-w-[280px]">
+                  <span className="truncate">{hasMission ? (mission.length > 30 ? `${mission.slice(0, 30)}…` : mission) : 'Nouvelle conversation'}</span><ChevronDown className="h-3 w-3 shrink-0 text-[#71717a]" />
+                </button>
+                <AnimatePresence>
+                  {conversationMenuOpen && (
+                    <motion.div initial={{ opacity: 0, y: 5, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.97 }} className="absolute left-0 top-10 z-50 w-60 rounded-xl border border-[#2a2a38] bg-[#171722] p-1.5 shadow-2xl">
+                      <p className="px-2.5 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.14em] text-[#71717a]">Conversation</p>
+                      {[
+                        { label: 'Renommer', icon: WandSparkles },
+                        { label: 'Ajouter aux favoris', icon: Heart },
+                        { label: 'Dupliquer', icon: Copy },
+                        { label: 'Ouvrir dans un nouvel onglet', icon: ArrowUpRight },
+                        { label: 'Télécharger en ZIP', icon: Download },
+                      ].map((item) => (
+                        <button key={item.label} type="button" onClick={() => { setConversationMenuOpen(false); showNotice(`${item.label} sera activé après validation de la coque.`); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-[#d4d4d8] hover:bg-white/5"><item.icon className="h-3.5 w-3.5 text-[#a78bfa]" />{item.label}</button>
+                      ))}
+                      <div className="my-1 border-t border-[#2a2a38]" />
+                      {[
+                        { label: 'Réglages', icon: Settings2 },
+                        { label: 'Transférer', icon: Share2 },
+                        { label: 'Supprimer la conversation', icon: Trash2 },
+                      ].map((item) => (
+                        <button key={item.label} type="button" onClick={() => { setConversationMenuOpen(false); showNotice(`${item.label} sera activé après validation de la coque.`); }} className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs hover:bg-white/5 ${item.label.startsWith('Supprimer') ? 'text-red-300' : 'text-[#d4d4d8]'}`}><item.icon className="h-3.5 w-3.5" />{item.label}</button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              <div className="ml-1 flex min-w-0 items-center gap-0.5 border-l border-[#292938] pl-2">
+                <button type="button" onClick={() => showNotice('Le mode Design sera activé après validation visuelle.')} aria-label="Design" title="Design" className="rounded-md p-1.5 text-[#a1a1aa] hover:bg-white/5 hover:text-white"><WandSparkles className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setWorkspaceTab('preview')} aria-label="Preview" title="Preview" className={`rounded-md p-1.5 hover:bg-white/5 ${workspaceTab === 'preview' ? 'text-white' : 'text-[#71717a]'}`}><PanelRight className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setWorkspaceTab('code')} aria-label="Code" title="Code" className={`rounded-md p-1.5 hover:bg-white/5 ${workspaceTab === 'code' ? 'text-white' : 'text-[#71717a]'}`}><Code2 className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setWorkspaceTab('data')} aria-label="Data" title="Data" className={`rounded-md p-1.5 hover:bg-white/5 ${workspaceTab === 'data' ? 'text-white' : 'text-[#71717a]'}`}><Database className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => { setConsoleTab('terminal'); setConsoleOpen(true); }} aria-label="Console" title="Console" className={`rounded-md p-1.5 hover:bg-white/5 ${consoleOpen ? 'text-white' : 'text-[#71717a]'}`}><TerminalSquare className="h-3.5 w-3.5" /></button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="hidden text-[11px] text-[#71717a] sm:inline">Aperçu sans connexion</span>
-              <button type="button" onClick={() => showNotice('La connexion sera activée après validation de la nouvelle interface.')} className="rounded-md px-2.5 py-1.5 text-xs text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]">Se connecter</button>
-              <button type="button" onClick={() => showNotice('La création de compte sera activée après validation de la nouvelle interface.')} className="hidden rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-[#0a0a0f] transition-opacity hover:opacity-90 sm:inline-flex">S’inscrire</button>
+
+            <div className="flex shrink-0 items-center gap-0.5 text-[#71717a]">
+              <button type="button" aria-label="Preview précédente" title="Preview précédente" className="hidden rounded-md p-1.5 hover:bg-white/5 hover:text-white sm:inline-flex"><ChevronLeft className="h-3.5 w-3.5" /></button>
+              <button type="button" aria-label="Preview suivante" title="Preview suivante" className="hidden rounded-md p-1.5 hover:bg-white/5 hover:text-white sm:inline-flex"><ChevronRight className="h-3.5 w-3.5" /></button>
+              <div className="hidden items-center gap-1 rounded-md border border-[#242432] bg-[#101017] px-2 py-1 text-[10px] sm:flex"><Globe2 className="h-3 w-3" /> /</div>
+              <button type="button" aria-label="Version actuelle" title="Version actuelle" className="hidden items-center gap-1 rounded-md px-2 py-1.5 text-xs text-[#a1a1aa] hover:bg-white/5 hover:text-white sm:flex">Latest <ChevronDown className="h-3 w-3" /></button>
+              <button type="button" onClick={() => showNotice('Les actions du projet apparaîtront ici.')} aria-label="Plus d’actions" title="Plus d’actions" className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><MoreHorizontal className="h-4 w-4" /></button>
+              <button type="button" onClick={() => showNotice('Le partage sera activé après validation de la coque.')} aria-label="Partager" title="Partager" className="hidden rounded-md p-1.5 hover:bg-white/5 hover:text-white sm:inline-flex"><Share2 className="h-3.5 w-3.5" /></button>
+              <span className="hidden items-center gap-1 px-2 text-[10px] text-[#a1a1aa] sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Site</span>
+              <button type="button" onClick={() => showNotice('La publication sera activée après validation de la coque.')} className="hidden rounded-md bg-[#18181f] px-2 py-1.5 text-[10px] font-medium text-[#e4e4e7] hover:bg-[#23232d] sm:inline-flex">Merge PR</button>
             </div>
           </header>
+
+          <AnimatePresence initial={false}>
+            {consoleOpen && (
+              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="absolute right-3 top-12 z-40 h-60 w-[min(92vw,420px)] overflow-hidden rounded-xl border border-[#2a2a38] bg-[#0b0b10] shadow-2xl">
+                <ConsolePanel phase={phase} consoleTab={consoleTab} setConsoleTab={setConsoleTab} onClose={() => setConsoleOpen(false)} showNotice={showNotice} />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className={`flex min-h-0 flex-1 flex-col ${hasMission ? 'lg:flex-row' : ''}`}>
             <section className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${hasMission ? 'lg:w-[46%] lg:border-r lg:border-[#1f1f2a]' : ''}`}>
@@ -446,7 +501,7 @@ export function IdealyV2Page() {
                   className="min-h-[420px] w-full flex-none bg-[#0d0d14] lg:min-h-0 lg:w-[var(--idealy-canvas-width)]"
                   style={{ '--idealy-canvas-width': `${canvasWidth}%` } as CSSProperties}
                 >
-                  <PreviewSurface phase={phase} mission={mission} workspaceTab={workspaceTab} setWorkspaceTab={setWorkspaceTab} terminalOpen={terminalOpen} setTerminalOpen={setTerminalOpen} showNotice={showNotice} />
+                  <PreviewSurface phase={phase} workspaceTab={workspaceTab} setWorkspaceTab={setWorkspaceTab} showNotice={showNotice} />
                 </motion.aside>
               )}
             </AnimatePresence>
@@ -501,42 +556,11 @@ function AgentTimeline({ phase, way, reducedMotion }: { phase: Phase; way: { lab
   );
 }
 
-function PreviewSurface({ phase, mission, workspaceTab, setWorkspaceTab, terminalOpen, setTerminalOpen, showNotice }: { phase: Phase; mission: string; workspaceTab: 'preview' | 'code' | 'data'; setWorkspaceTab: (tab: 'preview' | 'code' | 'data') => void; terminalOpen: boolean; setTerminalOpen: (open: boolean) => void; showNotice: (message: string) => void }) {
+function PreviewSurface({ phase, workspaceTab, setWorkspaceTab, showNotice }: { phase: Phase; workspaceTab: 'preview' | 'code' | 'data'; setWorkspaceTab: (tab: 'preview' | 'code' | 'data') => void; showNotice: (message: string) => void }) {
   const [previewHidden, setPreviewHidden] = useState(false);
-  const tabs = [
-    { id: 'preview' as const, label: 'Preview', icon: PanelRight },
-    { id: 'code' as const, label: 'Code', icon: Code2 },
-    { id: 'data' as const, label: 'Data', icon: Database },
-  ];
 
   return (
     <div className="relative flex h-full min-h-[420px] flex-col bg-[#0d0d14]">
-      <div className="flex h-12 shrink-0 items-center justify-between border-b border-[#1f1f2a] px-3 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2 text-xs text-[#a1a1aa]"><span className="truncate">{mission.length > 34 ? `${mission.slice(0, 34)}…` : mission}</span><span className="text-[#52525b]">·</span><span className="text-[#71717a]">Latest</span></div>
-        <div className="flex items-center gap-0.5 text-[#71717a]">
-          <button type="button" aria-label={previewHidden ? 'Afficher la preview' : 'Masquer la preview'} title={previewHidden ? 'Afficher la preview' : 'Masquer la preview'} onClick={() => setPreviewHidden((value) => !value)} className="rounded-md p-1.5 hover:bg-white/5 hover:text-white">{previewHidden ? <PanelRight className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}</button>
-          <button type="button" aria-label="Partager" title="Partager" onClick={() => showNotice('Le partage sera activé après validation de la coque.')} className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><Share2 className="h-3.5 w-3.5" /></button>
-          <button type="button" aria-label="Ouvrir dans un nouvel onglet" title="Ouvrir dans un nouvel onglet" onClick={() => showNotice('La preview pourra être ouverte dans un nouvel onglet après connexion.')} className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><ExternalLink className="h-3.5 w-3.5" /></button>
-          <button type="button" aria-label="Plus d’actions" title="Plus d’actions" onClick={() => showNotice('Les actions du projet apparaîtront ici.')} className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><MoreHorizontal className="h-3.5 w-3.5" /></button>
-        </div>
-      </div>
-
-      <div className="flex h-10 shrink-0 items-center justify-between border-b border-[#1f1f2a] px-3 text-[11px] text-[#71717a]">
-        <div role="tablist" aria-label="Vues du projet" className="flex items-center gap-1">
-          {tabs.map((tab) => (
-            <button key={tab.id} type="button" role="tab" aria-selected={workspaceTab === tab.id} onClick={() => setWorkspaceTab(tab.id)} className={`flex items-center gap-1.5 border-b-2 px-2.5 py-2.5 transition-colors ${workspaceTab === tab.id ? 'border-[#a78bfa] text-[#f4f4f5]' : 'border-transparent hover:text-[#d4d4d8]'}`}>
-              <tab.icon className="h-3.5 w-3.5" /> {tab.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button type="button" aria-label="Preview précédente" title="Preview précédente" className="rounded-md p-1 hover:bg-white/5 hover:text-white"><ChevronLeft className="h-3.5 w-3.5" /></button>
-          <button type="button" aria-label="Preview suivante" title="Preview suivante" className="rounded-md p-1 hover:bg-white/5 hover:text-white"><ChevronRight className="h-3.5 w-3.5" /></button>
-          <div className="hidden items-center gap-1 rounded-md border border-[#242432] bg-[#101017] px-2 py-1 sm:flex"><span className={`h-1.5 w-1.5 rounded-full ${phase === 'ready' ? 'bg-emerald-400' : 'animate-pulse bg-amber-400'}`} /> preview.local</div>
-          <button type="button" aria-label="Actualiser la preview" title="Actualiser la preview" className="rounded-md p-1 hover:bg-white/5 hover:text-white"><RefreshCw className="h-3.5 w-3.5" /></button>
-        </div>
-      </div>
-
       <div className="min-h-0 flex-1 p-3 sm:p-4">
         {previewHidden ? (
           <CanvasPlaceholder icon={<PanelRight className="h-4 w-4" />} label="Preview masquée. Utilise l’icône en haut pour l’afficher." />
@@ -556,18 +580,32 @@ function PreviewSurface({ phase, mission, workspaceTab, setWorkspaceTab, termina
         )}
       </div>
 
-      <div className="flex h-9 shrink-0 items-center justify-between border-t border-[#1f1f2a] px-3 text-[10px] text-[#52525b]">
-        <span className="flex min-w-0 items-center gap-1.5 truncate"><FileCode2 className="h-3 w-3 shrink-0" /> {FILES.length} fichiers</span>
-        <button type="button" onClick={() => setTerminalOpen(!terminalOpen)} aria-expanded={terminalOpen} className={`flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors ${terminalOpen ? 'bg-white/[0.08] text-[#f4f4f5]' : 'hover:bg-white/5 hover:text-[#d4d4d8]'}`}><TerminalSquare className="h-3 w-3" /> Terminal</button>
-      </div>
+    </div>
+  );
+}
 
-      <AnimatePresence initial={false}>
-        {terminalOpen && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} className="absolute inset-x-3 bottom-12 z-20 h-44 overflow-hidden rounded-xl border border-[#2a2a38] bg-[#0b0b10] shadow-2xl">
-            <TerminalSurface phase={phase} />
-          </motion.div>
+function ConsolePanel({ phase, consoleTab, setConsoleTab, onClose, showNotice }: { phase: Phase; consoleTab: 'logs' | 'terminal'; setConsoleTab: (tab: 'logs' | 'terminal') => void; onClose: () => void; showNotice: (message: string) => void }) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-[#1f1f2a] px-2 text-[11px] text-[#a1a1aa]">
+        <div className="flex items-center gap-1">
+          {(['logs', 'terminal'] as const).map((tab) => (
+            <button key={tab} type="button" onClick={() => setConsoleTab(tab)} className={`rounded-md px-2 py-1 ${consoleTab === tab ? 'bg-white/[0.08] text-white' : 'text-[#71717a] hover:text-[#d4d4d8]'}`}>{tab === 'logs' ? 'Logs' : 'Terminal'}</button>
+          ))}
+        </div>
+        <div className="flex items-center gap-0.5">
+          <button type="button" onClick={() => showNotice('Les logs sont prêts à être copiés dans la prochaine passe.')} aria-label="Copier les logs" title="Copier les logs" className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><Copy className="h-3 w-3" /></button>
+          <button type="button" onClick={() => showNotice('Les logs seront effaçables lorsque la console réelle sera branchée.')} aria-label="Effacer les logs" title="Effacer les logs" className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><Trash2 className="h-3 w-3" /></button>
+          <button type="button" onClick={onClose} aria-label="Fermer la console" title="Fermer la console" className="rounded-md p-1.5 hover:bg-white/5 hover:text-white"><X className="h-3 w-3" /></button>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 p-2">
+        {consoleTab === 'logs' ? (
+          <div className="h-full overflow-auto rounded-lg bg-[#101017] p-3 font-mono text-[10px] leading-5 text-[#a1a1aa]"><p className="text-[#71717a]">[idealy] mission reçue</p><p className="text-[#a78bfa]">[orchestrateur] structure préparée</p><p className="text-emerald-300">[preview] environnement prêt</p></div>
+        ) : (
+          <TerminalSurface phase={phase} />
         )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }
