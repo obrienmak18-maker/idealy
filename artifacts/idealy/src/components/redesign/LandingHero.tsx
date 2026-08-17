@@ -18,6 +18,8 @@ import {
   Rocket,
   Menu,
   X,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -147,7 +149,12 @@ const NAV_LINKS = [
 
 export default function LandingHero() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [lightMode, setLightMode] = useState(false);
   const reducedMotion = useReducedMotion();
+
+  const toggleTheme = () => {
+    setLightMode((current) => !current);
+  };
 
   const fadeUp = reducedMotion
     ? {}
@@ -158,7 +165,7 @@ export default function LandingHero() {
       };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-[#f4f4f5]">
+    <div className={`idealy-landing min-h-screen bg-[#0a0a0f] text-[#f4f4f5] ${lightMode ? 'idealy-landing--light' : ''}`} data-theme={lightMode ? 'light' : 'dark'}>
       {/* Header */}
       <header className="border-b border-[#1f1f2a]">
         <nav
@@ -183,6 +190,15 @@ export default function LandingHero() {
                 {link.label}
               </a>
             ))}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={lightMode ? 'Activer le mode sombre' : 'Activer le mode clair'}
+              title={lightMode ? 'Mode sombre' : 'Mode clair'}
+              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f97316]"
+            >
+              {lightMode ? <Moon className="h-4 w-4" aria-hidden="true" /> : <Sun className="h-4 w-4" aria-hidden="true" />}
+            </button>
             <Button
               variant="ghost"
               size="sm"
