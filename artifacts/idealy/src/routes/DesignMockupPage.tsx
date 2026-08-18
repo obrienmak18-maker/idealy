@@ -1,3 +1,21 @@
+/**
+ * IDEALY — DESIGN MOCKUP AUTONOME
+ *
+ * Ce fichier regroupe toute la maquette React : accueil, onboarding, workspace,
+ * mission, timeline, preview, code, data, terminal, logs et dictée simulée.
+ * Il ne contient aucun appel Supabase, Stripe, OAuth ou fournisseur IA.
+ *
+ * Bibliothèques utilisées :
+ * - React : état local, rendu des écrans et interactions utilisateur.
+ * - framer-motion : transitions d’écran, timeline, drawers et micro-animations.
+ * - lucide-react : icônes vectorielles cohérentes et accessibles.
+ * - Tailwind CSS : tokens visuels, responsive layout, couleurs et états hover/focus.
+ *
+ * Le backend réel sera branché plus tard autour des handlers déjà nommés
+ * (onMission, onListening, onSetWorkspaceTab, onSetConsoleOpen, etc.).
+ * L’agent design doit conserver la hiérarchie produit et ne modifier le sens
+ * des quatre voies qu’après discussion.
+ */
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowRight,
@@ -44,7 +62,34 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Logo } from '@/components/Brand';
+
+/**
+ * Contexte prêt à transmettre à un agent design ou produit.
+ * Il est volontairement dans ce fichier pour que le livrable React reste autonome.
+ */
+export const IDEALY_DESIGN_AGENT_CONTEXT = `
+Idealy est un studio IA no-code/low-code qui transforme une idée en application explorable,
+avec une interface soignée, une preview visible et, à terme, du code et des données réelles.
+Cette maquette est une démonstration frontend : elle ne doit appeler aucun backend et ne doit
+pas inventer de fonctionnalités déjà branchées.
+
+Parcours inclus : accueil, idée, starters, onboarding gamifié en 3 étapes, quatre voies narratives
+(Ninja, Mage, Hunter, Pro), nom, équipe, rôle, source de découverte, workspace, sidebar, historique,
+conversation, timeline de réflexion, preview, Code, Data, Terminal/Logs, dictée et micro-interactions.
+Les quatre voies sont des identités de création, jamais des niveaux tarifaires ou de compétence.
+La sidebar reste visible dans la workspace. La top bar apparaît après une mission. Le centre est
+la preview. Le code est secondaire, les données sont lisibles, le terminal reste un tiroir indépendant.
+
+Bibliothèques : React porte l’état et les composants ; framer-motion porte les transitions, la
+progression, les drawers et les micro-animations ; lucide-react porte les icônes vectorielles ;
+Tailwind CSS porte le système visuel responsive. Ces bibliothèques sont déjà présentes dans le
+projet et doivent être conservées plutôt que remplacées par des dépendances inventées.
+
+Ne pas transformer Idealy en dashboard complexe, en clone WhatsApp ou en interface remplie de
+boutons. Ne pas supprimer la simplicité inspirée de ChatGPT, Gemini, Claude et v0. Ne pas modifier
+le sens des voies, le parcours, la hiérarchie preview/chat/sidebar ou le backend existant sans
+proposition explicite et validation humaine préalable.
+`;
 
 type Screen = 'welcome' | 'onboarding' | 'workspace';
 type OnboardingStep = 'way' | 'profile' | 'context';
@@ -60,6 +105,21 @@ type Way = {
   accent: string;
   background: string;
 };
+
+function Logo({ size = 28, markOnly = false }: { size?: number; markOnly?: boolean }) {
+  return (
+    <div className="flex items-center gap-2" aria-label="Idealy">
+      <span
+        aria-hidden="true"
+        className="flex items-center justify-center rounded-[9px] border border-white/[0.16] bg-gradient-to-br from-[#f2b1d1]/20 to-[#8edee2]/15 text-[#f2b1d1] shadow-[0_0_24px_rgba(242,177,209,0.12)]"
+        style={{ width: size, height: size, fontSize: Math.max(12, size * 0.48) }}
+      >
+        ✦
+      </span>
+      {!markOnly && <span className="text-sm font-semibold tracking-[-0.03em] text-[#eee7ee]">Idealy</span>}
+    </div>
+  );
+}
 
 const WAYS: Way[] = [
   { id: 'ninja', name: 'Ninja', short: 'Rapide et direct', description: 'Pour aller droit vers une première version claire.', accent: '#d7d9e2', background: 'from-slate-700/45 via-zinc-950 to-zinc-950' },
