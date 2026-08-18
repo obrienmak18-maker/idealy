@@ -1,83 +1,82 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { Stripe } from 'https://esm.sh/stripe@14.14.0';
+import Stripe from "npm:stripe@17.7.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const appOrigin = Deno.env.get("APP_ORIGIN") ?? "";
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  "Access-Control-Allow-Origin": appOrigin || "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
+    const authorization = req.headers.get("Authorization");
+    if (!authorization?.startsWith("Bearer "))
+      return json({ error: "Unauthorized" }, 401);
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const stripeSecret = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+    if (!supabaseUrl || !anonKey || !serviceRoleKey || !stripeSecret)
+      return json({ error: "Billing server configuration is incomplete" }, 500);
 
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const authClient = createClient(supabaseUrl, anonKey);
+    const {
+      data: { user },
+      error: authError,
+    } = await authClient.auth.getUser(authorization.slice("Bearer ".length));
+    if (authError || !user) return json({ error: "Unauthorized" }, 401);
 
-    const { data: customer } = await supabase
-      .from('stripe_customers')
-      .select('stripe_customer_id')
-      .eq('user_id', user.id)
-      .single();
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const { data: profile, error: profileError } = await admin
+      .from("profiles")
+      .select("stripe_customer_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profileError) throw profileError;
+    if (!profile?.stripe_customer_id)
+      return json({ error: "No Stripe customer found" }, 404);
 
-    if (!customer) {
-      return new Response(JSON.stringify({ error: 'No subscription found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
-      apiVersion: '2024-06-20',
+    const stripe = new Stripe(stripeSecret, {
+      apiVersion: "2025-02-24.acacia",
     });
-
     const subscriptions = await stripe.subscriptions.list({
-      customer: customer.stripe_customer_id,
-      status: 'active',
-      limit: 1,
+      customer: profile.stripe_customer_id,
+      status: "all",
+      limit: 10,
     });
+    const subscription = subscriptions.data.find((item) =>
+      ["active", "trialing", "past_due"].includes(item.status),
+    );
+    if (!subscription) return json({ error: "No active subscription" }, 404);
 
-    if (subscriptions.data.length === 0) {
-      return new Response(JSON.stringify({ error: 'No active subscription' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const subscription = subscriptions.data[0];
-
-    await stripe.subscriptions.update(subscription.id, {
+    const updated = await stripe.subscriptions.update(subscription.id, {
       cancel_at_period_end: true,
     });
-
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return json({
+      success: true,
+      subscriptionId: updated.id,
+      cancelAtPeriodEnd: updated.cancel_at_period_end,
+      currentPeriodEnd: updated.current_period_end,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error("cancel-subscription failed", error);
+    return json(
+      { error: error instanceof Error ? error.message : "Cancellation failed" },
+      500,
+    );
   }
 });

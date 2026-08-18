@@ -1,82 +1,92 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { Stripe } from 'https://esm.sh/stripe@14.14.0';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const appOrigin = Deno.env.get("APP_ORIGIN") ?? "";
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  "Access-Control-Allow-Origin": appOrigin || "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "GET") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    const authorization = req.headers.get("Authorization");
+    if (!authorization?.startsWith("Bearer "))
+      return json({ error: "Unauthorized" }, 401);
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!supabaseUrl || !anonKey || !serviceRoleKey)
+      return json(
+        { error: "Supabase server configuration is incomplete" },
+        500,
+      );
+
+    const authClient = createClient(supabaseUrl, anonKey);
+    const {
+      data: { user },
+      error: authError,
+    } = await authClient.auth.getUser(authorization.slice("Bearer ".length));
+    if (authError || !user) return json({ error: "Unauthorized" }, 401);
+
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const [
+      { data: profile, error: profileError },
+      { data: subscription, error: subscriptionError },
+    ] = await Promise.all([
+      admin
+        .from("profiles")
+        .select("plan, stripe_customer_id")
+        .eq("id", user.id)
+        .maybeSingle(),
+      admin
+        .from("subscriptions")
+        .select("status, plan, current_period_end, cancel_at_period_end")
+        .eq("user_id", user.id)
+        .in("status", ["active", "trialing", "past_due"])
+        .order("current_period_end", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    if (profileError) throw profileError;
+    if (subscriptionError) throw subscriptionError;
+
+    const active = Boolean(
+      subscription && ["active", "trialing"].includes(subscription.status),
     );
+    const periodEnd = subscription?.current_period_end
+      ? Math.floor(new Date(subscription.current_period_end).getTime() / 1000)
+      : null;
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: customer } = await supabase
-      .from('stripe_customers')
-      .select('stripe_customer_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!customer) {
-      return new Response(JSON.stringify({ active: false, planId: null }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
-      apiVersion: '2024-06-20',
-    });
-
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customer.stripe_customer_id,
-      status: 'active',
-      limit: 1,
-    });
-
-    if (subscriptions.data.length === 0) {
-      return new Response(JSON.stringify({ active: false, planId: null }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const subscription = subscriptions.data[0];
-
-    return new Response(JSON.stringify({
-      active: true,
-      planId: subscription.metadata.planId || 'pro',
-      currentPeriodEnd: subscription.current_period_end,
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return json({
+      active,
+      planId: subscription?.plan ?? profile?.plan ?? "free",
+      currentPeriodEnd: periodEnd,
+      cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
+      status: subscription?.status ?? "none",
+      stripeCustomerId: profile?.stripe_customer_id ?? null,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error("check-subscription failed", error);
+    return json(
+      {
+        error:
+          error instanceof Error ? error.message : "Subscription check failed",
+      },
+      500,
+    );
   }
 });

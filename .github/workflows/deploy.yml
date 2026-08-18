@@ -76,7 +76,6 @@ jobs:
             echo "Supabase deployment skipped: SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_ID are not configured in GitHub Secrets."
             exit 0
           fi
-          supabase functions deploy ai-proxy --project-ref "$PROJECT_ID"
           supabase functions deploy process-ai-request --project-ref "$PROJECT_ID"
           supabase functions deploy create-checkout-session --project-ref "$PROJECT_ID"
           supabase functions deploy create-billing-portal --project-ref "$PROJECT_ID"
