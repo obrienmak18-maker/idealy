@@ -68,3 +68,5 @@ Le linter sécurité Supabase ne rapporte aucune alerte critique. Il conserve tr
 | vercel-deploy | 2 | true | — | auth.users |
 | vercel-status | 2 | true | — | auth.users |
 | ai-proxy | 2 | true | — | 410 → process-ai-request |
+
+L’inventaire Supabase final confirme les fonctions modernes actives : `integration-connect` v20 (`verify_jwt=true`), `integration-callback` v21 (`verify_jwt=false`), `integration-status` v3, `github-export` v2, `process-ai-request` v4, `stripe-webhook` v20 (`verify_jwt=false`), `create-billing-portal` v2, `check-subscription` v2, `cancel-subscription` v2, `vercel-deploy` v2, `vercel-status` v2 et `ai-proxy` v2. Les anciennes fonctions `create-checkout-session` v19 et `create-portal-session` v18 sont encore actives dans Supabase, mais le frontend actuel appelle `create-billing-portal`; elles restent à déprécier séparément après confirmation de compatibilité pour éviter une suppression intempestive.
