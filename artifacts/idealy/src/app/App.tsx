@@ -9,6 +9,7 @@ const OnboardingPage = lazy(() => import('@/routes/OnboardingPage').then((module
 const WorkspacePage = lazy(() => import('@/routes/WorkspacePage').then((module) => ({ default: module.WorkspacePage })));
 const PricingPage = lazy(() => import('@/routes/PricingPage').then((module) => ({ default: module.PricingPage })));
 const IdealyV2Page = lazy(() => import('@/routes/IdealyV2Page').then((module) => ({ default: module.IdealyV2Page })));
+const DesignMockupPage = lazy(() => import('@/routes/DesignMockupPage').then((module) => ({ default: module.DesignMockupPage })));
 
 // Simple path-based routing without React Router
 const currentPath = window.location.pathname;
@@ -75,6 +76,8 @@ function App() {
     page = <WorkspacePage demoMode />;
   } else if (currentPath === '/v2') {
     page = <IdealyV2Page />;
+  } else if (currentPath === '/design-mockup') {
+    page = <DesignMockupPage />;
   } else if (!onboarded || stage === 'choosing-way' || stage === 'creating-profile') {
     if (stage === 'choosing-way' || stage === 'creating-profile') {
       page = <OnboardingPage />;
