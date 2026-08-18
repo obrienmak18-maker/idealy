@@ -33,3 +33,38 @@ L’intégration Supabase de la session n’a pas pu être interrogée pendant c
 ## Périmètre de cette passe
 
 La coque visuelle reste inchangée. Les corrections prévues portent sur la cohérence des fonctions Edge, les tests de contrat et la documentation de déploiement. Aucun secret ne sera ajouté au dépôt et aucune fusion vers `main` ne sera faite sans validation explicite.
+
+## Vérification distante du 18 août 2026
+
+Le projet Supabase distant identifié est `IDEALY`, référence `vhucjkyktdflwocrmzhe`, région `eu-west-3`, état `ACTIVE_HEALTHY`. La base distante possède déjà les tables modernes `profiles`, `subscriptions`, `user_integrations`, `integration_oauth_states`, `integration_credentials`, `user_ai_keys`, `credit_ledger` et `user_credits`, ainsi que les anciennes tables `integrations`, `oauth_states` et `stripe_customers`. Cette coexistence explique pourquoi certaines fonctions legacy pouvaient encore fonctionner tout en contournant le modèle moderne.
+
+Les migrations distantes sont nommées `create_inia_schema`, `idealy_identity_billing`, `harden_legacy_functions`, `add_agent_platform_foundation`, `secure_oauth_integration_credentials`, `document_service_only_credentials_access`, `configure_private_project_assets_bucket`, `add_covering_foreign_key_indexes` et `harden_security_definer_functions`. Elles ne portent pas les mêmes noms que les migrations locales récentes ; aucune migration distante n’a été appliquée automatiquement pendant cette passe.
+
+Les fonctions publiées après correction sont `process-ai-request` version 4, `stripe-webhook` version 20, `integration-connect` version 20, `integration-callback` version 20, `create-billing-portal` version 2, `check-subscription` version 2, `cancel-subscription` version 2, `integration-status` version 2, `vercel-deploy` version 2, `vercel-status` version 2 et `ai-proxy` version 2. Le webhook conserve `verify_jwt=false` parce qu’il vérifie la signature Stripe ; les autres fonctions concernées exigent un JWT.
+
+Le linter sécurité Supabase signale trois informations, non des erreurs critiques : RLS est activé sans policy sur `credit_ledger`, `user_ai_keys` et `user_credits`. Ce choix est volontaire pour empêcher l’accès direct des rôles client ; ces tables sont utilisées via des fonctions SECURITY DEFINER ou le service role. La vérification des RPC distantes `consume_ai_credit`, `grant_user_credits` et `refund_ai_credit` a été lancée ; son résultat doit être conservé avec la sortie MCP correspondante.
+
+La fonction `stripe-webhook` a nécessité un payload de déploiement déclarant explicitement `deno.json` comme import map, car Supabase conservait une référence historique vers cet import map. Le déploiement final a réussi après cette correction.
+
+La requête distante sur `information_schema.routines` a confirmé la présence des trois RPC : `consume_ai_credit`, `grant_user_credits` et `refund_ai_credit`. Le contrat de crédits requis par le proxy IA et le webhook existe donc bien sur le projet IDEALY distant.
+
+## Avis sécurité après publication OAuth
+
+Le linter sécurité Supabase ne rapporte aucune alerte critique. Il conserve trois avis de niveau `INFO` `rls_enabled_no_policy` sur `public.credit_ledger`, `public.user_ai_keys` et `public.user_credits`. Ces tables sont volontairement sans policies pour empêcher toute lecture ou écriture directe par `anon` et `authenticated`; les accès passent par le service role et les RPC contrôlées. La documentation Supabase associée est https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy. Aucune policy permissive n'a été ajoutée pour faire disparaître artificiellement ces avis.
+
+## Fonctions Edge publiées — état final
+
+| Fonction | Version | verify_jwt | import_map | Registre |
+|---|---|---|---|---|
+| process-ai-request | 4 | true | false | profiles/subscriptions |
+| stripe-webhook | 20 | false | deno.json | profiles/subscriptions |
+| integration-connect | 20 | true | deno.json | integration_oauth_states |
+| integration-callback | 21 | false | deno.json | user_integrations + integration_credentials |
+| integration-status | 3 | true | — | user_integrations |
+| github-export | 2 | true | deno.json | user_integrations + integration_credentials |
+| check-subscription | 2 | true | — | profiles/subscriptions |
+| create-billing-portal | 2 | true | — | profiles/subscriptions |
+| cancel-subscription | 2 | true | — | profiles/subscriptions |
+| vercel-deploy | 2 | true | — | auth.users |
+| vercel-status | 2 | true | — | auth.users |
+| ai-proxy | 2 | true | — | 410 → process-ai-request |

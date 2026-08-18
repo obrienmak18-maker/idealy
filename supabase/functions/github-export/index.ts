@@ -1,11 +1,7 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { authenticate } from '../_shared/auth.ts';
+import { corsResponse, optionsResponse } from '../_shared/cors.ts';
+import { decryptIntegrationToken } from '../_shared/integrationCrypto.ts';
 
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
@@ -14,82 +10,85 @@ async function githubFetch(url: string, token: string, options: RequestInit = {}
   const res = await fetch(url, {
     ...options,
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/vnd.github+json',
+      Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
       ...(options.headers ?? {}),
     },
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? `GitHub error ${res.status}`);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const message = data && typeof data === 'object' && 'message' in data
+      ? String(data.message)
+      : `GitHub error ${res.status}`;
+    throw new Error(message);
+  }
   return data;
 }
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+Deno.serve(async (request) => {
+  if (request.method === 'OPTIONS') return optionsResponse(request);
+  if (request.method !== 'POST') return corsResponse({ error: 'Method not allowed' }, 405, request);
+
+  const auth = await authenticate(request);
+  if ('error' in auth) return corsResponse({ error: auth.error }, auth.status, request);
 
   try {
-    // Use service role for admin DB operations
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const { projectName, files } = await request.json();
+    if (
+      typeof projectName !== 'string' ||
+      projectName.trim().length === 0 ||
+      projectName.length > 100 ||
+      !files ||
+      typeof files !== 'object' ||
+      Array.isArray(files)
+    ) {
+      return corsResponse({ error: 'Invalid project payload.' }, 400, request);
     }
 
-    // Verify user with anon client
-    const anonClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-    const { data: { user } } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { projectName, files } = await req.json();
-    if (typeof projectName !== 'string' || projectName.trim().length === 0 || projectName.length > 100 || !files || typeof files !== 'object') {
-      return new Response(JSON.stringify({ error: 'Invalid project payload.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
     let totalBytes = 0;
     for (const [path, content] of Object.entries(files as Record<string, unknown>)) {
       if (!path || path.includes('..') || path.startsWith('/') || typeof content !== 'string') {
-        return new Response(JSON.stringify({ error: `Invalid file path or content: ${path}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return corsResponse({ error: `Invalid file path or content: ${path}` }, 400, request);
       }
       const size = new TextEncoder().encode(content).byteLength;
-      if (size > MAX_FILE_BYTES) return new Response(JSON.stringify({ error: `File too large: ${path}` }), { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (size > MAX_FILE_BYTES) return corsResponse({ error: `File too large: ${path}` }, 413, request);
       totalBytes += size;
-      if (totalBytes > MAX_TOTAL_BYTES) return new Response(JSON.stringify({ error: 'Project payload too large.' }), { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (totalBytes > MAX_TOTAL_BYTES) return corsResponse({ error: 'Project payload too large.' }, 413, request);
     }
 
-    // Get user's GitHub token from integrations table
-    const { data: integration } = await supabase
-      .from('integrations')
-      .select('access_token')
-      .eq('user_id', user.id)
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+    const { data: integration, error: integrationError } = await admin
+      .from('user_integrations')
+      .select('id, status')
+      .eq('user_id', auth.user.id)
       .eq('provider', 'github')
-      .single();
+      .maybeSingle();
 
-    if (!integration?.access_token) {
-      return new Response(JSON.stringify({ error: 'GitHub not connected. Please connect GitHub in Connectors.' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (integrationError || !integration || integration.status !== 'active') {
+      return corsResponse({ error: 'GitHub not connected. Please connect GitHub in Connectors.' }, 400, request);
     }
 
-    const token = integration.access_token;
-    const repoName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || `idealy-${crypto.randomUUID().slice(0, 8)}`;
+    const { data: credential, error: credentialError } = await admin
+      .from('integration_credentials')
+      .select('ciphertext, iv')
+      .eq('integration_id', integration.id)
+      .maybeSingle();
+    if (credentialError || !credential?.ciphertext || !credential.iv) {
+      return corsResponse({ error: 'GitHub credentials are unavailable. Please reconnect GitHub.' }, 400, request);
+    }
 
-    // 1. Create repository
+    const token = await decryptIntegrationToken(credential.ciphertext, credential.iv);
+    const repoName = projectName
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || `idealy-${crypto.randomUUID().slice(0, 8)}`;
+
     const repo = await githubFetch('https://api.github.com/user/repos', token, {
       method: 'POST',
       body: JSON.stringify({
@@ -102,80 +101,61 @@ serve(async (req) => {
 
     const owner = repo.owner.login;
     const repoFullName = repo.full_name;
-
-    // 2. Get default branch SHA (from auto_init commit)
     const branchData = await githubFetch(
       `https://api.github.com/repos/${repoFullName}/git/ref/heads/${repo.default_branch}`,
-      token
+      token,
     );
     const baseTreeSHA = branchData.object.sha;
-
-    // 3. Get base tree SHA
     const commitData = await githubFetch(
       `https://api.github.com/repos/${repoFullName}/git/commits/${baseTreeSHA}`,
-      token
+      token,
     );
     const baseTree = commitData.tree.sha;
 
-    // 4. Create blobs for all files in parallel
-    const blobPromises = Object.entries(files as Record<string, string>).map(async ([path, content]) => {
-      const blob = await githubFetch(
-        `https://api.github.com/repos/${repoFullName}/git/blobs`,
-        token,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            content: btoa(unescape(encodeURIComponent(content))),
-            encoding: 'base64',
-          }),
-        }
-      );
-      return { path: path.startsWith('/') ? path.slice(1) : path, mode: '100644', type: 'blob', sha: blob.sha };
-    });
+    const treeItems = await Promise.all(
+      Object.entries(files as Record<string, string>).map(async ([path, content]) => {
+        const blob = await githubFetch(
+          `https://api.github.com/repos/${repoFullName}/git/blobs`,
+          token,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              content: btoa(unescape(encodeURIComponent(content))),
+              encoding: 'base64',
+            }),
+          },
+        );
+        return { path, mode: '100644', type: 'blob', sha: blob.sha };
+      }),
+    );
 
-    const treeItems = await Promise.all(blobPromises);
-
-    // 5. Create a single tree with all files (atomic)
     const newTree = await githubFetch(
       `https://api.github.com/repos/${repoFullName}/git/trees`,
       token,
-      {
-        method: 'POST',
-        body: JSON.stringify({ base_tree: baseTree, tree: treeItems }),
-      }
+      { method: 'POST', body: JSON.stringify({ base_tree: baseTree, tree: treeItems }) },
     );
-
-    // 6. Create commit
     const newCommit = await githubFetch(
       `https://api.github.com/repos/${repoFullName}/git/commits`,
       token,
       {
         method: 'POST',
         body: JSON.stringify({
-          message: `🚀 Initial commit — Generated by Idealy`,
+          message: 'Initial commit — Generated by Idealy',
           tree: newTree.sha,
           parents: [baseTreeSHA],
         }),
-      }
+      },
     );
-
-    // 7. Update branch ref
     await githubFetch(
       `https://api.github.com/repos/${repoFullName}/git/refs/heads/${repo.default_branch}`,
       token,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ sha: newCommit.sha }),
-      }
+      { method: 'PATCH', body: JSON.stringify({ sha: newCommit.sha }) },
     );
 
-    return new Response(JSON.stringify({ repoUrl: repo.html_url, owner, repo: repoName }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
+    return corsResponse({ repoUrl: repo.html_url, owner, repo: repoName }, 200, request);
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    const message = error instanceof Error ? error.message : 'Unexpected export error.';
+    console.error('github-export failed', message);
+    return corsResponse({ error: message }, 500, request);
   }
 });

@@ -1,144 +1,177 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptIntegrationToken } from "../_shared/integrationCrypto.ts";
 
-/**
- * integration-callback — Reçoit le code OAuth de GitHub/Figma,
- * échange contre un access_token, le stocke dans la table `integrations`.
- *
- * URL : https://<project>.supabase.co/functions/v1/integration-callback?code=...&state=...&provider=github
- * Configurez cette URL comme Redirect URI dans votre GitHub OAuth App.
- */
+const APP_ORIGIN =
+  Deno.env.get("APP_ORIGIN") ??
+  Deno.env.get("APP_URL") ??
+  "http://localhost:3000";
 
-const APP_URL = Deno.env.get("APP_URL") ?? "http://localhost:5173";
+function redirect(errorOrQuery: string): Response {
+  return Response.redirect(`${APP_ORIGIN.replace(/\/$/, "")}?${errorOrQuery}`);
+}
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+function encodeBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+async function hashState(state: string): Promise<string> {
+  return encodeBase64Url(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state)),
+  );
+}
+
+Deno.serve(async (request) => {
+  if (request.method !== "GET") return redirect("error=method_not_allowed");
 
   try {
-    const url = new URL(req.url);
+    const url = new URL(request.url);
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
-    const provider = url.searchParams.get("provider") ?? "github";
+    if (!code || !state) return redirect("error=missing_code_or_state");
 
-    if (!code || !state) {
-      return Response.redirect(`${APP_URL}?error=missing_code_or_state`);
-    }
-    if (!["github", "figma"].includes(provider)) {
-      return Response.redirect(`${APP_URL}?error=unsupported_provider`);
-    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const clientId =
+      Deno.env.get("GITHUB_OAUTH_CLIENT_ID") ??
+      Deno.env.get("GITHUB_CLIENT_ID") ??
+      "";
+    const clientSecret =
+      Deno.env.get("GITHUB_OAUTH_CLIENT_SECRET") ??
+      Deno.env.get("GITHUB_CLIENT_SECRET") ??
+      "";
+    if (!supabaseUrl || !serviceRoleKey || !clientId || !clientSecret)
+      return redirect("error=oauth_server_not_configured");
 
-    // Use service role to bypass RLS
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const stateHash = await hashState(state);
+    const { data: oauthState, error: stateError } = await admin
+      .from("integration_oauth_states")
+      .select("id, user_id, provider, redirect_uri, expires_at, consumed_at")
+      .eq("state_hash", stateHash)
+      .eq("provider", "github")
+      .maybeSingle();
 
-    // Validate CSRF state
-    const { data: oauthState, error: stateError } = await supabase
-      .from("oauth_states")
-      .select("user_id, provider, created_at")
-      .eq("state", state)
-      .single();
-
-    if (stateError || !oauthState || oauthState.provider !== provider) {
-      return Response.redirect(`${APP_URL}?error=invalid_state`);
-    }
-    const createdAt = new Date(oauthState.created_at).getTime();
     if (
-      !Number.isFinite(createdAt) ||
-      Date.now() - createdAt > 10 * 60 * 1000
+      stateError ||
+      !oauthState ||
+      oauthState.consumed_at ||
+      new Date(oauthState.expires_at).getTime() <= Date.now()
     ) {
-      await supabase.from("oauth_states").delete().eq("state", state);
-      return Response.redirect(`${APP_URL}?error=expired_state`);
+      return redirect("error=invalid_or_expired_state");
     }
 
-    // Clean up used state
-    await supabase.from("oauth_states").delete().eq("state", state);
+    const { data: consumedState, error: consumeError } = await admin
+      .from("integration_oauth_states")
+      .update({ consumed_at: new Date().toISOString() })
+      .eq("id", oauthState.id)
+      .is("consumed_at", null)
+      .select("id")
+      .maybeSingle();
+    if (consumeError || !consumedState)
+      return redirect("error=state_already_consumed");
 
-    // Provider-specific token exchange
-    const providerConfigs: Record<
-      string,
-      { tokenUrl: string; clientIdEnv: string; clientSecretEnv: string }
-    > = {
-      github: {
-        tokenUrl: "https://github.com/login/oauth/access_token",
-        clientIdEnv: "GITHUB_CLIENT_ID",
-        clientSecretEnv: "GITHUB_CLIENT_SECRET",
-      },
-      figma: {
-        tokenUrl: "https://www.figma.com/api/oauth/token",
-        clientIdEnv: "FIGMA_CLIENT_ID",
-        clientSecretEnv: "FIGMA_CLIENT_SECRET",
-      },
-    };
-
-    const config = providerConfigs[provider];
-    const clientId = Deno.env.get(config.clientIdEnv);
-    const clientSecret = Deno.env.get(config.clientSecretEnv);
-    if (!clientId || !clientSecret) {
-      return Response.redirect(`${APP_URL}?error=oauth_server_not_configured`);
-    }
-
-    const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/integration-callback?provider=${provider}`;
-
-    // Exchange code for access token
-    const tokenRes = await fetch(config.tokenUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-        redirect_uri: redirectUri,
-      }),
-    });
-
-    const tokenData = await tokenRes.json();
-
-    if (tokenData.error || !tokenData.access_token) {
-      console.error("Token exchange failed for provider:", provider);
-      return Response.redirect(`${APP_URL}?error=token_exchange_failed`);
-    }
-
-    // Store token in integrations table (upsert)
-    const { error: upsertError } = await supabase.from("integrations").upsert(
+    const tokenResponse = await fetch(
+      "https://github.com/login/oauth/access_token",
       {
-        user_id: oauthState.user_id,
-        provider,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token ?? null,
-        metadata: {
-          scope: tokenData.scope,
-          token_type: tokenData.token_type,
-          connected_at: new Date().toISOString(),
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-        updated_at: new Date().toISOString(),
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+          redirect_uri: oauthState.redirect_uri,
+        }),
       },
-      { onConflict: "user_id,provider" },
     );
-
-    if (upsertError) {
-      console.error("Failed to store integration:", upsertError);
-      return Response.redirect(`${APP_URL}?error=storage_failed`);
+    const tokenData = (await tokenResponse.json().catch(() => null)) as {
+      access_token?: string;
+      token_type?: string;
+      scope?: string;
+      error?: string;
+    } | null;
+    if (!tokenResponse.ok || !tokenData?.access_token) {
+      console.error(
+        "GitHub token exchange failed",
+        tokenData?.error ?? tokenResponse.status,
+      );
+      return redirect("error=token_exchange_failed");
     }
 
-    // Redirect back to the app with success
-    return Response.redirect(
-      `${APP_URL}?connected=${encodeURIComponent(provider)}`,
-    );
+    const userResponse = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+    const githubUser = (await userResponse.json().catch(() => null)) as {
+      id?: number;
+      login?: string;
+      name?: string;
+    } | null;
+    const encrypted = await encryptIntegrationToken(tokenData.access_token);
+    const now = new Date().toISOString();
+
+    const { data: integration, error: integrationError } = await admin
+      .from("user_integrations")
+      .upsert(
+        {
+          user_id: oauthState.user_id,
+          provider: "github",
+          connection_type: "oauth",
+          external_account_id: githubUser?.id ? String(githubUser.id) : null,
+          display_name: githubUser?.login ?? githubUser?.name ?? "GitHub",
+          credential_reference: "oauth:github",
+          scopes: (tokenData.scope ?? "")
+            .split(",")
+            .map((scope) => scope.trim())
+            .filter(Boolean),
+          status: "active",
+          last_verified_at: now,
+          metadata: {
+            connected_at: now,
+            token_type: tokenData.token_type ?? "bearer",
+          },
+          updated_at: now,
+        },
+        { onConflict: "user_id,provider" },
+      )
+      .select("id")
+      .single();
+    if (integrationError || !integration) {
+      console.error("GitHub integration record failed", integrationError);
+      return redirect("error=storage_failed");
+    }
+
+    const { error: credentialError } = await admin
+      .from("integration_credentials")
+      .upsert(
+        {
+          integration_id: integration.id,
+          ciphertext: encrypted.ciphertext,
+          iv: encrypted.iv,
+          algorithm: "AES-GCM-256",
+          key_version: 1,
+          rotated_at: now,
+        },
+        { onConflict: "integration_id" },
+      );
+    if (credentialError) {
+      console.error("GitHub credential storage failed", credentialError);
+      return redirect("error=credential_storage_failed");
+    }
+
+    return redirect("connected=github");
   } catch (error) {
-    console.error("OAuth callback error:", error);
-    return Response.redirect(`${APP_URL}?error=internal`);
+    console.error("integration-callback failed", error);
+    return redirect("error=internal");
   }
 });
