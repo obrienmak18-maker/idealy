@@ -1,5 +1,5 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /**
  * integration-callback — Reçoit le code OAuth de GitHub/Figma,
@@ -9,80 +9,92 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
  * Configurez cette URL comme Redirect URI dans votre GitHub OAuth App.
  */
 
-const APP_URL = Deno.env.get('APP_URL') ?? 'http://localhost:5173';
+const APP_URL = Deno.env.get("APP_URL") ?? "http://localhost:5173";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const url = new URL(req.url);
-    const code = url.searchParams.get('code');
-    const state = url.searchParams.get('state');
-    const provider = url.searchParams.get('provider') ?? 'github';
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+    const provider = url.searchParams.get("provider") ?? "github";
 
     if (!code || !state) {
       return Response.redirect(`${APP_URL}?error=missing_code_or_state`);
     }
+    if (!["github", "figma"].includes(provider)) {
+      return Response.redirect(`${APP_URL}?error=unsupported_provider`);
+    }
 
     // Use service role to bypass RLS
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
     // Validate CSRF state
     const { data: oauthState, error: stateError } = await supabase
-      .from('oauth_states')
-      .select('user_id, provider')
-      .eq('state', state)
+      .from("oauth_states")
+      .select("user_id, provider, created_at")
+      .eq("state", state)
       .single();
 
     if (stateError || !oauthState || oauthState.provider !== provider) {
       return Response.redirect(`${APP_URL}?error=invalid_state`);
     }
+    const createdAt = new Date(oauthState.created_at).getTime();
+    if (
+      !Number.isFinite(createdAt) ||
+      Date.now() - createdAt > 10 * 60 * 1000
+    ) {
+      await supabase.from("oauth_states").delete().eq("state", state);
+      return Response.redirect(`${APP_URL}?error=expired_state`);
+    }
 
     // Clean up used state
-    await supabase.from('oauth_states').delete().eq('state', state);
+    await supabase.from("oauth_states").delete().eq("state", state);
 
     // Provider-specific token exchange
-    const providerConfigs: Record<string, { tokenUrl: string; clientIdEnv: string; clientSecretEnv: string }> = {
+    const providerConfigs: Record<
+      string,
+      { tokenUrl: string; clientIdEnv: string; clientSecretEnv: string }
+    > = {
       github: {
-        tokenUrl: 'https://github.com/login/oauth/access_token',
-        clientIdEnv: 'GITHUB_CLIENT_ID',
-        clientSecretEnv: 'GITHUB_CLIENT_SECRET',
+        tokenUrl: "https://github.com/login/oauth/access_token",
+        clientIdEnv: "GITHUB_CLIENT_ID",
+        clientSecretEnv: "GITHUB_CLIENT_SECRET",
       },
       figma: {
-        tokenUrl: 'https://www.figma.com/api/oauth/token',
-        clientIdEnv: 'FIGMA_CLIENT_ID',
-        clientSecretEnv: 'FIGMA_CLIENT_SECRET',
+        tokenUrl: "https://www.figma.com/api/oauth/token",
+        clientIdEnv: "FIGMA_CLIENT_ID",
+        clientSecretEnv: "FIGMA_CLIENT_SECRET",
       },
     };
 
     const config = providerConfigs[provider];
-    if (!config) {
-      return Response.redirect(`${APP_URL}?error=unsupported_provider`);
-    }
     const clientId = Deno.env.get(config.clientIdEnv);
     const clientSecret = Deno.env.get(config.clientSecretEnv);
     if (!clientId || !clientSecret) {
       return Response.redirect(`${APP_URL}?error=oauth_server_not_configured`);
     }
 
-    const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/integration-callback?provider=${provider}`;
+    const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/integration-callback?provider=${provider}`;
 
     // Exchange code for access token
     const tokenRes = await fetch(config.tokenUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
         client_id: clientId,
@@ -95,14 +107,13 @@ serve(async (req) => {
     const tokenData = await tokenRes.json();
 
     if (tokenData.error || !tokenData.access_token) {
-      console.error('Token exchange failed for provider:', provider);
+      console.error("Token exchange failed for provider:", provider);
       return Response.redirect(`${APP_URL}?error=token_exchange_failed`);
     }
 
     // Store token in integrations table (upsert)
-    const { error: upsertError } = await supabase
-      .from('integrations')
-      .upsert({
+    const { error: upsertError } = await supabase.from("integrations").upsert(
+      {
         user_id: oauthState.user_id,
         provider,
         access_token: tokenData.access_token,
@@ -113,18 +124,21 @@ serve(async (req) => {
           connected_at: new Date().toISOString(),
         },
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,provider' });
+      },
+      { onConflict: "user_id,provider" },
+    );
 
     if (upsertError) {
-      console.error('Failed to store integration:', upsertError);
+      console.error("Failed to store integration:", upsertError);
       return Response.redirect(`${APP_URL}?error=storage_failed`);
     }
 
     // Redirect back to the app with success
-    return Response.redirect(`${APP_URL}?connected=${encodeURIComponent(provider)}`);
-
+    return Response.redirect(
+      `${APP_URL}?connected=${encodeURIComponent(provider)}`,
+    );
   } catch (error) {
-    console.error('OAuth callback error:', error);
+    console.error("OAuth callback error:", error);
     return Response.redirect(`${APP_URL}?error=internal`);
   }
 });

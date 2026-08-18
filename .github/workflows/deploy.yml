@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feat/idealy-complete-system
+      - feat/idealy-v2-shell
   pull_request:
     branches: [main]
   workflow_dispatch:
