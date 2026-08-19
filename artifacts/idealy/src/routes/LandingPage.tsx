@@ -13,7 +13,7 @@ export function LandingPage() {
 
   return (
     <>
-      <LandingHero />
+      <LandingHero onSignIn={() => openAuth('signin')} onSignUp={() => openAuth('signup')} />
       <AuthModal
         open={authOpen}
         onClose={() => setAuthOpen(false)}
