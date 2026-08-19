@@ -65,8 +65,7 @@ export function OnboardingPage() {
                 Choisissez votre voie
               </h1>
               <p className="mx-auto mt-4 max-w-xl text-ink-300">
-                Chaque voie définit votre univers : vocabulaire, agents, grades et énergie.
-                Vous pourrez la changer plus tard dans les paramètres.
+                Choisissez la façon dont Idealy vous accompagne. Cela change le ton, le rythme et les suggestions — jamais votre capacité à créer.
               </p>
             </div>
 
@@ -81,6 +80,9 @@ export function OnboardingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                     whileHover={{ y: -6 }}
+                    type="button"
+                    aria-pressed={isSelected}
+                    aria-label={`Choisir ${w.name} : ${w.tagline}`}
                     className={`group relative overflow-hidden rounded-2xl border text-left transition-all duration-300 ${
                       isSelected
                         ? `${w.borderClass} ${w.glowClass}`
@@ -150,29 +152,29 @@ export function OnboardingPage() {
                     Bienvenue, {WAYS[selected].vocab.task === 'Mission' ? 'Genin' : 'Apprenti'}
                   </h1>
                   <p className="mt-3 text-ink-300">
-                    Donnez un nom à votre spécialiste. Vos agents vous appelleront ainsi.
+                    Quelques détails pour personnaliser votre espace sans vous ralentir.
                   </p>
                 </div>
 
                 <div className="card p-6">
                   <label className="mb-2 block text-sm text-ink-200">
-                    Nom de spécialiste
+                    Comment devons-nous vous appeler ?
                   </label>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex : Naruto, Natsu, Gon..."
+                    placeholder="Ex : Marie, Studio Nova, Alex..."
                     className="input"
                     autoFocus
                   />
 
                   <div className="mt-5 rounded-xl bg-white/5 p-4">
-                    <p className="text-xs text-ink-400">Aperçu</p>
-                    <p className="mt-1.5 text-sm text-ink-100">
+                    <p className="text-xs text-ink-400">Voici votre première interaction</p>
+                    <p className="mt-1.5 text-sm leading-6 text-ink-100">
                       <span className={WAYS[selected].textClass}>
                         {WAYS[selected].agents[0].name}
                       </span>
-                      {' '}— « {name || 'Apprenti'}, que voulons-nous construire aujourd'hui ? »
+                      {' '}vous aidera à transformer une idée en plan clair, puis en première version testable.
                     </p>
                   </div>
                 </div>

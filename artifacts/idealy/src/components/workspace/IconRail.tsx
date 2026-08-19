@@ -3,8 +3,11 @@ import {
   ChevronDown,
   Crown,
   Eye,
+  FileCode2,
+  FolderOpen,
   LogOut,
   Plug,
+  Rocket,
   Plus,
   ScrollText,
   Settings,
@@ -16,7 +19,7 @@ import { Logo } from '@/components/Brand';
 import type { WayId } from '@/lore/ways';
 import { WAYS } from '@/lore/ways';
 
-export type RailDestination = 'missions' | 'preview' | 'activity' | 'connectors';
+export type RailDestination = 'missions' | 'preview' | 'files' | 'code' | 'activity' | 'connectors' | 'deploy';
 
 type RailMission = {
   id: string;
@@ -41,10 +44,13 @@ type IconRailProps = {
 };
 
 const destinations: Array<{ id: RailDestination; label: string; icon: LucideIcon }> = [
-  { id: 'missions', label: 'Missions', icon: Sparkles },
+  { id: 'missions', label: 'Mission', icon: Sparkles },
   { id: 'preview', label: 'Aperçu', icon: Eye },
+  { id: 'files', label: 'Fichiers', icon: FolderOpen },
+  { id: 'code', label: 'Code', icon: FileCode2 },
   { id: 'activity', label: 'Activité', icon: ScrollText },
-  { id: 'connectors', label: 'Connecteurs', icon: Plug },
+  { id: 'connectors', label: 'Connexions', icon: Plug },
+  { id: 'deploy', label: 'Déployer', icon: Rocket },
 ];
 
 export function IconRail({
