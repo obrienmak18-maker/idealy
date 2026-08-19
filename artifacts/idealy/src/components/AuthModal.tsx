@@ -4,6 +4,7 @@ import { X, Mail, Github, Chrome, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { Logo } from '@/components/Brand';
 import { getSupabaseClient } from '@/supabaseClient';
+import { isFirebaseAuthConfigured, signInWithFirebaseGithub, signInWithFirebaseGoogle } from '@/firebaseAuth';
 import { logger } from '@/utils/logger';
 import { useAuth } from '@/hooks/useAuth';
 import { PasswordStrength } from '@/components/PasswordStrength';
@@ -25,6 +26,8 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [firebaseBusy, setFirebaseBusy] = useState(false);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
 
   const {
     loading,
@@ -46,12 +49,14 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
       setEmail('');
       setPassword('');
       setShowPassword(false);
+      setFirebaseError(null);
       clearMessages();
     }
   }, [initialMode, open, clearMessages]);
 
   const isSignup = mode === 'signup';
   const isRecovery = mode === 'recovery';
+  const authBusy = loading || firebaseBusy;
 
   // Real-time validation
   const emailError = email ? validateEmailInput(email).error : null;
@@ -91,7 +96,31 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
         onClose();
       }
     } else {
-      // OAuth
+      if (isFirebaseAuthConfigured()) {
+        setFirebaseBusy(true);
+        setFirebaseError(null);
+        try {
+          const firebaseUser = kind === 'google'
+            ? await signInWithFirebaseGoogle()
+            : await signInWithFirebaseGithub();
+          await finishAuthenticatedUser({
+            email: firebaseUser.email ?? undefined,
+            user_metadata: { full_name: firebaseUser.displayName ?? undefined },
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Erreur Firebase Auth';
+          setFirebaseError(message);
+          logger.error('Firebase OAuth authentication failed', err instanceof Error ? err : undefined, {
+            component: 'AuthModal',
+            action: 'handleAuth',
+            kind,
+          });
+        } finally {
+          setFirebaseBusy(false);
+        }
+        return;
+      }
+      // OAuth Supabase fallback
       try {
         const supabase = getSupabaseClient();
         if (!supabase) throw new Error('Service d\'authentification non disponible.');
@@ -135,10 +164,10 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
 
             {!isRecovery && <>
               <div className="mt-6 space-y-2.5">
-                <button onClick={() => handleAuth('google')} disabled={loading} className="btn-outline w-full justify-center">
+                <button onClick={() => handleAuth('google')} disabled={authBusy} className="btn-outline w-full justify-center">
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <Chrome size={16} />} Continuer avec Google
                 </button>
-                <button onClick={() => handleAuth('github')} disabled={loading} className="btn-outline w-full justify-center">
+                <button onClick={() => handleAuth('github')} disabled={authBusy} className="btn-outline w-full justify-center">
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <Github size={16} />} Continuer avec GitHub
                 </button>
               </div>
@@ -187,11 +216,12 @@ export function AuthModal({ open, onClose, mode: initialMode, onSuccess }: Props
                 <PasswordStrength strength={passwordStrength} />
               )}
 
-              <button type="submit" disabled={loading} className="btn-primary w-full justify-center">
+              <button type="submit" disabled={authBusy} className="btn-primary w-full justify-center">
                 {loading ? <Loader2 size={16} className="animate-spin" /> : isRecovery ? 'Mettre à jour le mot de passe' : isSignup ? 'Créer mon compte' : 'Se connecter'}
               </button>
             </form>
-            {!isRecovery && !isSignup && <button type="button" onClick={() => { clearMessages(); void handlePasswordReset(); }} disabled={loading} className="mt-3 w-full text-center text-xs text-ink-400 transition hover:text-electric-300">Mot de passe oublié ?</button>}
+            {!isRecovery && !isSignup && <button type="button" onClick={() => { clearMessages(); void handlePasswordReset(); }} disabled={authBusy} className="mt-3 w-full text-center text-xs text-ink-400 transition hover:text-electric-300">Mot de passe oublié ?</button>}
+            {firebaseError && <p role="alert" className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-100">{firebaseError}</p>}
             {error && <p role="alert" className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
             {success && <p role="status" className="mt-3 rounded-lg border border-green-400/20 bg-green-500/10 p-3 text-sm text-green-200">{success}</p>}
             {!isRecovery && <p className="mt-5 text-center text-xs text-ink-400">{isSignup ? 'Déjà un compte ? ' : 'Pas encore de compte ? '}<button className="font-medium text-electric-400 transition hover:text-electric-300" onClick={() => { setMode(isSignup ? 'signin' : 'signup'); clearMessages(); }}>{isSignup ? 'Se connecter' : "S\'inscrire"}</button></p>}

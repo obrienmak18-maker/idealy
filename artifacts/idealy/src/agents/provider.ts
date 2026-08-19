@@ -6,6 +6,7 @@
  * fournisseur autorisé et conserve les secrets côté serveur.
  */
 
+import { getFirebaseIdToken } from '@/firebaseAuth';
 import { getSupabaseClient } from '@/supabaseClient';
 
 export type Complexity = 'low' | 'medium' | 'high' | 'fast';
@@ -20,6 +21,21 @@ export interface IntentRoute {
 }
 
 export type AgentUIPhase = 'planning' | 'building' | 'validating' | 'completed' | 'needs-fix';
+
+export interface MissionPlanAgent {
+  name: string;
+  responsibility: string;
+  result: string;
+  accent?: string;
+}
+
+export interface MissionPlan {
+  projectKind: string;
+  intention: string;
+  v1Scope: string;
+  agents: MissionPlanAgent[];
+  nextStep: string;
+}
 
 export interface AgentTimelineData {
   missionId?: string | null;
@@ -60,6 +76,7 @@ export interface ProxyCallOptions {
   uiStream?: boolean;
   uiPhase?: AgentUIPhase;
   uiProgress?: number;
+  planOnly?: boolean;
 }
 
 async function createProxyRequest(options: ProxyCallOptions): Promise<Response> {
@@ -77,12 +94,15 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
     uiStream = false,
     uiPhase,
     uiProgress,
+    planOnly = false,
   } = options;
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error('Supabase non configuré.');
 
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) throw new Error('Connectez-vous avant de lancer une mission IA.');
+  const firebaseToken = await getFirebaseIdToken().catch(() => null);
+  const accessToken = firebaseToken ?? session?.access_token;
+  if (!accessToken) throw new Error('Connectez-vous avant de lancer une mission IA.');
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
@@ -92,7 +112,7 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
   return fetch(`${supabaseUrl}/functions/v1/process-ai-request`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
       apikey: anonKey,
       'Content-Type': 'application/json',
     },
@@ -111,6 +131,7 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
       uiStream,
       uiPhase,
       uiProgress,
+      planOnly,
     }),
   });
 }
@@ -189,6 +210,43 @@ export async function callAIProxy(options: ProxyCallOptions): Promise<string> {
  * Flux de texte via l’Edge Function. Le proxy renvoie des événements SSE
  * OpenAI-compatibles et ce lecteur expose seulement les fragments texte.
  */
+export async function requestMissionPlan(options: {
+  prompt: string;
+  way?: string;
+  profile?: { name?: string; team?: string; role?: string; source?: string };
+  missionId?: string;
+  idempotencyKey?: string;
+}): Promise<MissionPlan> {
+  const context = [
+    options.way ? `Voie choisie: ${options.way}` : '',
+    options.profile?.name ? `Nom: ${options.profile.name}` : '',
+    options.profile?.team ? `Taille d'équipe: ${options.profile.team}` : '',
+    options.profile?.role ? `Rôle: ${options.profile.role}` : '',
+    options.profile?.source ? `Source: ${options.profile.source}` : '',
+  ].filter(Boolean).join('\n');
+  const response = await createProxyRequest({
+    prompt: `${options.prompt.trim()}${context ? `\n\nContexte utilisateur:\n${context}` : ''}`,
+    systemPrompt: [
+      'Tu es l\'Orchestrateur d\'Idealy.',
+      'Analyse le projet et compose une équipe dynamique. Ne crée que les agents nécessaires.',
+      'Retourne uniquement un objet JSON valide avec exactement les clés projectKind, intention, v1Scope, agents et nextStep.',
+      'agents est un tableau d\'objets {name, responsibility, result}.',
+      'Ne présente jamais les voies comme des niveaux tarifaires.',
+    ].join('\n'),
+    complexity: 'medium',
+    mode: 'auto',
+    missionId: options.missionId,
+    idempotencyKey: options.idempotencyKey,
+    intentCategory: 'IDEATION',
+    maxTokens: 1800,
+    planOnly: true,
+  });
+  if (!response.ok) throw new Error(await readProxyError(response));
+  const payload = await response.json() as { plan?: MissionPlan; message?: string };
+  if (!payload.plan) throw new Error('Le plan IA reçu est incomplet.');
+  return payload.plan;
+}
+
 export async function streamAIProxy(options: ProxyCallOptions): Promise<AsyncIterable<string>> {
   const response = await createProxyRequest({ ...options, stream: true });
   if (!response.ok || !response.body) throw new Error(await readProxyError(response));
