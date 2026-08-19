@@ -34,3 +34,9 @@ Après le correctif, l’activation du microphone affiche `Écoute active…`, u
 ## Accessibilité DOM
 
 Le bouton vocal de l’accueil expose bien `aria-label="Dicter une idée"`, `title="Dicter"`, `aria-pressed="false"` et reste activé hors phase occupée. Le bouton du workspace est configuré séparément avec `aria-label="Dicter la mission"`, `title="Dicter"` et `disabled` pendant `thinking` ou `building`.
+
+## Test direct dans l’environnement Manus
+
+Le test a été exécuté directement sur `http://127.0.0.1:3000/design-mockup?mic-test=1`. Le bouton `Dicter une idée` active bien le feedback vocal, affiche `Écoute active…` et le message de fallback. Après quelques instants, le textarea contient la phrase complète `Une interface simple, élégante et publiable.` et l’animation disparaît proprement. Le fallback local fonctionne donc ici.
+
+Le vrai accès à un microphone physique ne peut pas être validé dans cet environnement sandbox ; le navigateur local a correctement utilisé le comportement prévu quand Web Speech n’est pas disponible ou renvoie une erreur.
