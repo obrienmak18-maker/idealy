@@ -17,6 +17,7 @@
  * des quatre voies qu’après discussion.
  */
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { requestMissionPlan, type MissionPlan } from '@/agents/provider';
 import {
   ArrowRight,
   ArrowUp,
@@ -94,7 +95,7 @@ proposition explicite et validation humaine préalable.
 type Screen = 'welcome' | 'onboarding' | 'workspace';
 type OnboardingStep = 'way' | 'profile' | 'context';
 type WorkspaceTab = 'preview' | 'code' | 'data';
-type Phase = 'idle' | 'thinking' | 'building' | 'ready';
+type Phase = 'idle' | 'thinking' | 'planning' | 'building' | 'ready';
 type WayId = 'ninja' | 'mage' | 'hunter' | 'pro';
 
 type Way = {
@@ -104,6 +105,13 @@ type Way = {
   description: string;
   accent: string;
   background: string;
+};
+
+type AgentRole = {
+  name: string;
+  responsibility: string;
+  result: string;
+  accent: string;
 };
 
 function Logo({ size = 28, markOnly = false }: { size?: number; markOnly?: boolean }) {
@@ -122,10 +130,10 @@ function Logo({ size = 28, markOnly = false }: { size?: number; markOnly?: boole
 }
 
 const WAYS: Way[] = [
-  { id: 'ninja', name: 'Ninja', short: 'Rapide et direct', description: 'Pour aller droit vers une première version claire.', accent: '#d7d9e2', background: 'from-slate-700/45 via-zinc-950 to-zinc-950' },
-  { id: 'mage', name: 'Mage', short: 'Créatif et exploratoire', description: 'Pour donner une forme neuve aux idées ouvertes.', accent: '#c6a5ff', background: 'from-violet-700/45 via-zinc-950 to-zinc-950' },
-  { id: 'hunter', name: 'Hunter', short: 'Orienté résultat', description: 'Pour viser une action concrète et mesurable.', accent: '#f4cb76', background: 'from-amber-700/45 via-zinc-950 to-zinc-950' },
-  { id: 'pro', name: 'Pro', short: 'Précis et technique', description: 'Pour garder une structure détaillée et contrôlable.', accent: '#8edee2', background: 'from-cyan-700/40 via-zinc-950 to-zinc-950' },
+  { id: 'ninja', name: 'Ninja', short: 'Rapide et direct', description: 'Inspirée de Naruto, cette voie avance par itérations nettes et instinctives.', accent: '#d7d9e2', background: 'from-slate-700/45 via-zinc-950 to-zinc-950' },
+  { id: 'mage', name: 'Mage', short: 'Créatif et exploratoire', description: 'Inspirée de Fairy Tail, elle transforme les idées ouvertes en possibilités.', accent: '#c6a5ff', background: 'from-violet-700/45 via-zinc-950 to-zinc-950' },
+  { id: 'hunter', name: 'Hunter', short: 'Orienté résultat', description: 'Inspirée de Hunter x Hunter, elle cherche la bonne stratégie pour atteindre le but.', accent: '#f4cb76', background: 'from-amber-700/45 via-zinc-950 to-zinc-950' },
+  { id: 'pro', name: 'Pro', short: 'Précis et technique', description: 'La voie normale : claire, structurée et sans vocabulaire otaku.', accent: '#8edee2', background: 'from-cyan-700/40 via-zinc-950 to-zinc-950' },
 ];
 
 const STARTERS = [
@@ -165,15 +173,19 @@ const CODE_LINES = [
 export function DesignMockupPage() {
   const [screen, setScreen] = useState<Screen>('welcome');
   const [step, setStep] = useState<OnboardingStep>('way');
-  const [way, setWay] = useState<WayId>('pro');
+  const [way, setWay] = useState<WayId | null>(null);
   const [name, setName] = useState('');
   const [team, setTeam] = useState('');
   const [role, setRole] = useState('');
   const [source, setSource] = useState('');
+  const [pendingWelcomePrompt, setPendingWelcomePrompt] = useState('');
   const [pulse, setPulse] = useState(0);
   const [welcomePrompt, setWelcomePrompt] = useState('');
   const [prompt, setPrompt] = useState('');
   const [mission, setMission] = useState('');
+  const [plan, setPlan] = useState<MissionPlan | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [history, setHistory] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -184,6 +196,7 @@ export function DesignMockupPage() {
   const [attachmentOpen, setAttachmentOpen] = useState(false);
   const [helperOpen, setHelperOpen] = useState(false);
   const [conversationOpen, setConversationOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [canvasWidth, setCanvasWidth] = useState(55);
@@ -193,8 +206,9 @@ export function DesignMockupPage() {
   const helperRef = useRef<HTMLDivElement>(null);
   const conversationRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
-  const activeWay = WAYS.find((item) => item.id === way) ?? WAYS[3];
+  const activeWay = WAYS.find((item) => item.id === way) ?? WAYS[0];
   const hasMission = phase !== 'idle';
+  const hasBuildStarted = phase === 'building' || phase === 'ready';
 
   const clearTimers = () => {
     timers.current.forEach((timer) => window.clearTimeout(timer));
@@ -260,18 +274,48 @@ export function DesignMockupPage() {
     }
   };
 
-  const submitMission = () => {
+  const startSignup = (initialPrompt = '') => {
+    setPendingWelcomePrompt(initialPrompt.trim());
+    setScreen('onboarding');
+    setStep('way');
+  };
+
+  const submitMission = async () => {
     const value = prompt.trim();
-    if (!value || phase === 'thinking' || phase === 'building') return;
+    if (!value || phase === 'thinking' || phase === 'building' || planLoading) return;
     clearTimers();
     if (mission && mission !== value) setHistory((items) => [mission, ...items.filter((item) => item !== mission)].slice(0, 8));
     setMission(value);
     setPrompt('');
+    setPlan(null);
+    setPlanError(null);
     setWorkspaceTab('preview');
     setConsoleOpen(false);
     setPhase('thinking');
-    timers.current.push(window.setTimeout(() => setPhase('building'), 950));
-    timers.current.push(window.setTimeout(() => setPhase('ready'), 2650));
+    setPlanLoading(true);
+    try {
+      const nextPlan = await requestMissionPlan({
+        prompt: value,
+        way: activeWay.name,
+        profile: { name, team, role, source },
+      });
+      setPlan(nextPlan);
+      setPhase('planning');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Plan IA indisponible.';
+      setPlanError(message);
+      setPhase('planning');
+      showNotice('Mode aperçu local : connecte-toi pour activer l’équipe IA réelle.');
+    } finally {
+      setPlanLoading(false);
+    }
+  };
+
+  const approvePlan = () => {
+    if (phase !== 'planning') return;
+    clearTimers();
+    setPhase('building');
+    timers.current.push(window.setTimeout(() => setPhase('ready'), 1700));
   };
 
   const newMission = () => {
@@ -282,6 +326,12 @@ export function DesignMockupPage() {
     setPhase('idle');
     setWorkspaceTab('preview');
     setConsoleOpen(false);
+  };
+
+  const changeWay = (nextWay: WayId) => {
+    setWay(nextWay);
+    setSettingsOpen(false);
+    showNotice(`La voie ${WAYS.find((item) => item.id === nextWay)?.name ?? ''} est maintenant active.`);
   };
 
   const toggleSidebar = () => {
@@ -314,7 +364,11 @@ export function DesignMockupPage() {
     setPulse((value) => value + 1);
     if (step === 'way') setStep('profile');
     else if (step === 'profile') setStep('context');
-    else startWorkspace();
+    else {
+      const initialPrompt = pendingWelcomePrompt;
+      setPendingWelcomePrompt('');
+      startWorkspace(initialPrompt);
+    }
   };
 
   const goBackOnboarding = () => {
@@ -333,7 +387,7 @@ export function DesignMockupPage() {
               setPrompt={setWelcomePrompt}
               listening={listening}
               onDictate={startDictation}
-              onStart={() => startWorkspace(welcomePrompt)}
+              onStart={() => startSignup(welcomePrompt)}
               onOnboarding={() => setScreen('onboarding')}
               onNotice={showNotice}
             />
@@ -368,6 +422,9 @@ export function DesignMockupPage() {
               activeWay={activeWay}
               history={history}
               mission={mission}
+              plan={plan}
+              planLoading={planLoading}
+              planError={planError}
               phase={phase}
               prompt={prompt}
               setPrompt={setPrompt}
@@ -386,8 +443,12 @@ export function DesignMockupPage() {
               conversationRef={conversationRef}
               onToggleSidebar={toggleSidebar}
               onCloseMobileSidebar={() => setSidebarOpen(false)}
-              onNewMission={newMission}
-              onMission={submitMission}
+               onNewMission={newMission}
+               settingsOpen={settingsOpen}
+               onSetSettingsOpen={setSettingsOpen}
+               onChangeWay={changeWay}
+              onMission={() => { void submitMission(); }}
+               onApprovePlan={approvePlan}
               onSetWorkspaceTab={setWorkspaceTab}
               onSetConsoleOpen={setConsoleOpen}
               onSetConsoleTab={setConsoleTab}
@@ -523,7 +584,7 @@ function OnboardingMockup({
 }: {
   step: OnboardingStep;
   stepIndex: number;
-  way: WayId;
+  way: WayId | null;
   name: string;
   team: string;
   role: string;
@@ -539,13 +600,13 @@ function OnboardingMockup({
   onBack: () => void;
   onExit: () => void;
 }) {
-  const selectedWay = WAYS.find((item) => item.id === way) ?? WAYS[3];
+  const selectedWay = WAYS.find((item) => item.id === way);
   return (
     <div className="relative z-10 min-h-screen px-5 pb-12 sm:px-8">
       <header className="mx-auto max-w-7xl pt-6"><div className="flex items-center justify-between"><button type="button" onClick={onExit} aria-label="Quitter le parcours" className="rounded-lg p-1.5 text-[#98909b] transition hover:bg-white/[0.05] hover:text-white"><Logo size={27} markOnly /></button><div className="flex items-center gap-3 text-xs text-[#918a95]"><motion.div key={pulse} animate={reducedMotion ? undefined : { scale: [1, 1.15, 1] }} transition={{ duration: 0.44 }} className="flex h-7 w-7 items-center justify-center rounded-full border border-[#5b4050] bg-[#211720] text-[#f2b1d1]"><Heart className="h-3.5 w-3.5 fill-current" /></motion.div><span className="hidden sm:inline">Ton espace prend forme</span><span className="tabular-nums text-[#d0c7d0]">{stepIndex} / 3</span></div></div><div className="mt-5 h-px bg-white/[0.08]"><motion.div initial={false} animate={{ width: `${(stepIndex / 3) * 100}%` }} transition={{ duration: 0.28 }} className="h-px bg-gradient-to-r from-[#f2b1d1] via-[#f3d27a] to-[#8edee2]" /></div></header>
       <AnimatePresence mode="wait" initial={false}>
-        {step === 'way' && <motion.section key="way" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -18 }} className="mx-auto max-w-6xl py-14"><div className="mb-10 text-center"><p className="mb-3 text-[11px] uppercase tracking-[0.22em] text-[#f2b1d1]">Première rencontre</p><h1 className="text-4xl font-semibold tracking-[-0.045em] text-[#fff9fc] sm:text-5xl">Choisis ta voie</h1><p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#aaa1ab]">Pas un niveau de prix. Une manière de créer, un vocabulaire et une énergie qui te ressemblent.</p></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{WAYS.map((item, index) => <WayCard key={item.id} item={item} selected={way === item.id} index={index} reducedMotion={reducedMotion} onClick={() => onWay(item.id)} />)}</div><div className="mt-9 flex items-center justify-between gap-4"><p className="text-xs text-[#827a86]">Voie sélectionnée : <span style={{ color: selectedWay.accent }}>{selectedWay.name}</span></p><ContinueButton label="Continuer" onClick={onContinue} /></div></motion.section>}
-        {step === 'profile' && <motion.section key="profile" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -18 }} className="mx-auto max-w-xl py-16"><div className="mb-8 text-center"><div className="mx-auto mb-4 h-1 w-12 rounded-full" style={{ background: selectedWay.accent }} /><h1 className="text-3xl font-semibold tracking-[-0.035em] text-[#fff9fc]">Comment allons-nous t’appeler ?</h1><p className="mt-3 text-sm leading-6 text-[#aaa1ab]">Ton nom apparaîtra dans les messages de tes agents.</p></div><div className="rounded-2xl border border-white/[0.10] bg-[#151219]/90 p-6 shadow-2xl"><label htmlFor="mockup-name" className="mb-2 block text-sm text-[#eee7ee]">Nom de spécialiste</label><input id="mockup-name" autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex. Amina, Naruto, Chris…" className="w-full rounded-xl border border-white/[0.12] bg-[#0e0c12] px-4 py-3 text-sm text-white outline-none transition placeholder:text-[#6f6872] focus:border-[#f2b1d1]" /><div className="mt-5 rounded-xl border border-white/[0.08] bg-[#0e0c12] p-4"><p className="text-xs text-[#7e7681]">Aperçu de la première conversation</p><p className="mt-2 text-sm leading-6 text-[#eee7ee]"><span style={{ color: selectedWay.accent }}>{selectedWay.name}</span> — « {name || 'Apprenti'}, que voulons-nous construire aujourd’hui ? »</p></div></div><div className="mt-6 flex items-center justify-between"><BackButton onClick={onBack} /><ContinueButton label="Continuer" onClick={onContinue} /></div></motion.section>}
+         {step === 'way' && <motion.section key="way" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -18 }} className="mx-auto max-w-6xl py-14"><div className="mb-10 text-center"><p className="mb-3 text-[11px] uppercase tracking-[0.22em] text-[#f2b1d1]">Première rencontre</p><h1 className="text-4xl font-semibold tracking-[-0.045em] text-[#fff9fc] sm:text-5xl">Choisis ta voie</h1><p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#aaa1ab]">Une identité de création qui guidera ton espace et tes agents. Tu pourras la changer plus tard dans les paramètres.</p></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{WAYS.map((item, index) => <WayCard key={item.id} item={item} selected={way === item.id} index={index} reducedMotion={reducedMotion} onClick={() => onWay(item.id)} />)}</div><div className="mt-9 flex items-center justify-between gap-4"><p className="text-xs text-[#827a86]">{selectedWay ? <>Voie sélectionnée : <span style={{ color: selectedWay.accent }}>{selectedWay.name}</span></> : 'Choisis une voie pour continuer'}</p><ContinueButton label="Continuer" onClick={onContinue} /></div></motion.section>}
+         {step === 'profile' && <motion.section key="profile" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -18 }} className="mx-auto max-w-xl py-16"><div className="mb-8 text-center"><div className="mx-auto mb-4 h-1 w-12 rounded-full" style={{ background: selectedWay?.accent ?? '#f2b1d1' }} /><h1 className="text-3xl font-semibold tracking-[-0.035em] text-[#fff9fc]">Comment allons-nous t’appeler ?</h1><p className="mt-3 text-sm leading-6 text-[#aaa1ab]">Ton nom apparaîtra dans les messages de tes agents.</p></div><div className="rounded-2xl border border-white/[0.10] bg-[#151219]/90 p-6 shadow-2xl"><label htmlFor="mockup-name" className="mb-2 block text-sm text-[#eee7ee]">Nom de spécialiste</label><input id="mockup-name" autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex. Amina, Naruto, Chris…" className="w-full rounded-xl border border-white/[0.12] bg-[#0e0c12] px-4 py-3 text-sm text-white outline-none transition placeholder:text-[#6f6872] focus:border-[#f2b1d1]" /><div className="mt-5 rounded-xl border border-white/[0.08] bg-[#0e0c12] p-4"><p className="text-xs text-[#7e7681]">Aperçu de la première conversation</p><p className="mt-2 text-sm leading-6 text-[#eee7ee]"><span style={{ color: selectedWay?.accent ?? '#f2b1d1' }}>{selectedWay?.name}</span> — « {name || 'Apprenti'}, que voulons-nous construire aujourd’hui ? »</p></div></div><div className="mt-6 flex items-center justify-between"><BackButton onClick={onBack} /><ContinueButton label="Continuer" onClick={onContinue} /></div></motion.section>}
         {step === 'context' && <motion.section key="context" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -18 }} className="mx-auto max-w-4xl py-12"><div className="mb-8 text-center"><Sparkles className="mx-auto mb-4 h-5 w-5 text-[#8edee2]" /><h1 className="text-3xl font-semibold tracking-[-0.035em] text-[#fff9fc]">Pour mieux t’accompagner</h1><p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#aaa1ab]">Trois réponses suffisent. Elles servent à personnaliser ton premier espace, sans te faire perdre du temps.</p></div><div className="grid gap-3 lg:grid-cols-3"><ChoiceGroup title="Combien êtes-vous ?" value={team} choices={TEAM_SIZES} onChange={setTeam} /><ChoiceGroup title="Quel est ton rôle ?" value={role} choices={ROLES} onChange={setRole} /><ChoiceGroup title="Comment nous as-tu connus ?" value={source} choices={SOURCES} onChange={setSource} /></div><div className="mt-8 flex items-center justify-between"><BackButton onClick={onBack} /><ContinueButton label="Entrer dans Idealy" onClick={onContinue} /></div><p className="mt-4 text-center text-[11px] text-[#6f6872]">Parcours de démonstration · l’authentification réelle sera branchée séparément.</p></motion.section>}
       </AnimatePresence>
     </div>
@@ -572,6 +633,9 @@ function WorkspaceShell({
   activeWay,
   history,
   mission,
+  plan,
+  planLoading,
+  planError,
   phase,
   prompt,
   setPrompt,
@@ -591,7 +655,11 @@ function WorkspaceShell({
   onToggleSidebar,
   onCloseMobileSidebar,
   onNewMission,
+  settingsOpen,
+  onSetSettingsOpen,
+  onChangeWay,
   onMission,
+  onApprovePlan,
   onSetWorkspaceTab,
   onSetConsoleOpen,
   onSetConsoleTab,
@@ -606,6 +674,9 @@ function WorkspaceShell({
   activeWay: Way;
   history: string[];
   mission: string;
+  plan: MissionPlan | null;
+  planLoading: boolean;
+  planError: string | null;
   phase: Phase;
   prompt: string;
   setPrompt: (value: string) => void;
@@ -625,7 +696,11 @@ function WorkspaceShell({
   onToggleSidebar: () => void;
   onCloseMobileSidebar: () => void;
   onNewMission: () => void;
+  settingsOpen: boolean;
+  onSetSettingsOpen: (value: boolean) => void;
+  onChangeWay: (value: WayId) => void;
   onMission: () => void;
+  onApprovePlan: () => void;
   onSetWorkspaceTab: (value: WorkspaceTab) => void;
   onSetConsoleOpen: (value: boolean) => void;
   onSetConsoleTab: (value: 'logs' | 'terminal') => void;
@@ -638,11 +713,16 @@ function WorkspaceShell({
   onCanvasWidth: (value: number) => void;
 }) {
   const hasMission = phase !== 'idle';
-  return <div className="relative z-10 flex min-h-screen"><AnimatePresence>{sidebarOpen && <motion.button type="button" aria-label="Fermer la sidebar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCloseMobileSidebar} className="fixed inset-0 z-30 bg-black/55 lg:hidden" />}</AnimatePresence><aside className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-white/[0.08] bg-[#111016]/95 backdrop-blur transition-[width,transform] duration-200 lg:static lg:translate-x-0 ${sidebarCollapsed ? 'w-0 border-r-0' : 'w-[244px]'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-hidden`}><div className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.07] px-4"><Logo size={25} markOnly /><button type="button" onClick={onCloseMobileSidebar} aria-label="Fermer la sidebar" className="rounded-md p-1.5 text-[#77707b] hover:bg-white/[0.05] hover:text-white lg:hidden"><X className="h-4 w-4" /></button></div><div className="p-3"><button type="button" onClick={onNewMission} className="flex w-full items-center gap-2 rounded-lg border border-white/[0.10] px-3 py-2.5 text-left text-xs text-[#eee7ee] transition hover:border-[#8a6c7e]/60 hover:bg-white/[0.035]"><Plus className="h-4 w-4 text-[#f2b1d1]" />Nouvelle mission</button></div><p className="px-4 pb-2 pt-3 text-[10px] uppercase tracking-[0.18em] text-[#655e69]">Historique</p><div className="space-y-1 px-3">{hasMission && <HistoryItem text={mission} active />}{history.map((item, index) => <HistoryItem key={`${item}-${index}`} text={item} />)}{!hasMission && history.length === 0 && <p className="px-3 py-2 text-xs leading-5 text-[#6d6671]">Tes missions apparaîtront ici.</p>}</div><div className="mt-auto border-t border-white/[0.07] p-3"><div className="flex items-center gap-2"><div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#f2b1d1] to-[#f3d27a] text-[10px] font-semibold text-[#24151e]">{activeWay.name[0]}</div><div><p className="text-xs text-[#d9d2da]">{activeWay.name}</p><p className="text-[10px] text-[#6d6671]">Maquette locale</p></div><button type="button" onClick={() => onShowNotice('Les paramètres seront branchés après validation.')} aria-label="Paramètres" className="ml-auto rounded-md p-1.5 text-[#6d6671] hover:bg-white/[0.05] hover:text-white"><Settings2 className="h-3.5 w-3.5" /></button></div><p className="mt-2 text-[10px] leading-4 text-[#58515c]">Les connecteurs et l’authentification arrivent après la validation visuelle.</p></div></aside><main className="relative flex min-w-0 flex-1 flex-col">{hasMission && <TopBar mission={mission} activeWay={activeWay} sidebarCollapsed={sidebarCollapsed} workspaceTab={workspaceTab} consoleOpen={consoleOpen} conversationOpen={conversationOpen} conversationRef={conversationRef} onToggleSidebar={onToggleSidebar} onSetWorkspaceTab={onSetWorkspaceTab} onSetConsoleOpen={onSetConsoleOpen} onSetConsoleTab={onSetConsoleTab} onSetConversationOpen={onSetConversationOpen} onShowNotice={onShowNotice} />}{hasMission && <AnimatePresence initial={false}>{consoleOpen && <ConsoleDrawer tab={consoleTab} onTab={onSetConsoleTab} onClose={() => onSetConsoleOpen(false)} />}</AnimatePresence>}<div className={`flex min-h-0 flex-1 flex-col ${hasMission ? 'lg:flex-row' : ''}`}><section className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${hasMission ? 'lg:w-[45%] lg:border-r lg:border-white/[0.07]' : ''}`}><div className={`flex-1 overflow-y-auto px-5 sm:px-9 ${hasMission ? 'pb-36 pt-9' : 'pb-40 pt-12'}`}><div className={`mx-auto w-full ${hasMission ? 'max-w-xl' : 'max-w-2xl'}`}>{hasMission ? <MissionConversation mission={mission} phase={phase} activeWay={activeWay} /> : <EmptyWorkspace activeWay={activeWay} onStarter={(value) => setPrompt(value)} />}</div></div><div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0c0b10] via-[#0c0b10]/95 to-transparent" /><Composer prompt={prompt} setPrompt={setPrompt} phase={phase} activeWay={activeWay} listening={listening} attachmentOpen={attachmentOpen} helperOpen={helperOpen} attachmentRef={attachmentRef} helperRef={helperRef} onMission={onMission} onListening={onListening} onSetAttachmentOpen={onSetAttachmentOpen} onSetHelperOpen={onSetHelperOpen} onShowNotice={onShowNotice} /></section>{hasMission && <div role="separator" aria-label="Redimensionner la preview" tabIndex={0} onPointerDown={onResizeStart} onKeyDown={(event) => { if (event.key === 'ArrowLeft') onCanvasWidth(Math.min(66, canvasWidth + 3)); if (event.key === 'ArrowRight') onCanvasWidth(Math.max(35, canvasWidth - 3)); }} className="group hidden w-1 cursor-col-resize items-center justify-center bg-white/[0.07] outline-none hover:bg-[#8edee2]/40 focus-visible:bg-[#8edee2]/40 lg:flex"><span className="h-12 w-0.5 rounded-full bg-[#5d5662] group-hover:bg-[#8edee2]" /></div>}{hasMission && <motion.aside initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} className="min-h-[430px] w-full flex-none bg-[#0d0c12] lg:min-h-0 lg:w-[var(--mockup-canvas-width)]" style={{ '--mockup-canvas-width': `${canvasWidth}%` } as React.CSSProperties}><PreviewCanvas phase={phase} tab={workspaceTab} onShowNotice={onShowNotice} /></motion.aside>}</div></main></div>;
+  const hasBuildStarted = phase === 'building' || phase === 'ready';
+  return <div className="relative z-10 flex min-h-screen"><AnimatePresence>{sidebarOpen && <motion.button type="button" aria-label="Fermer la sidebar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCloseMobileSidebar} className="fixed inset-0 z-30 bg-black/55 lg:hidden" />}</AnimatePresence><aside className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-white/[0.08] bg-[#111016]/95 backdrop-blur transition-[width,transform] duration-200 lg:static lg:translate-x-0 ${sidebarCollapsed ? 'w-0 border-r-0' : 'w-[244px]'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-hidden`}><div className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.07] px-4"><Logo size={25} markOnly /><button type="button" onClick={onCloseMobileSidebar} aria-label="Fermer la sidebar" className="rounded-md p-1.5 text-[#77707b] hover:bg-white/[0.05] hover:text-white lg:hidden"><X className="h-4 w-4" /></button></div><div className="p-3"><button type="button" onClick={onNewMission} className="flex w-full items-center gap-2 rounded-lg border border-white/[0.10] px-3 py-2.5 text-left text-xs text-[#eee7ee] transition hover:border-[#8a6c7e]/60 hover:bg-white/[0.035]"><Plus className="h-4 w-4 text-[#f2b1d1]" />Nouvelle mission</button></div><p className="px-4 pb-2 pt-3 text-[10px] uppercase tracking-[0.18em] text-[#655e69]">Historique</p><div className="space-y-1 px-3">{hasMission && <HistoryItem text={mission} active />}{history.map((item, index) => <HistoryItem key={`${item}-${index}`} text={item} />)}{!hasMission && history.length === 0 && <p className="px-3 py-2 text-xs leading-5 text-[#6d6671]">Tes missions apparaîtront ici.</p>}</div><div className="mt-auto border-t border-white/[0.07] p-3"><div className="flex items-center gap-2"><div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#f2b1d1] to-[#f3d27a] text-[10px] font-semibold text-[#24151e]">{activeWay.name[0]}</div><div><p className="text-xs text-[#d9d2da]">{activeWay.name}</p><p className="text-[10px] text-[#6d6671]">Maquette locale</p></div><button type="button" onClick={() => onSetSettingsOpen(true)} aria-label="Paramètres" className="ml-auto rounded-md p-1.5 text-[#6d6671] hover:bg-white/[0.05] hover:text-white"><Settings2 className="h-3.5 w-3.5" /></button></div><p className="mt-2 text-[10px] leading-4 text-[#58515c]">La voie guide le vocabulaire et la composition de l’équipe.</p></div></aside><main className="relative flex min-w-0 flex-1 flex-col">{hasMission && <TopBar mission={mission} activeWay={activeWay} sidebarCollapsed={sidebarCollapsed} workspaceTab={workspaceTab} consoleOpen={consoleOpen} conversationOpen={conversationOpen} conversationRef={conversationRef} onToggleSidebar={onToggleSidebar} onSetWorkspaceTab={onSetWorkspaceTab} onSetConsoleOpen={onSetConsoleOpen} onSetConsoleTab={onSetConsoleTab} onSetConversationOpen={onSetConversationOpen} onShowNotice={onShowNotice} />}{hasMission && <AnimatePresence initial={false}>{consoleOpen && <ConsoleDrawer tab={consoleTab} onTab={onSetConsoleTab} onClose={() => onSetConsoleOpen(false)} />}</AnimatePresence>}<div className={`flex min-h-0 flex-1 flex-col ${hasMission ? 'lg:flex-row' : ''}`}><section className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${hasMission ? 'lg:w-[45%] lg:border-r lg:border-white/[0.07]' : ''}`}><div className={`flex-1 overflow-y-auto px-5 sm:px-9 ${hasMission ? 'pb-36 pt-9' : 'pb-40 pt-12'}`}><div className={`mx-auto w-full ${hasMission ? 'max-w-xl' : 'max-w-2xl'}`}>{hasMission ? <MissionConversation mission={mission} plan={plan} planLoading={planLoading} planError={planError} phase={phase} activeWay={activeWay} onApprovePlan={onApprovePlan} /> : <EmptyWorkspace activeWay={activeWay} onStarter={(value) => setPrompt(value)} />}</div></div><div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0c0b10] via-[#0c0b10]/95 to-transparent" /><Composer prompt={prompt} setPrompt={setPrompt} phase={phase} activeWay={activeWay} listening={listening} attachmentOpen={attachmentOpen} helperOpen={helperOpen} attachmentRef={attachmentRef} helperRef={helperRef} onMission={onMission} onListening={onListening} onSetAttachmentOpen={onSetAttachmentOpen} onSetHelperOpen={onSetHelperOpen} onShowNotice={onShowNotice} /></section>{hasBuildStarted && <div role="separator" aria-label="Redimensionner la preview" tabIndex={0} onPointerDown={onResizeStart} onKeyDown={(event) => { if (event.key === 'ArrowLeft') onCanvasWidth(Math.min(66, canvasWidth + 3)); if (event.key === 'ArrowRight') onCanvasWidth(Math.max(35, canvasWidth - 3)); }} className="group hidden w-1 cursor-col-resize items-center justify-center bg-white/[0.07] outline-none hover:bg-[#8edee2]/40 focus-visible:bg-[#8edee2]/40 lg:flex"><span className="h-12 w-0.5 rounded-full bg-[#5d5662] group-hover:bg-[#8edee2]" /></div>}{hasBuildStarted && <motion.aside initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} className="min-h-[430px] w-full flex-none bg-[#0d0c12] lg:min-h-0 lg:w-[var(--mockup-canvas-width)]" style={{ '--mockup-canvas-width': `${canvasWidth}%` } as React.CSSProperties}><PreviewCanvas phase={phase} tab={workspaceTab} onShowNotice={onShowNotice} /></motion.aside>}</div></main>{settingsOpen && <SettingsPanel activeWay={activeWay} onClose={() => onSetSettingsOpen(false)} onChangeWay={onChangeWay} />}</div>;
 }
 
 function HistoryItem({ text, active = false }: { text: string; active?: boolean }) {
   return <button type="button" className={`flex w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition ${active ? 'bg-white/[0.055] text-[#e9e2ea]' : 'text-[#827a86] hover:bg-white/[0.035] hover:text-[#cfc6d0]'}`}><History className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${active ? 'text-[#f2b1d1]' : 'text-[#625b66]'}`} /><span className="line-clamp-2">{text}</span></button>;
+}
+
+function SettingsPanel({ activeWay, onClose, onChangeWay }: { activeWay: Way; onClose: () => void; onChangeWay: (way: WayId) => void }) {
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-4 sm:items-center"><motion.div initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="w-full max-w-xl rounded-2xl border border-white/[0.12] bg-[#17141c] p-5 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-[10px] uppercase tracking-[0.18em] text-[#7b727f]">Paramètres de l’espace</p><h2 className="mt-2 text-lg font-semibold text-[#f4edf4]">Choisir une autre voie</h2><p className="mt-1 text-xs leading-5 text-[#918995]">Ce choix change le ton de l’interface et la façon dont l’équipe te guide.</p></div><button type="button" onClick={onClose} aria-label="Fermer les paramètres" className="rounded-lg p-1.5 text-[#77707b] hover:bg-white/[0.06] hover:text-white"><X className="h-4 w-4" /></button></div><div className="mt-5 grid gap-2 sm:grid-cols-2">{WAYS.map((way) => <button key={way.id} type="button" onClick={() => onChangeWay(way.id)} className={`rounded-xl border p-3 text-left transition ${activeWay.id === way.id ? 'border-[#f2b1d1]/60 bg-[#2a1d27]' : 'border-white/[0.08] bg-white/[0.02] hover:border-white/20'}`}><div className="flex items-center justify-between"><span className="text-sm font-medium text-[#eee7ee]">{way.name}</span>{activeWay.id === way.id && <Check className="h-3.5 w-3.5 text-[#f2b1d1]" />}</div><p className="mt-1 text-[11px]" style={{ color: way.accent }}>{way.short}</p><p className="mt-2 text-[11px] leading-5 text-[#817985]">{way.description}</p></button>)}</div><div className="mt-5 flex justify-end"><button type="button" onClick={onClose} className="rounded-lg bg-white/[0.08] px-3 py-2 text-xs text-[#ddd5de] hover:bg-white/[0.12]">Fermer</button></div></motion.div></motion.div>;
 }
 
 function TopBar({ mission, activeWay, sidebarCollapsed, workspaceTab, consoleOpen, conversationOpen, conversationRef, onToggleSidebar, onSetWorkspaceTab, onSetConsoleOpen, onSetConsoleTab, onSetConversationOpen, onShowNotice }: { mission: string; activeWay: Way; sidebarCollapsed: boolean; workspaceTab: WorkspaceTab; consoleOpen: boolean; conversationOpen: boolean; conversationRef: React.RefObject<HTMLDivElement | null>; onToggleSidebar: () => void; onSetWorkspaceTab: (value: WorkspaceTab) => void; onSetConsoleOpen: (value: boolean) => void; onSetConsoleTab: (value: 'logs' | 'terminal') => void; onSetConversationOpen: (value: boolean) => void; onShowNotice: (message: string) => void }) {
@@ -657,14 +737,43 @@ function EmptyWorkspace({ activeWay, onStarter }: { activeWay: Way; onStarter: (
   return <div className="flex min-h-[calc(100vh-10rem)] flex-col items-center justify-center text-center"><div className="mb-5 flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.035] text-[#f2b1d1]"><Sparkles className="h-4 w-4" /></div><h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#fff9fc] sm:text-4xl">Qu’allons-nous construire ?</h1><p className="mt-3 max-w-md text-sm leading-6 text-[#918a95]">Décris ton idée. La maquette simule la réflexion, la construction et la preview sans appeler de backend.</p><div className="mt-8 grid w-full gap-2 sm:grid-cols-2">{STARTERS.map((starter) => <button key={starter} type="button" onClick={() => onStarter(starter)} className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-white/[0.018] px-4 py-3 text-left text-xs leading-5 text-[#8f8792] transition hover:border-white/20 hover:bg-white/[0.035] hover:text-[#e9e2ea]"><span>{starter}</span><ArrowRight className="h-3.5 w-3.5 text-[#625b66]" /></button>)}</div><p className="mt-8 text-[11px]" style={{ color: activeWay.accent }}>Voie active · {activeWay.name}</p></div>;
 }
 
-function MissionConversation({ mission, phase, activeWay }: { mission: string; phase: Phase; activeWay: Way }) {
-  return <div className="space-y-8"><div className="flex items-start gap-3"><div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#eee9ee] text-[10px] font-semibold text-[#1c171d]">Toi</div><p className="pt-1 text-sm leading-6 text-[#e7e0e7]">{mission}</p></div><AgentTimeline phase={phase} activeWay={activeWay} /><AnimatePresence mode="wait"><motion.div key={phase} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="border-l border-white/[0.08] pl-4 text-sm leading-7 text-[#b9b1bb]">{phase === 'thinking' && 'Je transforme ton idée en intention claire, sans ouvrir encore le canvas.'}{phase === 'building' && 'La structure prend forme. Les premiers écrans deviennent explorables dans la preview.'}{phase === 'ready' && 'La première version est prête. Tu peux maintenant regarder, modifier ou continuer la mission.'}</motion.div></AnimatePresence></div>;
+function inferProject(mission: string) {
+  const lower = mission.toLowerCase();
+  if (lower.includes('réserv') || lower.includes('restaurant') || lower.includes('pizza')) return { kind: 'expérience de réservation', focus: 'parcours client et disponibilités' };
+  if (lower.includes('tableau') || lower.includes('dépense') || lower.includes('dashboard')) return { kind: 'tableau de bord', focus: 'lecture rapide et actions utiles' };
+  if (lower.includes('cours') || lower.includes('école') || lower.includes('formation')) return { kind: 'outil d’organisation', focus: 'contenu, progression et rappels' };
+  return { kind: 'application web exploratoire', focus: 'première expérience claire et testable' };
 }
 
-function AgentTimeline({ phase, activeWay }: { phase: Phase; activeWay: Way }) {
+function getProjectTeam(mission: string): AgentRole[] {
+  const project = inferProject(mission);
+  const common: AgentRole[] = [
+    { name: 'Éclaireur', responsibility: 'Clarifie l’intention et les utilisateurs', result: 'brief de mission', accent: '#f2b1d1' },
+    { name: 'Architecte', responsibility: `Dessine la structure de ${project.kind}`, result: 'écrans et navigation', accent: '#c6a5ff' },
+  ];
+  if (project.kind === 'tableau de bord') common.push({ name: 'Analyste', responsibility: 'Organise les indicateurs et états', result: 'hiérarchie des données', accent: '#f3d27a' });
+  else common.push({ name: 'Designer', responsibility: 'Définit les composants et le rythme visuel', result: 'direction d’interface', accent: '#8edee2' });
+  return common;
+}
+
+function PlanCard({ mission, plan, planLoading, planError, activeWay, onApprove }: { mission: string; plan: MissionPlan | null; planLoading: boolean; planError: string | null; activeWay: Way; onApprove: () => void }) {
+  const project = inferProject(mission);
+  const team = plan?.agents ?? getProjectTeam(mission);
+  const projectKind = plan?.projectKind ?? project.kind;
+  const intention = plan?.intention ?? project.focus;
+  const v1Scope = plan?.v1Scope ?? 'Accueil, parcours principal et état de confirmation';
+  return <div className="mt-1 rounded-2xl border border-[#c6a5ff]/25 bg-[#17131e] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.16)]"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.16em] text-[#c6a5ff]">Plan de mission</p><h3 className="mt-2 text-sm font-medium text-[#eee7ee]">Une {projectKind}, guidée par la voie {activeWay.name}</h3></div><Sparkles className="h-4 w-4 shrink-0 text-[#c6a5ff]" /></div><div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-white/[0.035] p-3"><p className="text-[10px] uppercase tracking-[0.12em] text-[#6f6872]">Intention comprise</p><p className="mt-1 text-xs leading-5 text-[#cfc6d0]">{intention}</p></div><div className="rounded-xl bg-white/[0.035] p-3"><p className="text-[10px] uppercase tracking-[0.12em] text-[#6f6872]">Périmètre V1</p><p className="mt-1 text-xs leading-5 text-[#cfc6d0]">{v1Scope}</p></div></div><p className="mt-4 text-[10px] uppercase tracking-[0.12em] text-[#6f6872]">Équipe composée pour cette mission</p><div className="mt-2 space-y-2">{team.map((agent) => <div key={agent.name} className="flex items-center gap-2 rounded-lg border border-white/[0.06] px-2.5 py-2"><span className="h-2 w-2 rounded-full" style={{ background: agent.accent }} /><span className="text-xs font-medium text-[#ddd5de]">{agent.name}</span><span className="truncate text-[11px] text-[#77707b]">· {agent.responsibility}</span></div>)}</div>{planLoading && <p className="mt-3 text-[11px] text-[#8edee2]">L’Orchestrateur compose l’équipe adaptée à ce projet…</p>}{planError && <p className="mt-3 text-[11px] text-[#f3d27a]">Aperçu local utilisé : le plan réel apparaîtra après connexion.</p>}<button type="button" onClick={onApprove} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#f2b1d1] to-[#f3d27a] px-3.5 py-2.5 text-xs font-semibold text-[#24151e] hover:brightness-105">Valider et construire <ArrowRight className="h-3.5 w-3.5" /></button></div>;
+}
+
+function MissionConversation({ mission, plan, planLoading, planError, phase, activeWay, onApprovePlan }: { mission: string; plan: MissionPlan | null; planLoading: boolean; planError: string | null; phase: Phase; activeWay: Way; onApprovePlan: () => void }) {
+  return <div className="space-y-8"><div className="flex items-start gap-3"><div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#eee9ee] text-[10px] font-semibold text-[#1c171d]">Toi</div><p className="pt-1 text-sm leading-6 text-[#e7e0e7]">{mission}</p></div><AgentTimeline mission={mission} plan={plan} phase={phase} activeWay={activeWay} /><AnimatePresence mode="wait"><motion.div key={phase} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="border-l border-white/[0.08] pl-4 text-sm leading-7 text-[#b9b1bb]">{phase === 'thinking' && 'Je clarifie ton idée avant de choisir une direction.'}{phase === 'planning' && <PlanCard mission={mission} plan={plan} planLoading={planLoading} planError={planError} activeWay={activeWay} onApprove={onApprovePlan} />}{phase === 'building' && 'La structure prend forme. Les premiers écrans deviennent explorables dans la preview.'}{phase === 'ready' && 'La première version est prête. Tu peux maintenant regarder, modifier ou continuer la mission.'}</motion.div></AnimatePresence></div>;
+}
+
+function AgentTimeline({ mission, plan, phase, activeWay }: { mission: string; plan: MissionPlan | null; phase: Phase; activeWay: Way }) {
   const [expanded, setExpanded] = useState(false);
-  const steps = [{ label: 'Intention comprise', detail: `${activeWay.name} reformule le résultat attendu`, done: phase !== 'thinking' }, { label: 'Structure préparée', detail: 'Les écrans et les fichiers principaux prennent forme', done: phase === 'ready' }, { label: 'Preview construite', detail: 'Une première version est prête à être explorée', done: phase === 'ready' }];
-  const headline = phase === 'thinking' ? 'Réflexion en cours' : phase === 'building' ? 'Construction en cours' : 'Première version prête';
+  const agentCount = plan?.agents.length ?? getProjectTeam(mission).length;
+  const steps = [{ label: 'Intention comprise', detail: `${activeWay.name} reformule le résultat attendu`, done: phase !== 'thinking' }, { label: 'Équipe composée', detail: `${agentCount} agents spécialisés selon la mission`, done: phase === 'planning' || phase === 'building' || phase === 'ready' }, { label: 'Structure préparée', detail: 'Les écrans et les fichiers principaux prennent forme', done: phase === 'building' || phase === 'ready' }, { label: 'Preview construite', detail: 'Une première version est prête à être explorée', done: phase === 'ready' }];
+  const headline = phase === 'thinking' ? 'Clarification en cours' : phase === 'planning' ? 'Plan prêt à valider' : phase === 'building' ? 'Construction en cours' : 'Première version prête';
   return <div><button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="flex w-full items-center gap-3 px-1 py-2 text-left"><div className="flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.035] text-[10px] font-semibold" style={{ color: activeWay.accent }}>I</div><span className="min-w-0 flex-1"><span className="flex items-center gap-2 text-xs font-medium text-[#eee7ee]">{headline}<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#f2b1d1]" /></span><span className="mt-0.5 block text-[11px] text-[#77707b]">Escouade {activeWay.name} · étapes visibles, détails discrets</span></span><ChevronDown className={`h-3.5 w-3.5 text-[#77707b] transition-transform ${expanded ? 'rotate-180' : ''}`} /></button><AnimatePresence initial={false}>{expanded && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden border-l border-white/[0.08] pl-4"><div className="space-y-1 py-2">{steps.map((stepItem) => <div key={stepItem.label} className="flex items-start gap-2.5 px-2 py-2"><span className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border ${stepItem.done ? 'border-[#8edee2]/70 bg-[#8edee2]/10 text-[#8edee2]' : 'border-[#5c3e54] bg-[#281a25] text-[#f2b1d1]'}`}>{stepItem.done ? <Check className="h-2.5 w-2.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}</span><span><span className="block text-[11px] font-medium text-[#d8d0d9]">{stepItem.label}</span><span className="mt-0.5 block text-[11px] leading-5 text-[#77707b]">{stepItem.detail}</span></span></div>)}</div></motion.div>}</AnimatePresence></div>;
 }
 

@@ -1,12 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { useIdealyStore } from '@/stores/idealyStore';
+import { getFirebaseIdToken, isFirebaseAuthConfigured } from '@/firebaseAuth';
 
 type IdealySupabaseClient = Omit<ReturnType<typeof createClient>, 'from'> & {
   from: (table: string) => any;
 };
 
 let client: IdealySupabaseClient | null = null;
-let clientConfig = { url: '', key: '' };
+let clientConfig = { url: '', key: '', firebaseConfigured: false };
 
 const getRuntimeSupabaseConfig = () => {
   const envUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
@@ -52,8 +53,10 @@ export const getSupabaseClient = (): IdealySupabaseClient | null => {
     return null;
   }
 
-  if (!client || clientConfig.url !== supabaseUrl || clientConfig.key !== supabaseAnonKey) {
+  const firebaseConfigured = isFirebaseAuthConfigured();
+  if (!client || clientConfig.url !== supabaseUrl || clientConfig.key !== supabaseAnonKey || clientConfig.firebaseConfigured !== firebaseConfigured) {
     client = createClient(supabaseUrl, supabaseAnonKey, {
+      ...(firebaseConfigured ? { accessToken: getFirebaseIdToken } : {}),
       auth: {
         autoRefreshToken: true,
         detectSessionInUrl: true,
@@ -61,7 +64,7 @@ export const getSupabaseClient = (): IdealySupabaseClient | null => {
         persistSession: true,
       },
     }) as IdealySupabaseClient;
-    clientConfig = { url: supabaseUrl, key: supabaseAnonKey };
+    clientConfig = { url: supabaseUrl, key: supabaseAnonKey, firebaseConfigured };
   }
 
   return client;

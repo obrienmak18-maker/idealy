@@ -61,3 +61,18 @@ Il ne faut pas copier tout le ZIP dans Idealy et remplacer l’application actue
 La prochaine implémentation sûre serait de porter dans la route V2 actuelle les types `AgentRole`, `inferProject` et `getProjectTeam` sous forme d’adaptateurs temporaires, puis de remplacer l’heuristique locale par la réponse structurée de `process-ai-request` ou d’un futur endpoint d’orchestration. Le design doit rester stable pendant ce branchement.
 
 Le ZIP est donc une bonne base de travail pour **l’expérience de clarification et de composition d’équipe**, mais pas une base de remplacement du backend.
+
+## Portage du 19 août 2026
+
+La maquette principale du ZIP a été copiée dans `artifacts/idealy/src/routes/DesignMockupPage.tsx`. Le typecheck frontend et le build Vite passent. La route `/design-mockup` affiche bien la page d’accueil du ZIP avec le composer, les starters et les actions de parcours. Lors du premier test navigateur, les deux tentatives de clic sur le bouton central n’ont pas déclenché de transition visible ; ce point reste à diagnostiquer avant de considérer l’interaction comme validée.
+
+La route de production `WorkspacePage` n’a pas encore été remplacée et le backend n’a pas encore été branché à la maquette portée.
+
+
+Le diagnostic montre que le bouton principal était correctement désactivé parce que le composer était vide. Le clic sur le starter pizzeria remplit le composer et déclenche le toast de dictée simulée dans la maquette. L’interaction de démarrage doit maintenant être testée après sélection d’un starter, et non depuis l’état initial vide.
+
+
+Le clic programmatique sur le starter a confirmé que le handler React fonctionne : après un court délai, le textarea contient bien `Une landing page élégante pour une pizzeria artisanale`. Les premiers clics visuels n’avaient pas touché le bon élément ou avaient été inspectés avant la mise à jour d’état React. Le portage du starter est donc fonctionnel ; le bouton de lancement peut être testé ensuite dans le même état.
+
+
+Le lancement du starter fonctionne. Après le clic, la maquette affiche l’onboarding du ZIP avec la progression `1 / 3`, le choix Ninja/Mage/Hunter/Pro et le bouton de continuation. Le parcours porté conserve donc bien le passage accueil → mission → sélection de voie.

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useIdealyStore } from '@/stores/idealyStore';
 import { getSupabaseClient } from '@/supabaseClient';
+import { isFirebaseAuthConfigured, subscribeFirebaseAuth, type FirebaseUserLike } from '@/firebaseAuth';
 import { AuthModal } from '@/components/AuthModal';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -40,8 +41,9 @@ function App() {
 
       setProfile({ email: user.email ?? '', displayName, avatarHue: 220 });
 
-      if (user.id) {
-        const { data: energyData } = await supabase.from('user_energy').select('*').eq('id', user.id).single();
+      const userId = user.id ?? user.uid;
+      if (userId) {
+        const { data: energyData } = await supabase.from('user_energy').select('*').eq('id', userId).single();
         if (energyData) {
           useIdealyStore.getState().setEnergy({
             current: energyData.current_energy,
@@ -57,14 +59,36 @@ function App() {
       setStage(current.way && current.onboarded ? 'ready' : 'choosing-way');
     };
 
+    let firebaseCleanup: (() => void) | undefined;
+    let cancelled = false;
     void supabase.auth.getSession().then(({ data }) => applySession(data.session?.user ?? null));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') void applySession(session?.user ?? null);
       if (event === 'PASSWORD_RECOVERY') setRecoveryOpen(true);
       if (event === 'SIGNED_OUT') useIdealyStore.getState().signOut();
     });
+    if (isFirebaseAuthConfigured()) {
+      void subscribeFirebaseAuth((firebaseUser: FirebaseUserLike | null) => {
+        if (!firebaseUser) {
+          useIdealyStore.getState().signOut();
+          return;
+        }
+        void applySession({
+          id: firebaseUser.uid,
+          email: firebaseUser.email ?? undefined,
+          user_metadata: { full_name: firebaseUser.displayName ?? undefined },
+        });
+      }).then((cleanup) => {
+        if (cancelled) cleanup();
+        else firebaseCleanup = cleanup;
+      });
+    }
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+      firebaseCleanup?.();
+    };
   }, [refillEnergy, setProfile, setStage]);
 
   let page;

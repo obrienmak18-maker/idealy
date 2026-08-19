@@ -126,3 +126,14 @@ La prochaine étape technique ne devrait donc pas être « ajouter tous les mod�
 [2]: https://github.com/QwenLM/Qwen3 "Qwen3 — dépôt officiel, variantes et exécution locale"
 [3]: https://github.com/zai-org/GLM-4.5 "GLM-4.5 — dépôt officiel, tailles et exigences d’inférence"
 [4]: https://firebase.google.com/docs/functions "Firebase Cloud Functions — documentation officielle"
+
+
+## Complément vérifié : Firebase Auth avec Supabase
+
+Supabase documente officiellement Firebase Auth comme fournisseur tiers, soit à côté de Supabase Auth, soit comme système d’authentification principal. Le projet doit enregistrer le **Firebase Project ID** dans l’intégration Third-Party Auth de Supabase, et les jetons Firebase doivent porter le custom claim `role: authenticated` [5].
+
+Le client Supabase peut recevoir le jeton Firebase via l’option `accessToken`, qui retourne le JWT de l’utilisateur Firebase. Cela permet de conserver Supabase comme couche de données, RLS et Edge Functions sans créer une deuxième session métier [5]. Le dépôt contient déjà la section `[auth.third_party.firebase]`, mais elle est désactivée et son `project_id` est encore un exemple ; il ne faut donc pas l’activer avec une valeur inventée.
+
+Le futur flux correct est : Firebase Auth authentifie l’utilisateur, Firebase fournit son ID token, le client Supabase l’envoie comme `accessToken`, Supabase vérifie que le projet Firebase est autorisé, puis les requêtes vers les tables et Edge Functions utilisent le rôle `authenticated`. Il faudra d’abord obtenir le vrai Firebase Project ID et configurer le claim avant de tester un compte réel.
+
+[5]: https://supabase.com/docs/guides/auth/third-party/firebase-auth "Supabase — utiliser Firebase Auth avec un projet Supabase"

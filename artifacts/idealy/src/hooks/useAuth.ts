@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { getSupabaseClient } from '@/supabaseClient';
+import { isFirebaseAuthConfigured, signInWithFirebaseEmail, signUpWithFirebaseEmail, signOutFirebase } from '@/firebaseAuth';
 import { logger } from '@/utils/logger';
 import { validateEmail, validatePassword, ValidationResult } from '@/utils/validation';
 
@@ -98,6 +99,12 @@ export function useAuth(): UseAuthReturn {
     }
 
     try {
+      if (isFirebaseAuthConfigured()) {
+        await signInWithFirebaseEmail(email, password);
+        setSuccess('Connexion réussie !');
+        logger.info('Firebase user signed in successfully', { action: 'signIn', email });
+        return true;
+      }
       const supabase = getSupabaseClient();
       if (!supabase) throw new Error('Supabase n’est pas encore configuré. Ouvrez Paramètres → Connecteurs et entrez vos clés Supabase.');
 
@@ -145,6 +152,12 @@ export function useAuth(): UseAuthReturn {
     }
 
     try {
+      if (isFirebaseAuthConfigured()) {
+        await signUpWithFirebaseEmail(email, password);
+        setSuccess('Compte créé ! Vérifiez votre e-mail si Firebase demande une confirmation.');
+        logger.info('Firebase user signed up successfully', { action: 'signUp', email });
+        return true;
+      }
       const supabase = getSupabaseClient();
       if (!supabase) throw new Error('Supabase n’est pas encore configuré. Ouvrez Paramètres → Connecteurs et entrez vos clés Supabase.');
 
@@ -251,6 +264,7 @@ export function useAuth(): UseAuthReturn {
 
   const handleSignOut = useCallback(async (): Promise<void> => {
     try {
+      await signOutFirebase();
       const supabase = getSupabaseClient();
       if (supabase) {
         await supabase.auth.signOut();

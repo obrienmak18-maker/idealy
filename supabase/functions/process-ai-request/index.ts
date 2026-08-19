@@ -39,6 +39,7 @@ type LLMRequest = {
   uiStream?: boolean;
   uiPhase?: AgentUIPhase;
   uiProgress?: number;
+  planOnly?: boolean;
 };
 
 const DEFAULT_MODELS: Record<Provider, string> = {
@@ -97,6 +98,49 @@ function isAgentUIPhase(value: unknown): value is AgentUIPhase {
   return value === 'planning' || value === 'building' || value === 'validating' || value === 'completed' || value === 'needs-fix';
 }
 
+type MissionPlanAgent = {
+  name: string;
+  responsibility: string;
+  result: string;
+};
+
+type MissionPlan = {
+  projectKind: string;
+  intention: string;
+  v1Scope: string;
+  agents: MissionPlanAgent[];
+  nextStep: string;
+};
+
+function parseMissionPlan(content: unknown): MissionPlan | null {
+  if (typeof content !== 'string') return null;
+  const normalized = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  try {
+    const value = JSON.parse(normalized) as Partial<MissionPlan>;
+    if (!value || typeof value !== 'object' || !Array.isArray(value.agents)) return null;
+    const agents = value.agents
+      .filter((agent): agent is MissionPlanAgent => Boolean(agent && typeof agent === 'object'))
+      .map((agent) => ({
+        name: typeof agent.name === 'string' ? agent.name.trim() : '',
+        responsibility: typeof agent.responsibility === 'string' ? agent.responsibility.trim() : '',
+        result: typeof agent.result === 'string' ? agent.result.trim() : '',
+      }))
+      .filter((agent) => agent.name && agent.responsibility && agent.result)
+      .slice(0, 8);
+    if (!agents.length) return null;
+    const text = (input: unknown, fallback: string) => typeof input === 'string' && input.trim() ? input.trim() : fallback;
+    return {
+      projectKind: text(value.projectKind, 'application à préciser'),
+      intention: text(value.intention, 'clarifier le résultat attendu'),
+      v1Scope: text(value.v1Scope, 'premier parcours utilisable'),
+      agents,
+      nextStep: text(value.nextStep, 'valider le plan avant la construction'),
+    };
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   const headers = getCorsHeaders(req);
 
@@ -136,6 +180,7 @@ serve(async (req) => {
     if (input.intentOnly !== undefined && typeof input.intentOnly !== 'boolean') return jsonError('intentOnly must be boolean.', 400, headers);
     if (input.intentCategory !== undefined && !['CONVERSATION', 'IDEATION', 'EXECUTION'].includes(input.intentCategory as string)) return jsonError('Invalid intentCategory.', 400, headers);
     if (input.uiStream !== undefined && typeof input.uiStream !== 'boolean') return jsonError('uiStream must be boolean.', 400, headers);
+    if (input.planOnly !== undefined && typeof input.planOnly !== 'boolean') return jsonError('planOnly must be boolean.', 400, headers);
 
     if (input.intentOnly === true) {
       return new Response(JSON.stringify({ intent: classifyIntent(prompt) }), {
@@ -253,8 +298,23 @@ serve(async (req) => {
     }
 
     const result = await llmRes.json();
+    const message = result.choices?.[0]?.message?.content ?? '';
+    if (input.planOnly === true) {
+      const plan = parseMissionPlan(message);
+      if (!plan) return jsonError('Le fournisseur IA a renvoyé un plan de mission invalide.', 502, headers, 'INVALID_MISSION_PLAN');
+      return new Response(JSON.stringify({
+        plan,
+        energyRemaining,
+        mode: resolution.mode,
+        model: resolution.model,
+        provider: resolution.provider,
+        intentCategory,
+      }), {
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
     return new Response(JSON.stringify({
-      message: result.choices?.[0]?.message?.content ?? '',
+      message,
       energyRemaining,
       mode: resolution.mode,
       model: resolution.model,
