@@ -6,7 +6,7 @@
  * Accent gradient (CTA + command bar border only): #f2b1d1 → #f97316
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowUp,
@@ -35,13 +35,41 @@ export function CommandBar({
   placeholder = 'Décrivez ce que vous voulez construire…',
   onSubmit,
   autoFocus = false,
+  onOpenVoice,
 }: {
   placeholder?: string;
   onSubmit?: (value: string) => void;
   autoFocus?: boolean;
+  onOpenVoice?: () => void;
 }) {
   const [value, setValue] = useState('');
+  const [listening, setListening] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<{ start: () => void; stop: () => void; onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null } | null>(null);
+
+  useEffect(() => () => recognitionRef.current?.stop(), []);
+
+  const toggleVoice = (fullscreen = false) => {
+    if (fullscreen) setVoiceOpen(true);
+    const Recognition = (window as Window & { SpeechRecognition?: new () => typeof recognitionRef.current; webkitSpeechRecognition?: new () => typeof recognitionRef.current }).SpeechRecognition
+      ?? (window as Window & { webkitSpeechRecognition?: new () => typeof recognitionRef.current }).webkitSpeechRecognition;
+    if (!Recognition) return;
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const recognition = new Recognition() as NonNullable<typeof recognitionRef.current>;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? '';
+      setValue((current) => `${current} ${transcript}`.trim());
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    setListening(true);
+    recognition.start();
+  };
 
   const submit = () => {
     const trimmed = value.trim();
@@ -98,9 +126,11 @@ export function CommandBar({
             </button>
             <button
               type="button"
-              aria-label="Dicter au micro"
-              title="Dicter au micro"
-              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2b1d1]"
+              onClick={() => toggleVoice(true)}
+              aria-pressed={listening}
+              aria-label={listening ? 'Arrêter la dictée' : 'Dicter au micro'}
+              title={listening ? 'Arrêter la dictée' : 'Dicter au micro'}
+              className={`rounded-lg p-2 transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2b1d1] ${listening ? 'text-[#f2b1d1]' : 'text-[#a1a1aa]'}`}
             >
               <Mic className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -117,6 +147,16 @@ export function CommandBar({
           </button>
         </div>
       </div>
+      {voiceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#08080c]/85 p-5 backdrop-blur-xl" role="dialog" aria-modal="true" aria-labelledby="voice-title">
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="relative flex min-h-[22rem] w-full max-w-xl flex-col items-center justify-center gap-6 rounded-3xl border border-[#f2b1d1]/30 bg-[#12121a] p-8 text-center shadow-2xl">
+            <button type="button" onClick={() => { setVoiceOpen(false); if (listening) toggleVoice(); }} aria-label="Fermer la dictée" className="absolute right-4 top-4 rounded-lg p-2 text-[#a1a1aa] hover:bg-white/5 hover:text-white"><X className="h-5 w-5" aria-hidden="true" /></button>
+            <div className={`flex h-24 w-24 items-center justify-center rounded-full border ${listening ? 'border-[#f2b1d1] shadow-[0_0_0_14px_rgba(242,177,209,0.08)]' : 'border-[#1f1f2a]'}`}><Mic className={`h-8 w-8 ${listening ? 'text-[#f2b1d1]' : 'text-[#a1a1aa]'}`} aria-hidden="true" /></div>
+            <div><h2 id="voice-title" className="text-xl font-semibold">{listening ? 'Je vous écoute' : 'Décrivez votre idée'}</h2><p className="mt-2 text-sm leading-6 text-[#a1a1aa]">Parlez naturellement. Vous pourrez relire et modifier le brief avant de commencer.</p></div>
+            <button type="button" onClick={() => toggleVoice()} className="rounded-xl px-5 py-2.5 text-sm font-medium text-[#171522]" style={{ background: ACCENT_GRADIENT }}>{listening ? 'Arrêter et relire' : 'Commencer à parler'}</button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
@@ -301,13 +341,13 @@ export default function LandingHero({
               {!submittedPrompt ? (
                 <>
                   <CommandBar onSubmit={(prompt) => setSubmittedPrompt(prompt)} />
-                  <div className="mt-4 flex flex-wrap justify-center gap-2" aria-label="Exemples de demandes">
+                  <motion.div initial={reducedMotion ? false : 'hidden'} animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }} className="mt-4 flex flex-wrap justify-center gap-2" aria-label="Exemples de demandes">
                     {['Une landing page pour une agence', 'Un dashboard de suivi', 'Un espace client simple'].map((example) => (
-                      <button key={example} type="button" onClick={() => setSubmittedPrompt(example)} className="rounded-full border border-[#1f1f2a] px-3 py-1.5 text-xs text-[#a1a1aa] transition-colors hover:border-[#f2b1d1]/60 hover:text-[#f4f4f5]">
+                      <motion.button key={example} type="button" variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }} onClick={() => setSubmittedPrompt(example)} className="rounded-full border border-[#1f1f2a] px-3 py-1.5 text-xs text-[#a1a1aa] transition-colors hover:border-[#f2b1d1]/60 hover:text-[#f4f4f5]">
                         {example}
-                      </button>
+                      </motion.button>
                     ))}
-                  </div>
+                  </motion.div>
                 </>
               ) : (
                 <motion.div initial={reducedMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-2xl border border-[#1f1f2a] bg-[#12121a]">

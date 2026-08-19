@@ -14,6 +14,9 @@ export function OnboardingPage() {
   const [step, setStep] = useState<'way' | 'profile'>('way');
   const [selected, setSelected] = useState<WayId | null>(null);
   const [name, setName] = useState(profile?.displayName ?? '');
+  const [team, setTeam] = useState('Solo');
+  const [role, setRole] = useState('Créateur de produit');
+  const [source, setSource] = useState('Une recommandation');
 
   function chooseWay(id: WayId) {
     setSelected(id);
@@ -42,10 +45,11 @@ export function OnboardingPage() {
       <header className="mx-auto max-w-7xl px-5 pt-6">
         <div className="flex items-center justify-between">
           <Logo />
-          <div className="flex items-center gap-2 text-xs text-ink-400">
-            <span className={step === 'way' ? 'text-white' : ''}>1. Voie</span>
+          <div className="flex items-center gap-3 text-xs text-ink-400">
+            <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-white/10 sm:block" aria-label={`Progression ${step === 'way' ? '50' : '100'} pour cent`}><motion.div className="h-full rounded-full bg-gradient-to-r from-electric-400 to-ember-400" animate={{ width: step === 'way' ? '50%' : '100%' }} /></div>
+            <span className={step === 'way' ? 'text-white' : 'text-ink-500'}>1. Voie</span>
             <span className="text-ink-600">/</span>
-            <span className={step === 'profile' ? 'text-white' : ''}>2. Profil</span>
+            <span className={step === 'profile' ? 'text-white' : 'text-ink-500'}>2. Profil</span>
           </div>
         </div>
       </header>
@@ -167,6 +171,18 @@ export function OnboardingPage() {
                     className="input"
                     autoFocus
                   />
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    <label className="text-xs text-ink-400">Vous êtes
+                      <select value={team} onChange={(event) => setTeam(event.target.value)} className="input mt-1.5 w-full text-xs"><option>Solo</option><option>Une petite équipe</option><option>Une équipe produit</option></select>
+                    </label>
+                    <label className="text-xs text-ink-400">Votre rôle
+                      <select value={role} onChange={(event) => setRole(event.target.value)} className="input mt-1.5 w-full text-xs"><option>Créateur de produit</option><option>Designer</option><option>Développeur</option><option>Fondateur</option></select>
+                    </label>
+                    <label className="text-xs text-ink-400">Vous nous avez trouvé via
+                      <select value={source} onChange={(event) => setSource(event.target.value)} className="input mt-1.5 w-full text-xs"><option>Une recommandation</option><option>Recherche web</option><option>Réseaux sociaux</option><option>Un événement</option></select>
+                    </label>
+                  </div>
 
                   <div className="mt-5 rounded-xl bg-white/5 p-4">
                     <p className="text-xs text-ink-400">Voici votre première interaction</p>
