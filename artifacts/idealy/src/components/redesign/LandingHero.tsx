@@ -3,10 +3,10 @@
 /**
  * LandingHero — minimal, Claude/ChatGPT-inspired landing hero for Idealy.
  * Tokens: bg #0a0a0f | surface #12121a | border #1f1f2a | text-1 #f4f4f5 | text-2 #a1a1aa
- * Accent gradient (CTA + command bar border only): #8b5cf6 → #f97316
+ * Accent gradient (CTA + command bar border only): #f2b1d1 → #f97316
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowUp,
@@ -18,10 +18,14 @@ import {
   Rocket,
   Menu,
   X,
+  Sun,
+  Moon,
+  Check,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const ACCENT_GRADIENT = 'linear-gradient(90deg, #8b5cf6, #f97316)';
+const ACCENT_GRADIENT = 'linear-gradient(90deg, #f2b1d1, #f3d27a, #8edee2)';
 
 /* ------------------------------------------------------------------ */
 /* Command bar (shared pattern — duplicated in WorkspaceEmptyState)    */
@@ -31,18 +35,46 @@ export function CommandBar({
   placeholder = 'Décrivez ce que vous voulez construire…',
   onSubmit,
   autoFocus = false,
+  onOpenVoice,
 }: {
   placeholder?: string;
   onSubmit?: (value: string) => void;
   autoFocus?: boolean;
+  onOpenVoice?: () => void;
 }) {
   const [value, setValue] = useState('');
+  const [listening, setListening] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<{ start: () => void; stop: () => void; onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null } | null>(null);
+
+  useEffect(() => () => recognitionRef.current?.stop(), []);
+
+  const toggleVoice = (fullscreen = false) => {
+    if (fullscreen) setVoiceOpen(true);
+    const Recognition = (window as Window & { SpeechRecognition?: new () => typeof recognitionRef.current; webkitSpeechRecognition?: new () => typeof recognitionRef.current }).SpeechRecognition
+      ?? (window as Window & { webkitSpeechRecognition?: new () => typeof recognitionRef.current }).webkitSpeechRecognition;
+    if (!Recognition) return;
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const recognition = new Recognition() as NonNullable<typeof recognitionRef.current>;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? '';
+      setValue((current) => `${current} ${transcript}`.trim());
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    setListening(true);
+    recognition.start();
+  };
 
   const submit = () => {
     const trimmed = value.trim();
     if (!trimmed) return;
-    onSubmit?.(trimmed); // TODO: route to workspace / create mission
+    onSubmit?.(trimmed);
     setValue('');
   };
 
@@ -80,7 +112,7 @@ export function CommandBar({
               type="button"
               aria-label="Commandes slash"
               title="Commandes slash (/)"
-              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2b1d1]"
             >
               <Command className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -88,15 +120,17 @@ export function CommandBar({
               type="button"
               aria-label="Joindre un fichier"
               title="Joindre un fichier"
-              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2b1d1]"
             >
               <Paperclip className="h-4 w-4" aria-hidden="true" />
             </button>
             <button
               type="button"
-              aria-label="Dicter au micro"
-              title="Dicter au micro"
-              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+              onClick={() => toggleVoice(true)}
+              aria-pressed={listening}
+              aria-label={listening ? 'Arrêter la dictée' : 'Dicter au micro'}
+              title={listening ? 'Arrêter la dictée' : 'Dicter au micro'}
+              className={`rounded-lg p-2 transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2b1d1] ${listening ? 'text-[#f2b1d1]' : 'text-[#a1a1aa]'}`}
             >
               <Mic className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -106,13 +140,23 @@ export function CommandBar({
             onClick={submit}
             disabled={!value.trim()}
             aria-label="Envoyer"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-opacity disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8b5cf6]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-opacity disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2b1d1]"
             style={{ background: ACCENT_GRADIENT }}
           >
             <ArrowUp className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
+      {voiceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#08080c]/85 p-5 backdrop-blur-xl" role="dialog" aria-modal="true" aria-labelledby="voice-title">
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="relative flex min-h-[22rem] w-full max-w-xl flex-col items-center justify-center gap-6 rounded-3xl border border-[#f2b1d1]/30 bg-[#12121a] p-8 text-center shadow-2xl">
+            <button type="button" onClick={() => { setVoiceOpen(false); if (listening) toggleVoice(); }} aria-label="Fermer la dictée" className="absolute right-4 top-4 rounded-lg p-2 text-[#a1a1aa] hover:bg-white/5 hover:text-white"><X className="h-5 w-5" aria-hidden="true" /></button>
+            <div className={`flex h-24 w-24 items-center justify-center rounded-full border ${listening ? 'border-[#f2b1d1] shadow-[0_0_0_14px_rgba(242,177,209,0.08)]' : 'border-[#1f1f2a]'}`}><Mic className={`h-8 w-8 ${listening ? 'text-[#f2b1d1]' : 'text-[#a1a1aa]'}`} aria-hidden="true" /></div>
+            <div><h2 id="voice-title" className="text-xl font-semibold">{listening ? 'Je vous écoute' : 'Décrivez votre idée'}</h2><p className="mt-2 text-sm leading-6 text-[#a1a1aa]">Parlez naturellement. Vous pourrez relire et modifier le brief avant de commencer.</p></div>
+            <button type="button" onClick={() => toggleVoice()} className="rounded-xl px-5 py-2.5 text-sm font-medium text-[#171522]" style={{ background: ACCENT_GRADIENT }}>{listening ? 'Arrêter et relire' : 'Commencer à parler'}</button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
@@ -145,9 +189,21 @@ const NAV_LINKS = [
   { label: 'Docs', href: '/docs' },
 ];
 
-export default function LandingHero() {
+export default function LandingHero({
+  onSignIn,
+  onSignUp,
+}: {
+  onSignIn?: () => void;
+  onSignUp?: () => void;
+}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [lightMode, setLightMode] = useState(false);
+  const [submittedPrompt, setSubmittedPrompt] = useState('');
   const reducedMotion = useReducedMotion();
+
+  const toggleTheme = () => {
+    setLightMode((current) => !current);
+  };
 
   const fadeUp = reducedMotion
     ? {}
@@ -158,7 +214,7 @@ export default function LandingHero() {
       };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-[#f4f4f5]">
+    <div className={`idealy-landing min-h-screen bg-[#0a0a0f] text-[#f4f4f5] ${lightMode ? 'idealy-landing--light' : ''}`} data-theme={lightMode ? 'light' : 'dark'}>
       {/* Header */}
       <header className="border-b border-[#1f1f2a]">
         <nav
@@ -167,7 +223,7 @@ export default function LandingHero() {
         >
           <a
             href="/"
-            className="font-semibold tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+            className="font-semibold tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2b1d1]"
           >
             Idealy
           </a>
@@ -178,19 +234,27 @@ export default function LandingHero() {
               <a
                 key={link.label}
                 href={link.href}
-                className="text-sm text-[#a1a1aa] transition-colors hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6]"
+                className="text-sm text-[#a1a1aa] transition-colors hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2b1d1]"
               >
                 {link.label}
               </a>
             ))}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={lightMode ? 'Activer le mode sombre' : 'Activer le mode clair'}
+              title={lightMode ? 'Mode sombre' : 'Mode clair'}
+              className="rounded-lg p-2 text-[#a1a1aa] transition-colors hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f97316]"
+            >
+              {lightMode ? <Moon className="h-4 w-4" aria-hidden="true" /> : <Sun className="h-4 w-4" aria-hidden="true" />}
+            </button>
             <Button
               variant="ghost"
               size="sm"
               className="text-[#a1a1aa] hover:bg-white/5 hover:text-[#f4f4f5]"
               asChild
             >
-              {/* TODO: connect to Supabase auth (sign in) */}
-              <a href="/login">Connexion</a>
+              <button type="button" onClick={onSignIn}>Connexion</button>
             </Button>
             <Button
               size="sm"
@@ -198,15 +262,14 @@ export default function LandingHero() {
               style={{ background: ACCENT_GRADIENT }}
               asChild
             >
-              {/* TODO: connect to Supabase auth (sign up) */}
-              <a href="/signup">Commencer</a>
+              <button type="button" onClick={onSignUp}>Commencer</button>
             </Button>
           </div>
 
           {/* Mobile menu toggle */}
           <button
             type="button"
-            className="rounded-lg p-2 text-[#a1a1aa] hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b5cf6] md:hidden"
+            className="rounded-lg p-2 text-[#a1a1aa] hover:bg-white/5 hover:text-[#f4f4f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#f2b1d1] md:hidden"
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-menu"
             aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
@@ -236,19 +299,12 @@ export default function LandingHero() {
                   {link.label}
                 </a>
               ))}
-              <a
-                href="/login"
-                className="rounded-lg px-3 py-2 text-sm text-[#a1a1aa] hover:bg-white/5 hover:text-[#f4f4f5]"
-              >
+              <button type="button" onClick={onSignIn} className="rounded-lg px-3 py-2 text-left text-sm text-[#a1a1aa] hover:bg-white/5 hover:text-[#f4f4f5]">
                 Connexion
-              </a>
-              <a
-                href="/signup"
-                className="mt-1 rounded-lg px-3 py-2 text-center text-sm font-medium text-white"
-                style={{ background: ACCENT_GRADIENT }}
-              >
+              </button>
+              <button type="button" onClick={onSignUp} className="mt-1 rounded-lg px-3 py-2 text-center text-sm font-medium text-white" style={{ background: ACCENT_GRADIENT }}>
                 Commencer
-              </a>
+              </button>
             </div>
           </div>
         )}
@@ -264,7 +320,7 @@ export default function LandingHero() {
               style={{ background: ACCENT_GRADIENT }}
             >
               <img
-                src="/images/kage-avatar.png"
+                src="/agents/avatar_pro_daniel_1785476092067.jpg"
                 alt=""
                 aria-hidden="true"
                 width={28}
@@ -282,12 +338,32 @@ export default function LandingHero() {
             </p>
 
             <div className="w-full text-left">
-              <CommandBar
-                onSubmit={(prompt) => {
-                  // TODO: persist prompt then redirect to signup/workspace
-                  console.log('prompt:', prompt);
-                }}
-              />
+              {!submittedPrompt ? (
+                <>
+                  <CommandBar onSubmit={(prompt) => setSubmittedPrompt(prompt)} />
+                  <motion.div initial={reducedMotion ? false : 'hidden'} animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }} className="mt-4 flex flex-wrap justify-center gap-2" aria-label="Exemples de demandes">
+                    {['Une landing page pour une agence', 'Un dashboard de suivi', 'Un espace client simple'].map((example) => (
+                      <motion.button key={example} type="button" variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }} onClick={() => setSubmittedPrompt(example)} className="rounded-full border border-[#1f1f2a] px-3 py-1.5 text-xs text-[#a1a1aa] transition-colors hover:border-[#f2b1d1]/60 hover:text-[#f4f4f5]">
+                        {example}
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                </>
+              ) : (
+                <motion.div initial={reducedMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-2xl border border-[#1f1f2a] bg-[#12121a]">
+                  <div className="border-b border-[#1f1f2a] px-4 py-3 text-sm text-[#f4f4f5]">{submittedPrompt}</div>
+                  <div className="flex flex-col gap-4 p-4">
+                    <div className="flex items-center gap-2 text-sm text-[#f4f4f5]"><Sparkles className="h-4 w-4 text-[#f2b1d1]" aria-hidden="true" />Voici comment je vais commencer.</div>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {['Structurer l’expérience', 'Créer l’interface', 'Préparer la preview'].map((step) => <div key={step} className="flex items-center gap-2 rounded-lg border border-[#1f1f2a] px-3 py-2 text-xs text-[#a1a1aa]"><Check className="h-3.5 w-3.5 text-[#8edee2]" aria-hidden="true" />{step}</div>)}
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                      <button type="button" onClick={() => setSubmittedPrompt('')} className="rounded-lg px-3 py-2 text-sm text-[#a1a1aa] hover:bg-white/5">Modifier</button>
+                      <button type="button" onClick={() => window.location.assign(`/demo?prompt=${encodeURIComponent(submittedPrompt)}`)} className="rounded-lg px-4 py-2 text-sm font-medium text-[#171522]" style={{ background: ACCENT_GRADIENT }}>Ouvrir l’espace de création <ArrowUp className="ml-1 inline h-4 w-4 rotate-45" aria-hidden="true" /></button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         </section>
@@ -308,14 +384,22 @@ export default function LandingHero() {
                 idealy.app/workspace
               </span>
             </div>
-            {/* TODO: replace with a real screenshot of the workspace */}
-            <img
-              src="/images/workspace-preview.png"
-              alt="Le workspace Idealy : conversation avec l'agent à gauche, aperçu de l'application générée à droite"
-              className="block w-full"
-              width={1280}
-              height={720}
-            />
+            <div
+              role="img"
+              aria-label="Aperçu du workspace Idealy avec conversation, plan et prévisualisation"
+              className="grid min-h-64 grid-cols-[0.8fr_1.2fr] bg-[#0a0a0f] sm:min-h-96"
+            >
+              <div className="flex flex-col gap-4 border-r border-[#1f1f2a] p-5">
+                <div className="flex items-center gap-2 text-xs text-[#a1a1aa]"><span className="h-2 w-2 rounded-full bg-[#f2b1d1]" />Mission en cours</div>
+                <div className="h-2 w-4/5 rounded bg-[#1f1f2a]" />
+                <div className="h-2 w-3/5 rounded bg-[#1f1f2a]" />
+                <div className="mt-auto rounded-lg border border-[#1f1f2a] bg-[#12121a] p-3 text-xs text-[#a1a1aa]">Construisons une expérience simple et rapide.</div>
+              </div>
+              <div className="flex flex-col gap-4 p-5">
+                <div className="flex items-center justify-between"><span className="text-xs text-[#a1a1aa]">Preview</span><span className="rounded-full bg-[#f2b1d1]/15 px-2 py-1 text-[10px] text-[#c4b5fd]">Live</span></div>
+                <div className="flex-1 rounded-lg border border-[#1f1f2a] bg-[#12121a] p-4"><div className="h-3 w-2/5 rounded bg-[#f2b1d1]/40" /><div className="mt-5 h-16 rounded bg-[#1f1f2a]" /><div className="mt-4 grid grid-cols-3 gap-2"><div className="h-10 rounded bg-[#1f1f2a]" /><div className="h-10 rounded bg-[#1f1f2a]" /><div className="h-10 rounded bg-[#1f1f2a]" /></div></div>
+              </div>
+            </div>
           </div>
         </section>
 

@@ -114,6 +114,35 @@
   }
 }
 
+/* Idealy's light mode is intentionally warm and paper-like, not a white inversion. */
+.idealy-landing--light {
+  background: #f7f7fb !important;
+  color: #171522 !important;
+  background-image:
+    radial-gradient(50rem 40rem at 85% -20%, rgba(249, 115, 22, 0.12), transparent 62%),
+    radial-gradient(45rem 35rem at 0% 20%, rgba(139, 92, 246, 0.08), transparent 58%);
+}
+.idealy-landing--light header,
+.idealy-landing--light section {
+  border-color: #e6e4ec !important;
+}
+.idealy-landing--light .bg-\[\#12121a\] { background-color: #ffffff !important; }
+.idealy-landing--light .bg-\[\#0a0a0f\] { background-color: #f7f7fb !important; }
+.idealy-landing--light .border-\[\#1f1f2a\] { border-color: #e6e4ec !important; }
+.idealy-landing--light .text-\[\#f4f4f5\] { color: #171522 !important; }
+.idealy-landing--light .text-\[\#a1a1aa\] { color: #6b6878 !important; }
+.idealy-landing--light .placeholder\:text-\[\#a1a1aa\]\/70::placeholder { color: #8d8998 !important; }
+.idealy-landing--light .hover\:bg-white\/5:hover { background-color: rgba(23, 21, 34, 0.06) !important; }
+.idealy-landing--light .hover\:text-\[\#f4f4f5\]:hover { color: #171522 !important; }
+
+@keyframes idealy-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+  50% { box-shadow: 0 0 0 8px rgba(249, 115, 22, 0.08); }
+}
+.idealy-landing [aria-label="Décrivez votre projet"]:focus {
+  animation: idealy-breathe 2.4s ease-in-out infinite;
+}
+
 /* SHADCN UI VARIABLES */
 
 @custom-variant dark (&:is(.dark *));

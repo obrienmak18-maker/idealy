@@ -216,7 +216,10 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   }, [showPreview]);
 
   useEffect(() => {
-    if (initialDemoMode && messages.length === 0) startDemoMode();
+    if (!initialDemoMode || messages.length > 0) return;
+    startDemoMode();
+    const prompt = new URLSearchParams(window.location.search).get('prompt');
+    if (prompt) setInput(prompt);
   }, [initialDemoMode]);
 
   // Load missions from Supabase on mount
@@ -1019,11 +1022,17 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
   const energyPct = Math.round((energy.current / energy.max) * 100);
   const railDestination: RailDestination = tab === 'preview'
     ? 'preview'
-    : tab === 'connectors'
-      ? 'connectors'
-      : tab === 'logs'
-        ? 'activity'
-        : 'missions';
+    : tab === 'files'
+      ? 'files'
+      : tab === 'code'
+        ? 'code'
+        : tab === 'connectors'
+          ? 'connectors'
+          : tab === 'deploy'
+            ? 'deploy'
+            : tab === 'logs'
+              ? 'activity'
+              : 'missions';
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -1066,6 +1075,11 @@ export function WorkspacePage({ demoMode: initialDemoMode = false }: { demoMode?
           }
           if (destination === 'activity') {
             setTab('logs');
+            return;
+          }
+          if (destination === 'files' || destination === 'code' || destination === 'deploy') {
+            setTab(destination);
+            if (destination === 'code') setCodePanelOpen(true);
             return;
           }
           setTab('mission');

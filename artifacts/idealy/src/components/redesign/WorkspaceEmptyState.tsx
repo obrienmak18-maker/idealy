@@ -296,7 +296,7 @@ export default function WorkspaceEmptyState({
                 }}
               >
                 <img
-                  src="/images/kage-avatar.png"
+                  src="/agents/avatar_pro_daniel_1785476092067.jpg"
                   alt=""
                   aria-hidden="true"
                   width={36}

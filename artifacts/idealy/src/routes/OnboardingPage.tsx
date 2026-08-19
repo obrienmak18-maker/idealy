@@ -14,6 +14,9 @@ export function OnboardingPage() {
   const [step, setStep] = useState<'way' | 'profile'>('way');
   const [selected, setSelected] = useState<WayId | null>(null);
   const [name, setName] = useState(profile?.displayName ?? '');
+  const [team, setTeam] = useState('Solo');
+  const [role, setRole] = useState('Créateur de produit');
+  const [source, setSource] = useState('Une recommandation');
 
   function chooseWay(id: WayId) {
     setSelected(id);
@@ -42,10 +45,11 @@ export function OnboardingPage() {
       <header className="mx-auto max-w-7xl px-5 pt-6">
         <div className="flex items-center justify-between">
           <Logo />
-          <div className="flex items-center gap-2 text-xs text-ink-400">
-            <span className={step === 'way' ? 'text-white' : ''}>1. Voie</span>
+          <div className="flex items-center gap-3 text-xs text-ink-400">
+            <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-white/10 sm:block" aria-label={`Progression ${step === 'way' ? '50' : '100'} pour cent`}><motion.div className="h-full rounded-full bg-gradient-to-r from-electric-400 to-ember-400" animate={{ width: step === 'way' ? '50%' : '100%' }} /></div>
+            <span className={step === 'way' ? 'text-white' : 'text-ink-500'}>1. Voie</span>
             <span className="text-ink-600">/</span>
-            <span className={step === 'profile' ? 'text-white' : ''}>2. Profil</span>
+            <span className={step === 'profile' ? 'text-white' : 'text-ink-500'}>2. Profil</span>
           </div>
         </div>
       </header>
@@ -65,8 +69,7 @@ export function OnboardingPage() {
                 Choisissez votre voie
               </h1>
               <p className="mx-auto mt-4 max-w-xl text-ink-300">
-                Chaque voie définit votre univers : vocabulaire, agents, grades et énergie.
-                Vous pourrez la changer plus tard dans les paramètres.
+                Choisissez la façon dont Idealy vous accompagne. Cela change le ton, le rythme et les suggestions — jamais votre capacité à créer.
               </p>
             </div>
 
@@ -81,6 +84,9 @@ export function OnboardingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                     whileHover={{ y: -6 }}
+                    type="button"
+                    aria-pressed={isSelected}
+                    aria-label={`Choisir ${w.name} : ${w.tagline}`}
                     className={`group relative overflow-hidden rounded-2xl border text-left transition-all duration-300 ${
                       isSelected
                         ? `${w.borderClass} ${w.glowClass}`
@@ -150,29 +156,41 @@ export function OnboardingPage() {
                     Bienvenue, {WAYS[selected].vocab.task === 'Mission' ? 'Genin' : 'Apprenti'}
                   </h1>
                   <p className="mt-3 text-ink-300">
-                    Donnez un nom à votre spécialiste. Vos agents vous appelleront ainsi.
+                    Quelques détails pour personnaliser votre espace sans vous ralentir.
                   </p>
                 </div>
 
                 <div className="card p-6">
                   <label className="mb-2 block text-sm text-ink-200">
-                    Nom de spécialiste
+                    Comment devons-nous vous appeler ?
                   </label>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex : Naruto, Natsu, Gon..."
+                    placeholder="Ex : Marie, Studio Nova, Alex..."
                     className="input"
                     autoFocus
                   />
 
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    <label className="text-xs text-ink-400">Vous êtes
+                      <select value={team} onChange={(event) => setTeam(event.target.value)} className="input mt-1.5 w-full text-xs"><option>Solo</option><option>Une petite équipe</option><option>Une équipe produit</option></select>
+                    </label>
+                    <label className="text-xs text-ink-400">Votre rôle
+                      <select value={role} onChange={(event) => setRole(event.target.value)} className="input mt-1.5 w-full text-xs"><option>Créateur de produit</option><option>Designer</option><option>Développeur</option><option>Fondateur</option></select>
+                    </label>
+                    <label className="text-xs text-ink-400">Vous nous avez trouvé via
+                      <select value={source} onChange={(event) => setSource(event.target.value)} className="input mt-1.5 w-full text-xs"><option>Une recommandation</option><option>Recherche web</option><option>Réseaux sociaux</option><option>Un événement</option></select>
+                    </label>
+                  </div>
+
                   <div className="mt-5 rounded-xl bg-white/5 p-4">
-                    <p className="text-xs text-ink-400">Aperçu</p>
-                    <p className="mt-1.5 text-sm text-ink-100">
+                    <p className="text-xs text-ink-400">Voici votre première interaction</p>
+                    <p className="mt-1.5 text-sm leading-6 text-ink-100">
                       <span className={WAYS[selected].textClass}>
                         {WAYS[selected].agents[0].name}
                       </span>
-                      {' '}— « {name || 'Apprenti'}, que voulons-nous construire aujourd'hui ? »
+                      {' '}vous aidera à transformer une idée en plan clair, puis en première version testable.
                     </p>
                   </div>
                 </div>
