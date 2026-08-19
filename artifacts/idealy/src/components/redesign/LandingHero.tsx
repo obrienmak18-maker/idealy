@@ -20,6 +20,8 @@ import {
   X,
   Sun,
   Moon,
+  Check,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -156,6 +158,7 @@ export default function LandingHero({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [lightMode, setLightMode] = useState(false);
+  const [submittedPrompt, setSubmittedPrompt] = useState('');
   const reducedMotion = useReducedMotion();
 
   const toggleTheme = () => {
@@ -295,11 +298,32 @@ export default function LandingHero({
             </p>
 
             <div className="w-full text-left">
-              <CommandBar
-                onSubmit={(prompt) => {
-                  window.location.assign(`/demo?prompt=${encodeURIComponent(prompt)}`);
-                }}
-              />
+              {!submittedPrompt ? (
+                <>
+                  <CommandBar onSubmit={(prompt) => setSubmittedPrompt(prompt)} />
+                  <div className="mt-4 flex flex-wrap justify-center gap-2" aria-label="Exemples de demandes">
+                    {['Une landing page pour une agence', 'Un dashboard de suivi', 'Un espace client simple'].map((example) => (
+                      <button key={example} type="button" onClick={() => setSubmittedPrompt(example)} className="rounded-full border border-[#1f1f2a] px-3 py-1.5 text-xs text-[#a1a1aa] transition-colors hover:border-[#f2b1d1]/60 hover:text-[#f4f4f5]">
+                        {example}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <motion.div initial={reducedMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-2xl border border-[#1f1f2a] bg-[#12121a]">
+                  <div className="border-b border-[#1f1f2a] px-4 py-3 text-sm text-[#f4f4f5]">{submittedPrompt}</div>
+                  <div className="flex flex-col gap-4 p-4">
+                    <div className="flex items-center gap-2 text-sm text-[#f4f4f5]"><Sparkles className="h-4 w-4 text-[#f2b1d1]" aria-hidden="true" />Voici comment je vais commencer.</div>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {['Structurer l’expérience', 'Créer l’interface', 'Préparer la preview'].map((step) => <div key={step} className="flex items-center gap-2 rounded-lg border border-[#1f1f2a] px-3 py-2 text-xs text-[#a1a1aa]"><Check className="h-3.5 w-3.5 text-[#8edee2]" aria-hidden="true" />{step}</div>)}
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                      <button type="button" onClick={() => setSubmittedPrompt('')} className="rounded-lg px-3 py-2 text-sm text-[#a1a1aa] hover:bg-white/5">Modifier</button>
+                      <button type="button" onClick={() => window.location.assign(`/demo?prompt=${encodeURIComponent(submittedPrompt)}`)} className="rounded-lg px-4 py-2 text-sm font-medium text-[#171522]" style={{ background: ACCENT_GRADIENT }}>Ouvrir l’espace de création <ArrowUp className="ml-1 inline h-4 w-4 rotate-45" aria-hidden="true" /></button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         </section>
