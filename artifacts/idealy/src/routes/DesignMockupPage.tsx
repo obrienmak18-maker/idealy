@@ -18,6 +18,7 @@
  */
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { requestMissionPlan, type MissionPlan } from '@/agents/provider';
+import { useSpeechRecognition, type SpeechRecognitionUpdate } from '@/hooks/useSpeechRecognition';
 import {
   ArrowRight,
   ArrowUp,
@@ -35,6 +36,7 @@ import {
   FileCode2,
   Figma,
   Github,
+  Globe,
   Heart,
   History,
   Image as ImageIcon,
@@ -62,7 +64,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 /**
  * Contexte prêt à transmettre à un agent design ou produit.
@@ -97,6 +99,26 @@ type OnboardingStep = 'way' | 'profile' | 'context';
 type WorkspaceTab = 'preview' | 'code' | 'data';
 type Phase = 'idle' | 'thinking' | 'planning' | 'building' | 'ready';
 type WayId = 'ninja' | 'mage' | 'hunter' | 'pro';
+type DictationLanguage = 'fr-FR' | 'en-US' | 'es-ES';
+type DictationTarget = 'welcome' | 'workspace';
+
+const DICTATION_LANGUAGES: Array<{ code: DictationLanguage; label: string; short: string }> = [
+  { code: 'fr-FR', label: 'Français', short: 'FR' },
+  { code: 'en-US', label: 'English', short: 'EN' },
+  { code: 'es-ES', label: 'Español', short: 'ES' },
+];
+
+const DICTATION_DEMOS: Record<DictationLanguage, string> = {
+  'fr-FR': 'Une interface simple, élégante et publiable.',
+  'en-US': 'A simple, elegant, and publishable interface.',
+  'es-ES': 'Una interfaz simple, elegante y publicable.',
+};
+
+const DICTATION_COPY: Record<DictationLanguage, { listen: string; active: string; unsupported: string; error: string; placeholder: string }> = {
+  'fr-FR': { listen: 'Dicter', active: 'Écoute active…', unsupported: 'La dictée simulée est utilisée dans ce navigateur.', error: 'La reconnaissance vocale a rencontré un problème.' , placeholder: 'Décris ce que tu veux créer…' },
+  'en-US': { listen: 'Dictate', active: 'Listening…', unsupported: 'Mock dictation is used in this browser.', error: 'Speech recognition encountered a problem.', placeholder: 'Describe what you want to create…' },
+  'es-ES': { listen: 'Dictar', active: 'Escuchando…', unsupported: 'La dictée simulée se usa en este navegador.', error: 'La reconnaissance vocale a rencontré un problème.', placeholder: 'Describe lo que quieres crear…' },
+};
 
 type Way = {
   id: WayId;
@@ -198,10 +220,15 @@ export function DesignMockupPage() {
   const [conversationOpen, setConversationOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [listening, setListening] = useState(false);
+  const [dictationMode, setDictationMode] = useState<'speech' | 'simulation' | null>(null);
+  const [language, setLanguage] = useState<DictationLanguage>('fr-FR');
+  const [interimTranscript, setInterimTranscript] = useState('');
   const [canvasWidth, setCanvasWidth] = useState(55);
   const [resizing, setResizing] = useState(false);
   const timers = useRef<number[]>([]);
+  const dictationBaseRef = useRef('');
+  const dictationSimulationRef = useRef<number | null>(null);
+  const dictationSilenceTimerRef = useRef<number | null>(null);
   const attachmentRef = useRef<HTMLDivElement>(null);
   const helperRef = useRef<HTMLDivElement>(null);
   const conversationRef = useRef<HTMLDivElement>(null);
@@ -209,6 +236,18 @@ export function DesignMockupPage() {
   const activeWay = WAYS.find((item) => item.id === way) ?? WAYS[0];
   const hasMission = phase !== 'idle';
   const hasBuildStarted = phase === 'building' || phase === 'ready';
+  const dictationTargetRef = useRef<DictationTarget>('workspace');
+
+  const handleSpeechResult = useCallback(({ finalTranscript, interimTranscript: nextInterim }: SpeechRecognitionUpdate) => {
+    const base = dictationBaseRef.current;
+    const nextText = [base, finalTranscript, nextInterim].filter(Boolean).join(' ').trim();
+    if (dictationTargetRef.current === 'welcome') setWelcomePrompt(nextText);
+    else setPrompt(nextText);
+    setInterimTranscript(nextInterim);
+  }, []);
+
+  const speech = useSpeechRecognition(handleSpeechResult, language);
+  const listening = speech.listening || dictationMode === 'simulation';
 
   const clearTimers = () => {
     timers.current.forEach((timer) => window.clearTimeout(timer));
@@ -256,10 +295,10 @@ export function DesignMockupPage() {
     };
   }, [resizing, sidebarCollapsed]);
 
-  const showNotice = (message: string) => {
+  const showNotice = useCallback((message: string) => {
     setNotice(message);
     window.setTimeout(() => setNotice(null), 2600);
-  };
+  }, []);
 
   const chooseWay = (nextWay: WayId) => {
     setWay(nextWay);
@@ -280,8 +319,8 @@ export function DesignMockupPage() {
     setStep('way');
   };
 
-  const submitMission = async () => {
-    const value = prompt.trim();
+  const submitMission = async (promptOverride?: string) => {
+    const value = (promptOverride ?? prompt).trim();
     if (!value || phase === 'thinking' || phase === 'building' || planLoading) return;
     clearTimers();
     if (mission && mission !== value) setHistory((items) => [mission, ...items.filter((item) => item !== mission)].slice(0, 8));
@@ -313,12 +352,14 @@ export function DesignMockupPage() {
 
   const approvePlan = () => {
     if (phase !== 'planning') return;
+    stopActiveDictation();
     clearTimers();
     setPhase('building');
     timers.current.push(window.setTimeout(() => setPhase('ready'), 1700));
   };
 
   const newMission = () => {
+    stopActiveDictation();
     clearTimers();
     if (mission) setHistory((items) => [mission, ...items.filter((item) => item !== mission)].slice(0, 8));
     setMission('');
@@ -343,18 +384,74 @@ export function DesignMockupPage() {
     }
   };
 
-  const startDictation = () => {
+  const stopActiveDictation = useCallback(() => {
+    if (dictationSimulationRef.current !== null) {
+      window.clearInterval(dictationSimulationRef.current);
+      dictationSimulationRef.current = null;
+    }
+    if (dictationSilenceTimerRef.current !== null) {
+      window.clearTimeout(dictationSilenceTimerRef.current);
+      dictationSilenceTimerRef.current = null;
+    }
+    speech.stopDictation();
+    setDictationMode(null);
+    setInterimTranscript('');
+    const target = dictationTargetRef.current;
+    window.setTimeout(() => document.getElementById(target === 'welcome' ? 'design-mockup-welcome-composer' : 'design-mockup-composer')?.focus(), 0);
+    return (target === 'welcome' ? welcomePrompt : prompt).trim();
+  }, [prompt, speech.stopDictation, welcomePrompt]);
+
+  const startSimulation = useCallback((target: DictationTarget) => {
+    setDictationMode('simulation');
+    showNotice(DICTATION_COPY[language].unsupported);
+    const words = DICTATION_DEMOS[language].split(' ');
+    let wordIndex = 0;
+    dictationSimulationRef.current = window.setInterval(() => {
+      wordIndex += 1;
+      const simulated = words.slice(0, wordIndex).join(' ');
+      const nextText = [dictationBaseRef.current, simulated].filter(Boolean).join(' ');
+      if (target === 'welcome') setWelcomePrompt(nextText);
+      else setPrompt(nextText);
+      setInterimTranscript(simulated);
+      if (wordIndex >= words.length) stopActiveDictation();
+    }, 300);
+  }, [language, showNotice, stopActiveDictation]);
+
+  const startDictation = useCallback((target: DictationTarget = 'workspace') => {
+    if (target === 'workspace' && (phase === 'thinking' || phase === 'building')) return;
     if (listening) {
-      setListening(false);
+      stopActiveDictation();
       return;
     }
-    setListening(true);
-    showNotice('Mode voix simulé : parle comme si Idealy t’écoutait.');
-    window.setTimeout(() => {
-      setListening(false);
-      setPrompt((value) => `${value}${value ? ' ' : ''}Une interface simple, élégante et publiable.`);
-    }, 1600);
-  };
+    dictationTargetRef.current = target;
+    const current = target === 'welcome' ? welcomePrompt : prompt;
+    dictationBaseRef.current = current.trim();
+    setInterimTranscript('');
+    const started = speech.startDictation();
+    const focusId = target === 'welcome' ? 'design-mockup-welcome-composer' : 'design-mockup-composer';
+    window.setTimeout(() => document.getElementById(focusId)?.focus(), 0);
+
+    if (started) {
+      setDictationMode('speech');
+      showNotice(`Microphone ${DICTATION_COPY[language].active.toLowerCase()}`);
+      dictationSilenceTimerRef.current = window.setTimeout(() => stopActiveDictation(), 5000);
+      return;
+    }
+
+    startSimulation(target);
+  }, [language, listening, phase, prompt, speech, startSimulation, stopActiveDictation, welcomePrompt]);
+
+  useEffect(() => {
+    if (!speech.error || dictationMode !== 'speech') return;
+    speech.stopDictation();
+    startSimulation(dictationTargetRef.current);
+  }, [dictationMode, speech.error, speech.stopDictation, startSimulation]);
+
+  useEffect(() => () => {
+    if (dictationSimulationRef.current !== null) window.clearInterval(dictationSimulationRef.current);
+    if (dictationSilenceTimerRef.current !== null) window.clearTimeout(dictationSilenceTimerRef.current);
+    speech.stopDictation();
+  }, [speech.stopDictation]);
 
   const onboardingStepIndex = step === 'way' ? 1 : step === 'profile' ? 2 : 3;
   const canContinue = step === 'way' ? Boolean(way) : step === 'profile' ? Boolean(name.trim()) : Boolean(team && role && source);
@@ -385,9 +482,11 @@ export function DesignMockupPage() {
             <WelcomeScreen
               prompt={welcomePrompt}
               setPrompt={setWelcomePrompt}
+              language={language}
+              onSetLanguage={setLanguage}
               listening={listening}
-              onDictate={startDictation}
-              onStart={() => startSignup(welcomePrompt)}
+              onDictate={() => startDictation('welcome')}
+              onStart={() => { const dictatedPrompt = stopActiveDictation(); startSignup(dictatedPrompt || welcomePrompt); }}
               onOnboarding={() => setScreen('onboarding')}
               onNotice={showNotice}
             />
@@ -428,6 +527,11 @@ export function DesignMockupPage() {
               phase={phase}
               prompt={prompt}
               setPrompt={setPrompt}
+              language={language}
+              onSetLanguage={setLanguage}
+              interimTranscript={interimTranscript}
+              dictationMode={dictationMode}
+              speechError={speech.error}
               sidebarOpen={sidebarOpen}
               sidebarCollapsed={sidebarCollapsed}
               workspaceTab={workspaceTab}
@@ -447,7 +551,7 @@ export function DesignMockupPage() {
                settingsOpen={settingsOpen}
                onSetSettingsOpen={setSettingsOpen}
                onChangeWay={changeWay}
-              onMission={() => { void submitMission(); }}
+              onMission={(value) => { void submitMission(value); }}
                onApprovePlan={approvePlan}
               onSetWorkspaceTab={setWorkspaceTab}
               onSetConsoleOpen={setConsoleOpen}
@@ -455,7 +559,8 @@ export function DesignMockupPage() {
               onSetAttachmentOpen={setAttachmentOpen}
               onSetHelperOpen={setHelperOpen}
               onSetConversationOpen={setConversationOpen}
-              onListening={startDictation}
+              onListening={() => startDictation('workspace')}
+              onStopListening={stopActiveDictation}
               onShowNotice={showNotice}
               onResizeStart={() => setResizing(true)}
               onCanvasWidth={setCanvasWidth}
@@ -488,6 +593,8 @@ function AmbientBackground() {
 function WelcomeScreen({
   prompt,
   setPrompt,
+  language,
+  onSetLanguage,
   listening,
   onDictate,
   onStart,
@@ -496,6 +603,8 @@ function WelcomeScreen({
 }: {
   prompt: string;
   setPrompt: (value: string) => void;
+  language: DictationLanguage;
+  onSetLanguage: (value: DictationLanguage) => void;
   listening: boolean;
   onDictate: () => void;
   onStart: () => void;
@@ -508,6 +617,7 @@ function WelcomeScreen({
       <header className="mx-auto flex max-w-7xl items-center justify-between px-5 pb-3 pt-5 sm:px-8">
         <Logo size={28} />
         <div className="flex items-center gap-2">
+          <LanguagePicker language={language} onChange={onSetLanguage} />
           <button type="button" onClick={() => onNotice('Le mode connexion sera branché après validation du design.')} className="rounded-lg px-3 py-2 text-xs text-[#a9a1ab] transition hover:bg-white/[0.04] hover:text-white">Se connecter</button>
           <button type="button" onClick={onOnboarding} className="rounded-lg bg-[#f2b1d1] px-3.5 py-2 text-xs font-semibold text-[#24151e] transition hover:brightness-105">Commencer</button>
         </div>
@@ -523,7 +633,8 @@ function WelcomeScreen({
         <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.45 }} className="mx-auto mt-11 max-w-2xl">
           <div className={`rounded-2xl p-px transition ${listening ? 'bg-gradient-to-r from-[#f2b1d1] via-[#f3d27a] to-[#8edee2]' : 'bg-white/[0.11]'}`}>
             <div className="rounded-[15px] bg-[#141219]/95 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
-              <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} rows={3} placeholder="Ex. Une application de réservation simple pour un petit restaurant…" className="w-full resize-none bg-transparent text-sm leading-6 text-[#f5eff4] outline-none placeholder:text-[#69616d]" />
+              <textarea id="design-mockup-welcome-composer" value={prompt} onChange={(event) => setPrompt(event.target.value)} rows={3} placeholder={DICTATION_COPY[language].placeholder} className="w-full resize-none bg-transparent text-sm leading-6 text-[#f5eff4] outline-none placeholder:text-[#69616d]" />
+              {listening && <VoiceFeedback language={language} interimTranscript="" mode="listening" />}
               {attached && <div className="mb-2 inline-flex items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1 text-[11px] text-[#c8c0c8]"><Paperclip className="h-3 w-3" /> brief-idee.pdf <button type="button" onClick={() => setAttached(false)} aria-label="Retirer la pièce jointe"><X className="h-3 w-3" /></button></div>}
               <div className="mt-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1">
@@ -531,7 +642,7 @@ function WelcomeScreen({
                   <button type="button" onClick={() => onNotice('Import d’image simulé pour cette maquette.')} aria-label="Importer une image" title="Importer une image" className="rounded-lg p-2 text-[#77707b] transition hover:bg-white/[0.06] hover:text-white"><ImageIcon className="h-4 w-4" /></button>
                   <button type="button" onClick={() => onNotice('Le connecteur Figma sera branché plus tard.')} aria-label="Importer depuis Figma" title="Figma" className="rounded-lg p-2 text-[#77707b] transition hover:bg-white/[0.06] hover:text-white"><Figma className="h-4 w-4" /></button>
                   <button type="button" onClick={() => onNotice('Le connecteur GitHub sera branché plus tard.')} aria-label="Importer depuis GitHub" title="GitHub" className="rounded-lg p-2 text-[#77707b] transition hover:bg-white/[0.06] hover:text-white"><Github className="h-4 w-4" /></button>
-                  <button type="button" onClick={onDictate} aria-pressed={listening} aria-label="Dicter une idée" title="Dicter" className={`relative rounded-lg p-2 transition ${listening ? 'bg-[#8edee2]/10 text-[#8edee2]' : 'text-[#77707b] hover:bg-white/[0.06] hover:text-white'}`}><Mic className="h-4 w-4" />{listening && <span className="absolute -right-1 -top-1 flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#8edee2] opacity-35" /><span className="relative inline-flex h-3 w-3 rounded-full bg-[#8edee2]" /></span>}</button>
+                  <button type="button" onClick={onDictate} aria-pressed={listening} aria-label="Dicter une idée" title={DICTATION_COPY[language].listen} className={`relative rounded-lg p-2 transition ${listening ? 'bg-[#8edee2]/15 text-[#f87171]' : 'text-[#77707b] hover:bg-white/[0.06] hover:text-white'}`}><Mic className="h-4 w-4" />{listening && <><span className="absolute -right-1 -top-1 flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f87171] opacity-35" /><span className="relative inline-flex h-3 w-3 rounded-full bg-[#f87171]" /></span><span className="pointer-events-none absolute inset-0 rounded-lg border border-[#8edee2]/60 motion-safe:animate-ping" /></>}</button>
                 </div>
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={onOnboarding} className="hidden rounded-lg border border-white/[0.10] px-3 py-2 text-xs text-[#bdb5be] transition hover:border-white/20 hover:text-white sm:inline-flex">Voir le parcours</button>
@@ -639,6 +750,11 @@ function WorkspaceShell({
   phase,
   prompt,
   setPrompt,
+  language,
+  onSetLanguage,
+  interimTranscript,
+  dictationMode,
+  speechError,
   sidebarOpen,
   sidebarCollapsed,
   workspaceTab,
@@ -667,6 +783,7 @@ function WorkspaceShell({
   onSetHelperOpen,
   onSetConversationOpen,
   onListening,
+  onStopListening,
   onShowNotice,
   onResizeStart,
   onCanvasWidth,
@@ -680,6 +797,11 @@ function WorkspaceShell({
   phase: Phase;
   prompt: string;
   setPrompt: (value: string) => void;
+  language: DictationLanguage;
+  onSetLanguage: (value: DictationLanguage) => void;
+  interimTranscript: string;
+  dictationMode: 'speech' | 'simulation' | null;
+  speechError: string | null;
   sidebarOpen: boolean;
   sidebarCollapsed: boolean;
   workspaceTab: WorkspaceTab;
@@ -699,7 +821,7 @@ function WorkspaceShell({
   settingsOpen: boolean;
   onSetSettingsOpen: (value: boolean) => void;
   onChangeWay: (value: WayId) => void;
-  onMission: () => void;
+  onMission: (value?: string) => void;
   onApprovePlan: () => void;
   onSetWorkspaceTab: (value: WorkspaceTab) => void;
   onSetConsoleOpen: (value: boolean) => void;
@@ -708,13 +830,14 @@ function WorkspaceShell({
   onSetHelperOpen: (value: boolean) => void;
   onSetConversationOpen: (value: boolean) => void;
   onListening: () => void;
+  onStopListening: () => string;
   onShowNotice: (message: string) => void;
   onResizeStart: () => void;
   onCanvasWidth: (value: number) => void;
 }) {
   const hasMission = phase !== 'idle';
   const hasBuildStarted = phase === 'building' || phase === 'ready';
-  return <div className="relative z-10 flex min-h-screen"><AnimatePresence>{sidebarOpen && <motion.button type="button" aria-label="Fermer la sidebar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCloseMobileSidebar} className="fixed inset-0 z-30 bg-black/55 lg:hidden" />}</AnimatePresence><aside className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-white/[0.08] bg-[#111016]/95 backdrop-blur transition-[width,transform] duration-200 lg:static lg:translate-x-0 ${sidebarCollapsed ? 'w-0 border-r-0' : 'w-[244px]'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-hidden`}><div className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.07] px-4"><Logo size={25} markOnly /><button type="button" onClick={onCloseMobileSidebar} aria-label="Fermer la sidebar" className="rounded-md p-1.5 text-[#77707b] hover:bg-white/[0.05] hover:text-white lg:hidden"><X className="h-4 w-4" /></button></div><div className="p-3"><button type="button" onClick={onNewMission} className="flex w-full items-center gap-2 rounded-lg border border-white/[0.10] px-3 py-2.5 text-left text-xs text-[#eee7ee] transition hover:border-[#8a6c7e]/60 hover:bg-white/[0.035]"><Plus className="h-4 w-4 text-[#f2b1d1]" />Nouvelle mission</button></div><p className="px-4 pb-2 pt-3 text-[10px] uppercase tracking-[0.18em] text-[#655e69]">Historique</p><div className="space-y-1 px-3">{hasMission && <HistoryItem text={mission} active />}{history.map((item, index) => <HistoryItem key={`${item}-${index}`} text={item} />)}{!hasMission && history.length === 0 && <p className="px-3 py-2 text-xs leading-5 text-[#6d6671]">Tes missions apparaîtront ici.</p>}</div><div className="mt-auto border-t border-white/[0.07] p-3"><div className="flex items-center gap-2"><div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#f2b1d1] to-[#f3d27a] text-[10px] font-semibold text-[#24151e]">{activeWay.name[0]}</div><div><p className="text-xs text-[#d9d2da]">{activeWay.name}</p><p className="text-[10px] text-[#6d6671]">Maquette locale</p></div><button type="button" onClick={() => onSetSettingsOpen(true)} aria-label="Paramètres" className="ml-auto rounded-md p-1.5 text-[#6d6671] hover:bg-white/[0.05] hover:text-white"><Settings2 className="h-3.5 w-3.5" /></button></div><p className="mt-2 text-[10px] leading-4 text-[#58515c]">La voie guide le vocabulaire et la composition de l’équipe.</p></div></aside><main className="relative flex min-w-0 flex-1 flex-col">{hasMission && <TopBar mission={mission} activeWay={activeWay} sidebarCollapsed={sidebarCollapsed} workspaceTab={workspaceTab} consoleOpen={consoleOpen} conversationOpen={conversationOpen} conversationRef={conversationRef} onToggleSidebar={onToggleSidebar} onSetWorkspaceTab={onSetWorkspaceTab} onSetConsoleOpen={onSetConsoleOpen} onSetConsoleTab={onSetConsoleTab} onSetConversationOpen={onSetConversationOpen} onShowNotice={onShowNotice} />}{hasMission && <AnimatePresence initial={false}>{consoleOpen && <ConsoleDrawer tab={consoleTab} onTab={onSetConsoleTab} onClose={() => onSetConsoleOpen(false)} />}</AnimatePresence>}<div className={`flex min-h-0 flex-1 flex-col ${hasMission ? 'lg:flex-row' : ''}`}><section className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${hasMission ? 'lg:w-[45%] lg:border-r lg:border-white/[0.07]' : ''}`}><div className={`flex-1 overflow-y-auto px-5 sm:px-9 ${hasMission ? 'pb-36 pt-9' : 'pb-40 pt-12'}`}><div className={`mx-auto w-full ${hasMission ? 'max-w-xl' : 'max-w-2xl'}`}>{hasMission ? <MissionConversation mission={mission} plan={plan} planLoading={planLoading} planError={planError} phase={phase} activeWay={activeWay} onApprovePlan={onApprovePlan} /> : <EmptyWorkspace activeWay={activeWay} onStarter={(value) => setPrompt(value)} />}</div></div><div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0c0b10] via-[#0c0b10]/95 to-transparent" /><Composer prompt={prompt} setPrompt={setPrompt} phase={phase} activeWay={activeWay} listening={listening} attachmentOpen={attachmentOpen} helperOpen={helperOpen} attachmentRef={attachmentRef} helperRef={helperRef} onMission={onMission} onListening={onListening} onSetAttachmentOpen={onSetAttachmentOpen} onSetHelperOpen={onSetHelperOpen} onShowNotice={onShowNotice} /></section>{hasBuildStarted && <div role="separator" aria-label="Redimensionner la preview" tabIndex={0} onPointerDown={onResizeStart} onKeyDown={(event) => { if (event.key === 'ArrowLeft') onCanvasWidth(Math.min(66, canvasWidth + 3)); if (event.key === 'ArrowRight') onCanvasWidth(Math.max(35, canvasWidth - 3)); }} className="group hidden w-1 cursor-col-resize items-center justify-center bg-white/[0.07] outline-none hover:bg-[#8edee2]/40 focus-visible:bg-[#8edee2]/40 lg:flex"><span className="h-12 w-0.5 rounded-full bg-[#5d5662] group-hover:bg-[#8edee2]" /></div>}{hasBuildStarted && <motion.aside initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} className="min-h-[430px] w-full flex-none bg-[#0d0c12] lg:min-h-0 lg:w-[var(--mockup-canvas-width)]" style={{ '--mockup-canvas-width': `${canvasWidth}%` } as React.CSSProperties}><PreviewCanvas phase={phase} tab={workspaceTab} onShowNotice={onShowNotice} /></motion.aside>}</div></main>{settingsOpen && <SettingsPanel activeWay={activeWay} onClose={() => onSetSettingsOpen(false)} onChangeWay={onChangeWay} />}</div>;
+  return <div className="relative z-10 flex min-h-screen"><AnimatePresence>{sidebarOpen && <motion.button type="button" aria-label="Fermer la sidebar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCloseMobileSidebar} className="fixed inset-0 z-30 bg-black/55 lg:hidden" />}</AnimatePresence><aside className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-white/[0.08] bg-[#111016]/95 backdrop-blur transition-[width,transform] duration-200 lg:static lg:translate-x-0 ${sidebarCollapsed ? 'w-0 border-r-0' : 'w-[244px]'} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} overflow-hidden`}><div className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.07] px-4"><Logo size={25} markOnly /><button type="button" onClick={onCloseMobileSidebar} aria-label="Fermer la sidebar" className="rounded-md p-1.5 text-[#77707b] hover:bg-white/[0.05] hover:text-white lg:hidden"><X className="h-4 w-4" /></button></div><div className="p-3"><button type="button" onClick={onNewMission} className="flex w-full items-center gap-2 rounded-lg border border-white/[0.10] px-3 py-2.5 text-left text-xs text-[#eee7ee] transition hover:border-[#8a6c7e]/60 hover:bg-white/[0.035]"><Plus className="h-4 w-4 text-[#f2b1d1]" />Nouvelle mission</button></div><p className="px-4 pb-2 pt-3 text-[10px] uppercase tracking-[0.18em] text-[#655e69]">Historique</p><div className="space-y-1 px-3">{hasMission && <HistoryItem text={mission} active />}{history.map((item, index) => <HistoryItem key={`${item}-${index}`} text={item} />)}{!hasMission && history.length === 0 && <p className="px-3 py-2 text-xs leading-5 text-[#6d6671]">Tes missions apparaîtront ici.</p>}</div><div className="mt-auto border-t border-white/[0.07] p-3"><div className="flex items-center gap-2"><div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#f2b1d1] to-[#f3d27a] text-[10px] font-semibold text-[#24151e]">{activeWay.name[0]}</div><div><p className="text-xs text-[#d9d2da]">{activeWay.name}</p><p className="text-[10px] text-[#6d6671]">Maquette locale</p></div><button type="button" onClick={() => onSetSettingsOpen(true)} aria-label="Paramètres" className="ml-auto rounded-md p-1.5 text-[#6d6671] hover:bg-white/[0.05] hover:text-white"><Settings2 className="h-3.5 w-3.5" /></button></div><p className="mt-2 text-[10px] leading-4 text-[#58515c]">La voie guide le vocabulaire et la composition de l’équipe.</p></div></aside><main className="relative flex min-w-0 flex-1 flex-col">{hasMission && <TopBar mission={mission} activeWay={activeWay} language={language} onSetLanguage={onSetLanguage} sidebarCollapsed={sidebarCollapsed} workspaceTab={workspaceTab} consoleOpen={consoleOpen} conversationOpen={conversationOpen} conversationRef={conversationRef} onToggleSidebar={onToggleSidebar} onSetWorkspaceTab={onSetWorkspaceTab} onSetConsoleOpen={onSetConsoleOpen} onSetConsoleTab={onSetConsoleTab} onSetConversationOpen={onSetConversationOpen} onShowNotice={onShowNotice} />}{hasMission && <AnimatePresence initial={false}>{consoleOpen && <ConsoleDrawer tab={consoleTab} onTab={onSetConsoleTab} onClose={() => onSetConsoleOpen(false)} />}</AnimatePresence>}<div className={`flex min-h-0 flex-1 flex-col ${hasMission ? 'lg:flex-row' : ''}`}><section className={`relative flex min-h-0 min-w-0 flex-1 flex-col ${hasMission ? 'lg:w-[45%] lg:border-r lg:border-white/[0.07]' : ''}`}><div className={`flex-1 overflow-y-auto px-5 sm:px-9 ${hasMission ? 'pb-36 pt-9' : 'pb-40 pt-12'}`}><div className={`mx-auto w-full ${hasMission ? 'max-w-xl' : 'max-w-2xl'}`}>{hasMission ? <MissionConversation mission={mission} plan={plan} planLoading={planLoading} planError={planError} phase={phase} activeWay={activeWay} onApprovePlan={onApprovePlan} /> : <EmptyWorkspace activeWay={activeWay} onStarter={(value) => setPrompt(value)} />}</div></div><div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0c0b10] via-[#0c0b10]/95 to-transparent" /><Composer prompt={prompt} setPrompt={setPrompt} phase={phase} activeWay={activeWay} language={language} interimTranscript={interimTranscript} dictationMode={dictationMode} speechError={speechError} listening={listening} attachmentOpen={attachmentOpen} helperOpen={helperOpen} attachmentRef={attachmentRef} helperRef={helperRef} onMission={onMission} onListening={onListening} onStopListening={onStopListening} onSetAttachmentOpen={onSetAttachmentOpen} onSetHelperOpen={onSetHelperOpen} onShowNotice={onShowNotice} /></section>{hasBuildStarted && <div role="separator" aria-label="Redimensionner la preview" tabIndex={0} onPointerDown={onResizeStart} onKeyDown={(event) => { if (event.key === 'ArrowLeft') onCanvasWidth(Math.min(66, canvasWidth + 3)); if (event.key === 'ArrowRight') onCanvasWidth(Math.max(35, canvasWidth - 3)); }} className="group hidden w-1 cursor-col-resize items-center justify-center bg-white/[0.07] outline-none hover:bg-[#8edee2]/40 focus-visible:bg-[#8edee2]/40 lg:flex"><span className="h-12 w-0.5 rounded-full bg-[#5d5662] group-hover:bg-[#8edee2]" /></div>}{hasBuildStarted && <motion.aside initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} className="min-h-[430px] w-full flex-none bg-[#0d0c12] lg:min-h-0 lg:w-[var(--mockup-canvas-width)]" style={{ '--mockup-canvas-width': `${canvasWidth}%` } as React.CSSProperties}><PreviewCanvas phase={phase} tab={workspaceTab} onShowNotice={onShowNotice} /></motion.aside>}</div></main>{settingsOpen && <SettingsPanel activeWay={activeWay} onClose={() => onSetSettingsOpen(false)} onChangeWay={onChangeWay} />}</div>;
 }
 
 function HistoryItem({ text, active = false }: { text: string; active?: boolean }) {
@@ -725,8 +848,20 @@ function SettingsPanel({ activeWay, onClose, onChangeWay }: { activeWay: Way; on
   return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-4 sm:items-center"><motion.div initial={{ opacity: 0, y: 18, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="w-full max-w-xl rounded-2xl border border-white/[0.12] bg-[#17141c] p-5 shadow-2xl"><div className="flex items-start justify-between"><div><p className="text-[10px] uppercase tracking-[0.18em] text-[#7b727f]">Paramètres de l’espace</p><h2 className="mt-2 text-lg font-semibold text-[#f4edf4]">Choisir une autre voie</h2><p className="mt-1 text-xs leading-5 text-[#918995]">Ce choix change le ton de l’interface et la façon dont l’équipe te guide.</p></div><button type="button" onClick={onClose} aria-label="Fermer les paramètres" className="rounded-lg p-1.5 text-[#77707b] hover:bg-white/[0.06] hover:text-white"><X className="h-4 w-4" /></button></div><div className="mt-5 grid gap-2 sm:grid-cols-2">{WAYS.map((way) => <button key={way.id} type="button" onClick={() => onChangeWay(way.id)} className={`rounded-xl border p-3 text-left transition ${activeWay.id === way.id ? 'border-[#f2b1d1]/60 bg-[#2a1d27]' : 'border-white/[0.08] bg-white/[0.02] hover:border-white/20'}`}><div className="flex items-center justify-between"><span className="text-sm font-medium text-[#eee7ee]">{way.name}</span>{activeWay.id === way.id && <Check className="h-3.5 w-3.5 text-[#f2b1d1]" />}</div><p className="mt-1 text-[11px]" style={{ color: way.accent }}>{way.short}</p><p className="mt-2 text-[11px] leading-5 text-[#817985]">{way.description}</p></button>)}</div><div className="mt-5 flex justify-end"><button type="button" onClick={onClose} className="rounded-lg bg-white/[0.08] px-3 py-2 text-xs text-[#ddd5de] hover:bg-white/[0.12]">Fermer</button></div></motion.div></motion.div>;
 }
 
-function TopBar({ mission, activeWay, sidebarCollapsed, workspaceTab, consoleOpen, conversationOpen, conversationRef, onToggleSidebar, onSetWorkspaceTab, onSetConsoleOpen, onSetConsoleTab, onSetConversationOpen, onShowNotice }: { mission: string; activeWay: Way; sidebarCollapsed: boolean; workspaceTab: WorkspaceTab; consoleOpen: boolean; conversationOpen: boolean; conversationRef: React.RefObject<HTMLDivElement | null>; onToggleSidebar: () => void; onSetWorkspaceTab: (value: WorkspaceTab) => void; onSetConsoleOpen: (value: boolean) => void; onSetConsoleTab: (value: 'logs' | 'terminal') => void; onSetConversationOpen: (value: boolean) => void; onShowNotice: (message: string) => void }) {
-  return <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#111016]/90 px-2 backdrop-blur sm:px-3"><div className="flex min-w-0 items-center gap-1"><button type="button" onClick={onToggleSidebar} aria-label={sidebarCollapsed ? 'Afficher la sidebar' : 'Réduire la sidebar'} className="rounded-md p-1.5 text-[#9f97a2] hover:bg-white/[0.05] hover:text-white"><PanelLeft className="h-4 w-4" /></button><div ref={conversationRef} className="relative min-w-0"><button type="button" onClick={() => onSetConversationOpen(!conversationOpen)} className="flex max-w-[260px] items-center gap-1 rounded-md px-2 py-1.5 text-xs text-[#d9d2da] hover:bg-white/[0.05] hover:text-white"><span className="truncate">{mission.length > 34 ? `${mission.slice(0, 34)}…` : mission}</span><ChevronDown className="h-3 w-3 text-[#6f6872]" /></button><AnimatePresence>{conversationOpen && <motion.div initial={{ opacity: 0, y: 5, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.98 }} className="absolute left-0 top-10 z-40 w-60 rounded-xl border border-white/[0.10] bg-[#1a1720] p-1.5 shadow-2xl"><p className="px-2.5 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.15em] text-[#6f6872]">Conversation</p>{['Renommer', 'Ajouter aux favoris', 'Dupliquer', 'Télécharger en ZIP', 'Réglages'].map((item) => <button key={item} type="button" onClick={() => { onSetConversationOpen(false); onShowNotice(`${item} est simulé dans le mockup.`); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-[#d9d2da] hover:bg-white/[0.05]"><Sparkles className="h-3.5 w-3.5 text-[#f2b1d1]" />{item}</button>)}</motion.div>}</AnimatePresence></div></div><div className="flex shrink-0 items-center gap-0.5 text-[#77707b]"><div className="hidden items-center gap-0.5 border-r border-white/[0.08] pr-2 sm:flex"><button type="button" onClick={() => onShowNotice('Le mode design sera branché après validation.')} aria-label="Mode design" className="rounded-md p-1.5 text-[#f2b1d1] hover:bg-white/[0.05]"><Sparkles className="h-3.5 w-3.5" /></button><IconTab icon={<PanelRight className="h-3.5 w-3.5" />} label="Preview" active={workspaceTab === 'preview'} color="#8edee2" onClick={() => onSetWorkspaceTab('preview')} /><IconTab icon={<Code2 className="h-3.5 w-3.5" />} label="Code" active={workspaceTab === 'code'} color="#c6a5ff" onClick={() => onSetWorkspaceTab('code')} /><IconTab icon={<Database className="h-3.5 w-3.5" />} label="Data" active={workspaceTab === 'data'} color="#f3d27a" onClick={() => onSetWorkspaceTab('data')} /><button type="button" onClick={() => { onSetConsoleTab('terminal'); onSetConsoleOpen(!consoleOpen); }} aria-label="Terminal" className={`rounded-md p-1.5 hover:bg-white/[0.05] ${consoleOpen ? 'text-white' : 'text-[#77707b]'}`}><TerminalSquare className="h-3.5 w-3.5" /></button></div><button type="button" onClick={() => onShowNotice('Ouverture de la preview simulée.')} aria-label="Ouvrir la preview" className="hidden rounded-md p-1.5 hover:bg-white/[0.05] hover:text-white sm:inline-flex"><ExternalLink className="h-3.5 w-3.5" /></button><button type="button" onClick={() => onShowNotice(`La voie ${activeWay.name} garde ce vocabulaire dans l’expérience.`)} aria-label="Voir la voie active" className="hidden items-center gap-1 rounded-md px-2 py-1.5 text-[10px] sm:flex" style={{ color: activeWay.accent }}>{activeWay.name}<ChevronDown className="h-3 w-3" /></button><button type="button" onClick={() => onShowNotice('Les actions de publication sont simulées.')} className="hidden rounded-md bg-gradient-to-r from-[#f2b1d1] to-[#f3d27a] px-2.5 py-1.5 text-[10px] font-semibold text-[#24151e] sm:inline-flex">Publier</button><button type="button" onClick={() => onShowNotice('Menu projet simulé.')} aria-label="Plus d’actions" className="rounded-md p-1.5 hover:bg-white/[0.05] hover:text-white"><MoreHorizontal className="h-4 w-4" /></button></div></header>;
+function TopBar({ mission, activeWay, language, onSetLanguage, sidebarCollapsed, workspaceTab, consoleOpen, conversationOpen, conversationRef, onToggleSidebar, onSetWorkspaceTab, onSetConsoleOpen, onSetConsoleTab, onSetConversationOpen, onShowNotice }: { mission: string; activeWay: Way; language: DictationLanguage; onSetLanguage: (value: DictationLanguage) => void; sidebarCollapsed: boolean; workspaceTab: WorkspaceTab; consoleOpen: boolean; conversationOpen: boolean; conversationRef: React.RefObject<HTMLDivElement | null>; onToggleSidebar: () => void; onSetWorkspaceTab: (value: WorkspaceTab) => void; onSetConsoleOpen: (value: boolean) => void; onSetConsoleTab: (value: 'logs' | 'terminal') => void; onSetConversationOpen: (value: boolean) => void; onShowNotice: (message: string) => void }) {
+  return <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#111016]/90 px-2 backdrop-blur sm:px-3"><div className="flex min-w-0 items-center gap-1"><button type="button" onClick={onToggleSidebar} aria-label={sidebarCollapsed ? 'Afficher la sidebar' : 'Réduire la sidebar'} className="rounded-md p-1.5 text-[#9f97a2] hover:bg-white/[0.05] hover:text-white"><PanelLeft className="h-4 w-4" /></button><div ref={conversationRef} className="relative min-w-0"><button type="button" onClick={() => onSetConversationOpen(!conversationOpen)} className="flex max-w-[260px] items-center gap-1 rounded-md px-2 py-1.5 text-xs text-[#d9d2da] hover:bg-white/[0.05] hover:text-white"><span className="truncate">{mission.length > 34 ? `${mission.slice(0, 34)}…` : mission}</span><ChevronDown className="h-3 w-3 text-[#6f6872]" /></button><AnimatePresence>{conversationOpen && <motion.div initial={{ opacity: 0, y: 5, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.98 }} className="absolute left-0 top-10 z-40 w-60 rounded-xl border border-white/[0.10] bg-[#1a1720] p-1.5 shadow-2xl"><p className="px-2.5 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.15em] text-[#6f6872]">Conversation</p>{['Renommer', 'Ajouter aux favoris', 'Dupliquer', 'Télécharger en ZIP', 'Réglages'].map((item) => <button key={item} type="button" onClick={() => { onSetConversationOpen(false); onShowNotice(`${item} est simulé dans le mockup.`); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-[#d9d2da] hover:bg-white/[0.05]"><Sparkles className="h-3.5 w-3.5 text-[#f2b1d1]" />{item}</button>)}</motion.div>}</AnimatePresence></div></div><div className="flex shrink-0 items-center gap-0.5 text-[#77707b]"><div className="hidden items-center gap-0.5 border-r border-white/[0.08] pr-2 sm:flex"><button type="button" onClick={() => onShowNotice('Le mode design sera branché après validation.')} aria-label="Mode design" className="rounded-md p-1.5 text-[#f2b1d1] hover:bg-white/[0.05]"><Sparkles className="h-3.5 w-3.5" /></button><IconTab icon={<PanelRight className="h-3.5 w-3.5" />} label="Preview" active={workspaceTab === 'preview'} color="#8edee2" onClick={() => onSetWorkspaceTab('preview')} /><IconTab icon={<Code2 className="h-3.5 w-3.5" />} label="Code" active={workspaceTab === 'code'} color="#c6a5ff" onClick={() => onSetWorkspaceTab('code')} /><IconTab icon={<Database className="h-3.5 w-3.5" />} label="Data" active={workspaceTab === 'data'} color="#f3d27a" onClick={() => onSetWorkspaceTab('data')} /><button type="button" onClick={() => { onSetConsoleTab('terminal'); onSetConsoleOpen(!consoleOpen); }} aria-label="Terminal" className={`rounded-md p-1.5 hover:bg-white/[0.05] ${consoleOpen ? 'text-white' : 'text-[#77707b]'}`}><TerminalSquare className="h-3.5 w-3.5" /></button></div><LanguagePicker language={language} onChange={onSetLanguage} compact /><button type="button" onClick={() => onShowNotice('Ouverture de la preview simulée.')} aria-label="Ouvrir la preview" className="hidden rounded-md p-1.5 hover:bg-white/[0.05] hover:text-white sm:inline-flex"><ExternalLink className="h-3.5 w-3.5" /></button><button type="button" onClick={() => onShowNotice(`La voie ${activeWay.name} garde ce vocabulaire dans l’expérience.`)} aria-label="Voir la voie active" className="hidden items-center gap-1 rounded-md px-2 py-1.5 text-[10px] sm:flex" style={{ color: activeWay.accent }}>{activeWay.name}<ChevronDown className="h-3 w-3" /></button><button type="button" onClick={() => onShowNotice('Les actions de publication sont simulées.')} className="hidden rounded-md bg-gradient-to-r from-[#f2b1d1] to-[#f3d27a] px-2.5 py-1.5 text-[10px] font-semibold text-[#24151e] sm:inline-flex">Publier</button><button type="button" onClick={() => onShowNotice('Menu projet simulé.')} aria-label="Plus d’actions" className="rounded-md p-1.5 hover:bg-white/[0.05] hover:text-white"><MoreHorizontal className="h-4 w-4" /></button></div></header>;
+}
+
+function LanguagePicker({ language, onChange, compact = false }: { language: DictationLanguage; onChange: (value: DictationLanguage) => void; compact?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const current = DICTATION_LANGUAGES.find((item) => item.code === language) ?? DICTATION_LANGUAGES[0];
+  return <div className="relative"><button type="button" onClick={() => setOpen((value) => !value)} aria-label="Choisir la langue de dictée" aria-expanded={open} title="Langue de dictée" className="flex items-center gap-1 rounded-md p-1.5 text-[#8c8490] hover:bg-white/[0.05] hover:text-white"><Globe className="h-3.5 w-3.5" /><span className={compact ? 'hidden text-[10px] sm:inline' : 'text-[10px]'}>{current.short}</span></button><AnimatePresence>{open && <motion.div initial={{ opacity: 0, y: 5, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.98 }} className="absolute right-0 top-9 z-50 w-36 rounded-xl border border-white/[0.10] bg-[#1a1720] p-1.5 shadow-2xl">{DICTATION_LANGUAGES.map((item) => <button key={item.code} type="button" onClick={() => { onChange(item.code); setOpen(false); }} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs ${item.code === language ? 'bg-white/[0.08] text-white' : 'text-[#aaa1ab] hover:bg-white/[0.05] hover:text-white'}`}><span>{item.label}</span><span className="text-[10px] text-[#77707b]">{item.short}</span></button>)}</motion.div>}</AnimatePresence></div>;
+}
+
+function VoiceFeedback({ language, interimTranscript, mode }: { language: DictationLanguage; interimTranscript: string; mode: 'speech' | 'simulation' | 'listening' }) {
+  const copy = DICTATION_COPY[language];
+  const heights = [9, 15, 21, 13, 18];
+  return <div data-dictation-mode={mode} className="mt-1 flex items-center gap-2 rounded-lg border border-[#8edee2]/20 bg-[#8edee2]/[0.045] px-2.5 py-1.5"><span className="flex shrink-0 items-center gap-1.5 text-[10px] text-[#c2f3f1]"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#f87171]" />{copy.active}</span><span aria-live="polite" className="min-w-0 flex-1 truncate text-[10px] italic text-[#aaa1ab]">{interimTranscript || '…'}</span><span aria-hidden="true" className="flex h-5 items-end gap-0.5">{heights.map((height, index) => <motion.span key={height + index} animate={{ height: [height, Math.max(5, height - 7), height + 4, height] }} transition={{ duration: 0.72, repeat: Infinity, delay: index * 0.08 }} className="w-0.5 rounded-full bg-gradient-to-t from-[#f2b1d1] to-[#8edee2]" />)}</span></div>;
 }
 
 function IconTab({ icon, label, active, color, onClick }: { icon: ReactNode; label: string; active: boolean; color: string; onClick: () => void }) {
@@ -777,9 +912,14 @@ function AgentTimeline({ mission, plan, phase, activeWay }: { mission: string; p
   return <div><button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="flex w-full items-center gap-3 px-1 py-2 text-left"><div className="flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.035] text-[10px] font-semibold" style={{ color: activeWay.accent }}>I</div><span className="min-w-0 flex-1"><span className="flex items-center gap-2 text-xs font-medium text-[#eee7ee]">{headline}<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#f2b1d1]" /></span><span className="mt-0.5 block text-[11px] text-[#77707b]">Escouade {activeWay.name} · étapes visibles, détails discrets</span></span><ChevronDown className={`h-3.5 w-3.5 text-[#77707b] transition-transform ${expanded ? 'rotate-180' : ''}`} /></button><AnimatePresence initial={false}>{expanded && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden border-l border-white/[0.08] pl-4"><div className="space-y-1 py-2">{steps.map((stepItem) => <div key={stepItem.label} className="flex items-start gap-2.5 px-2 py-2"><span className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border ${stepItem.done ? 'border-[#8edee2]/70 bg-[#8edee2]/10 text-[#8edee2]' : 'border-[#5c3e54] bg-[#281a25] text-[#f2b1d1]'}`}>{stepItem.done ? <Check className="h-2.5 w-2.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}</span><span><span className="block text-[11px] font-medium text-[#d8d0d9]">{stepItem.label}</span><span className="mt-0.5 block text-[11px] leading-5 text-[#77707b]">{stepItem.detail}</span></span></div>)}</div></motion.div>}</AnimatePresence></div>;
 }
 
-function Composer({ prompt, setPrompt, phase, activeWay, listening, attachmentOpen, helperOpen, attachmentRef, helperRef, onMission, onListening, onSetAttachmentOpen, onSetHelperOpen, onShowNotice }: { prompt: string; setPrompt: (value: string) => void; phase: Phase; activeWay: Way; listening: boolean; attachmentOpen: boolean; helperOpen: boolean; attachmentRef: React.RefObject<HTMLDivElement | null>; helperRef: React.RefObject<HTMLDivElement | null>; onMission: () => void; onListening: () => void; onSetAttachmentOpen: (value: boolean) => void; onSetHelperOpen: (value: boolean) => void; onShowNotice: (message: string) => void }) {
+function Composer({ prompt, setPrompt, phase, activeWay, language, interimTranscript, dictationMode, speechError, listening, attachmentOpen, helperOpen, attachmentRef, helperRef, onMission, onListening, onStopListening, onSetAttachmentOpen, onSetHelperOpen, onShowNotice }: { prompt: string; setPrompt: (value: string) => void; phase: Phase; activeWay: Way; language: DictationLanguage; interimTranscript: string; dictationMode: 'speech' | 'simulation' | null; speechError: string | null; listening: boolean; attachmentOpen: boolean; helperOpen: boolean; attachmentRef: React.RefObject<HTMLDivElement | null>; helperRef: React.RefObject<HTMLDivElement | null>; onMission: (value?: string) => void; onListening: () => void; onStopListening: () => string; onSetAttachmentOpen: (value: boolean) => void; onSetHelperOpen: (value: boolean) => void; onShowNotice: (message: string) => void }) {
   const busy = phase === 'thinking' || phase === 'building';
-  return <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-5 sm:px-9"><div className="mx-auto max-w-2xl"><div className="mb-2 flex items-center justify-between px-1 text-[10px] text-[#6f6872]"><div className="flex items-center gap-2"><span style={{ color: activeWay.accent }}>Voie {activeWay.name}</span><span className="h-1 w-1 rounded-full bg-white/20" /><span>Entrée pour envoyer</span></div><span className="hidden sm:inline">Maj + Entrée pour une nouvelle ligne</span></div><div className={`rounded-2xl p-px ${busy ? 'bg-gradient-to-r from-[#f2b1d1] via-[#f3d27a] to-[#8edee2]' : 'bg-white/[0.12]'}`}><div className="rounded-[15px] bg-[#151219] p-3"><textarea id="design-mockup-composer" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); onMission(); } }} rows={2} placeholder="Décris ce que tu veux créer…" className="w-full resize-none bg-transparent px-1 text-sm leading-6 text-[#eee7ee] outline-none placeholder:text-[#6f6872]" /><div className="mt-2 flex items-center justify-between"><div className="flex items-center gap-0.5"><div ref={attachmentRef} className="relative"><button type="button" onClick={() => onSetAttachmentOpen(!attachmentOpen)} aria-label="Joindre ou connecter" className={`rounded-lg p-2 text-[#706873] hover:bg-white/[0.05] hover:text-white ${attachmentOpen ? 'bg-white/[0.05] text-white' : ''}`}><Paperclip className="h-4 w-4" /></button><AnimatePresence>{attachmentOpen && <motion.div initial={{ opacity: 0, y: 5, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.98 }} className="absolute bottom-11 left-0 z-30 w-56 rounded-xl border border-white/[0.10] bg-[#1a1720] p-1.5 shadow-2xl"><MenuItem icon={<Upload className="h-3.5 w-3.5" />} label="Importer depuis l’ordinateur" onClick={() => { onSetAttachmentOpen(false); onShowNotice('Import simulé dans cette maquette.'); }} /><MenuItem icon={<Plug className="h-3.5 w-3.5" />} label="Connecter un service" onClick={() => { onSetAttachmentOpen(false); onShowNotice('Le registre des connecteurs sera branché plus tard.'); }} /><MenuItem icon={<Puzzle className="h-3.5 w-3.5" />} label="Ajouter un plugin" onClick={() => { onSetAttachmentOpen(false); onShowNotice('Les plugins restent hors backend dans ce mockup.'); }} /></motion.div>}</AnimatePresence></div><div ref={helperRef} className="relative"><button type="button" onClick={() => onSetHelperOpen(!helperOpen)} aria-label="Améliorer l’idée" className={`rounded-lg p-2 text-[#706873] hover:bg-white/[0.05] hover:text-white ${helperOpen ? 'bg-white/[0.05] text-white' : ''}`}><Sparkles className="h-4 w-4" /></button><AnimatePresence>{helperOpen && <motion.div initial={{ opacity: 0, y: 5, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.98 }} className="absolute bottom-11 left-0 z-30 w-64 rounded-xl border border-white/[0.10] bg-[#1a1720] p-1.5 shadow-2xl"><p className="px-2.5 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.15em] text-[#6f6872]">Améliorer l’idée</p>{[['Préciser le résultat', 'Ajoute le résultat attendu et les personnes visées.'], ['Structurer les écrans', 'Propose les pages principales et leur navigation.'], ['Définir le style', 'Suggère une direction visuelle cohérente.']].map(([label, addition]) => <MenuItem key={label} icon={<Sparkles className="h-3.5 w-3.5" />} label={label} onClick={() => { setPrompt(`${prompt.trim()}${prompt.trim() ? '\n\n' : ''}${addition}`); onSetHelperOpen(false); }} />)}</motion.div>}</AnimatePresence></div></div><div className="flex items-center gap-1"><button type="button" onClick={onListening} aria-pressed={listening} aria-label="Dicter" className={`relative rounded-lg p-2 ${listening ? 'bg-[#8edee2]/10 text-[#8edee2]' : 'text-[#706873] hover:bg-white/[0.05] hover:text-white'}`}><Mic className="h-4 w-4" />{listening && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-ping rounded-full bg-[#8edee2]" />}</button><button type="button" onClick={onMission} disabled={!prompt.trim() || busy} aria-label="Envoyer la mission" className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#f2b1d1] to-[#f3d27a] text-[#24151e] transition disabled:cursor-not-allowed disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button></div></div></div></div><p className="mt-2 text-center text-[10px] text-[#514a56]">Aperçu local · aucune donnée n’est envoyée</p></div></div>;
+  const copy = DICTATION_COPY[language];
+  const send = () => {
+    const finalized = onStopListening();
+    onMission(finalized || prompt.trim());
+  };
+  return <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-5 sm:px-9"><div className="mx-auto max-w-2xl"><div className="mb-2 flex items-center justify-between px-1 text-[10px] text-[#6f6872]"><div className="flex items-center gap-2"><span style={{ color: activeWay.accent }}>Voie {activeWay.name}</span><span className="h-1 w-1 rounded-full bg-white/20" /><span>Entrée pour envoyer</span></div><span className="hidden sm:inline">Maj + Entrée pour une nouvelle ligne</span></div><div className={`rounded-2xl p-px ${busy ? 'bg-gradient-to-r from-[#f2b1d1] via-[#f3d27a] to-[#8edee2]' : 'bg-white/[0.12]'}`}><div className="rounded-[15px] bg-[#151219] p-3"><textarea id="design-mockup-composer" value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send(); } }} rows={2} placeholder={copy.placeholder} className="w-full resize-none bg-transparent px-1 text-sm leading-6 text-[#eee7ee] outline-none placeholder:text-[#6f6872]" />{listening && <VoiceFeedback language={language} interimTranscript={interimTranscript} mode={dictationMode ?? 'speech'} />}{speechError && <p role="status" className="mt-1 px-1 text-[10px] text-[#fca5a5]">{copy.error}</p>}<div className="mt-2 flex items-center justify-between"><div className="flex items-center gap-0.5"><div ref={attachmentRef} className="relative"><button type="button" onClick={() => onSetAttachmentOpen(!attachmentOpen)} aria-label="Joindre ou connecter" className={`rounded-lg p-2 text-[#706873] hover:bg-white/[0.05] hover:text-white ${attachmentOpen ? 'bg-white/[0.05] text-white' : ''}`}><Paperclip className="h-4 w-4" /></button><AnimatePresence>{attachmentOpen && <motion.div initial={{ opacity: 0, y: 5, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.98 }} className="absolute bottom-11 left-0 z-30 w-56 rounded-xl border border-white/[0.10] bg-[#1a1720] p-1.5 shadow-2xl"><MenuItem icon={<Upload className="h-3.5 w-3.5" />} label="Importer depuis l’ordinateur" onClick={() => { onSetAttachmentOpen(false); onShowNotice('Import simulé dans cette maquette.'); }} /><MenuItem icon={<Plug className="h-3.5 w-3.5" />} label="Connecter un service" onClick={() => { onSetAttachmentOpen(false); onShowNotice('Le registre des connecteurs sera branché plus tard.'); }} /><MenuItem icon={<Puzzle className="h-3.5 w-3.5" />} label="Ajouter un plugin" onClick={() => { onSetAttachmentOpen(false); onShowNotice('Les plugins restent hors backend dans ce mockup.'); }} /></motion.div>}</AnimatePresence></div><div ref={helperRef} className="relative"><button type="button" onClick={() => onSetHelperOpen(!helperOpen)} aria-label="Améliorer l’idée" className={`rounded-lg p-2 text-[#706873] hover:bg-white/[0.05] hover:text-white ${helperOpen ? 'bg-white/[0.05] text-white' : ''}`}><Sparkles className="h-4 w-4" /></button><AnimatePresence>{helperOpen && <motion.div initial={{ opacity: 0, y: 5, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.98 }} className="absolute bottom-11 left-0 z-30 w-64 rounded-xl border border-white/[0.10] bg-[#1a1720] p-1.5 shadow-2xl"><p className="px-2.5 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.15em] text-[#6f6872]">Améliorer l’idée</p>{[['Préciser le résultat', 'Ajoute le résultat attendu et les personnes visées.'], ['Structurer les écrans', 'Propose les pages principales et leur navigation.'], ['Définir le style', 'Suggère une direction visuelle cohérente.']].map(([label, addition]) => <MenuItem key={label} icon={<Sparkles className="h-3.5 w-3.5" />} label={label} onClick={() => { setPrompt(`${prompt.trim()}${prompt.trim() ? '\n\n' : ''}${addition}`); onSetHelperOpen(false); }} />)}</motion.div>}</AnimatePresence></div></div><div className="flex items-center gap-1"><button type="button" onClick={onListening} disabled={busy} aria-pressed={listening} aria-label="Dicter la mission" title="Dicter" className={`relative rounded-lg p-2 transition ${busy ? 'cursor-not-allowed text-[#4e4853]' : listening ? 'bg-[#8edee2]/15 text-[#f87171]' : 'text-[#706873] hover:bg-white/[0.05] hover:text-white'}`}><Mic className="h-4 w-4" />{listening && <><span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#f87171]" /><span className="pointer-events-none absolute inset-0 rounded-lg border border-[#8edee2]/70 motion-safe:animate-ping" /></>}</button><button type="button" onClick={send} disabled={!prompt.trim() || busy} aria-label="Envoyer la mission" className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#f2b1d1] to-[#f3d27a] text-[#24151e] transition disabled:cursor-not-allowed disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button></div></div></div></div><p className="mt-2 text-center text-[10px] text-[#514a56]">Aperçu local · aucune donnée n’est envoyée</p></div></div>;
 }
 
 function MenuItem({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
