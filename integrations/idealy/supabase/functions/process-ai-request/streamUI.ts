@@ -1,46 +1,23 @@
-import {
-  createUIMessageStream,
-  createUIMessageStreamResponse,
-} from "npm:ai@7.0.51";
+import { createUIMessageStream, createUIMessageStreamResponse } from 'npm:ai@7.0.51';
 
-export type AgentUIPhase =
-  | "planning"
-  | "building"
-  | "validating"
-  | "completed"
-  | "needs-fix";
+export type AgentUIPhase = 'planning' | 'building' | 'validating' | 'completed' | 'needs-fix';
 
 export interface AgentTimelineData {
-  builder: "queued" | "active" | "done";
   missionId?: string | null;
   phase: AgentUIPhase;
   progress: number;
-  strategist: "queued" | "active" | "done";
-  terminal: "queued" | "active" | "done" | "error";
+  strategist: 'queued' | 'active' | 'done';
+  builder: 'queued' | 'active' | 'done';
+  terminal: 'queued' | 'active' | 'done' | 'error';
 }
 
-function timelineForPhase(
-  phase: AgentUIPhase,
-  progress: number
-): AgentTimelineData {
+function timelineForPhase(phase: AgentUIPhase, progress: number): AgentTimelineData {
   return {
-    builder:
-      phase === "building"
-        ? "active"
-        : phase === "planning"
-          ? "queued"
-          : "done",
     phase,
     progress: Math.max(0, Math.min(100, progress)),
-    strategist: phase === "planning" ? "active" : "done",
-    terminal:
-      phase === "validating"
-        ? "active"
-        : phase === "needs-fix"
-          ? "error"
-          : phase === "completed"
-            ? "done"
-            : "queued",
+    strategist: phase === 'planning' ? 'active' : 'done',
+    builder: phase === 'building' ? 'active' : phase === 'planning' ? 'queued' : 'done',
+    terminal: phase === 'validating' ? 'active' : phase === 'needs-fix' ? 'error' : phase === 'completed' ? 'done' : 'queued',
   };
 }
 
@@ -55,26 +32,23 @@ export function streamUI(input: {
   phase: AgentUIPhase;
   progress?: number;
 }): Response {
-  const data = {
-    ...timelineForPhase(input.phase, input.progress ?? 0),
-    missionId: input.missionId ?? null,
-  };
+  const data = { ...timelineForPhase(input.phase, input.progress ?? 0), missionId: input.missionId ?? null };
   const stream = createUIMessageStream({
     execute({ writer }) {
       writer.write({
+        type: 'data-agent-timeline',
+        id: 'idealy-agent-timeline',
         data,
-        id: "idealy-agent-timeline",
-        type: "data-agent-timeline",
       } as never);
     },
-    onError: () => "UI stream failed.",
+    onError: () => 'UI stream failed.',
   });
 
   return createUIMessageStreamResponse({
+    stream,
     headers: {
       ...input.headers,
-      "Cache-Control": "no-cache",
+      'Cache-Control': 'no-cache',
     },
-    stream,
   });
 }

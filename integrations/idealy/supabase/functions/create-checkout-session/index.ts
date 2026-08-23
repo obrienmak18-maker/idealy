@@ -1,34 +1,22 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "npm:stripe@17.7.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const appOrigin = Deno.env.get("APP_ORIGIN") ?? "";
 const corsHeaders = {
+  "Access-Control-Allow-Origin": appOrigin || "*",
   "Access-Control-Allow-Headers": "authorization, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Origin": appOrigin || "*",
 };
 
 const PRICE_IDS = {
-  business: {
-    monthly:
-      Deno.env.get("STRIPE_PRICE_ID_BUSINESS_MONTHLY") ??
-      Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ??
-      "",
-    yearly:
-      Deno.env.get("STRIPE_PRICE_ID_BUSINESS_YEARLY") ??
-      Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ??
-      "",
-  },
   pro: {
-    monthly:
-      Deno.env.get("STRIPE_PRICE_ID_PRO_MONTHLY") ??
-      Deno.env.get("STRIPE_PRICE_ID_PRO") ??
-      "",
-    yearly:
-      Deno.env.get("STRIPE_PRICE_ID_PRO_YEARLY") ??
-      Deno.env.get("STRIPE_PRICE_ID_PRO") ??
-      "",
+    monthly: Deno.env.get("STRIPE_PRICE_ID_PRO_MONTHLY") ?? Deno.env.get("STRIPE_PRICE_ID_PRO") ?? "",
+    yearly: Deno.env.get("STRIPE_PRICE_ID_PRO_YEARLY") ?? Deno.env.get("STRIPE_PRICE_ID_PRO") ?? "",
+  },
+  business: {
+    monthly: Deno.env.get("STRIPE_PRICE_ID_BUSINESS_MONTHLY") ?? Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ?? "",
+    yearly: Deno.env.get("STRIPE_PRICE_ID_BUSINESS_YEARLY") ?? Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ?? "",
   },
 } as const;
 
@@ -37,61 +25,43 @@ type BillingCycle = keyof typeof PRICE_IDS.pro;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
     status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const authorization = req.headers.get("Authorization");
-    if (!authorization?.startsWith("Bearer ")) {
-      return json({ error: "Unauthorized" }, 401);
-    }
+    if (!authorization?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authorization } } }
+      { global: { headers: { Authorization: authorization } } },
     );
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return json({ error: "Unauthorized" }, 401);
-    }
+    if (userError || !user) return json({ error: "Unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
     const plan = (body?.planId ?? body?.plan) as Plan;
     const billingCycle = body?.billingCycle as BillingCycle;
-    if (plan !== "pro" && plan !== "business") {
-      return json({ error: "Invalid plan" }, 400);
-    }
-    if (billingCycle !== "monthly" && billingCycle !== "yearly") {
-      return json({ error: "Invalid billing cycle" }, 400);
-    }
+    if (plan !== "pro" && plan !== "business") return json({ error: "Invalid plan" }, 400);
+    if (billingCycle !== "monthly" && billingCycle !== "yearly") return json({ error: "Invalid billing cycle" }, 400);
     const priceId = PRICE_IDS[plan][billingCycle];
-    if (!priceId) {
-      return json(
-        {
-          error:
-            "Stripe price is not configured for this plan and billing cycle",
-        },
-        503
-      );
-    }
+    if (!priceId) return json({ error: "Stripe price is not configured for this plan and billing cycle" }, 503);
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
       apiVersion: "2025-02-24.acacia",
     });
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
     const { data: profile, error: profileError } = await admin
@@ -99,9 +69,7 @@ Deno.serve(async (req) => {
       .select("id, email, stripe_customer_id")
       .eq("id", user.id)
       .maybeSingle();
-    if (profileError) {
-      throw profileError;
-    }
+    if (profileError) throw profileError;
 
     let customerId = profile?.stripe_customer_id ?? null;
     if (!customerId) {
@@ -115,33 +83,27 @@ Deno.serve(async (req) => {
         .from("profiles")
         .update({ stripe_customer_id: customerId })
         .eq("id", user.id);
-      if (customerUpdateError) {
-        throw customerUpdateError;
-      }
+      if (customerUpdateError) throw customerUpdateError;
     }
 
-    const origin =
-      appOrigin || req.headers.get("origin") || "http://localhost:3000";
+    const origin = appOrigin || req.headers.get("origin") || "http://localhost:3000";
     const session = await stripe.checkout.sessions.create({
-      allow_promotion_codes: true,
-      cancel_url: `${origin}/settings?billing=cancelled`,
-      client_reference_id: user.id,
-      customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
+      customer: customerId,
+      client_reference_id: user.id,
+      line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        metadata: { billing_cycle: billingCycle, plan, user_id: user.id },
         trial_period_days: 14,
+        metadata: { user_id: user.id, plan, billing_cycle: billingCycle },
       },
+      allow_promotion_codes: true,
       success_url: `${origin}/settings?billing=success`,
+      cancel_url: `${origin}/settings?billing=cancelled`,
     });
 
     return json({ url: session.url });
   } catch (error) {
     console.error("create-checkout-session failed", error);
-    return json(
-      { error: error instanceof Error ? error.message : "Checkout failed" },
-      500
-    );
+    return json({ error: error instanceof Error ? error.message : "Checkout failed" }, 500);
   }
 });

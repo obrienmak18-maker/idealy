@@ -22,10 +22,10 @@ function headersFor(request?: Request): Record<string, string> {
   const origin =
     requested && allowed.includes(requested) ? requested : allowed[0];
   return {
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, stripe-signature",
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Origin": origin,
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
@@ -33,7 +33,7 @@ function headersFor(request?: Request): Record<string, string> {
 
 export function handleCors(response: Response, request?: Request): Response {
   Object.entries(headersFor(request)).forEach(([key, value]) =>
-    response.headers.set(key, value)
+    response.headers.set(key, value),
   );
   return response;
 }
@@ -41,11 +41,11 @@ export function handleCors(response: Response, request?: Request): Response {
 export function corsResponse(
   body: unknown,
   status = 200,
-  request?: Request
+  request?: Request,
 ): Response {
   const response = new Response(JSON.stringify(body), {
-    headers: { "Content-Type": "application/json" },
     status,
+    headers: { "Content-Type": "application/json" },
   });
   return handleCors(response, request);
 }

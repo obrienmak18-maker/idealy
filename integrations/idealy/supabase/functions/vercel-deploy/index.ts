@@ -7,9 +7,8 @@ const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
 function encodeBase64(value: string): string {
   const bytes = new TextEncoder().encode(value);
   let binary = "";
-  for (let index = 0; index < bytes.length; index += 1) {
+  for (let index = 0; index < bytes.length; index += 1)
     binary += String.fromCharCode(bytes[index]);
-  }
   return btoa(binary);
 }
 
@@ -22,26 +21,21 @@ function slugify(value: string): string {
 }
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") {
-    return optionsResponse(request);
-  }
-  if (request.method !== "POST") {
+  if (request.method === "OPTIONS") return optionsResponse(request);
+  if (request.method !== "POST")
     return corsResponse({ error: "Method not allowed" }, 405, request);
-  }
 
   const auth = await authenticate(request);
-  if ("error" in auth) {
+  if ("error" in auth)
     return corsResponse({ error: auth.error }, auth.status, request);
-  }
 
   const token = Deno.env.get("VERCEL_TOKEN");
-  if (!token) {
+  if (!token)
     return corsResponse(
       { error: "Vercel server connector is not configured." },
       503,
-      request
+      request,
     );
-  }
 
   try {
     const body = await request.json();
@@ -55,7 +49,7 @@ Deno.serve(async (request) => {
     }
 
     const files = Object.entries(
-      schema.project.files as Record<string, unknown>
+      schema.project.files as Record<string, unknown>,
     );
     let totalBytes = 0;
     const vercelFiles = [];
@@ -65,76 +59,72 @@ Deno.serve(async (request) => {
         filePath.length > 240 ||
         filePath.startsWith("/") ||
         filePath.includes("..")
-      ) {
+      )
         return corsResponse(
           { error: `Invalid file: ${filePath}` },
           400,
-          request
+          request,
         );
-      }
       const bytes = new TextEncoder().encode(rawContent).byteLength;
-      if (bytes > MAX_FILE_BYTES) {
+      if (bytes > MAX_FILE_BYTES)
         return corsResponse(
           { error: `File too large: ${filePath}` },
           413,
-          request
+          request,
         );
-      }
       totalBytes += bytes;
-      if (totalBytes > MAX_TOTAL_BYTES) {
+      if (totalBytes > MAX_TOTAL_BYTES)
         return corsResponse(
           { error: "Project payload too large." },
           413,
-          request
+          request,
         );
-      }
       vercelFiles.push({
+        file: filePath,
         data: encodeBase64(rawContent),
         encoding: "base64",
-        file: filePath,
       });
     }
 
     const response = await fetch("https://api.vercel.com/v13/deployments", {
-      body: JSON.stringify({
-        files: vercelFiles,
-        meta: { idealy_user_id: auth.user.id },
-        name: slugify(String(schema.project.name)),
-        projectSettings: {
-          buildCommand: "npm run build",
-          framework: "vite",
-          installCommand: "npm install",
-          outputDirectory: "dist",
-        },
-        target: body?.target === "preview" ? "preview" : "production",
-      }),
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      method: "POST",
+      body: JSON.stringify({
+        name: slugify(String(schema.project.name)),
+        files: vercelFiles,
+        projectSettings: {
+          framework: "vite",
+          buildCommand: "npm run build",
+          outputDirectory: "dist",
+          installCommand: "npm install",
+        },
+        target: body?.target === "preview" ? "preview" : "production",
+        meta: { idealy_user_id: auth.user.id },
+      }),
     });
 
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
+    if (!response.ok)
       return corsResponse(
         {
           error: data?.error?.message ?? `Vercel API error ${response.status}`,
         },
         response.status >= 500 ? 502 : response.status,
-        request
+        request,
       );
-    }
 
     return corsResponse(
       {
-        createdAt: data.createdAt ?? Date.now(),
         id: data.id,
-        readyState: data.readyState ?? "BUILDING",
         url: data.url ? `https://${data.url}` : "",
+        readyState: data.readyState ?? "BUILDING",
+        createdAt: data.createdAt ?? Date.now(),
       },
       200,
-      request
+      request,
     );
   } catch (error) {
     console.error("vercel-deploy failed", error);
