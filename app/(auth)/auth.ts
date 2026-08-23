@@ -4,6 +4,7 @@ import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { DUMMY_PASSWORD } from "@/lib/constants";
 import { createGuestUser, getUser } from "@/lib/db/queries";
+import { signInWithSupabasePassword } from "@/lib/idealy/supabase-auth";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -19,6 +20,7 @@ declare module "next-auth" {
   interface User {
     email?: string | null;
     id?: string;
+    supabaseAccessToken?: string;
     type: UserType;
   }
 }
@@ -26,6 +28,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string;
+    supabaseAccessToken?: string;
     type: UserType;
   }
 }
@@ -42,6 +45,9 @@ export const {
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
+        if (user.supabaseAccessToken) {
+          token.supabaseAccessToken = user.supabaseAccessToken;
+        }
       }
 
       return token;
@@ -91,7 +97,14 @@ export const {
           return null;
         }
 
-        return { ...user, type: "regular" };
+        const supabaseAuth = await signInWithSupabasePassword(email, password);
+        return {
+          ...user,
+          ...(supabaseAuth.accessToken
+            ? { supabaseAccessToken: supabaseAuth.accessToken }
+            : {}),
+          type: "regular",
+        };
       },
       credentials: {
         email: { label: "Email", type: "email" },

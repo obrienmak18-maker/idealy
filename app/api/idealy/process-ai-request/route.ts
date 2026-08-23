@@ -1,7 +1,23 @@
+import { getToken } from "next-auth/jwt";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
+import { isDevelopmentEnvironment } from "@/lib/constants";
 
 export async function POST(request: Request) {
-  const authorization = request.headers.get("authorization");
+  const explicitAuthorization = request.headers.get("authorization");
+  const token = explicitAuthorization
+    ? null
+    : await getToken({
+        req: request,
+        secret: process.env.AUTH_SECRET,
+        secureCookie: !isDevelopmentEnvironment,
+      });
+  const supabaseAccessToken =
+    typeof token?.supabaseAccessToken === "string"
+      ? token.supabaseAccessToken
+      : null;
+  const authorization =
+    explicitAuthorization ??
+    (supabaseAccessToken ? `Bearer ${supabaseAccessToken}` : null);
 
   if (!authorization?.startsWith("Bearer ")) {
     return Response.json(
