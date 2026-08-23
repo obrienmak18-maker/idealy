@@ -58,8 +58,19 @@ export const {
   providers: [
     Credentials({
       async authorize(credentials) {
-        const email = String(credentials.email ?? "");
-        const password = String(credentials.password ?? "");
+        const email = String(credentials.email ?? "demo@idealy.local");
+        const password = String(credentials.password ?? "demo-password");
+
+        if (process.env.DEMO_MODE === "true") {
+          await compare(password, DUMMY_PASSWORD);
+          return {
+            email,
+            id: "demo-user",
+            name: "Visiteur démo",
+            type: "regular",
+          };
+        }
+
         const users = await getUser(email);
 
         if (users.length === 0) {
@@ -89,6 +100,15 @@ export const {
     }),
     Credentials({
       async authorize() {
+        if (process.env.DEMO_MODE === "true") {
+          return {
+            email: "guest@idealy.local",
+            id: "demo-guest",
+            name: "Visiteur démo",
+            type: "guest",
+          };
+        }
+
         const [guestUser] = await createGuestUser();
         return { ...guestUser, type: "guest" };
       },

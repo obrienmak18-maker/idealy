@@ -5,18 +5,18 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+
 import type {
   QueryFunction,
   QueryKey,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-
-import type { HealthStatus } from "./api.schemas";
+import { useQuery } from "@tanstack/react-query";
+import type { ErrorType } from "../custom-fetch";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { HealthStatus } from "./api.schemas";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -28,22 +28,17 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * Returns server health status
  * @summary Health check
  */
-export const getHealthCheckUrl = () => {
-  return `/api/healthz`;
-};
+export const getHealthCheckUrl = () => "/api/healthz";
 
 export const healthCheck = async (
-  options?: RequestInit,
-): Promise<HealthStatus> => {
-  return customFetch<HealthStatus>(getHealthCheckUrl(), {
+  options?: RequestInit
+): Promise<HealthStatus> =>
+  customFetch<HealthStatus>(getHealthCheckUrl(), {
     ...options,
     method: "GET",
   });
-};
 
-export const getHealthCheckQueryKey = () => {
-  return [`/api/healthz`] as const;
-};
+export const getHealthCheckQueryKey = () => ["/api/healthz"] as const;
 
 export const getHealthCheckQueryOptions = <
   TData = Awaited<ReturnType<typeof healthCheck>>,
@@ -64,7 +59,7 @@ export const getHealthCheckQueryOptions = <
     signal,
   }) => healthCheck({ signal, ...requestOptions });
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+  return { queryFn, queryKey, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof healthCheck>>,
     TError,
     TData

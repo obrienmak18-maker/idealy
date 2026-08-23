@@ -48,9 +48,16 @@ function isRequest(input: RequestInfo | URL): input is Request {
   return typeof Request !== "undefined" && input instanceof Request;
 }
 
-function resolveMethod(input: RequestInfo | URL, explicitMethod?: string): string {
-  if (explicitMethod) return explicitMethod.toUpperCase();
-  if (isRequest(input)) return input.method.toUpperCase();
+function resolveMethod(
+  input: RequestInfo | URL,
+  explicitMethod?: string
+): string {
+  if (explicitMethod) {
+    return explicitMethod.toUpperCase();
+  }
+  if (isRequest(input)) {
+    return input.method.toUpperCase();
+  }
   return "GET";
 }
 
@@ -61,20 +68,32 @@ function isUrl(input: RequestInfo | URL): input is URL {
 }
 
 function applyBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
-  if (!_baseUrl) return input;
+  if (!_baseUrl) {
+    return input;
+  }
   const url = resolveUrl(input);
   // Only prepend to relative paths (starting with /)
-  if (!url.startsWith("/")) return input;
+  if (!url.startsWith("/")) {
+    return input;
+  }
 
   const absolute = `${_baseUrl}${url}`;
-  if (typeof input === "string") return absolute;
-  if (isUrl(input)) return new URL(absolute);
+  if (typeof input === "string") {
+    return absolute;
+  }
+  if (isUrl(input)) {
+    return new URL(absolute);
+  }
   return new Request(absolute, input as Request);
 }
 
 function resolveUrl(input: RequestInfo | URL): string {
-  if (typeof input === "string") return input;
-  if (isUrl(input)) return input.toString();
+  if (typeof input === "string") {
+    return input;
+  }
+  if (isUrl(input)) {
+    return input.toString();
+  }
   return input.url;
 }
 
@@ -82,7 +101,9 @@ function mergeHeaders(...sources: Array<HeadersInit | undefined>): Headers {
   const headers = new Headers();
 
   for (const source of sources) {
-    if (!source) continue;
+    if (!source) {
+      continue;
+    }
     new Headers(source).forEach((value, key) => {
       headers.set(key, value);
     });
@@ -97,7 +118,9 @@ function getMediaType(headers: Headers): string | null {
 }
 
 function isJsonMediaType(mediaType: string | null): boolean {
-  return mediaType === "application/json" || Boolean(mediaType?.endsWith("+json"));
+  return (
+    mediaType === "application/json" || Boolean(mediaType?.endsWith("+json"))
+  );
 }
 
 function isTextMediaType(mediaType: string | null): boolean {
@@ -107,7 +130,7 @@ function isTextMediaType(mediaType: string | null): boolean {
         mediaType === "application/xml" ||
         mediaType === "text/xml" ||
         mediaType.endsWith("+xml") ||
-        mediaType === "application/x-www-form-urlencoded"),
+        mediaType === "application/x-www-form-urlencoded")
   );
 }
 
@@ -118,15 +141,23 @@ function isTextMediaType(mediaType: string | null): boolean {
 // `.json()`.  Loose equality (`== null`) matches both `null` and `undefined`,
 // which causes every React Native response to be treated as empty.
 function hasNoBody(response: Response, method: string): boolean {
-  if (method === "HEAD") return true;
-  if (NO_BODY_STATUS.has(response.status)) return true;
-  if (response.headers.get("content-length") === "0") return true;
-  if (response.body === null) return true;
+  if (method === "HEAD") {
+    return true;
+  }
+  if (NO_BODY_STATUS.has(response.status)) {
+    return true;
+  }
+  if (response.headers.get("content-length") === "0") {
+    return true;
+  }
+  if (response.body === null) {
+    return true;
+  }
   return false;
 }
 
 function stripBom(text: string): string {
-  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  return text.charCodeAt(0) === 0xfe_ff ? text.slice(1) : text;
 }
 
 function looksLikeJson(text: string): boolean {
@@ -135,10 +166,14 @@ function looksLikeJson(text: string): boolean {
 }
 
 function getStringField(value: unknown, key: string): string | undefined {
-  if (!value || typeof value !== "object") return undefined;
+  if (!value || typeof value !== "object") {
+    return;
+  }
 
   const candidate = (value as Record<string, unknown>)[key];
-  if (typeof candidate !== "string") return undefined;
+  if (typeof candidate !== "string") {
+    return;
+  }
 
   const trimmed = candidate.trim();
   return trimmed === "" ? undefined : trimmed;
@@ -163,10 +198,18 @@ function buildErrorMessage(response: Response, data: unknown): string {
     getStringField(data, "error_description") ??
     getStringField(data, "error");
 
-  if (title && detail) return `${prefix}: ${title} — ${detail}`;
-  if (detail) return `${prefix}: ${detail}`;
-  if (message) return `${prefix}: ${message}`;
-  if (title) return `${prefix}: ${title}`;
+  if (title && detail) {
+    return `${prefix}: ${title} — ${detail}`;
+  }
+  if (detail) {
+    return `${prefix}: ${detail}`;
+  }
+  if (message) {
+    return `${prefix}: ${message}`;
+  }
+  if (title) {
+    return `${prefix}: ${title}`;
+  }
 
   return prefix;
 }
@@ -184,7 +227,7 @@ export class ApiError<T = unknown> extends Error {
   constructor(
     response: Response,
     data: T | null,
-    requestInfo: { method: string; url: string },
+    requestInfo: { method: string; url: string }
   ) {
     super(buildErrorMessage(response, data));
     Object.setPrototypeOf(this, new.target.prototype);
@@ -214,11 +257,11 @@ export class ResponseParseError extends Error {
     response: Response,
     rawBody: string,
     cause: unknown,
-    requestInfo: { method: string; url: string },
+    requestInfo: { method: string; url: string }
   ) {
     super(
       `Failed to parse response from ${requestInfo.method} ${response.url || requestInfo.url} ` +
-        `(${response.status} ${response.statusText}) as JSON`,
+        `(${response.status} ${response.statusText}) as JSON`
     );
     Object.setPrototypeOf(this, new.target.prototype);
 
@@ -235,7 +278,7 @@ export class ResponseParseError extends Error {
 
 async function parseJsonBody(
   response: Response,
-  requestInfo: { method: string; url: string },
+  requestInfo: { method: string; url: string }
 ): Promise<unknown> {
   const raw = await response.text();
   const normalized = stripBom(raw);
@@ -251,7 +294,10 @@ async function parseJsonBody(
   }
 }
 
-async function parseErrorBody(response: Response, method: string): Promise<unknown> {
+async function parseErrorBody(
+  response: Response,
+  method: string
+): Promise<unknown> {
   if (hasNoBody(response, method)) {
     return null;
   }
@@ -260,7 +306,9 @@ async function parseErrorBody(response: Response, method: string): Promise<unkno
 
   // Fall back to text when blob() is unavailable (e.g. some React Native builds).
   if (mediaType && !isJsonMediaType(mediaType) && !isTextMediaType(mediaType)) {
-    return typeof response.blob === "function" ? response.blob() : response.text();
+    return typeof response.blob === "function"
+      ? response.blob()
+      : response.text();
   }
 
   const raw = await response.text();
@@ -285,15 +333,19 @@ async function parseErrorBody(response: Response, method: string): Promise<unkno
 function inferResponseType(response: Response): "json" | "text" | "blob" {
   const mediaType = getMediaType(response.headers);
 
-  if (isJsonMediaType(mediaType)) return "json";
-  if (isTextMediaType(mediaType) || mediaType == null) return "text";
+  if (isJsonMediaType(mediaType)) {
+    return "json";
+  }
+  if (isTextMediaType(mediaType) || mediaType == null) {
+    return "text";
+  }
   return "blob";
 }
 
 async function parseSuccessBody(
   response: Response,
   responseType: "json" | "text" | "blob" | "auto",
-  requestInfo: { method: string; url: string },
+  requestInfo: { method: string; url: string }
 ): Promise<unknown> {
   if (hasNoBody(response, requestInfo.method)) {
     return null;
@@ -315,7 +367,7 @@ async function parseSuccessBody(
       if (typeof response.blob !== "function") {
         throw new TypeError(
           "Blob responses are not supported in this runtime. " +
-            "Use responseType \"json\" or \"text\" instead.",
+            'Use responseType "json" or "text" instead.'
         );
       }
       return response.blob();
@@ -324,7 +376,7 @@ async function parseSuccessBody(
 
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
-  options: CustomFetchOptions = {},
+  options: CustomFetchOptions = {}
 ): Promise<T> {
   input = applyBaseUrl(input);
   const { responseType = "auto", headers: headersInit, ...init } = options;
@@ -335,7 +387,10 @@ export async function customFetch<T = unknown>(
     throw new TypeError(`customFetch: ${method} requests cannot have a body.`);
   }
 
-  const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
+  const headers = mergeHeaders(
+    isRequest(input) ? input.headers : undefined,
+    headersInit
+  );
 
   if (
     typeof init.body === "string" &&
@@ -360,7 +415,7 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const response = await fetch(input, { ...init, headers, method });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

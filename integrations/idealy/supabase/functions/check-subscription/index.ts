@@ -2,44 +2,51 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const appOrigin = Deno.env.get("APP_ORIGIN") ?? "";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": appOrigin || "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Origin": appOrigin || "*",
 };
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
-    status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status,
   });
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS")
+  if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "GET") return json({ error: "Method not allowed" }, 405);
+  }
+  if (req.method !== "GET") {
+    return json({ error: "Method not allowed" }, 405);
+  }
 
   try {
     const authorization = req.headers.get("Authorization");
-    if (!authorization?.startsWith("Bearer "))
+    if (!authorization?.startsWith("Bearer ")) {
       return json({ error: "Unauthorized" }, 401);
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    if (!supabaseUrl || !anonKey || !serviceRoleKey)
+    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
       return json(
         { error: "Supabase server configuration is incomplete" },
-        500,
+        500
       );
+    }
 
     const authClient = createClient(supabaseUrl, anonKey);
     const {
       data: { user },
       error: authError,
     } = await authClient.auth.getUser(authorization.slice("Bearer ".length));
-    if (authError || !user) return json({ error: "Unauthorized" }, 401);
+    if (authError || !user) {
+      return json({ error: "Unauthorized" }, 401);
+    }
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const [
@@ -61,11 +68,15 @@ Deno.serve(async (req) => {
         .maybeSingle(),
     ]);
 
-    if (profileError) throw profileError;
-    if (subscriptionError) throw subscriptionError;
+    if (profileError) {
+      throw profileError;
+    }
+    if (subscriptionError) {
+      throw subscriptionError;
+    }
 
     const active = Boolean(
-      subscription && ["active", "trialing"].includes(subscription.status),
+      subscription && ["active", "trialing"].includes(subscription.status)
     );
     const periodEnd = subscription?.current_period_end
       ? Math.floor(new Date(subscription.current_period_end).getTime() / 1000)
@@ -73,9 +84,9 @@ Deno.serve(async (req) => {
 
     return json({
       active,
-      planId: subscription?.plan ?? profile?.plan ?? "free",
-      currentPeriodEnd: periodEnd,
       cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
+      currentPeriodEnd: periodEnd,
+      planId: subscription?.plan ?? profile?.plan ?? "free",
       status: subscription?.status ?? "none",
       stripeCustomerId: profile?.stripe_customer_id ?? null,
     });
@@ -86,7 +97,7 @@ Deno.serve(async (req) => {
         error:
           error instanceof Error ? error.message : "Subscription check failed",
       },
-      500,
+      500
     );
   }
 });

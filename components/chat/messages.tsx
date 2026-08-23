@@ -8,10 +8,14 @@ import { cn } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
+import { SuggestedActions } from "./suggested-actions";
+import type { VisibilityType } from "./visibility-selector";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
+  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
+  selectedVisibilityType: VisibilityType;
   status: UseChatHelpers<ChatMessage>["status"];
   votes: Vote[] | undefined;
   messages: ChatMessage[];
@@ -22,11 +26,14 @@ type MessagesProps = {
   isLoading?: boolean;
   selectedModelId: string;
   onEditMessage?: (message: ChatMessage) => void;
+  onSuggestionSelect?: (prompt: string) => void;
 };
 
 function PureMessages({
   addToolApprovalResponse,
   chatId,
+  sendMessage,
+  selectedVisibilityType,
   status,
   votes,
   messages,
@@ -37,6 +44,7 @@ function PureMessages({
   isLoading,
   selectedModelId: _selectedModelId,
   onEditMessage,
+  onSuggestionSelect,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -67,7 +75,15 @@ function PureMessages({
     <div className="relative flex-1 bg-background">
       {messages.length === 0 && !isLoading && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <Greeting />
+          <div className="pointer-events-auto flex w-full max-w-3xl flex-col items-center gap-8 px-4 pb-24">
+            <Greeting />
+            <SuggestedActions
+              chatId={chatId}
+              onSuggestionSelect={onSuggestionSelect}
+              selectedVisibilityType={selectedVisibilityType}
+              sendMessage={sendMessage}
+            />
+          </div>
         </div>
       )}
       <div

@@ -1,6 +1,16 @@
 import { getIdealyApiUrl } from "@/lib/idealy/config";
 
 export async function GET() {
+  if (process.env.DEMO_MODE === "true") {
+    return Response.json({
+      configuredUrl: null,
+      mode: "demo",
+      service: "idealy-api",
+      status: "ready",
+      upstream: null,
+    });
+  }
+
   const url = `${getIdealyApiUrl()}/api/healthz`;
 
   try {

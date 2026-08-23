@@ -27,9 +27,13 @@ export function DataStreamHandler() {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
         continue;
       }
+      const streamKind =
+        delta.type === "data-kind" && typeof delta.data === "string"
+          ? delta.data
+          : artifact.kind;
       const artifactDefinition = artifactDefinitions.find(
         (currentArtifactDefinition) =>
-          currentArtifactDefinition.kind === artifact.kind
+          currentArtifactDefinition.kind === streamKind
       );
 
       if (artifactDefinition?.onStreamPart) {
@@ -71,6 +75,23 @@ export function DataStreamHandler() {
             return {
               ...draftArtifact,
               content: "",
+              status: "streaming",
+            };
+
+          case "data-codeDelta": {
+            const content = typeof delta.data === "string" ? delta.data : "";
+            return {
+              ...draftArtifact,
+              content,
+              isVisible: content.length >= 240 ? true : draftArtifact.isVisible,
+              status: "streaming",
+            };
+          }
+
+          case "data-preview":
+            return {
+              ...draftArtifact,
+              preview: typeof delta.data === "string" ? delta.data : "",
               status: "streaming",
             };
 

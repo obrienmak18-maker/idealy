@@ -48,7 +48,7 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.985 0 0);
+  --background: oklch(0.965 0.012 250);
   --foreground: oklch(0.12 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.12 0 0);
@@ -56,11 +56,11 @@
   --popover-foreground: oklch(0.12 0 0);
   --primary: oklch(0.12 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.965 0 0);
+  --secondary: oklch(0.945 0.012 250);
   --secondary-foreground: oklch(0.38 0 0);
-  --muted: oklch(0.94 0 0);
+  --muted: oklch(0.925 0.012 250);
   --muted-foreground: oklch(0.58 0 0);
-  --accent: oklch(0.965 0 0);
+  --accent: oklch(0.945 0.012 250);
   --accent-foreground: oklch(0.12 0 0);
   --destructive: oklch(0.55 0.15 25);
   --border: oklch(0.9 0 0);
@@ -71,7 +71,7 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.97 0 0);
+  --sidebar: oklch(0.945 0.012 250);
   --sidebar-foreground: oklch(0.38 0 0);
   --sidebar-primary: oklch(0.12 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -88,6 +88,10 @@
     0 0 0 1px oklch(0 0 0 / 0.06), 0 2px 8px -2px oklch(0 0 0 / 0.06);
   --shadow-inset: inset 0 1px 1px oklch(0 0 0 / 0.03);
   --shadow-glow: 0 0 20px oklch(0 0 0 / 0.08);
+  --idealy-glow-blue: rgb(37 99 235 / 0.1);
+  --idealy-glow-orange: rgb(249 115 22 / 0.085);
+  --idealy-glow-violet: rgb(168 85 247 / 0.075);
+  --idealy-glow-teal: rgb(20 184 166 / 0.06);
 
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -138,6 +142,10 @@
   --shadow-composer-focus:
     0 0 0 1px oklch(1 0 0 / 0.1), 0 4px 16px -4px oklch(0 0 0 / 0.3),
     inset 0 1px 0 oklch(1 0 0 / 0.04);
+  --idealy-glow-blue: rgb(37 99 235 / 0.16);
+  --idealy-glow-orange: rgb(249 115 22 / 0.13);
+  --idealy-glow-violet: rgb(168 85 247 / 0.12);
+  --idealy-glow-teal: rgb(20 184 166 / 0.1);
 }
 
 @layer base {
@@ -252,6 +260,134 @@ textarea:focus-visible {
 
   .skeleton-div {
     @apply bg-foreground/20 animate-pulse;
+  }
+}
+
+.idealy-app-background {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 8% 6%, var(--idealy-glow-blue), transparent 32%),
+    radial-gradient(
+      circle at 92% 14%,
+      var(--idealy-glow-orange),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 66% 96%,
+      var(--idealy-glow-violet),
+      transparent 34%
+    ),
+    radial-gradient(circle at 34% 52%, var(--idealy-glow-teal), transparent 28%);
+  transition:
+    background-color 300ms ease,
+    background-image 500ms ease;
+}
+
+.idealy-surface {
+  background-color: color-mix(in oklch, var(--background) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.idealy-preview-surface {
+  background-color: color-mix(in oklch, var(--background) 82%, transparent);
+  background-image:
+    radial-gradient(circle at 12% 18%, var(--idealy-glow-blue), transparent 30%),
+    radial-gradient(circle at 88% 12%, var(--idealy-glow-orange), transparent 27%),
+    radial-gradient(circle at 72% 92%, var(--idealy-glow-violet), transparent 32%),
+    radial-gradient(circle at 34% 58%, var(--idealy-glow-teal), transparent 26%);
+  backdrop-filter: blur(16px);
+  transition: background-color 300ms ease, background-image 500ms ease;
+}
+
+.dark .idealy-preview-surface {
+  background-color: color-mix(in oklch, var(--background) 78%, transparent);
+}
+
+html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.idealy-split-divider {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+
+.idealy-split-divider::before {
+  position: absolute;
+  inset: 0.35rem 0.4rem;
+  z-index: -1;
+  border-radius: 53% 47% 49% 51% / 2% 3% 2% 4%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--border) 72%, transparent) 16%,
+    color-mix(in srgb, var(--border) 45%, transparent) 52%,
+    transparent 94%
+  );
+  content: "";
+  transform: rotate(0.55deg);
+  transition: background 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.idealy-split-divider__grip {
+  width: 0.2rem;
+  height: 4.75rem;
+  border-radius: 48% 52% 46% 54% / 5% 3% 4% 2%;
+  background: color-mix(in srgb, var(--muted-foreground) 34%, transparent);
+  box-shadow: 0 0 0.75rem color-mix(in srgb, var(--idealy-glow-blue) 48%, transparent);
+  transform: rotate(-1.1deg);
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.idealy-split-divider:hover::before,
+.idealy-split-divider:focus-visible::before,
+.idealy-split-divider.is-resizing::before {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, #38bdf8 80%, transparent) 16%,
+    color-mix(in srgb, #a78bfa 64%, transparent) 52%,
+    color-mix(in srgb, #fb923c 60%, transparent) 86%,
+    transparent
+  );
+  opacity: 0.9;
+  transform: rotate(-0.35deg) scaleX(1.25);
+}
+
+.idealy-split-divider:hover .idealy-split-divider__grip,
+.idealy-split-divider:focus-visible .idealy-split-divider__grip,
+.idealy-split-divider.is-resizing .idealy-split-divider__grip {
+  background: linear-gradient(180deg, #38bdf8, #a78bfa 55%, #fb923c);
+  box-shadow: 0 0 1.2rem color-mix(in srgb, #38bdf8 48%, transparent);
+  transform: rotate(-0.35deg) scaleY(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idealy-split-divider::before,
+  .idealy-split-divider__grip {
+    transition: none;
+  }
+}
+
+.idealy-build-mark {
+  animation: idealy-build-breathe 2.8s var(--ease-smooth) infinite;
+}
+
+@keyframes idealy-build-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-0.3rem) scale(1.035);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idealy-build-mark {
+    animation: none;
   }
 }
 
@@ -377,6 +513,57 @@ textarea:focus-visible {
   animation: glow-pulse 2s ease-in-out infinite;
 }
 
+/* Idealy demo treatment: a subtle Google-inspired color orbit around the composer. */
+.idealy-prompt-shell {
+  isolation: isolate;
+}
+
+.idealy-prompt-shell::before {
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    #4285f4 0%,
+    #34a853 25%,
+    #fbbc05 50%,
+    #ea4335 75%,
+    #4285f4 100%
+  );
+  background-size: 220% 100%;
+  border-radius: 1.1rem;
+  opacity: 0.32;
+  filter: blur(7px);
+  animation: idealy-prompt-glow 7s ease-in-out infinite alternate;
+}
+
+.idealy-prompt-shell::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background: var(--background);
+  border-radius: 1rem;
+}
+
+@keyframes idealy-prompt-glow {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idealy-prompt-shell::before {
+    animation: none;
+  }
+}
+
 .ProseMirror {
   outline: none;
 }
@@ -497,4 +684,157 @@ textarea:focus-visible {
 
 [data-testid="artifact"] {
   isolation: isolate;
+}
+
+/* Visitor welcome surface: slow ambient color movement behind the onboarding content. */
+.welcome-orb {
+  position: absolute;
+  width: 38rem;
+  height: 38rem;
+  border-radius: 9999px;
+  opacity: 0.2;
+  filter: blur(80px);
+  animation: welcome-drift 18s ease-in-out infinite alternate;
+}
+
+.welcome-orb-sky {
+  top: -18rem;
+  left: -10rem;
+  background: #38bdf8;
+}
+
+.welcome-orb-sunset {
+  right: -14rem;
+  bottom: -20rem;
+  background: #f97316;
+  animation-delay: -5s;
+}
+
+.welcome-orb-gold {
+  top: 30%;
+  left: 38%;
+  width: 24rem;
+  height: 24rem;
+  background: linear-gradient(135deg, #ef4444, #facc15);
+  opacity: 0.12;
+  animation-delay: -9s;
+}
+
+.welcome-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.35;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.welcome-gradient-text {
+  color: transparent;
+  background: linear-gradient(
+    100deg,
+    #7dd3fc 0%,
+    #c4b5fd 32%,
+    #f9a8d4 62%,
+    #fdba74 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+@keyframes welcome-drift {
+  0% {
+    transform: translate3d(-2%, -2%, 0) scale(0.96);
+  }
+  50% {
+    transform: translate3d(4%, 3%, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(-1%, 5%, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-orb {
+    animation: none;
+  }
+}
+
+/* Idealy brand mark: a four-point idea spark carried by two orbiting paths. */
+.idealy-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--foreground);
+}
+
+.idealy-logo--compact {
+  gap: 0;
+}
+
+.idealy-logo__wordmark {
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  background: linear-gradient(100deg, #0284c7 0%, #0f766e 38%, #7c3aed 72%, #ea580c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.idealy-mark {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+
+.idealy-mark__orbit {
+  transform-origin: 32px 32px;
+}
+
+.idealy-mark--animated .idealy-mark__orbit--one {
+  animation: idealy-orbit-one 8s linear infinite;
+}
+
+.idealy-mark--animated .idealy-mark__orbit--two {
+  animation: idealy-orbit-two 11s linear infinite reverse;
+}
+
+.idealy-mark--animated .idealy-mark__core {
+  animation: idealy-core-pulse 3.2s ease-in-out infinite;
+  transform-origin: 32px 32px;
+}
+
+@keyframes idealy-orbit-one {
+  from { transform: rotate(-28deg); }
+  to { transform: rotate(332deg); }
+}
+
+@keyframes idealy-orbit-two {
+  from { transform: rotate(38deg); }
+  to { transform: rotate(-322deg); }
+}
+
+@keyframes idealy-core-pulse {
+  0%, 100% { opacity: 0.92; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.dark .idealy-logo__wordmark {
+  background: linear-gradient(100deg, #7dd3fc 0%, #5eead4 38%, #c4b5fd 72%, #fdba74 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.dark .idealy-mark {
+  filter: drop-shadow(0 0 7px rgb(56 189 248 / 0.2));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idealy-mark--animated .idealy-mark__orbit,
+  .idealy-mark--animated .idealy-mark__core {
+    animation: none;
+  }
 }

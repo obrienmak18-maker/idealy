@@ -4,6 +4,17 @@ import { convertToUIMessages } from "@/lib/utils";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  if (process.env.DEMO_MODE === "true") {
+    return Response.json(
+      {
+        isReadonly: false,
+        messages: [],
+        userId: null,
+        visibility: "private",
+      },
+      { status: 200 }
+    );
+  }
   const chatId = searchParams.get("chatId");
 
   if (!chatId) {

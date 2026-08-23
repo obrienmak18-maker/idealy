@@ -12,27 +12,33 @@ function redirect(errorOrQuery: string): Response {
 
 function encodeBase64Url(bytes: Uint8Array): string {
   let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
   return btoa(binary)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
-    .replace(/=+$/g, "");
+    .replace(/[=]+$/g, "");
 }
 
 async function hashState(state: string): Promise<string> {
   return encodeBase64Url(
-    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state)),
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state))
   );
 }
 
 Deno.serve(async (request) => {
-  if (request.method !== "GET") return redirect("error=method_not_allowed");
+  if (request.method !== "GET") {
+    return redirect("error=method_not_allowed");
+  }
 
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
-    if (!code || !state) return redirect("error=missing_code_or_state");
+    if (!code || !state) {
+      return redirect("error=missing_code_or_state");
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -44,8 +50,9 @@ Deno.serve(async (request) => {
       Deno.env.get("GITHUB_OAUTH_CLIENT_SECRET") ??
       Deno.env.get("GITHUB_CLIENT_SECRET") ??
       "";
-    if (!supabaseUrl || !serviceRoleKey || !clientId || !clientSecret)
+    if (!supabaseUrl || !serviceRoleKey || !clientId || !clientSecret) {
       return redirect("error=oauth_server_not_configured");
+    }
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const stateHash = await hashState(state);
@@ -72,24 +79,25 @@ Deno.serve(async (request) => {
       .is("consumed_at", null)
       .select("id")
       .maybeSingle();
-    if (consumeError || !consumedState)
+    if (consumeError || !consumedState) {
       return redirect("error=state_already_consumed");
+    }
 
     const tokenResponse = await fetch(
       "https://github.com/login/oauth/access_token",
       {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
         body: new URLSearchParams({
           client_id: clientId,
           client_secret: clientSecret,
           code,
           redirect_uri: oauthState.redirect_uri,
         }),
-      },
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method: "POST",
+      }
     );
     const tokenData = (await tokenResponse.json().catch(() => null)) as {
       access_token?: string;
@@ -100,15 +108,15 @@ Deno.serve(async (request) => {
     if (!tokenResponse.ok || !tokenData?.access_token) {
       console.error(
         "GitHub token exchange failed",
-        tokenData?.error ?? tokenResponse.status,
+        tokenData?.error ?? tokenResponse.status
       );
       return redirect("error=token_exchange_failed");
     }
 
     const userResponse = await fetch("https://api.github.com/user", {
       headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
         Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${tokenData.access_token}`,
         "X-GitHub-Api-Version": "2022-11-28",
       },
     });
@@ -124,25 +132,25 @@ Deno.serve(async (request) => {
       .from("user_integrations")
       .upsert(
         {
-          user_id: oauthState.user_id,
-          provider: "github",
           connection_type: "oauth",
-          external_account_id: githubUser?.id ? String(githubUser.id) : null,
-          display_name: githubUser?.login ?? githubUser?.name ?? "GitHub",
           credential_reference: "oauth:github",
-          scopes: (tokenData.scope ?? "")
-            .split(",")
-            .map((scope) => scope.trim())
-            .filter(Boolean),
-          status: "active",
+          display_name: githubUser?.login ?? githubUser?.name ?? "GitHub",
+          external_account_id: githubUser?.id ? String(githubUser.id) : null,
           last_verified_at: now,
           metadata: {
             connected_at: now,
             token_type: tokenData.token_type ?? "bearer",
           },
+          provider: "github",
+          scopes: (tokenData.scope ?? "")
+            .split(",")
+            .map((scope) => scope.trim())
+            .filter(Boolean),
+          status: "active",
           updated_at: now,
+          user_id: oauthState.user_id,
         },
-        { onConflict: "user_id,provider" },
+        { onConflict: "user_id,provider" }
       )
       .select("id")
       .single();
@@ -155,14 +163,14 @@ Deno.serve(async (request) => {
       .from("integration_credentials")
       .upsert(
         {
-          integration_id: integration.id,
-          ciphertext: encrypted.ciphertext,
-          iv: encrypted.iv,
           algorithm: "AES-GCM-256",
+          ciphertext: encrypted.ciphertext,
+          integration_id: integration.id,
+          iv: encrypted.iv,
           key_version: 1,
           rotated_at: now,
         },
-        { onConflict: "integration_id" },
+        { onConflict: "integration_id" }
       );
     if (credentialError) {
       console.error("GitHub credential storage failed", credentialError);

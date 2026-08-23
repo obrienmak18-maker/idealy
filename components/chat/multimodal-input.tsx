@@ -7,7 +7,11 @@ import {
   ArrowUpIcon,
   BrainIcon,
   EyeIcon,
+  LibraryIcon,
+  Link2Icon,
   LockIcon,
+  MicIcon,
+  PlusIcon,
   WrenchIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -47,6 +51,10 @@ import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   PromptInput,
+  PromptInputActionMenu,
+  PromptInputActionMenuContent,
+  PromptInputActionMenuItem,
+  PromptInputActionMenuTrigger,
   PromptInputFooter,
   PromptInputSubmit,
   PromptInputTextarea,
@@ -61,7 +69,6 @@ import {
   SlashCommandMenu,
   slashCommands,
 } from "./slash-commands";
-import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
 
 function setCookie(name: string, value: string) {
@@ -146,6 +153,95 @@ function PureMultimodalInput({
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
+  const [isListening, setIsListening] = useState(false);
+  const speechBaseInputRef = useRef("");
+  const [promptHintIndex, setPromptHintIndex] = useState(0);
+  const promptHints = [
+    "Ask anything...",
+    "Describe the app you want to build...",
+    "Explain your idea and let’s shape it together...",
+    "Write a mission for your next project...",
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPromptHintIndex((current) => (current + 1) % promptHints.length);
+    }, 4200);
+    return () => clearInterval(timer);
+  }, [promptHints.length]);
+
+  const toggleSpeechRecognition = useCallback(() => {
+    const speechWindow = window as Window & {
+      SpeechRecognition?: new () => {
+        lang: string;
+        interimResults: boolean;
+        continuous: boolean;
+        onresult:
+          | ((event: {
+              results: ArrayLike<
+                ArrayLike<{ transcript: string }> & { isFinal?: boolean }
+              >;
+            }) => void)
+          | null;
+        onend: (() => void) | null;
+        onerror: (() => void) | null;
+        start: () => void;
+        stop: () => void;
+      };
+      webkitSpeechRecognition?: new () => {
+        lang: string;
+        interimResults: boolean;
+        continuous: boolean;
+        onresult:
+          | ((event: {
+              results: ArrayLike<
+                ArrayLike<{ transcript: string }> & { isFinal?: boolean }
+              >;
+            }) => void)
+          | null;
+        onend: (() => void) | null;
+        onerror: (() => void) | null;
+        start: () => void;
+        stop: () => void;
+      };
+    };
+    const Recognition =
+      speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+
+    if (!Recognition) {
+      toast("La dictée vocale n’est pas disponible dans ce navigateur.");
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript ?? "")
+        .join("")
+        .trim();
+      if (!transcript) {
+        return;
+      }
+      const prefix = speechBaseInputRef.current.trim();
+      setInput(prefix ? `${prefix} ${transcript}` : transcript);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => {
+      setIsListening(false);
+      toast("La dictée vocale n’a pas pu démarrer.");
+    };
+    speechBaseInputRef.current = input;
+    setIsListening(true);
+    recognition.start();
+  }, [isListening, setInput]);
 
   const handleInput = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -227,11 +323,13 @@ function PureMultimodalInput({
   );
 
   const submitForm = useCallback(() => {
-    window.history.pushState(
-      {},
-      "",
-      `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
-    );
+    if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") {
+      window.history.pushState(
+        {},
+        "",
+        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+      );
+    }
 
     sendMessage({
       parts: [
@@ -469,18 +567,6 @@ function PureMultimodalInput({
         </div>
       ) : null}
 
-      {!editingMessage &&
-        !isLoading &&
-        messages.length === 0 &&
-        attachments.length === 0 &&
-        uploadQueue.length === 0 && (
-          <SuggestedActions
-            chatId={chatId}
-            selectedVisibilityType={selectedVisibilityType}
-            sendMessage={sendMessage}
-          />
-        )}
-
       <input
         className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
         multiple
@@ -502,7 +588,7 @@ function PureMultimodalInput({
       </div>
 
       <PromptInput
-        className="[&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
+        className="idealy-prompt-shell relative [&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
         onSubmit={handlePromptSubmit}
       >
         {(attachments.length > 0 || uploadQueue.length > 0) && (
@@ -533,47 +619,106 @@ function PureMultimodalInput({
           </div>
         )}
         <PromptInputTextarea
-          className="min-h-24 text-[13px] leading-relaxed px-4 pt-3.5 pb-1.5 placeholder:text-muted-foreground/35"
+          className="min-h-16 max-h-32 text-[13px] leading-relaxed px-4 pt-3 pb-1.5 placeholder:text-muted-foreground/35"
           data-testid="multimodal-input"
           onChange={handleInput}
           onKeyDown={handleTextareaKeyDown}
           placeholder={
-            editingMessage ? "Edit your message..." : "Ask anything..."
+            editingMessage
+              ? "Edit your message..."
+              : promptHints[promptHintIndex]
           }
           ref={textareaRef}
           value={input}
         />
         <PromptInputFooter className="px-3 pb-3">
-          <PromptInputTools>
-            <AttachmentsButton
-              fileInputRef={fileInputRef}
-              selectedModelId={selectedModelId}
-              status={status}
-            />
-            <ModelSelectorCompact
-              onModelChange={onModelChange}
-              selectedModelId={selectedModelId}
-            />
-          </PromptInputTools>
+            <PromptInputTools>
+              <PromptInputActionMenu>
+                <PromptInputActionMenuTrigger
+                  aria-label="Ajouter des éléments"
+                  className="h-7 w-7 rounded-lg border border-border/40 p-1 text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
+                >
+                  <PlusIcon className="size-4" />
+                </PromptInputActionMenuTrigger>
+                <PromptInputActionMenuContent className="w-64 rounded-xl border-border/60 bg-popover/95 p-1.5 shadow-xl backdrop-blur-xl">
+                  <PromptInputActionMenuItem
+                    className="gap-2 rounded-lg py-2 text-[12px]"
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    <PaperclipIcon size={15} />
+                    <span className="flex-1">Importer des fichiers</span>
+                  </PromptInputActionMenuItem>
+                  <PromptInputActionMenuItem
+                    className="gap-2 rounded-lg py-2 text-[12px]"
+                    onSelect={() =>
+                      toast("Les connecteurs seront disponibles dans le workspace.")
+                    }
+                  >
+                    <Link2Icon className="size-3.5" />
+                    <span className="flex-1">Connecter une source</span>
+                  </PromptInputActionMenuItem>
+                  <PromptInputActionMenuItem
+                    className="gap-2 rounded-lg py-2 text-[12px]"
+                    onSelect={() =>
+                      toast("La bibliothèque Idealy sera bientôt disponible ici.")
+                    }
+                  >
+                    <LibraryIcon className="size-3.5" />
+                    <span className="flex-1">Ouvrir la bibliothèque</span>
+                  </PromptInputActionMenuItem>
+                </PromptInputActionMenuContent>
+              </PromptInputActionMenu>
+            </PromptInputTools>
 
-          {status === "submitted" ? (
-            <StopButton setMessages={setMessages} stop={stop} />
-          ) : (
-            <PromptInputSubmit
+          <div className="flex items-center gap-1.5">
+            {isListening ? (
+              <span
+                aria-live="polite"
+                className="flex items-end gap-0.5 px-1 text-[10px] text-red-500"
+              >
+                <span className="h-2 w-0.5 animate-pulse rounded-full bg-current" />
+                <span className="h-3.5 w-0.5 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
+                <span className="h-2.5 w-0.5 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
+                <span className="sr-only">Transcription en cours</span>
+              </span>
+            ) : null}
+            <Button
+              aria-label="Dicter au micro"
               className={cn(
-                "h-7 w-7 rounded-xl transition-all duration-200",
-                input.trim()
-                  ? "bg-foreground text-background hover:opacity-85 active:scale-95"
-                  : "bg-muted text-muted-foreground/25 cursor-not-allowed"
+                "h-7 w-7 rounded-lg border border-border/40 p-1 transition-colors",
+                isListening
+                  ? "bg-red-500/15 text-red-500 hover:bg-red-500/20"
+                  : "text-muted-foreground hover:border-border hover:text-foreground"
               )}
-              data-testid="send-button"
-              disabled={!input.trim() || uploadQueue.length > 0}
-              status={status}
-              variant="secondary"
+              onClick={toggleSpeechRecognition}
+              size="icon"
+              type="button"
+              variant="ghost"
             >
-              <ArrowUpIcon className="size-4" />
-            </PromptInputSubmit>
-          )}
+              <MicIcon className="size-3.5" />
+            </Button>
+            {status === "submitted" ? (
+              <StopButton setMessages={setMessages} stop={stop} />
+            ) : (
+              <PromptInputSubmit
+                className={cn(
+                  "h-7 w-7 rounded-xl transition-all duration-200",
+                  input.trim()
+                    ? "bg-foreground text-background hover:opacity-85 active:scale-95"
+                    : "bg-muted text-muted-foreground/25 cursor-not-allowed"
+                )}
+                data-testid="send-button"
+                disabled={!input.trim() || uploadQueue.length > 0}
+                status={status}
+                variant="secondary"
+              >
+                <ArrowUpIcon className="size-4" />
+              </PromptInputSubmit>
+            )}
+          </div>
         </PromptInputFooter>
       </PromptInput>
     </div>
@@ -634,52 +779,6 @@ function PureAttachmentPreviewItem({
 }
 
 const AttachmentPreviewItem = memo(PureAttachmentPreviewItem);
-
-function PureAttachmentsButton({
-  fileInputRef,
-  status,
-  selectedModelId,
-}: {
-  fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
-  status: UseChatHelpers<ChatMessage>["status"];
-  selectedModelId: string;
-}) {
-  const { data: modelsResponse } = useSWR(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
-    (url: string) => fetch(url).then((r) => r.json()),
-    { dedupingInterval: 3_600_000, revalidateOnFocus: false }
-  );
-
-  const caps: Record<string, ModelCapabilities> | undefined =
-    modelsResponse?.capabilities ?? modelsResponse;
-  const hasVision = caps?.[selectedModelId]?.vision ?? false;
-  const handleClick = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-      fileInputRef.current?.click();
-    },
-    [fileInputRef]
-  );
-
-  return (
-    <Button
-      className={cn(
-        "h-7 w-7 rounded-lg border border-border/40 p-1 transition-colors",
-        hasVision
-          ? "text-foreground hover:border-border hover:text-foreground"
-          : "text-muted-foreground/30 cursor-not-allowed"
-      )}
-      data-testid="attachments-button"
-      disabled={status !== "ready" || !hasVision}
-      onClick={handleClick}
-      variant="ghost"
-    >
-      <PaperclipIcon size={14} style={{ height: 14, width: 14 }} />
-    </Button>
-  );
-}
-
-const AttachmentsButton = memo(PureAttachmentsButton);
 
 function ModelSelectorOption({
   capabilities,

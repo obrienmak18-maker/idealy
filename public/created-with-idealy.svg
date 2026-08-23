@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 176 36" fill="none" role="img" aria-label="Created with Idealy">
+  <defs>
+    <linearGradient id="badge-spectrum" x1="10" y1="5" x2="166" y2="31" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset=".36" stop-color="#14B8A6"/>
+      <stop offset=".7" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#FB923C"/>
+    </linearGradient>
+  </defs>
+  <rect x=".75" y=".75" width="174.5" height="34.5" rx="17.25" fill="#fff" fill-opacity=".92" stroke="url(#badge-spectrum)" stroke-width="1.5"/>
+  <g transform="translate(8 6) scale(.375)">
+    <ellipse cx="32" cy="32" rx="25" ry="12" transform="rotate(-28 32 32)" stroke="url(#badge-spectrum)" stroke-width="3.8" stroke-linecap="round"/>
+    <path d="M32 5.5 37.3 26.7 58.5 32 37.3 37.3 32 58.5 26.7 37.3 5.5 32 26.7 26.7 32 5.5Z" fill="url(#badge-spectrum)"/>
+    <circle cx="32" cy="32" r="8.5" fill="#fff"/>
+    <path d="M32 26.2v13M27.8 30.2h8.4" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <text x="38" y="22.5" fill="#334155" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="600" letter-spacing=".1">Created with</text>
+  <text x="111" y="22.5" fill="#0F172A" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="750" letter-spacing="-.35">Idealy</text>
+</svg>

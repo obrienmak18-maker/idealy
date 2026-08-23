@@ -17,6 +17,10 @@ const documentSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  if (process.env.DEMO_MODE === "true") {
+    return Response.json([], { status: 200 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -49,6 +53,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (process.env.DEMO_MODE === "true") {
+    return Response.json({ success: true }, { status: 200 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -108,6 +116,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (process.env.DEMO_MODE === "true") {
+    return Response.json({ success: true }, { status: 200 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   const timestamp = searchParams.get("timestamp");

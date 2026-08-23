@@ -10,6 +10,10 @@ const voteSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  if (process.env.DEMO_MODE === "true") {
+    return Response.json([], { status: 200 });
+  }
+
   const { searchParams } = new URL(request.url);
   const chatId = searchParams.get("chatId");
 
@@ -42,6 +46,10 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (process.env.DEMO_MODE === "true") {
+    return new Response("Demo vote recorded", { status: 200 });
+  }
+
   let chatId: string;
   let messageId: string;
   let type: "up" | "down";

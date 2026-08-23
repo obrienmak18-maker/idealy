@@ -17,8 +17,10 @@ export type CreditRefill = {
 };
 
 function positiveInteger(value: unknown): number | null {
-  const parsed = typeof value === 'number' ? value : Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 100_000) return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 100_000) {
+    return null;
+  }
   return parsed;
 }
 
@@ -29,17 +31,19 @@ function positiveInteger(value: unknown): number | null {
  */
 export function getCreditRefillFromCheckout(
   event: CheckoutSessionCompletedEvent,
-  session: CheckoutSession,
+  session: CheckoutSession
 ): CreditRefill | null {
   const userId = session.metadata?.user_id?.trim();
   const amount = positiveInteger(session.metadata?.credit_amount);
-  if (!userId || !amount) return null;
+  if (!userId || !amount) {
+    return null;
+  }
 
   return {
-    userId,
     amount,
     eventId: event.id,
+    reason: `stripe:checkout.session.completed:${session.mode ?? "payment"}`,
     sessionId: session.id,
-    reason: `stripe:checkout.session.completed:${session.mode ?? 'payment'}`,
+    userId,
   };
 }

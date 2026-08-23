@@ -21,6 +21,7 @@ import {
   getModelAvailability,
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
+import { injectFreeIdealyBadge } from "@/lib/branding/free-badge";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { editDocument } from "@/lib/ai/tools/edit-document";
@@ -72,7 +73,10 @@ export async function POST(request: Request) {
 
   try {
     const json = await request.json();
-    requestBody = postRequestBodySchema.parse(json);
+    requestBody =
+      process.env.DEMO_MODE === "true"
+        ? (json as PostRequestBody)
+        : postRequestBodySchema.parse(json);
   } catch {
     return new ChatbotError("bad_request:api").toResponse();
   }
@@ -80,6 +84,45 @@ export async function POST(request: Request) {
   try {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
+
+    if (process.env.DEMO_MODE === "true") {
+      const demoText =
+        "J’ai compris votre idée. En mode démonstration, les agents Idealy prennent le relais : l’Architecte structure la mission, le Builder prépare le premier écran et le Reviewer vérifie la cohérence. La preview s’ouvre maintenant dans le canvas de droite, comme dans l’espace de création V0.";
+      const demoCode = `import React from "react";\n\nexport default function MissionWorkspace() {\n  return (\n    <main className="min-h-screen bg-slate-950 px-6 py-12 text-slate-100 md:px-12">\n      <div className="mx-auto max-w-5xl">\n        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">Idealy / Build complete</p>\n        <h1 className="mt-6 max-w-3xl text-5xl font-semibold tracking-tight md:text-7xl">Turn one clear idea into a beautiful product.</h1>\n        <p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">A focused workspace for shaping the experience, validating the details, and moving from concept to launch.</p>\n        <div className="mt-14 h-px w-full bg-gradient-to-r from-sky-400/70 via-violet-400/40 to-transparent" />\n        <div className="mt-6 flex flex-wrap gap-x-10 gap-y-3 text-sm text-slate-400">\n          <span><strong className="text-slate-100">Product direction</strong> defined</span>\n          <span><strong className="text-slate-100">Interface system</strong> ready</span>\n          <span><strong className="text-slate-100">Launch checklist</strong> 4 items left</span>\n        </div>\n      </div>\n    </main>\n  );\n}`;
+      const demoPreview = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Idealy workspace</title><style>*{box-sizing:border-box}body{margin:0;background:#020617;color:#f8fafc;font-family:Inter,system-ui,sans-serif}main{min-height:100vh;padding:48px 7vw;background:radial-gradient(circle at 12% 8%,#0ea5e933,transparent 32%),radial-gradient(circle at 86% 90%,#8b5cf633,transparent 36%),#020617}.eyebrow{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:#7dd3fc}.wrap{max-width:1120px;margin:auto}.hero{max-width:900px}.hero h1{font-size:clamp(42px,7vw,88px);line-height:1.02;letter-spacing:-.06em;margin:26px 0 0}.hero p{max-width:680px;margin:26px 0 0;color:#cbd5e1;font-size:clamp(15px,2vw,19px);line-height:1.7}.rule{height:1px;margin-top:72px;background:linear-gradient(90deg,#38bdf8b3,#a78bfa66,transparent)}.meta{display:flex;flex-wrap:wrap;gap:12px 38px;margin-top:22px;color:#94a3b8;font-size:13px}.meta strong{color:#f8fafc;font-weight:600}@media(max-width:760px){main{padding:32px 22px}.hero h1{font-size:48px}.rule{margin-top:52px}.meta{display:grid;gap:12px}} </style></head><body><main><div class="wrap"><div class="hero"><div class="eyebrow">Idealy / Build complete</div><h1>Turn one clear idea into a beautiful product.</h1><p>A focused workspace for shaping the experience, validating the details, and moving from concept to launch.</p></div><div class="rule"></div><div class="meta"><span><strong>Product direction</strong> defined</span><span><strong>Interface system</strong> ready</span><span><strong>Launch checklist</strong> 4 items left</span></div></div></main></body></html>`;
+      const demoStream = createUIMessageStream({
+        execute: async ({ writer }) => {
+          const textId = generateId();
+          const documentId = generateId();
+          writer.write({ data: "code", type: "data-kind" });
+          writer.write({ data: documentId, type: "data-id" });
+          writer.write({ data: "Mission workspace", type: "data-title" });
+          writer.write({
+            data: injectFreeIdealyBadge(demoPreview, true),
+            type: "data-preview",
+          });
+          writer.write({ data: true, type: "data-clear" });
+          writer.write({ id: textId, type: "text-start" });
+          for (const chunk of demoText.match(/.{1,18}(?:\s|$)/g) ?? [
+            demoText,
+          ]) {
+            writer.write({ delta: chunk, id: textId, type: "text-delta" });
+            await new Promise((resolve) => setTimeout(resolve, 45));
+          }
+          writer.write({ id: textId, type: "text-end" });
+          for (let end = 80; end <= demoCode.length; end += 80) {
+            writer.write({
+              data: demoCode.slice(0, end),
+              type: "data-codeDelta",
+            });
+            await new Promise((resolve) => setTimeout(resolve, 90));
+          }
+          writer.write({ data: demoCode, type: "data-codeDelta" });
+          writer.write({ data: true, type: "data-finish" });
+        },
+      });
+      return createUIMessageStreamResponse({ stream: demoStream });
+    }
 
     const [botIdResult, session] = await Promise.all([
       checkBotId().catch(() => null),

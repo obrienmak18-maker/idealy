@@ -62,7 +62,9 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const { mutate } = useSWRConfig();
 
   const chatIdFromUrl = extractChatId(pathname);
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   const isNewChat = !chatIdFromUrl;
+  const shouldLoadPersistedChat = Boolean(chatIdFromUrl) && !isDemoMode;
   const newChatIdRef = useRef(generateUUID());
   const prevPathnameRef = useRef(pathname);
 
@@ -83,9 +85,9 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 
   const { data: chatData, isLoading } = useSWR(
-    isNewChat
-      ? null
-      : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
+    shouldLoadPersistedChat
+      ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`
+      : null,
     fetcher,
     { revalidateOnFocus: false }
   );
@@ -93,9 +95,8 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const initialMessages: ChatMessage[] = isNewChat
     ? []
     : (chatData?.messages ?? []);
-  const visibility: VisibilityType = isNewChat
-    ? "private"
-    : (chatData?.visibility ?? "private");
+  const visibility: VisibilityType =
+    isNewChat || isDemoMode ? "private" : (chatData?.visibility ?? "private");
 
   const {
     messages,

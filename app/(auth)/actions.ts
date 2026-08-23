@@ -25,6 +25,10 @@ export const login = async (
       password: formData.get("password"),
     });
 
+    if (process.env.DEMO_MODE === "true") {
+      return { status: "success" };
+    }
+
     await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,
@@ -61,12 +65,19 @@ export const register = async (
       password: formData.get("password"),
     });
 
-    const [user] = await getUser(validatedData.email);
+    if (process.env.DEMO_MODE !== "true") {
+      const [user] = await getUser(validatedData.email);
 
-    if (user) {
-      return { status: "user_exists" } as RegisterActionState;
+      if (user) {
+        return { status: "user_exists" } as RegisterActionState;
+      }
+      await createUser(validatedData.email, validatedData.password);
     }
-    await createUser(validatedData.email, validatedData.password);
+
+    if (process.env.DEMO_MODE === "true") {
+      return { status: "success" };
+    }
+
     await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,

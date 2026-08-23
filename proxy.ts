@@ -9,6 +9,11 @@ export async function proxy(request: NextRequest) {
     return new Response("pong", { status: 200 });
   }
 
+  // Local visual demo only: keep the full UI navigable without Auth.js/Postgres.
+  if (process.env.DEMO_MODE === "true") {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }

@@ -4,6 +4,10 @@ import { deleteAllChatsByUserId, getChatsByUserId } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
+  if (process.env.DEMO_MODE === "true") {
+    return Response.json({ chats: [], hasMore: false }, { status: 200 });
+  }
+
   const { searchParams } = request.nextUrl;
 
   const limit = Math.min(
@@ -37,6 +41,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE() {
+  if (process.env.DEMO_MODE === "true") {
+    return Response.json({ success: true }, { status: 200 });
+  }
+
   const session = await auth();
 
   if (!session?.user) {
