@@ -22,5 +22,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`${base}/`, request.url));
   }
 
+  if (process.env.DEMO_MODE !== "true") {
+    const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+    return NextResponse.redirect(new URL(`${base}/login`, request.url));
+  }
+
   return signIn("guest", { redirect: true, redirectTo: redirectUrl });
 }
