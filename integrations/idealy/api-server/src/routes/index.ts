@@ -1,4 +1,4 @@
-import { type IRouter, Router } from "express";
+import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 
 const router: IRouter = Router();

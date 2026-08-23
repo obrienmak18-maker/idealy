@@ -1,7 +1,7 @@
-import { defineConfig, type InputTransformerFn } from "orval";
+import { defineConfig, InputTransformerFn } from "orval";
 import path from "path";
 
-const root = path.resolve(import.meta.dirname, "..", "..");
+const root = path.resolve(__dirname, "..", "..");
 const apiClientReactSrc = path.resolve(root, "lib", "api-client-react", "src");
 const apiZodSrc = path.resolve(root, "lib", "api-zod", "src");
 
@@ -16,57 +16,57 @@ const titleTransformer: InputTransformerFn = (config) => {
 export default defineConfig({
   "api-client-react": {
     input: {
+      target: "./openapi.yaml",
       override: {
         transformer: titleTransformer,
       },
-      target: "./openapi.yaml",
     },
     output: {
-      baseUrl: "/api",
-      clean: true,
+      workspace: apiClientReactSrc,
+      target: "generated",
       client: "react-query",
       mode: "split",
+      baseUrl: "/api",
+      clean: true,
+      prettier: true,
       override: {
         fetch: {
           includeHttpResponseReturnType: false,
         },
         mutator: {
-          name: "customFetch",
           path: path.resolve(apiClientReactSrc, "custom-fetch.ts"),
+          name: "customFetch",
         },
       },
-      prettier: true,
-      target: "generated",
-      workspace: apiClientReactSrc,
     },
   },
   zod: {
     input: {
+      target: "./openapi.yaml",
       override: {
         transformer: titleTransformer,
       },
-      target: "./openapi.yaml",
     },
     output: {
-      clean: true,
+      workspace: apiZodSrc,
       client: "zod",
+      target: "generated",
+      schemas: { path: "generated/types", type: "typescript" },
       mode: "split",
+      clean: true,
+      prettier: true,
       override: {
-        useBigInt: true,
-        useDates: true,
         zod: {
           coerce: {
-            body: ["bigint", "date"],
-            param: ["boolean", "number", "string"],
-            query: ["boolean", "number", "string"],
-            response: ["bigint", "date"],
+            query: ['boolean', 'number', 'string'],
+            param: ['boolean', 'number', 'string'],
+            body: ['bigint', 'date'],
+            response: ['bigint', 'date'],
           },
         },
+        useDates: true,
+        useBigInt: true,
       },
-      prettier: true,
-      schemas: { path: "generated/types", type: "typescript" },
-      target: "generated",
-      workspace: apiZodSrc,
     },
   },
 });
