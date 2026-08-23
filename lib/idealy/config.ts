@@ -16,8 +16,18 @@ export function getIdealyApiUrl() {
 }
 
 export function getIdealyAiFunctionUrl() {
-  return (
-    process.env.IDEALY_AI_FUNCTION_URL ??
-    `${getIdealyApiUrl()}/functions/v1/process-ai-request`
-  ).replace(/\/$/, "");
+  const configuredFunctionUrl = process.env.IDEALY_AI_FUNCTION_URL?.trim();
+  if (configuredFunctionUrl) {
+    return configuredFunctionUrl.replace(/\/$/, "");
+  }
+
+  const supabaseUrl = process.env.SUPABASE_URL?.trim();
+  if (supabaseUrl) {
+    return `${supabaseUrl.replace(/\/$/, "")}/functions/v1/process-ai-request`;
+  }
+
+  return `${getIdealyApiUrl()}/functions/v1/process-ai-request`.replace(
+    /\/$/,
+    ""
+  );
 }
