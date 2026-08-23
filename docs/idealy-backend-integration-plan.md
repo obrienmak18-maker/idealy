@@ -51,3 +51,25 @@ La prochaine tranche technique devrait ajouter l’adaptateur serveur, le contr�
 [4]: https://docs.lovable.dev/introduction/welcome — Lovable, workspace full-stack, ownership et cycle de livraison.
 [5]: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy — Supabase, avis RLS enabled without policy.
 [6]: https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys — Vercel AI Gateway, API keys.
+
+
+## Synchronisation de la branche live
+
+Une branche dédiée `feat/idealy-live-backend` a été créée et publiée sur [le dépôt GitHub Idealy](https://github.com/obrienmak18-maker/idealy). Elle contient le workspace visuel, le mode démo désactivé, la redirection d’authentification live, le pont Auth.js vers Supabase côté serveur, le proxy Edge et une copie synchronisée des fonctions Supabase du `main` Idealy.
+
+Le serveur Express importé dans `integrations/idealy/api-server` reste une sonde minimale exposant seulement `/api/healthz`. La logique métier réelle du dépôt `main` se trouve dans les Edge Functions Supabase, notamment `process-ai-request`, `ai-proxy`, les fonctions de crédit/abonnement, les intégrations et les fonctions Vercel. Les modules `src/core/mission`, `src/core/webcontainer` et `src/agents` du dépôt source sont identifiés comme contrats à porter progressivement : équipe d’agents, planification, validation, mémoire d’architecture, diagnostics terminal et auto-correction.
+
+Le premier palier live a été validé par build Next.js/TypeScript. Avec les variables locales actuelles, l’application redirige un visiteur sans session vers `/login` au lieu de créer un guest de démonstration. Une tentative de mission sans `POSTGRES_URL` échoue encore côté persistance, avec `ECONNREFUSED`; ce résultat est attendu tant que l’environnement de déploiement n’a pas reçu la base et les credentials réels. Aucun secret n’a été ajouté ou publié.
+
+La synchronisation du dossier Supabase a été faite depuis le checkout de `main` du dépôt source le 23 août 2026. Elle n’a pas appliqué de migration distante et n’a pas redéployé de fonction. Les déploiements Edge et la configuration des secrets devront être traités séparément après rotation des clés et validation de l’identité Auth.js/Supabase.
+
+Référence source : [obrienmak18-maker/idealy](https://github.com/obrienmak18-maker/idealy), branche `main` et branche de travail `feat/idealy-live-backend`.
+
+
+## Raccordement du chat au provider Edge
+
+Le flux `/api/chat` accepte désormais `IDEALY_AI_PROVIDER=supabase-function`. Dans ce mode, il conserve la persistance des messages et du titre dans Postgres, récupère le JWT Supabase associé au token Auth.js côté serveur, appelle `process-ai-request` en streaming et convertit les fragments OpenAI-compatibles en événements UI du chatbot. Le chemin Gateway et les outils Vercel AI restent disponibles lorsque `IDEALY_AI_PROVIDER=gateway`.
+
+Le helper `lib/idealy/supabase-auth.ts` tente de synchroniser une connexion ou une inscription email/mot de passe Auth.js avec Supabase Auth lorsque `SUPABASE_URL` et `SUPABASE_ANON_KEY` sont configurés. Le jeton Supabase est conservé uniquement dans le JWT serveur Auth.js et n’est pas copié dans la session publique.
+
+Le build passe avec le provider Edge câblé. Le test de bout en bout ne peut pas encore appeler le modèle, car l’environnement local courant ne possède ni `POSTGRES_URL`, ni `SUPABASE_URL`, ni clé IA Edge. Aucun fallback démo n’est réactivé ; le blocage restant est donc un blocage de configuration runtime, pas de code.
