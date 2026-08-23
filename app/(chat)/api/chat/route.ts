@@ -9,6 +9,7 @@ import {
   toUIMessageStream,
 } from "ai";
 import { checkBotId } from "botid/server";
+import { getToken } from "next-auth/jwt";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
@@ -21,6 +22,7 @@ import {
   getModelAvailability,
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
+import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
 import { injectFreeIdealyBadge } from "@/lib/branding/free-badge";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
@@ -28,7 +30,10 @@ import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-import { isProductionEnvironment } from "@/lib/constants";
+import {
+  isDevelopmentEnvironment,
+  isProductionEnvironment,
+} from "@/lib/constants";
 import {
   createStreamId,
   deleteChatById,
@@ -49,6 +54,132 @@ import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
+
+function shouldUseIdealyEdgeProvider() {
+  return process.env.IDEALY_AI_PROVIDER === "supabase-function";
+}
+
+async function getSupabaseAccessToken(request: Request) {
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET,
+    secureCookie: !isDevelopmentEnvironment,
+  });
+  return typeof token?.supabaseAccessToken === "string"
+    ? token.supabaseAccessToken
+    : null;
+}
+
+function getTextFromMessageParts(message: ChatMessage | undefined) {
+  return (
+    message?.parts
+      ?.filter((part): part is { text: string; type: "text" } =>
+        part.type === "text"
+      )
+      .map((part) => part.text)
+      .join("\n")
+      .trim() ?? ""
+  );
+}
+
+function getIdealyPrompt(messages: ChatMessage[]) {
+  return messages
+    .slice(-12)
+    .map((currentMessage) => {
+      const text = getTextFromMessageParts(currentMessage);
+      return text
+        ? `${currentMessage.role.toUpperCase()}:\n${text}`
+        : null;
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+async function streamIdealyEdgeResponse({
+  dataStream,
+  messages,
+  request,
+}: {
+  dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
+  messages: ChatMessage[];
+  request: Request;
+}) {
+  const supabaseAccessToken = await getSupabaseAccessToken(request);
+  if (!supabaseAccessToken) {
+    throw new Error(
+      "La session Supabase n’est pas disponible. Reconnectez-vous pour continuer."
+    );
+  }
+
+  const response = await fetch(getIdealyAiFunctionUrl(), {
+    body: JSON.stringify({
+      intentCategory: "EXECUTION",
+      maxTokens: 8000,
+      mode: "auto",
+      prompt: getIdealyPrompt(messages),
+      stream: true,
+      systemPrompt: systemPrompt({
+        requestHints: {
+          city: undefined,
+          country: undefined,
+          latitude: undefined,
+          longitude: undefined,
+        },
+        supportsTools: false,
+      }),
+    }),
+    headers: {
+      Authorization: `Bearer ${supabaseAccessToken}`,
+      ...(process.env.SUPABASE_ANON_KEY
+        ? { apikey: process.env.SUPABASE_ANON_KEY }
+        : {}),
+      "Content-Type": "application/json",
+      "x-client-info": "idealy-next-chat",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok || !response.body) {
+    const payload = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(payload?.error ?? `Le backend Idealy a répondu ${response.status}.`);
+  }
+
+  const assistantId = generateId();
+  dataStream.write({ id: assistantId, type: "text-start" });
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      pending += decoder.decode(value, { stream: true });
+      const lines = pending.split("\n");
+      pending = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const raw = line.slice(6).trim();
+        if (!raw || raw === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(raw) as {
+            choices?: Array<{ delta?: { content?: string } }>;
+          };
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (delta) {
+            dataStream.write({ delta, id: assistantId, type: "text-delta" });
+          }
+        } catch {
+          // Ignore incomplete provider frames; the next chunk completes them.
+        }
+      }
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+
+  dataStream.write({ id: assistantId, type: "text-end" });
+}
 
 const HEALTH_CHECK_DELAY_MS = 9000;
 
@@ -309,74 +440,83 @@ export async function POST(request: Request) {
           clearHealthCheckTimer();
         };
 
-        const result = streamText({
-          activeTools:
-            isReasoningModel && !supportsTools
-              ? []
-              : [
-                  "getWeather",
-                  "createDocument",
-                  "editDocument",
-                  "updateDocument",
-                  "requestSuggestions",
-                ],
-          instructions: systemPrompt({ requestHints, supportsTools }),
-          messages: modelMessages,
-          model: getLanguageModel(chatModel),
-          onAbort() {
-            stopWaitingStatus();
-          },
-          onChunk({ chunk }) {
-            if (isModelStreamActivity(chunk)) {
-              markModelActive();
-            }
-          },
-          onEnd() {
-            stopWaitingStatus();
-          },
-          onError() {
-            stopWaitingStatus();
-          },
-          providerOptions: {
-            ...(modelConfig?.gatewayOrder && {
-              gateway: { order: modelConfig.gatewayOrder },
-            }),
-            ...(modelConfig?.reasoningEffort && {
-              openai: { reasoningEffort: modelConfig.reasoningEffort },
-            }),
-          },
-          stopWhen: isStepCount(5),
-          telemetry: {
-            functionId: "stream-text",
-            isEnabled: isProductionEnvironment,
-          },
-          tools: {
-            createDocument: createDocument({
-              dataStream,
-              modelId: chatModel,
-              session,
-            }),
-            editDocument: editDocument({ dataStream, session }),
-            getWeather,
-            requestSuggestions: requestSuggestions({
-              dataStream,
-              modelId: chatModel,
-              session,
-            }),
-            updateDocument: updateDocument({
-              dataStream,
-              modelId: chatModel,
-              session,
-            }),
-          },
-        });
+        if (shouldUseIdealyEdgeProvider()) {
+          await streamIdealyEdgeResponse({
+            dataStream,
+            messages: uiMessages,
+            request,
+          });
+          stopWaitingStatus();
+        } else {
+          const result = streamText({
+            activeTools:
+              isReasoningModel && !supportsTools
+                ? []
+                : [
+                    "getWeather",
+                    "createDocument",
+                    "editDocument",
+                    "updateDocument",
+                    "requestSuggestions",
+                  ],
+            instructions: systemPrompt({ requestHints, supportsTools }),
+            messages: modelMessages,
+            model: getLanguageModel(chatModel),
+            onAbort() {
+              stopWaitingStatus();
+            },
+            onChunk({ chunk }) {
+              if (isModelStreamActivity(chunk)) {
+                markModelActive();
+              }
+            },
+            onEnd() {
+              stopWaitingStatus();
+            },
+            onError() {
+              stopWaitingStatus();
+            },
+            providerOptions: {
+              ...(modelConfig?.gatewayOrder && {
+                gateway: { order: modelConfig.gatewayOrder },
+              }),
+              ...(modelConfig?.reasoningEffort && {
+                openai: { reasoningEffort: modelConfig.reasoningEffort },
+              }),
+            },
+            stopWhen: isStepCount(5),
+            telemetry: {
+              functionId: "stream-text",
+              isEnabled: isProductionEnvironment,
+            },
+            tools: {
+              createDocument: createDocument({
+                dataStream,
+                modelId: chatModel,
+                session,
+              }),
+              editDocument: editDocument({ dataStream, session }),
+              getWeather,
+              requestSuggestions: requestSuggestions({
+                dataStream,
+                modelId: chatModel,
+                session,
+              }),
+              updateDocument: updateDocument({
+                dataStream,
+                modelId: chatModel,
+                session,
+              }),
+            },
+          });
 
-        dataStream.merge(
-          toUIMessageStream({
-            sendReasoning: isReasoningModel,
-            stream: result.stream,
-          })
-        );
+          dataStream.merge(
+            toUIMessageStream({
+              sendReasoning: isReasoningModel,
+              stream: result.stream,
+            })
+          );
+        }
 
         if (titlePromise) {
           try {
