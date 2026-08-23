@@ -73,3 +73,14 @@ Le flux `/api/chat` accepte désormais `IDEALY_AI_PROVIDER=supabase-function`. D
 Le helper `lib/idealy/supabase-auth.ts` tente de synchroniser une connexion ou une inscription email/mot de passe Auth.js avec Supabase Auth lorsque `SUPABASE_URL` et `SUPABASE_ANON_KEY` sont configurés. Le jeton Supabase est conservé uniquement dans le JWT serveur Auth.js et n’est pas copié dans la session publique.
 
 Le build passe avec le provider Edge câblé. Le test de bout en bout ne peut pas encore appeler le modèle, car l’environnement local courant ne possède ni `POSTGRES_URL`, ni `SUPABASE_URL`, ni clé IA Edge. Aucun fallback démo n’est réactivé ; le blocage restant est donc un blocage de configuration runtime, pas de code.
+
+
+## Palier mainline publié — 23 août 2026
+
+La branche `feat/idealy-live-backend` a été réalignée sur l’arbre backend réel de `main`. Le dossier Supabase officiel est maintenant unique et canonique à la racine `supabase/`; la duplication `integrations/idealy/supabase` a été supprimée. Les 15 fonctions Edge et les migrations issues de `main` sont donc directement consommables par les workflows Supabase du workspace, sans importer le frontend historique `src/app`, `src/components`, `src/routes` ou `src/themes`.
+
+Le flux live de `/api/chat` utilise désormais l’adaptateur `lib/idealy/backend-adapter.ts`. Pour une intention `IDEATION` ou `EXECUTION`, il classe l’intention via `intentOnly`, crée un projet Supabase et une mission RLS, demande un `planOnly` structuré, enregistre les runs d’agents, conserve les identifiants dans les metadata du flux UI et passe le `missionId` au streaming Edge. Les clés d’idempotence du plan et de l’exécution sont distinctes afin de ne pas fusionner leurs débits de crédits. Les statuts projet/mission sont mis à jour côté serveur après réussite ou erreur.
+
+La CI `Idealy Live Quality` contient le contrôle `pnpm backend:verify`, le typecheck Next et le build, ainsi que le contrat webhook Stripe local issu de `main`. Le run GitHub `32619180434` du commit `1c1e21d` est passé avec succès pour ces deux jobs. Le workflow de déploiement Edge canonique est présent sous `.github/workflows/idealy-supabase-deploy.yml`; il se déclenche uniquement sur `main` ou manuellement et ne déploie pas automatiquement une branche de travail.
+
+La validation locale `pnpm backend:verify`, `pnpm typecheck` et `pnpm build` est verte. Le contrat webhook ne peut pas être lancé dans le sandbox local car Docker n’y est pas disponible, mais il a passé sur le runner GitHub. La validation fonctionnelle réelle de l’authentification, de Postgres, du provider IA et des crédits reste conditionnée à l’installation de credentials régénérés dans les gestionnaires sécurisés ; aucune valeur fournie en clair n’a été utilisée.
