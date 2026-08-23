@@ -106,16 +106,17 @@ function getIdealyPrompt(messages: ChatMessage[]) {
 
 async function streamIdealyEdgeResponse({
   dataStream,
+  idempotencyKey,
   intentCategory,
   messages,
   missionId,
   request,
 }: {
   dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
+  idempotencyKey: string;
   intentCategory: "CONVERSATION" | "IDEATION" | "EXECUTION";
   messages: ChatMessage[];
   missionId?: string;
-
   request: Request;
 }) {
   const supabaseAccessToken = await getSupabaseAccessToken(request);
@@ -127,6 +128,7 @@ async function streamIdealyEdgeResponse({
 
   const response = await fetch(getIdealyAiFunctionUrl(), {
     body: JSON.stringify({
+      idempotencyKey,
       intentCategory,
       ...(missionId ? { missionId } : {}),
       maxTokens: 8000,
@@ -502,7 +504,7 @@ export async function POST(request: Request) {
 
               writeWaitingStatus("thinking", "Planning the next build step...");
               missionPlan = await createIdealyMissionPlan({
-                idempotencyKey,
+                idempotencyKey: `${idempotencyKey}:plan`,
                 missionId,
                 prompt: idealyPrompt,
                 request,
@@ -526,6 +528,7 @@ export async function POST(request: Request) {
           try {
             await streamIdealyEdgeResponse({
               dataStream,
+              idempotencyKey: `${idempotencyKey}:run`,
               intentCategory,
               messages: uiMessages,
               missionId,
