@@ -20,6 +20,7 @@ export const user = pgTable("User", {
   isAnonymous: boolean("isAnonymous").notNull().default(false),
   name: text("name"),
   password: varchar("password", { length: 64 }),
+  supabaseUserId: uuid("supabaseUserId").unique(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 

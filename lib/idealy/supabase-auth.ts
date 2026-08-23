@@ -1,10 +1,11 @@
 type SupabaseAuthUser = {
-  email?: string | null;
   id?: string;
 };
 
 type SupabaseAuthPayload = {
   access_token?: string;
+  expires_in?: number;
+  refresh_token?: string;
   error?: string;
   error_code?: string;
   error_description?: string;
@@ -15,7 +16,15 @@ type SupabaseAuthPayload = {
 export type SupabasePasswordAuthResult = {
   accessToken: string | null;
   configured: boolean;
-  status: "authenticated" | "already_registered" | "invalid_credentials" | "not_configured" | "unavailable";
+  expiresAt: number | null;
+  refreshToken: string | null;
+  status:
+    | "authenticated"
+    | "already_registered"
+    | "confirmation_required"
+    | "invalid_credentials"
+    | "not_configured"
+    | "unavailable";
   userId: string | null;
 };
 
@@ -56,17 +65,41 @@ async function postSupabaseAuth(
   }
 }
 
+function emptyResult(
+  status: SupabasePasswordAuthResult["status"],
+  configured: boolean
+): SupabasePasswordAuthResult {
+  return {
+    accessToken: null,
+    configured,
+    expiresAt: null,
+    refreshToken: null,
+    status,
+    userId: null,
+  };
+}
+
+function authenticatedResult(
+  payload: SupabaseAuthPayload
+): SupabasePasswordAuthResult {
+  return {
+    accessToken: payload.access_token ?? null,
+    configured: true,
+    expiresAt: payload.expires_in
+      ? Date.now() + payload.expires_in * 1000
+      : null,
+    refreshToken: payload.refresh_token ?? null,
+    status: "authenticated",
+    userId: payload.user?.id ?? null,
+  };
+}
+
 export async function signInWithSupabasePassword(
   email: string,
   password: string
 ): Promise<SupabasePasswordAuthResult> {
   if (!getSupabaseAuthConfig()) {
-    return {
-      accessToken: null,
-      configured: false,
-      status: "not_configured",
-      userId: null,
-    };
+    return emptyResult("not_configured", false);
   }
 
   const result = await postSupabaseAuth("token?grant_type=password", {
@@ -75,20 +108,31 @@ export async function signInWithSupabasePassword(
   });
 
   if (!result.ok) {
-    return {
-      accessToken: null,
-      configured: true,
-      status: result.status === 400 ? "invalid_credentials" : "unavailable",
-      userId: null,
-    };
+    return emptyResult(
+      result.status === 400 ? "invalid_credentials" : "unavailable",
+      true
+    );
   }
 
-  return {
-    accessToken: result.payload.access_token ?? null,
-    configured: true,
-    status: "authenticated",
-    userId: result.payload.user?.id ?? null,
-  };
+  return authenticatedResult(result.payload);
+}
+
+export async function refreshSupabaseSession(
+  refreshToken: string
+): Promise<SupabasePasswordAuthResult> {
+  if (!getSupabaseAuthConfig()) {
+    return emptyResult("not_configured", false);
+  }
+
+  const result = await postSupabaseAuth("token?grant_type=refresh_token", {
+    refresh_token: refreshToken,
+  });
+
+  if (!result.ok) {
+    return emptyResult("unavailable", true);
+  }
+
+  return authenticatedResult(result.payload);
 }
 
 export async function signUpWithSupabasePassword(
@@ -96,12 +140,7 @@ export async function signUpWithSupabasePassword(
   password: string
 ): Promise<SupabasePasswordAuthResult> {
   if (!getSupabaseAuthConfig()) {
-    return {
-      accessToken: null,
-      configured: false,
-      status: "not_configured",
-      userId: null,
-    };
+    return emptyResult("not_configured", false);
   }
 
   const result = await postSupabaseAuth("signup", { email, password });
@@ -116,27 +155,23 @@ export async function signUpWithSupabasePassword(
     .toLowerCase();
 
   if (!result.ok && (result.status === 422 || errorText.includes("already"))) {
-    return {
-      accessToken: null,
-      configured: true,
-      status: "already_registered",
-      userId: null,
-    };
+    return emptyResult("already_registered", true);
   }
 
   if (!result.ok) {
+    return emptyResult("unavailable", true);
+  }
+
+  if (!result.payload.access_token) {
     return {
       accessToken: null,
       configured: true,
-      status: "unavailable",
-      userId: null,
+      expiresAt: null,
+      refreshToken: null,
+      status: "confirmation_required",
+      userId: result.payload.user?.id ?? null,
     };
   }
 
-  return {
-    accessToken: result.payload.access_token ?? null,
-    configured: true,
-    status: "authenticated",
-    userId: result.payload.user?.id ?? null,
-  };
+  return authenticatedResult(result.payload);
 }

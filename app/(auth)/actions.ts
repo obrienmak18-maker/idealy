@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { createUser, getUser } from "@/lib/db/queries";
+import { signUpWithSupabasePassword } from "@/lib/idealy/supabase-auth";
 
 import { signIn } from "./auth";
 
@@ -51,6 +52,7 @@ export type RegisterActionState = {
     | "in_progress"
     | "success"
     | "failed"
+    | "pending_confirmation"
     | "user_exists"
     | "invalid_data";
 };
@@ -71,7 +73,25 @@ export const register = async (
       if (user) {
         return { status: "user_exists" } as RegisterActionState;
       }
+
+      const supabaseAuth = await signUpWithSupabasePassword(
+        validatedData.email,
+        validatedData.password
+      );
+
+      if (supabaseAuth.status === "already_registered") {
+        return { status: "user_exists" } as RegisterActionState;
+      }
+
+      if (supabaseAuth.status === "unavailable") {
+        return { status: "failed" } as RegisterActionState;
+      }
+
       await createUser(validatedData.email, validatedData.password);
+
+      if (supabaseAuth.status === "confirmation_required") {
+        return { status: "pending_confirmation" } as RegisterActionState;
+      }
     }
 
     if (process.env.DEMO_MODE === "true") {

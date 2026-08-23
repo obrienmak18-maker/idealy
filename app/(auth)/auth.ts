@@ -3,8 +3,15 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { DUMMY_PASSWORD } from "@/lib/constants";
-import { createGuestUser, getUser } from "@/lib/db/queries";
-import { signInWithSupabasePassword } from "@/lib/idealy/supabase-auth";
+import {
+  createGuestUser,
+  getUser,
+  linkUserToSupabaseUser,
+} from "@/lib/db/queries";
+import {
+  refreshSupabaseSession,
+  signInWithSupabasePassword,
+} from "@/lib/idealy/supabase-auth";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -21,6 +28,8 @@ declare module "next-auth" {
     email?: string | null;
     id?: string;
     supabaseAccessToken?: string;
+    supabaseAccessTokenExpiresAt?: number;
+    supabaseRefreshToken?: string;
     type: UserType;
   }
 }
@@ -29,6 +38,8 @@ declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string;
     supabaseAccessToken?: string;
+    supabaseAccessTokenExpiresAt?: number;
+    supabaseRefreshToken?: string;
     type: UserType;
   }
 }
@@ -41,12 +52,41 @@ export const {
 } = NextAuth({
   ...authConfig,
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
         if (user.supabaseAccessToken) {
           token.supabaseAccessToken = user.supabaseAccessToken;
+        }
+        if (user.supabaseAccessTokenExpiresAt) {
+          token.supabaseAccessTokenExpiresAt = user.supabaseAccessTokenExpiresAt;
+        }
+        if (user.supabaseRefreshToken) {
+          token.supabaseRefreshToken = user.supabaseRefreshToken;
+        }
+      }
+
+      if (
+        !user &&
+        token.supabaseRefreshToken &&
+        token.supabaseAccessTokenExpiresAt &&
+        token.supabaseAccessTokenExpiresAt <= Date.now() + 60_000
+      ) {
+        const refreshed = await refreshSupabaseSession(
+          token.supabaseRefreshToken
+        );
+
+        if (refreshed.status === "authenticated" && refreshed.accessToken) {
+          token.supabaseAccessToken = refreshed.accessToken;
+          token.supabaseAccessTokenExpiresAt =
+            refreshed.expiresAt ?? undefined;
+          token.supabaseRefreshToken =
+            refreshed.refreshToken ?? token.supabaseRefreshToken;
+        } else {
+          token.supabaseAccessToken = undefined;
+          token.supabaseAccessTokenExpiresAt = undefined;
+          token.supabaseRefreshToken = undefined;
         }
       }
 
@@ -98,10 +138,33 @@ export const {
         }
 
         const supabaseAuth = await signInWithSupabasePassword(email, password);
+
+        if (
+          supabaseAuth.configured &&
+          (supabaseAuth.status !== "authenticated" ||
+            !supabaseAuth.accessToken ||
+            !supabaseAuth.userId)
+        ) {
+          return null;
+        }
+
+        if (supabaseAuth.userId) {
+          await linkUserToSupabaseUser({
+            localUserId: user.id,
+            supabaseUserId: supabaseAuth.userId,
+          });
+        }
+
         return {
           ...user,
           ...(supabaseAuth.accessToken
             ? { supabaseAccessToken: supabaseAuth.accessToken }
+            : {}),
+          ...(supabaseAuth.expiresAt
+            ? { supabaseAccessTokenExpiresAt: supabaseAuth.expiresAt }
+            : {}),
+          ...(supabaseAuth.refreshToken
+            ? { supabaseRefreshToken: supabaseAuth.refreshToken }
             : {}),
           type: "regular",
         };

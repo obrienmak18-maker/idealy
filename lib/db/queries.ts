@@ -56,6 +56,26 @@ export async function createUser(email: string, password: string) {
   }
 }
 
+export async function linkUserToSupabaseUser({
+  localUserId,
+  supabaseUserId,
+}: {
+  localUserId: string;
+  supabaseUserId: string;
+}) {
+  try {
+    const [linkedUser] = await db
+      .update(user)
+      .set({ supabaseUserId, updatedAt: new Date() })
+      .where(eq(user.id, localUserId))
+      .returning({ id: user.id, supabaseUserId: user.supabaseUserId });
+
+    return linkedUser;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
 export async function createGuestUser() {
   const email = `guest-${Date.now()}`;
   const password = generateHashedPassword(generateUUID());

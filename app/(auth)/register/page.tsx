@@ -27,6 +27,12 @@ export default function Page() {
       toast({ description: "Account already exists!", type: "error" });
     } else if (state.status === "failed") {
       toast({ description: "Failed to create account!", type: "error" });
+    } else if (state.status === "pending_confirmation") {
+      toast({
+        description: "Check your email to confirm your account before signing in.",
+        type: "success",
+      });
+      setIsSuccessful(true);
     } else if (state.status === "invalid_data") {
       toast({
         description: "Failed validating your submission!",
