@@ -6,6 +6,10 @@ import type { getWeather } from "./ai/tools/get-weather";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
 import type { updateDocument } from "./ai/tools/update-document";
 import type { Suggestion } from "./db/schema";
+import type {
+  IdealyIntentCategory,
+  MissionPlan,
+} from "./idealy/backend-adapter";
 
 export const messageMetadataSchema = z.object({
   createdAt: z.string(),
@@ -49,6 +53,9 @@ export type CustomUIDataTypes = {
   finish: null;
   "chat-title": string;
   "waiting-status": WaitingStatusData;
+  "idealy-intent": IdealyIntentCategory;
+  "idealy-mission": string;
+  "idealy-plan": MissionPlan;
 };
 
 export type ChatMessage = UIMessage<

@@ -30,6 +30,7 @@ declare module "next-auth" {
     supabaseAccessToken?: string;
     supabaseAccessTokenExpiresAt?: number;
     supabaseRefreshToken?: string;
+    supabaseUserId?: string | null;
     type: UserType;
   }
 }
@@ -40,6 +41,7 @@ declare module "next-auth/jwt" {
     supabaseAccessToken?: string;
     supabaseAccessTokenExpiresAt?: number;
     supabaseRefreshToken?: string;
+    supabaseUserId?: string;
     type: UserType;
   }
 }
@@ -64,6 +66,9 @@ export const {
         }
         if (user.supabaseRefreshToken) {
           token.supabaseRefreshToken = user.supabaseRefreshToken;
+        }
+        if (user.supabaseUserId) {
+          token.supabaseUserId = user.supabaseUserId;
         }
       }
 
@@ -165,6 +170,9 @@ export const {
             : {}),
           ...(supabaseAuth.refreshToken
             ? { supabaseRefreshToken: supabaseAuth.refreshToken }
+            : {}),
+          ...(supabaseAuth.userId
+            ? { supabaseUserId: supabaseAuth.userId }
             : {}),
           type: "regular",
         };

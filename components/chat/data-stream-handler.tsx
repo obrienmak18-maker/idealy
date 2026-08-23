@@ -27,6 +27,22 @@ export function DataStreamHandler() {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
         continue;
       }
+
+      if (
+        delta.type === "data-idealy-intent" ||
+        delta.type === "data-idealy-mission" ||
+        delta.type === "data-idealy-plan"
+      ) {
+        setMetadata((current: Record<string, unknown> | null) => ({
+          ...(current ?? {}),
+          ...(delta.type === "data-idealy-intent"
+            ? { intentCategory: delta.data }
+            : delta.type === "data-idealy-mission"
+              ? { missionId: delta.data }
+              : { missionPlan: delta.data }),
+        }));
+        continue;
+      }
       const streamKind =
         delta.type === "data-kind" && typeof delta.data === "string"
           ? delta.data

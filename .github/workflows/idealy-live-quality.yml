@@ -1,0 +1,76 @@
+name: Idealy Live Quality
+
+on:
+  push:
+    branches:
+      - feat/idealy-live-backend
+  pull_request:
+    branches:
+      - main
+      - feat/idealy-live-backend
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-and-next:
+    name: Backend parity and Next build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Idealy backend manifest
+        run: pnpm backend:verify
+
+      - name: Typecheck application
+        run: pnpm typecheck
+
+      - name: Build application
+        run: pnpm build
+
+  webhook-test:
+    name: Local Stripe webhook contract
+    needs: backend-and-next
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run local Stripe webhook contract
+        env:
+          STRIPE_WEBHOOK_SECRET: whsec_idealy_ci_test
+          TEST_STRIPE_PRICE_ID_PRO: price_test_pro
+          TEST_STRIPE_PRICE_ID_BUSINESS: price_test_business
+        run: pnpm test:webhook:local

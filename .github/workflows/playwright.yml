@@ -1,12 +1,13 @@
 name: Playwright Tests
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, feat/idealy-live-backend]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, feat/idealy-live-backend]
 
 jobs:
   test:
+    if: ${{ secrets.AUTH_SECRET != '' && secrets.POSTGRES_URL != '' }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     env:
@@ -15,6 +16,8 @@ jobs:
       POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
       BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
       REDIS_URL: ${{ secrets.REDIS_URL }}
+      DEMO_MODE: "false"
+      NEXT_PUBLIC_DEMO_MODE: "false"
 
     steps:
       - uses: actions/checkout@v4

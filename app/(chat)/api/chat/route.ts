@@ -22,6 +22,15 @@ import {
   getModelAvailability,
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
+import {
+  classifyIdealyIntent,
+  createIdealyAgentRuns,
+  createIdealyMission,
+  createIdealyProject,
+  createIdealyMissionPlan,
+  updateIdealyMission,
+  updateIdealyProject,
+} from "@/lib/idealy/backend-adapter";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
 import { injectFreeIdealyBadge } from "@/lib/branding/free-badge";
 import { getLanguageModel } from "@/lib/ai/providers";
@@ -97,11 +106,16 @@ function getIdealyPrompt(messages: ChatMessage[]) {
 
 async function streamIdealyEdgeResponse({
   dataStream,
+  intentCategory,
   messages,
+  missionId,
   request,
 }: {
   dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
+  intentCategory: "CONVERSATION" | "IDEATION" | "EXECUTION";
   messages: ChatMessage[];
+  missionId?: string;
+
   request: Request;
 }) {
   const supabaseAccessToken = await getSupabaseAccessToken(request);
@@ -113,7 +127,8 @@ async function streamIdealyEdgeResponse({
 
   const response = await fetch(getIdealyAiFunctionUrl(), {
     body: JSON.stringify({
-      intentCategory: "EXECUTION",
+      intentCategory,
+      ...(missionId ? { missionId } : {}),
       maxTokens: 8000,
       mode: "auto",
       prompt: getIdealyPrompt(messages),
@@ -441,12 +456,117 @@ export async function POST(request: Request) {
         };
 
         if (shouldUseIdealyEdgeProvider()) {
-          await streamIdealyEdgeResponse({
-            dataStream,
-            messages: uiMessages,
-            request,
-          });
-          stopWaitingStatus();
+          let intentCategory:
+            | "CONVERSATION"
+            | "IDEATION"
+            | "EXECUTION" = "CONVERSATION";
+          const idealyPrompt =
+            message?.role === "user" ? getIdealyPrompt(uiMessages) : "";
+          const idempotencyKey =
+            message?.role === "user"
+              ? `chat:${id}:${message.id}`
+              : `chat:${id}:continuation`;
+
+          let projectId: string | undefined;
+          let missionId: string | undefined;
+          let missionPlan:
+            | Awaited<ReturnType<typeof createIdealyMissionPlan>>
+            | undefined;
+
+          if (idealyPrompt) {
+            writeWaitingStatus("thinking", "Routing your mission...");
+            intentCategory = await classifyIdealyIntent(request, idealyPrompt);
+            dataStream.write({ data: intentCategory, type: "data-idealy-intent" });
+
+            if (intentCategory !== "CONVERSATION") {
+              writeWaitingStatus("thinking", "Creating the mission workspace...");
+              const project = await createIdealyProject({
+                prompt: idealyPrompt,
+                request,
+              });
+              projectId = project.id;
+              await updateIdealyProject({
+                projectId,
+                request,
+                status: "generating",
+              });
+              const mission = await createIdealyMission({
+                chatId: id,
+                intentCategory,
+                projectId,
+                prompt: idealyPrompt,
+                request,
+              });
+              missionId = mission.id;
+              dataStream.write({ data: mission.id, type: "data-idealy-mission" });
+
+              writeWaitingStatus("thinking", "Planning the next build step...");
+              missionPlan = await createIdealyMissionPlan({
+                idempotencyKey,
+                missionId,
+                prompt: idealyPrompt,
+                request,
+              });
+              dataStream.write({ data: missionPlan, type: "data-idealy-plan" });
+              await updateIdealyMission({
+                input: { intentCategory, plan: missionPlan },
+                missionId,
+                request,
+                status: "planned",
+              });
+              await createIdealyAgentRuns({
+                missionId,
+                plan: missionPlan,
+                projectId,
+                request,
+              });
+            }
+          }
+
+          try {
+            await streamIdealyEdgeResponse({
+              dataStream,
+              intentCategory,
+              messages: uiMessages,
+              missionId,
+              request,
+            });
+            if (projectId) {
+              await updateIdealyProject({
+                projectId,
+                request,
+                status: "ready",
+              });
+            }
+            if (missionId && missionPlan) {
+              await updateIdealyMission({
+                input: { plan: missionPlan },
+                missionId,
+                request,
+                status: "ready",
+              });
+            }
+            stopWaitingStatus();
+          } catch (error) {
+            if (projectId) {
+              await updateIdealyProject({
+                projectId,
+                request,
+                status: "draft",
+              }).catch(() => undefined);
+            }
+            if (missionId) {
+              await updateIdealyMission({
+                input: {
+                  error: error instanceof Error ? error.message : String(error),
+                },
+                missionId,
+                request,
+                status: "needs-fix",
+              }).catch(() => undefined);
+            }
+            throw error;
+          }
         } else {
           const result = streamText({
             activeTools:
