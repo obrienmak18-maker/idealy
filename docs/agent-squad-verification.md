@@ -25,3 +25,7 @@ Après conversion sans recadrage, l’ensemble des avatars utilisateur pèse env
 La voie Professionnel a été contrôlée avec le portrait WebP de Daniel, la jauge « Capacité opératoire » et le studio UX actif. Le curseur principal prend le nom Daniel ; les éléments de collaboration restent une simulation visuelle et ne créent aucune session de co-édition ni appel externe.
 
 La validation complète de branche a été exécutée avec succès : contrôle TypeScript, contrats Design Engine, fichiers de mission, connecteurs, résultat Auth.js, programme de démo, build Next de production et contrôle de diff.
+
+Le déploiement Netlify `6a8cbe4411a88f410c894e53` est prêt. Son permalien unique sert bien le roster Ninja, le Chakra de mission et le studio UX. Les réponses HTTP des portraits WebP sont `200 image/webp` et le navigateur confirme des images terminées avec dimensions naturelles non nulles ; les avatars sont donc effectivement chargés même si une capture peut momentanément privilégier le fond dégradé des cartes.
+
+La propagation vers le domaine principal a ensuite été contrôlée : `https://idealy-ai.netlify.app/demo-flow?version=user-agents-v2` sert désormais aussi Naruto, l’ensemble de l’équipe Ninja, le Chakra de mission et le bouton permettant de masquer le studio UX. La démo enrichie est donc vérifiée sur le lien public principal.

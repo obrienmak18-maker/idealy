@@ -19,4 +19,4 @@
 - [x] Recenser et préparer les avatars utilisateur pour les voies Ninja, Hunter, Mage et Professionnel
 - [x] Remplacer les portraits générés de la démo par les avatars fournis
 - [x] Ajouter un mode de collaboration UX simulée avec curseurs, sélections et annotations dans le canvas
-- [ ] Valider et publier cette démo enrichie sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Valider et publier cette démo enrichie sur `feat/idealy-live-backend` sans fusionner vers `main`
