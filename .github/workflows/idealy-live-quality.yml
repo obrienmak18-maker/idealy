@@ -48,6 +48,9 @@ jobs:
       - name: Mission files contract
         run: pnpm test:mission-files
 
+      - name: Connector registry contract
+        run: pnpm test:connectors
+
       - name: Build application
         run: pnpm build
 
