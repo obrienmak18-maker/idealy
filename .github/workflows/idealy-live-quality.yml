@@ -74,6 +74,13 @@ jobs:
         with:
           version: latest
 
+      - name: Release stale local Supabase ports
+        run: |
+          sudo fuser -k 54321/tcp || true
+          sudo fuser -k 54322/tcp || true
+          sudo fuser -k 54323/tcp || true
+          docker ps -aq --filter name=supabase_idealy | xargs -r docker rm -f
+
       - name: Start local Supabase database
         run: supabase db start
 
