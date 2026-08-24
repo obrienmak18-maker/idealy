@@ -1,0 +1,5 @@
+import { ProfessionalPage } from "@/components/site/professional-page";
+
+export default function TermsPage() {
+  return <ProfessionalPage eyebrow="Conditions d’utilisation" title="Utiliser Idealy de manière sûre et responsable." intro="Ces conditions de produit constituent un socle de transparence ; elles doivent être adaptées et validées juridiquement avant toute mise sur le marché payante." sections={[{ title: "Responsabilité des actions", body: "Vous restez responsable du contenu fourni, des services connectés et de toute action de publication confirmée. Idealy doit présenter clairement les opérations externes avant leur exécution." }, { title: "Disponibilité et résultats", body: "Les sorties IA peuvent être incomplètes ou incorrectes. Toute génération, configuration ou modification de code doit être relue et testée avant un usage en production." }, { title: "Plans et facturation", body: "Les prix, packs et droits d’abonnement ne sont valides que lorsqu’ils proviennent du catalogue serveur et de Stripe. Une carte d’interface ne crée pas à elle seule un droit de paiement ou de consommation." }]} />;
+}

@@ -233,6 +233,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     Ouvrir la bibliothèque
                   </Link>
                 </details>
+                <Link
+                  className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  href="/docs"
+                >
+                  <BookOpenIcon className="size-3.5" /> Documentation
+                </Link>
               </div>
             </SidebarGroupContent>
           </SidebarGroup>

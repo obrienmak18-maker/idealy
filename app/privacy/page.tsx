@@ -1,0 +1,5 @@
+import { ProfessionalPage } from "@/components/site/professional-page";
+
+export default function PrivacyPage() {
+  return <ProfessionalPage eyebrow="Confidentialité" title="Vos données, vos autorisations, votre contrôle." intro="Cette page décrit les principes produit actuels et devra être revérifiée avec un conseil juridique avant un lancement commercial dans une juridiction donnée." sections={[{ title: "Données de compte et de mission", body: "Idealy utilise l’authentification, les missions et leurs fichiers pour fournir le workspace. Les politiques de base de données limitent la lecture de ces ressources à leur propriétaire authentifié." }, { title: "Connecteurs", body: "Les jetons OAuth sont chiffrés côté serveur et ne sont pas renvoyés au navigateur. Les comptes externes ne sont utilisés qu’après une autorisation explicite de leur propriétaire." }, { title: "IA et crédits", body: "Les requêtes gérées passent par un proxy serveur qui contrôle l’identité, le rythme des appels et le solde. Le produit mesure des crédits d’opération ; il ne présente pas ce compteur comme une facture exacte de tokens fournisseur." }]} />;
+}

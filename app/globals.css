@@ -48,17 +48,17 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.965 0.012 250);
+  --background: oklch(0.958 0.018 250);
   --foreground: oklch(0.12 0 0);
-  --card: oklch(1 0 0);
+  --card: oklch(0.99 0.006 250);
   --card-foreground: oklch(0.12 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.12 0 0);
   --primary: oklch(0.12 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.945 0.012 250);
+  --secondary: oklch(0.932 0.021 250);
   --secondary-foreground: oklch(0.38 0 0);
-  --muted: oklch(0.925 0.012 250);
+  --muted: oklch(0.915 0.021 250);
   --muted-foreground: oklch(0.58 0 0);
   --accent: oklch(0.945 0.012 250);
   --accent-foreground: oklch(0.12 0 0);
@@ -88,10 +88,10 @@
     0 0 0 1px oklch(0 0 0 / 0.06), 0 2px 8px -2px oklch(0 0 0 / 0.06);
   --shadow-inset: inset 0 1px 1px oklch(0 0 0 / 0.03);
   --shadow-glow: 0 0 20px oklch(0 0 0 / 0.08);
-  --idealy-glow-blue: rgb(37 99 235 / 0.1);
-  --idealy-glow-orange: rgb(249 115 22 / 0.085);
-  --idealy-glow-violet: rgb(168 85 247 / 0.075);
-  --idealy-glow-teal: rgb(20 184 166 / 0.06);
+  --idealy-glow-blue: rgb(66 133 244 / 0.15);
+  --idealy-glow-orange: rgb(234 67 53 / 0.12);
+  --idealy-glow-violet: rgb(251 188 5 / 0.12);
+  --idealy-glow-teal: rgb(52 168 83 / 0.1);
 
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -142,10 +142,10 @@
   --shadow-composer-focus:
     0 0 0 1px oklch(1 0 0 / 0.1), 0 4px 16px -4px oklch(0 0 0 / 0.3),
     inset 0 1px 0 oklch(1 0 0 / 0.04);
-  --idealy-glow-blue: rgb(37 99 235 / 0.16);
-  --idealy-glow-orange: rgb(249 115 22 / 0.13);
-  --idealy-glow-violet: rgb(168 85 247 / 0.12);
-  --idealy-glow-teal: rgb(20 184 166 / 0.1);
+  --idealy-glow-blue: rgb(66 133 244 / 0.2);
+  --idealy-glow-orange: rgb(234 67 53 / 0.16);
+  --idealy-glow-violet: rgb(251 188 5 / 0.14);
+  --idealy-glow-teal: rgb(52 168 83 / 0.13);
 }
 
 @layer base {
@@ -281,6 +281,15 @@ textarea:focus-visible {
   transition:
     background-color 300ms ease,
     background-image 500ms ease;
+}
+
+.idealy-public-shell {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 6% 8%, var(--idealy-glow-blue), transparent 35%),
+    radial-gradient(circle at 92% 12%, var(--idealy-glow-orange), transparent 31%),
+    radial-gradient(circle at 82% 88%, var(--idealy-glow-violet), transparent 35%),
+    radial-gradient(circle at 18% 78%, var(--idealy-glow-teal), transparent 35%);
 }
 
 .idealy-surface {

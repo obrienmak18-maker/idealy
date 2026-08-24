@@ -26,3 +26,9 @@
 - [x] Corriger les écarts de sécurité et de cohérence vérifiés sans transaction réelle
 - [x] Définir et intégrer les personnages Professionnel ainsi que le level design associé
 - [x] Valider et publier la revue de lancement sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Auditer les connecteurs réellement disponibles et les prérequis OAuth, permissions, stockage de jetons et consentement
+- [x] Définir puis amorcer l’architecture d’exécution multi-agent persistante, autorisée et traçable
+- [ ] Raccorder les connecteurs et plugins utilisables sans exposer de secret ni promettre une intégration non configurée
+- [x] Renforcer la palette Google/Idealy et réduire les surfaces visuellement blanches dans le workspace et les pages publiques
+- [x] Ajouter les pages produit professionnelles : à propos, documentation, confidentialité, conditions et contact
+- [ ] Valider, documenter et publier cette consolidation sur `feat/idealy-live-backend` sans fusionner vers `main`
