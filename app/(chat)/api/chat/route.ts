@@ -32,6 +32,7 @@ import {
   updateIdealyProject,
 } from "@/lib/idealy/backend-adapter";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
+import { getIdealyDirectProviderModel } from "@/lib/idealy/provider-registry";
 import { injectFreeIdealyBadge } from "@/lib/branding/free-badge";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
@@ -106,6 +107,7 @@ function getIdealyPrompt(messages: ChatMessage[]) {
 
 async function streamIdealyEdgeResponse({
   dataStream,
+  directModel,
   idempotencyKey,
   intentCategory,
   messages,
@@ -113,6 +115,7 @@ async function streamIdealyEdgeResponse({
   request,
 }: {
   dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
+  directModel?: ReturnType<typeof getIdealyDirectProviderModel>;
   idempotencyKey: string;
   intentCategory: "CONVERSATION" | "IDEATION" | "EXECUTION";
   messages: ChatMessage[];
@@ -130,7 +133,13 @@ async function streamIdealyEdgeResponse({
     body: JSON.stringify({
       idempotencyKey,
       intentCategory,
-      ...(missionId ? { missionId } : {}),
+      ...(directModel
+        ? {
+            model: directModel.edgeModel,
+            provider: directModel.edgeProvider,
+          }
+        : {}),
+      ...(missionId ? { missionId, workspaceStream: true } : {}),
       maxTokens: 8000,
       mode: "auto",
       prompt: getIdealyPrompt(messages),
@@ -181,7 +190,16 @@ async function streamIdealyEdgeResponse({
         try {
           const parsed = JSON.parse(raw) as {
             choices?: Array<{ delta?: { content?: string } }>;
+            event?: unknown;
+            type?: string;
           };
+          if (parsed.type === "idealy_file_event" && parsed.event) {
+            dataStream.write({
+              data: parsed.event as never,
+              type: "data-idealy-file-event",
+            });
+            continue;
+          }
           const delta = parsed.choices?.[0]?.delta?.content;
           if (delta) {
             dataStream.write({ delta, id: assistantId, type: "text-delta" });
@@ -386,6 +404,7 @@ export async function POST(request: Request) {
     }
 
     const modelConfig = chatModels.find((m) => m.id === chatModel);
+    const directModel = getIdealyDirectProviderModel(chatModel);
     const modelCapabilities = await getCapabilities();
     const capabilities = modelCapabilities[chatModel];
     const isReasoningModel = capabilities?.reasoning === true;
@@ -505,8 +524,10 @@ export async function POST(request: Request) {
               writeWaitingStatus("thinking", "Planning the next build step...");
               missionPlan = await createIdealyMissionPlan({
                 idempotencyKey: `${idempotencyKey}:plan`,
+                ...(directModel ? { model: directModel.edgeModel } : {}),
                 missionId,
                 prompt: idealyPrompt,
+                ...(directModel ? { provider: directModel.edgeProvider } : {}),
                 request,
               });
               dataStream.write({ data: missionPlan, type: "data-idealy-plan" });
@@ -528,6 +549,7 @@ export async function POST(request: Request) {
           try {
             await streamIdealyEdgeResponse({
               dataStream,
+              directModel,
               idempotencyKey: `${idempotencyKey}:run`,
               intentCategory,
               messages: uiMessages,

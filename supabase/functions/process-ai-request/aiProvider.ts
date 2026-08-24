@@ -1,6 +1,14 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export type Provider = "groq" | "openrouter" | "deepseek";
+export type Provider =
+  | "anthropic"
+  | "deepseek"
+  | "gemini"
+  | "groq"
+  | "moonshot"
+  | "openai"
+  | "openrouter"
+  | "together";
 export type UserMode = "free" | "trial" | "byok";
 export type RequestedMode = UserMode | "auto";
 
@@ -32,6 +40,26 @@ export const PROVIDER_CONFIGS: Record<
   deepseek: {
     url: "https://api.deepseek.com/chat/completions",
     envKey: "DEEPSEEK_API_KEY",
+  },
+  gemini: {
+    url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    envKey: "GEMINI_API_KEY",
+  },
+  anthropic: {
+    url: "https://api.anthropic.com/v1/chat/completions",
+    envKey: "ANTHROPIC_API_KEY",
+  },
+  moonshot: {
+    url: "https://api.moonshot.ai/v1/chat/completions",
+    envKey: "MOONSHOT_API_KEY",
+  },
+  openai: {
+    url: "https://api.openai.com/v1/chat/completions",
+    envKey: "OPENAI_API_KEY",
+  },
+  together: {
+    url: "https://api.together.ai/v1/chat/completions",
+    envKey: "TOGETHER_API_KEY",
   },
 };
 
@@ -82,7 +110,16 @@ export async function decryptAIKey(encryptedValue: string): Promise<string> {
 }
 
 function isProvider(value: unknown): value is Provider {
-  return value === "groq" || value === "openrouter" || value === "deepseek";
+  return (
+    value === "anthropic" ||
+    value === "deepseek" ||
+    value === "gemini" ||
+    value === "groq" ||
+    value === "moonshot" ||
+    value === "openai" ||
+    value === "openrouter" ||
+    value === "together"
+  );
 }
 
 async function resolveUserMode(

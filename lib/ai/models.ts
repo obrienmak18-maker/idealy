@@ -20,10 +20,13 @@ export type ChatModel = {
   provider: string;
   description: string;
   gatewayOrder?: string[];
+  edgeProvider?: string;
+  edgeModel?: string;
+  capabilities?: ModelCapabilities;
   reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high";
 };
 
-export const chatModels: ChatModel[] = [
+const gatewayChatModels: ChatModel[] = [
   {
     description: "Fast and capable model with tool use",
     gatewayOrder: ["bedrock", "deepinfra"],
@@ -63,12 +66,89 @@ export const chatModels: ChatModel[] = [
   },
 ];
 
+const directChatModels: ChatModel[] = [
+  {
+    capabilities: { reasoning: true, tools: true, vision: false },
+    description: "Kimi K3 pour le code et les missions longues",
+    edgeModel: "kimi-k3",
+    edgeProvider: "moonshot",
+    id: "moonshot/kimi-k3",
+    name: "Kimi K3",
+    provider: "moonshot",
+    reasoningEffort: "high",
+  },
+  {
+    capabilities: { reasoning: true, tools: true, vision: true },
+    description: "Gemini multimodal pour les interfaces et les fichiers",
+    edgeModel: "gemini-3.7-flash",
+    edgeProvider: "gemini",
+    id: "gemini/gemini-3.7-flash",
+    name: "Gemini 3.7 Flash",
+    provider: "gemini",
+  },
+  {
+    capabilities: { reasoning: true, tools: true, vision: true },
+    description: "Claude Sonnet pour le raisonnement et la qualité du code",
+    edgeModel: "claude-sonnet-4-6",
+    edgeProvider: "anthropic",
+    id: "anthropic/claude-sonnet-4-6",
+    name: "Claude Sonnet 4.6",
+    provider: "anthropic",
+    reasoningEffort: "medium",
+  },
+  {
+    capabilities: { reasoning: true, tools: true, vision: false },
+    description: "GPT OSS rapide via Together AI",
+    edgeModel: "openai/gpt-oss-120b",
+    edgeProvider: "together",
+    id: "together/openai/gpt-oss-120b",
+    name: "GPT OSS 120B · Together",
+    provider: "together",
+  },
+  {
+    capabilities: { reasoning: false, tools: true, vision: false },
+    description: "Llama rapide pour les conversations à faible latence",
+    edgeModel: "llama-3.3-70b-versatile",
+    edgeProvider: "groq",
+    id: "groq/llama-3.3-70b-versatile",
+    name: "Llama 3.3 70B · Groq",
+    provider: "groq",
+  },
+  {
+    capabilities: { reasoning: true, tools: true, vision: false },
+    description: "DeepSeek direct pour le code et le raisonnement",
+    edgeModel: "deepseek-chat",
+    edgeProvider: "deepseek",
+    id: "deepseek/deepseek-chat",
+    name: "DeepSeek Chat",
+    provider: "deepseek",
+    reasoningEffort: "medium",
+  },
+  {
+    capabilities: { reasoning: true, tools: true, vision: false },
+    description: "Fallback multi-modèles via OpenRouter",
+    edgeModel: "openrouter/free",
+    edgeProvider: "openrouter",
+    id: "openrouter/openrouter/free",
+    name: "OpenRouter Free",
+    provider: "openrouter",
+  },
+];
+
+export const chatModels: ChatModel[] =
+  process.env.NEXT_PUBLIC_IDEALY_DIRECT_MODEL_CATALOG === "true"
+    ? [...gatewayChatModels, ...directChatModels]
+    : gatewayChatModels;
+
 export async function getCapabilities(): Promise<
   Record<string, ModelCapabilities>
 > {
   const results = await Promise.all(
     chatModels.map(async (model) => {
       try {
+        if (model.capabilities) {
+          return [model.id, model.capabilities];
+        }
         const res = await fetch(
           `https://ai-gateway.vercel.sh/v1/models/${model.id}/endpoints`,
           { next: { revalidate: 86_400 } }

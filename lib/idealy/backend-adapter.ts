@@ -368,20 +368,26 @@ export async function createIdealyAgentRuns({
 export async function createIdealyMissionPlan({
   idempotencyKey,
   missionId,
+  model,
   prompt,
+  provider,
   request,
 }: {
   idempotencyKey: string;
   missionId?: string;
+  model?: string;
   prompt: string;
+  provider?: string;
   request: Request;
 }): Promise<MissionPlan> {
   const payload = await callProcessAIRequest<IdealyPlanResponse>(request, {
     idempotencyKey,
     intentCategory: "IDEATION",
+    ...(model ? { model } : {}),
     ...(missionId ? { missionId } : {}),
     maxTokens: 2_000,
     mode: "auto",
+    ...(provider ? { provider } : {}),
     planOnly: true,
     prompt,
     stream: false,

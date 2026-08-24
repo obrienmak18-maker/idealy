@@ -11,6 +11,7 @@
     "backend:verify": "node scripts/verify-idealy-backend.mjs",
     "test:webhook": "node scripts/test-stripe-webhook.mjs",
     "test:webhook:local": "bash scripts/run-stripe-webhook-test.sh",
+    "test:mission-files": "tsx scripts/test-mission-files.mjs",
     "fix": "ultracite fix",
     "prepare": "husky",
     "db:generate": "drizzle-kit generate",

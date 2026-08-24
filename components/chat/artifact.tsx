@@ -26,6 +26,7 @@ import { textArtifact } from "@/artifacts/text/client";
 import { useArtifact } from "@/hooks/use-artifact";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 import type { Document, Vote } from "@/lib/db/schema";
+import type { MissionFile } from "@/lib/idealy/mission-files";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { fetcher } from "@/lib/utils";
 import { VersionFooter } from "./version-footer";
@@ -118,6 +119,10 @@ function PureArtifact({
   const [previewKey, setPreviewKey] = useState(0);
   const [document, setDocument] = useState<Document | null>(null);
   const [currentVersionIndex, setCurrentVersionIndex] = useState(-1);
+  const [selectedMissionFilePath, setSelectedMissionFilePath] = useState<string | null>(null);
+  const missionFiles = Array.isArray(metadata?.missionFiles)
+    ? (metadata.missionFiles as MissionFile[])
+    : [];
 
   useEffect(() => {
     window.document.documentElement.toggleAttribute("data-idealy-canvas-expanded", isExpanded);
@@ -199,6 +204,21 @@ function PureArtifact({
     }
     el.scrollTo({ top: el.scrollHeight });
   }, [artifact.status]);
+
+  useEffect(() => {
+    if (missionFiles.length === 0) {
+      return;
+    }
+    const selectedFile = missionFiles.find(
+      (file) => file.path === selectedMissionFilePath && file.content !== undefined
+    );
+    const firstAvailableFile = missionFiles.find(
+      (file) => file.content !== undefined && file.status !== "error"
+    );
+    if (!selectedFile && firstAvailableFile) {
+      setSelectedMissionFilePath(firstAvailableFile.path);
+    }
+  }, [missionFiles, selectedMissionFilePath]);
 
   useEffect(() => {
     if (documents && documents.length > 0) {
@@ -422,6 +442,11 @@ function PureArtifact({
   }
 
   const consoleEntries = metadata?.outputs ?? [];
+  const selectedMissionFile = missionFiles.find(
+    (file) => file.path === selectedMissionFilePath && file.content !== undefined
+  );
+  const editorContent = selectedMissionFile?.content ??
+    (isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex));
   const consoleError =
     consoleEntries
       .filter((o: { status: string }) => o.status === "failed")
@@ -553,19 +578,36 @@ function PureArtifact({
             <aside className="hidden w-56 shrink-0 border-r border-sidebar-border/60 bg-sidebar/70 p-3 sm:block">
               <div className="mb-3 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"><span>Files</span><Folder className="size-3.5" /></div>
               <div className="space-y-1 text-xs">
-                <div className="flex items-center gap-2 rounded-md bg-sidebar-accent px-2.5 py-2 text-sidebar-accent-foreground"><FileCode2 className="size-3.5 text-sky-300" /><span className="truncate">page.tsx</span></div>
-                <div className="flex items-center gap-2 rounded-md px-2.5 py-2 text-muted-foreground"><FileJson className="size-3.5 text-amber-300" /><span>package.json</span></div>
-                <div className="flex items-center gap-2 rounded-md px-2.5 py-2 text-muted-foreground"><FileCode2 className="size-3.5 text-violet-300" /><span>app/layout.tsx</span></div>
-                <div className="flex items-center gap-2 rounded-md px-2.5 py-2 text-muted-foreground"><FileCode2 className="size-3.5 text-emerald-300" /><span>api/chat/route.ts</span></div>
+                {missionFiles.length > 0 ? missionFiles.map((file) => {
+                  const isActive = file.path === selectedMissionFilePath;
+                  const isJson = file.path.endsWith(".json");
+                  const fileColor = file.status === "error"
+                    ? "text-red-300"
+                    : file.status === "writing"
+                      ? "text-amber-300"
+                      : "text-sky-300";
+                  return (
+                    <button
+                      className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"}`}
+                      key={`${file.path}:${file.version}`}
+                      onClick={() => setSelectedMissionFilePath(file.path)}
+                      type="button"
+                    >
+                      {isJson ? <FileJson className={`size-3.5 ${fileColor}`} /> : <FileCode2 className={`size-3.5 ${fileColor}`} />}
+                      <span className="min-w-0 flex-1 truncate">{file.path}</span>
+                      <span className="text-[9px] uppercase tracking-[0.08em] opacity-70">{file.status}</span>
+                    </button>
+                  );
+                }) : (
+                  <div className="rounded-md border border-dashed border-sidebar-border/70 px-2.5 py-3 text-[11px] leading-5 text-muted-foreground">
+                    Les fichiers réels apparaîtront ici dès que le Builder les aura enregistrés.
+                  </div>
+                )}
               </div>
             </aside>
             <div className="min-w-0 flex-1 overflow-auto">
               <artifactDefinition.content
-                content={
-                  isCurrentVersion
-                    ? artifact.content
-                    : getDocumentContentById(currentVersionIndex)
-                }
+                  content={editorContent}
                 currentVersionIndex={currentVersionIndex}
                 getDocumentContentById={getDocumentContentById}
                 isCurrentVersion={isCurrentVersion}

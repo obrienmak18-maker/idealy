@@ -11,6 +11,7 @@ const requiredFiles = [
   "supabase/schema.sql",
   "supabase/migrations/20260807000000_missions.sql",
   "supabase/migrations/20260813000000_mission_contracts.sql",
+  "supabase/migrations/20260824000000_mission_files.sql",
   "supabase/functions/process-ai-request/index.ts",
   "supabase/functions/process-ai-request/aiProvider.ts",
   "supabase/functions/stripe-webhook/index.ts",
@@ -65,6 +66,9 @@ const requiredSecurityMarkers = [
   "planOnly",
   "idempotencyKey",
   "consumeManagedCredit",
+  "workspaceStream",
+  "mission_files",
+  "append_mission_file_event",
 ];
 const missingSecurityMarkers = requiredSecurityMarkers.filter(
   (marker) => !processAI.includes(marker)

@@ -10,6 +10,7 @@ import type {
   IdealyIntentCategory,
   MissionPlan,
 } from "./idealy/backend-adapter";
+import type { MissionFileEvent } from "./idealy/mission-files";
 
 export const messageMetadataSchema = z.object({
   createdAt: z.string(),
@@ -56,6 +57,7 @@ export type CustomUIDataTypes = {
   "idealy-intent": IdealyIntentCategory;
   "idealy-mission": string;
   "idealy-plan": MissionPlan;
+  "idealy-file-event": MissionFileEvent;
 };
 
 export type ChatMessage = UIMessage<

@@ -40,24 +40,59 @@ type LLMRequest = {
   uiPhase?: AgentUIPhase;
   uiProgress?: number;
   planOnly?: boolean;
+  workspaceStream?: boolean;
 };
 
 const DEFAULT_MODELS: Record<Provider, string> = {
-  groq: 'llama-3.3-70b-versatile',
-  openrouter: 'deepseek/deepseek-coder',
+  anthropic: 'claude-sonnet-4-6',
   deepseek: 'deepseek-chat',
+  gemini: 'gemini-3.7-flash',
+  groq: 'llama-3.3-70b-versatile',
+  moonshot: 'kimi-k3',
+  openai: 'gpt-5',
+  openrouter: 'openrouter/free',
+  together: 'openai/gpt-oss-120b',
 };
 
-const ALLOWED_MODELS: Record<Provider, readonly string[]> = {
-  groq: ['llama-3.3-70b-versatile'],
-  openrouter: ['deepseek/deepseek-coder', 'openrouter/free'],
-  deepseek: ['deepseek-chat'],
+const DEFAULT_ALLOWED_MODELS: Record<Provider, readonly string[]> = {
+  anthropic: ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-7'],
+  deepseek: ['deepseek-chat', 'deepseek-v4-flash', 'deepseek-v4-pro'],
+  gemini: ['gemini-3.7-flash', 'gemini-3.1-pro-preview', 'gemini-2.5-flash'],
+  groq: ['llama-3.3-70b-versatile', 'moonshotai/kimi-k2-instruct'],
+  moonshot: ['kimi-k3', 'kimi-k2.7-code', 'kimi-k2.6', 'kimi-k2.5'],
+  openai: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'],
+  openrouter: ['openrouter/free', 'deepseek/deepseek-coder'],
+  together: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
 };
+
+function getAllowedModels(): Record<Provider, readonly string[]> {
+  const raw = Deno.env.get('IDEALY_PROVIDER_MODELS_JSON');
+  if (!raw) return DEFAULT_ALLOWED_MODELS;
+
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const configured = { ...DEFAULT_ALLOWED_MODELS } as Record<Provider, readonly string[]>;
+    for (const provider of Object.keys(DEFAULT_ALLOWED_MODELS) as Provider[]) {
+      const values = parsed[provider];
+      if (Array.isArray(values)) {
+        const models = values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+        if (models.length > 0) configured[provider] = Array.from(new Set(models)).slice(0, 50);
+      }
+    }
+    return configured;
+  } catch {
+    return DEFAULT_ALLOWED_MODELS;
+  }
+}
 
 const MAX_PROMPT_CHARS = 120_000;
 const MAX_SYSTEM_PROMPT_CHARS = 20_000;
 const MAX_OUTPUT_TOKENS = 8_000;
 const MAX_IDEMPOTENCY_KEY_CHARS = 180;
+const WORKSPACE_SYSTEM_PROMPT = `
+Tu es le Builder d’Idealy. Pour une mission EXECUTION, réponds uniquement avec un JSON valide, sans markdown ni texte autour, selon ce contrat :
+{"project":{"name":"nom-kebab-case","description":"description courte","stack":"react-vite-typescript","fileTree":[{"path":"package.json","content":"contenu complet","type":"json"}]}}
+Génère une première version verticale réellement utilisable. Inclus au minimum package.json, index.html, src/main.tsx, src/App.tsx et src/App.css pour une application web. Chaque fichier doit avoir un chemin relatif sûr, un contenu complet et aucun secret. N’ajoute jamais de chemin absolu, de segment .., de mot de passe ou de clé API. Retourne tous les fichiers dans fileTree et ne retourne rien d’autre.`;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getCorsHeaders(req: Request): Record<string, string> {
@@ -141,6 +176,192 @@ function parseMissionPlan(content: unknown): MissionPlan | null {
   }
 }
 
+type GeneratedFile = {
+  content: string;
+  path: string;
+  type?: string;
+};
+
+function normalizeWorkspacePath(path: string) {
+  const normalized = path.trim().replaceAll('\\', '/').replace(/^\.\//, '');
+  if (!normalized || normalized.startsWith('/') || normalized.includes('..') || normalized.length > 240) {
+    throw new Error('Invalid mission file path.');
+  }
+  return normalized;
+}
+
+function generatedFilesFromContent(content: string): GeneratedFile[] {
+  const clean = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(clean);
+  } catch {
+    return [];
+  }
+  if (!parsed || typeof parsed !== 'object') return [];
+  const envelope = parsed as { project?: { fileTree?: unknown; files?: unknown } };
+  const project = envelope.project;
+  if (!project || typeof project !== 'object') return [];
+  const result: GeneratedFile[] = [];
+  if (Array.isArray(project.fileTree)) {
+    for (const candidate of project.fileTree) {
+      if (!candidate || typeof candidate !== 'object') continue;
+      const file = candidate as { path?: unknown; content?: unknown; type?: unknown };
+      if (typeof file.path === 'string' && typeof file.content === 'string') {
+        result.push({ content: file.content, path: normalizeWorkspacePath(file.path), type: typeof file.type === 'string' ? file.type : undefined });
+      }
+    }
+  }
+  if (result.length === 0 && project.files && typeof project.files === 'object' && !Array.isArray(project.files)) {
+    for (const [path, value] of Object.entries(project.files as Record<string, unknown>)) {
+      if (typeof value === 'string') result.push({ content: value, path: normalizeWorkspacePath(path) });
+    }
+  }
+  return result.slice(0, 500);
+}
+
+async function checksum(content: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content));
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function appendMissionFileEvent(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  input: {
+    eventType: string;
+    fileVersion?: number;
+    missionId: string;
+    path?: string;
+    payload?: Record<string, unknown>;
+    idempotencyKey: string;
+  },
+) {
+  const { data, error } = await supabaseAdmin.rpc('append_mission_file_event', {
+    p_event_type: input.eventType,
+    p_file_version: input.fileVersion ?? null,
+    p_idempotency_key: input.idempotencyKey,
+    p_mission_id: input.missionId,
+    p_path: input.path ?? null,
+    p_payload: input.payload ?? {},
+  });
+  if (error) throw new Error(`Mission file event persistence failed: ${error.message}`);
+  return Number(data);
+}
+
+async function emitMissionFileEvent(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  encoder: TextEncoder,
+  supabaseAdmin: ReturnType<typeof createClient>,
+  event: {
+    eventType: string;
+    file?: Record<string, unknown>;
+    fileVersion?: number;
+    missionId: string;
+    path?: string;
+    payload?: Record<string, unknown>;
+    idempotencyKey: string;
+  },
+) {
+  const sequence = await appendMissionFileEvent(supabaseAdmin, event);
+  controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+    event: { ...event, idempotencyKey: undefined, sequence },
+    type: 'idealy_file_event',
+  })}\\n\\n`));
+}
+
+async function streamWorkspaceBuild(
+  llmRes: Response,
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  encoder: TextEncoder,
+  supabaseAdmin: ReturnType<typeof createClient>,
+  input: {
+    idempotencyKey: string;
+    missionId: string;
+  },
+) {
+  const reader = llmRes.body?.getReader();
+  if (!reader) throw new Error('Workspace provider returned no stream.');
+  const decoder = new TextDecoder();
+  let pending = '';
+  let accumulated = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    pending += decoder.decode(value, { stream: true });
+    const lines = pending.split('\\n');
+    pending = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (!raw || raw === '[DONE]') continue;
+      try {
+        const chunk = JSON.parse(raw) as { choices?: Array<{ delta?: { content?: string } }> };
+        accumulated += chunk.choices?.[0]?.delta?.content ?? '';
+      } catch {
+        // Ignore an incomplete upstream frame.
+      }
+    }
+  }
+
+  const files = generatedFilesFromContent(accumulated);
+  if (files.length === 0) throw new Error('The builder returned no valid files.');
+
+  for (const [index, file] of files.entries()) {
+    const version = 1;
+    const idempotencyBase = `${input.idempotencyKey}:file:${file.path}:${version}`;
+    const baseFile = {
+      content: file.content,
+      language: file.type ?? null,
+      mission_id: input.missionId,
+      path: file.path,
+      source: 'builder',
+      status: 'writing',
+      version,
+    };
+    const { error: writingError } = await supabaseAdmin.from('mission_files').upsert(baseFile, { onConflict: 'mission_id,path,version' });
+    if (writingError) throw new Error(`Mission file write failed: ${writingError.message}`);
+    await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
+      eventType: 'file_started',
+      file: { missionId: input.missionId, path: file.path, status: 'writing', version },
+      fileVersion: version,
+      idempotencyKey: `${idempotencyBase}:started`,
+      missionId: input.missionId,
+      path: file.path,
+      payload: { index, total: files.length },
+    });
+
+    const fileChecksum = await checksum(file.content);
+    const { error: savedError } = await supabaseAdmin.from('mission_files').update({ checksum: fileChecksum, status: 'saved' }).eq('mission_id', input.missionId).eq('path', file.path).eq('version', version);
+    if (savedError) throw new Error(`Mission file save failed: ${savedError.message}`);
+    await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
+      eventType: 'file_saved',
+      file: { checksum: fileChecksum, content: file.content, language: file.type, missionId: input.missionId, path: file.path, status: 'saved', version },
+      fileVersion: version,
+      idempotencyKey: `${idempotencyBase}:saved`,
+      missionId: input.missionId,
+      path: file.path,
+      payload: { index, total: files.length },
+    });
+  }
+
+  await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
+    eventType: 'validation_result',
+    idempotencyKey: `${input.idempotencyKey}:validation`,
+    missionId: input.missionId,
+    payload: { status: 'pending', source: 'workspace-persistence' },
+  });
+  await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
+    eventType: 'mission_completed',
+    idempotencyKey: `${input.idempotencyKey}:completed`,
+    missionId: input.missionId,
+    payload: { fileCount: files.length },
+  });
+
+  const assistantMessage = 'La première version de votre application a été générée et enregistrée dans le workspace. Les fichiers sont disponibles dans l’onglet Code.';
+  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: assistantMessage } }] })}\\n\\n`));
+  controller.enqueue(encoder.encode('data: [DONE]\\n\\n'));
+}
+
 serve(async (req) => {
   const headers = getCorsHeaders(req);
 
@@ -181,6 +402,8 @@ serve(async (req) => {
     if (input.intentCategory !== undefined && !['CONVERSATION', 'IDEATION', 'EXECUTION'].includes(input.intentCategory as string)) return jsonError('Invalid intentCategory.', 400, headers);
     if (input.uiStream !== undefined && typeof input.uiStream !== 'boolean') return jsonError('uiStream must be boolean.', 400, headers);
     if (input.planOnly !== undefined && typeof input.planOnly !== 'boolean') return jsonError('planOnly must be boolean.', 400, headers);
+    if (input.workspaceStream !== undefined && typeof input.workspaceStream !== 'boolean') return jsonError('workspaceStream must be boolean.', 400, headers);
+    if (input.workspaceStream === true && (!input.missionId || !isValidUUID(input.missionId))) return jsonError('workspaceStream requires a missionId.', 400, headers);
 
     if (input.intentOnly === true) {
       return new Response(JSON.stringify({ intent: classifyIntent(prompt) }), {
@@ -209,7 +432,8 @@ serve(async (req) => {
     if (!isSupportedProvider(provider)) return jsonError('Unsupported provider.', 400, headers);
 
     const model = input.model ?? DEFAULT_MODELS[provider];
-    if (typeof model !== 'string' || !ALLOWED_MODELS[provider].includes(model)) {
+    const allowedModels = getAllowedModels();
+    if (typeof model !== 'string' || !allowedModels[provider].includes(model)) {
       return jsonError('Model is not allowed for this provider.', 400, headers);
     }
 
@@ -260,7 +484,10 @@ serve(async (req) => {
 
     const config = PROVIDER_CONFIGS[resolution.provider];
     const messages: { role: 'system' | 'user'; content: string }[] = [];
-    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    const effectiveSystemPrompt = input.workspaceStream
+      ? `${systemPrompt ?? ''}\n${WORKSPACE_SYSTEM_PROMPT}`.trim()
+      : systemPrompt;
+    if (effectiveSystemPrompt) messages.push({ role: 'system', content: effectiveSystemPrompt });
     messages.push({ role: 'user', content: prompt });
 
     const llmRes = await fetch(config.url, {
@@ -277,8 +504,13 @@ serve(async (req) => {
         model: resolution.model,
         messages,
         stream,
+        ...(provider === 'moonshot' && model === 'kimi-k3'
+          ? { reasoning_effort: 'high' }
+          : {}),
         max_tokens: maxTokens,
-        temperature: 0.7,
+        ...(provider === 'moonshot' || provider === 'gemini'
+          ? {}
+          : { temperature: 0.7 }),
       }),
     });
 
@@ -288,6 +520,33 @@ serve(async (req) => {
     }
 
     if (stream) {
+      if (input.workspaceStream && input.missionId) {
+        const encoder = new TextEncoder();
+        const workspaceReadable = new ReadableStream<Uint8Array>({
+          start(controller) {
+            streamWorkspaceBuild(llmRes, controller, encoder, supabaseAdmin, {
+              idempotencyKey: input.idempotencyKey?.trim() || `${user.id}:${input.missionId}:workspace`,
+              missionId: input.missionId as string,
+            })
+              .then(() => controller.close())
+              .catch((error) => {
+                const message = error instanceof Error ? error.message : String(error);
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'idealy_file_event', event: { eventType: 'mission_error', missionId: input.missionId, path: undefined, payload: { code: 'WORKSPACE_BUILD_FAILED', message }, sequence: 0 } })}\\n\\n`));
+                controller.close();
+              });
+          },
+          cancel() {
+            void llmRes.body?.cancel();
+          },
+        });
+        return new Response(workspaceReadable, {
+          headers: {
+            ...headers,
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+          },
+        });
+      }
       return new Response(llmRes.body, {
         headers: {
           ...headers,
