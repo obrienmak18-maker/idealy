@@ -10,9 +10,9 @@ function redirect(errorOrQuery: string): Response {
   return Response.redirect(`${APP_ORIGIN.replace(/\/$/, "")}?${errorOrQuery}`);
 }
 
-function encodeBase64Url(bytes: Uint8Array): string {
+function encodeBase64Url(bytes: ArrayBuffer | Uint8Array): string {
   let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
+  for (const byte of new Uint8Array(bytes)) binary += String.fromCharCode(byte);
   return btoa(binary)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")

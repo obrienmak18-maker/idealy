@@ -2,9 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { authenticate } from "../_shared/auth.ts";
 import { corsResponse, optionsResponse } from "../_shared/cors.ts";
 
-function encodeBase64Url(bytes: Uint8Array): string {
+function encodeBase64Url(bytes: ArrayBuffer | Uint8Array): string {
   let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
+  for (const byte of new Uint8Array(bytes)) binary += String.fromCharCode(byte);
   return btoa(binary)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
