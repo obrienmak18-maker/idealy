@@ -31,4 +31,4 @@
 - [ ] Raccorder les connecteurs et plugins utilisables sans exposer de secret ni promettre une intégration non configurée
 - [x] Renforcer la palette Google/Idealy et réduire les surfaces visuellement blanches dans le workspace et les pages publiques
 - [x] Ajouter les pages produit professionnelles : à propos, documentation, confidentialité, conditions et contact
-- [ ] Valider, documenter et publier cette consolidation sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Valider, documenter et publier cette consolidation sur `feat/idealy-live-backend` sans fusionner vers `main`
