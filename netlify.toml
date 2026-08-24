@@ -1,5 +1,5 @@
 [build]
-  command = "npm install --global pnpm@10.32.1 && pnpm install --frozen-lockfile && pnpm build"
+  command = "pnpm install --frozen-lockfile && pnpm build"
 
 [build.environment]
   NODE_VERSION = "22"
