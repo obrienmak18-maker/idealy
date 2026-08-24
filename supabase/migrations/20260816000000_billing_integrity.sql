@@ -29,8 +29,13 @@ BEGIN
     RAISE EXCEPTION 'Invalid AI request interval';
   END IF;
 
-  INSERT INTO public.user_energy (id, current_energy, max_energy)
-  VALUES (p_user_id, 100, 100)
+  INSERT INTO public.user_energy (id, current_energy, max_energy, updated_at)
+  VALUES (
+    p_user_id,
+    100,
+    100,
+    now() - make_interval(secs => p_minimum_interval_seconds)
+  )
   ON CONFLICT (id) DO NOTHING;
 
   SELECT updated_at

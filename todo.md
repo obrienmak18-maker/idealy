@@ -23,6 +23,6 @@
 - [x] Cartographier les flux sensibles : authentification, crédits, IA, paiements, exports et données workspace
 - [x] Auditer les contrôles serveur de quotas, crédits, Stripe, Supabase et RLS
 - [x] Vérifier les promesses visibles de paywall, de limites gratuites et Pro contre le code réellement exécutable
-- [ ] Corriger les écarts de sécurité et de cohérence vérifiés sans transaction réelle
+- [x] Corriger les écarts de sécurité et de cohérence vérifiés sans transaction réelle
 - [x] Définir et intégrer les personnages Professionnel ainsi que le level design associé
-- [ ] Valider et publier la revue de lancement sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Valider et publier la revue de lancement sur `feat/idealy-live-backend` sans fusionner vers `main`
