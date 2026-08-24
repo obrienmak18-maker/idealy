@@ -91,9 +91,9 @@ BEGIN
   ON CONFLICT (user_id) DO NOTHING;
 
   -- This row lock serializes every refund for a user, including concurrent requests.
-  SELECT balance INTO current_balance
-  FROM public.user_credits
-  WHERE user_id = p_user_id
+  SELECT uc.balance INTO current_balance
+  FROM public.user_credits AS uc
+  WHERE uc.user_id = p_user_id
   FOR UPDATE;
 
   SELECT cl.amount, cl.reason, cl.mission_id
@@ -174,7 +174,9 @@ EXCEPTION
       SELECT 1 FROM public.credit_ledger
       WHERE idempotency_key = p_refund_idempotency_key AND user_id = p_user_id
     ) THEN
-      SELECT balance INTO current_balance FROM public.user_credits WHERE user_id = p_user_id;
+      SELECT uc.balance INTO current_balance
+      FROM public.user_credits AS uc
+      WHERE uc.user_id = p_user_id;
       RETURN QUERY SELECT current_balance, TRUE;
       RETURN;
     END IF;
