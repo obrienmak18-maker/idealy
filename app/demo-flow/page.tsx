@@ -5,6 +5,7 @@ import {
   BriefcaseBusinessIcon,
   CheckCircle2Icon,
   ChevronRightIcon,
+  CircleAlertIcon,
   Code2Icon,
   CrosshairIcon,
   DatabaseIcon,
@@ -14,6 +15,7 @@ import {
   LayoutDashboardIcon,
   MonitorIcon,
   PanelRightIcon,
+  PauseCircleIcon,
   PlayIcon,
   RefreshCwIcon,
   RocketIcon,
@@ -32,6 +34,8 @@ import {
   demoMissionSteps,
   demoPaths,
   getDemoPath,
+  getPathAgent,
+  resourceForStep,
   type DemoPathId,
 } from "@/lib/idealy/demo-program";
 import { cn } from "@/lib/utils";
@@ -76,24 +80,30 @@ export default function DemoFlowPage() {
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const [showRoster, setShowRoster] = useState(true);
   const [selectedFile, setSelectedFile] = useState(codeFiles[0]);
+  const [recoveryBoost, setRecoveryBoost] = useState(0);
 
   const path = getDemoPath(pathId);
   const progress = progressForStep(stepIndex);
   const isCompleted = stepIndex >= demoMissionSteps.length;
   const currentStep = demoMissionSteps[Math.min(stepIndex, demoMissionSteps.length - 1)];
-  const activeAgent = path.agents[currentStep?.agentIndex ?? 0];
+  const activeAgent = getPathAgent(path, currentStep);
+  const resource = Math.min(100, resourceForStep(path, stepIndex) + recoveryBoost);
+  const requiresPause = !isCompleted && resource <= 30;
   const PathIcon = pathIcons[path.icon];
 
   const timeline = useMemo(
     () =>
       demoMissionSteps.slice(0, stepIndex).map((step) => ({
         ...step,
-        agent: path.agents[step.agentIndex],
+        agent: getPathAgent(path, step),
       })),
     [path.agents, stepIndex]
   );
 
   const advanceMission = () => {
+    if (requiresPause) {
+      return;
+    }
     setIsCanvasOpen(true);
     setIsCanvasExpanded(false);
     setActiveView(stepIndex >= 2 ? "preview" : "code");
@@ -102,10 +112,15 @@ export default function DemoFlowPage() {
 
   const restartMission = () => {
     setStepIndex(0);
+    setRecoveryBoost(0);
     setActiveView("preview");
     setPreviewPage("home");
     setIsCanvasOpen(true);
     setIsCanvasExpanded(false);
+  };
+
+  const recoverMission = () => {
+    setRecoveryBoost((current) => Math.max(current, 34));
   };
 
   return (
@@ -274,16 +289,7 @@ export default function DemoFlowPage() {
                       onClick={() => setShowRoster(true)}
                       type="button"
                     >
-                      <span
-                        aria-label={`Emplacement avatar de ${agent.name}`}
-                        className={cn(
-                          "flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-[11px] font-bold text-white shadow-sm",
-                          agent.accent
-                        )}
-                        title="Avatar à remplacer par votre personnage"
-                      >
-                        {agent.initials}
-                      </span>
+                      <AgentPortrait agent={agent} size="roster" />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2">
                           <span className="truncate text-xs font-semibold">{agent.name}</span>
@@ -301,18 +307,26 @@ export default function DemoFlowPage() {
                   );
                 })}
                 <p className="rounded-lg border border-dashed border-border/70 bg-background/40 px-3 py-2 text-[10px] leading-4 text-muted-foreground">
-                  Ces emblèmes sont des emplacements prêts à recevoir vos avatars de personnages.
+                  Escouade 01 : portraits, rôles et ressources sont simulés ici. Aucun agent externe n’est exécuté.
                 </p>
               </div>
             ) : null}
           </div>
 
           <div className="border-t border-border/55 p-3">
-            <div className="flex items-center justify-between rounded-xl bg-background/70 px-3 py-2.5 ring-1 ring-border/50">
-              <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                <SparklesIcon className="size-3.5 text-amber-400" /> Énergie créative
-              </span>
-              <span className="text-xs font-semibold">82 / 100</span>
+            <div className="rounded-xl bg-background/70 px-3 py-2.5 ring-1 ring-border/50">
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <SparklesIcon className="size-3.5 text-amber-400" /> {path.resource.label}
+                </span>
+                <span className="text-xs font-semibold">{resource} / 100</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div className={cn("h-full rounded-full bg-gradient-to-r transition-[width] duration-500", path.accent)} style={{ width: `${resource}%` }} />
+              </div>
+              <p className={cn("mt-2 text-[10px] leading-4", requiresPause ? "text-amber-600 dark:text-amber-300" : "text-muted-foreground")}>
+                {requiresPause ? path.resource.pauseLabel : `${activeAgent.name} conserve ${resource} ${path.resource.unit}.`}
+              </p>
             </div>
           </div>
         </aside>
@@ -387,14 +401,7 @@ export default function DemoFlowPage() {
                     key={entry.id}
                   >
                     <div className="mb-2 flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "flex size-7 items-center justify-center rounded-lg bg-gradient-to-br text-[10px] font-bold text-white",
-                          entry.agent.accent
-                        )}
-                      >
-                        {entry.agent.initials}
-                      </span>
+                      <AgentPortrait agent={entry.agent} size="message" />
                       <span className="text-xs font-semibold">{entry.agent.name}</span>
                       <span className="text-[10px] text-muted-foreground">{entry.agent.role}</span>
                       <span className="ml-auto text-[10px] text-muted-foreground">Étape {index + 1}</span>
@@ -421,6 +428,18 @@ export default function DemoFlowPage() {
                   </div>
                 </div>
               ) : null}
+
+              {path.incident && stepIndex >= 1 ? (
+                <div className="max-w-[95%] rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
+                  <div className="flex items-start gap-3">
+                    <CircleAlertIcon className="mt-0.5 size-4 text-amber-600 dark:text-amber-300" />
+                    <div>
+                      <p className="text-xs font-semibold">{path.incident.label}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">{path.incident.resolvedBy}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="border-t border-border/55 bg-background/85 p-3 md:p-4">
@@ -442,12 +461,16 @@ export default function DemoFlowPage() {
                     "ml-auto inline-flex items-center gap-2 rounded-xl bg-gradient-to-r px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     path.accent
                   )}
-                  onClick={isCompleted ? restartMission : advanceMission}
+                  onClick={isCompleted ? restartMission : requiresPause ? recoverMission : advanceMission}
                   type="button"
                 >
                   {isCompleted ? (
                     <>
                       <RefreshCwIcon className="size-3.5" /> Rejouer la mission
+                    </>
+                  ) : requiresPause ? (
+                    <>
+                      <PauseCircleIcon className="size-3.5" /> Faire une pause
                     </>
                   ) : stepIndex === 0 ? (
                     <>
@@ -563,8 +586,8 @@ export default function DemoFlowPage() {
                     stepIndex={stepIndex}
                   />
                 ) : null}
-                {activeView === "data" ? <DemoData path={path} stepIndex={stepIndex} /> : null}
-                {activeView === "console" ? <DemoConsole path={path} stepIndex={stepIndex} /> : null}
+                {activeView === "data" ? <DemoData path={path} resource={resource} stepIndex={stepIndex} /> : null}
+                {activeView === "console" ? <DemoConsole path={path} resource={resource} stepIndex={stepIndex} /> : null}
               </div>
 
               <div className="flex items-center justify-between border-t border-border/55 bg-sidebar/70 px-3 py-2 text-[10px] text-muted-foreground md:px-4">
@@ -579,6 +602,27 @@ export default function DemoFlowPage() {
         </section>
       </section>
     </main>
+  );
+}
+
+function AgentPortrait({
+  agent,
+  size,
+}: {
+  agent: ReturnType<typeof getDemoPath>["agents"][number];
+  size: "roster" | "message";
+}) {
+  const dimensions = size === "roster" ? "size-10 rounded-xl" : "size-7 rounded-lg";
+
+  return (
+    <span className={cn("relative flex shrink-0 overflow-hidden bg-gradient-to-br shadow-sm", dimensions, agent.accent)}>
+      <img
+        alt={`Portrait de ${agent.name}`}
+        className="size-full object-cover"
+        src={agent.avatarUrl}
+      />
+      <span className="sr-only">{agent.initials}</span>
+    </span>
   );
 }
 
@@ -784,11 +828,20 @@ function DemoCode({
   );
 }
 
-function DemoData({ path, stepIndex }: { path: ReturnType<typeof getDemoPath>; stepIndex: number }) {
+function DemoData({
+  path,
+  resource,
+  stepIndex,
+}: {
+  path: ReturnType<typeof getDemoPath>;
+  resource: number;
+  stepIndex: number;
+}) {
   const rows = [
     ["mission", "Mission créative", "active"],
     ["path", path.name, "selected"],
     ["progress", `${progressForStep(stepIndex)}%`, "updated"],
+    ["resource", `${path.resource.label} · ${resource}/100`, resource <= 30 ? "pause" : "stable"],
     ["reward", path.reward, "ready"],
   ];
 
@@ -828,10 +881,18 @@ function DemoData({ path, stepIndex }: { path: ReturnType<typeof getDemoPath>; s
   );
 }
 
-function DemoConsole({ path, stepIndex }: { path: ReturnType<typeof getDemoPath>; stepIndex: number }) {
+function DemoConsole({
+  path,
+  resource,
+  stepIndex,
+}: {
+  path: ReturnType<typeof getDemoPath>;
+  resource: number;
+  stepIndex: number;
+}) {
   const logs = demoMissionSteps.map((step, index) => ({
     label: index < stepIndex ? "ok" : "waiting",
-    message: index < stepIndex ? `${path.agents[step.agentIndex].name} · ${step.artifact}` : `En attente · ${step.label}`,
+    message: index < stepIndex ? `${getPathAgent(path, step).name} · ${step.artifact}` : `En attente · ${step.label}`,
   }));
 
   return (
@@ -850,6 +911,12 @@ function DemoConsole({ path, stepIndex }: { path: ReturnType<typeof getDemoPath>
             <span className="text-white/75">{log.message}</span>
           </p>
         ))}
+        <p className={resource <= 30 ? "text-amber-200/90" : "text-sky-200/80"}>
+          {resource <= 30
+            ? `[pause] ${path.resource.pauseLabel}`
+            : `[resource] ${path.resource.label}: ${resource}/100`}
+        </p>
+        {path.incident && stepIndex >= 1 ? <p className="text-amber-200/90">[incident] {path.incident.label}</p> : null}
         <p className="pt-2 text-sky-200/80">Démonstration locale : aucun agent externe n’est invoqué.</p>
       </div>
     </div>

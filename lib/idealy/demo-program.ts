@@ -2,6 +2,7 @@ export type DemoPathId = "ninja" | "hunter" | "mage" | "professional";
 
 export type DemoAgent = {
   accent: string;
+  avatarUrl: string;
   focus: string;
   initials: string;
   name: string;
@@ -14,8 +15,18 @@ export type DemoPath = {
   description: string;
   icon: "crosshair" | "telescope" | "sparkles" | "briefcase";
   id: DemoPathId;
+  incident?: {
+    label: string;
+    resolvedBy: string;
+  };
   name: string;
   objective: string;
+  resource: {
+    initial: number;
+    label: string;
+    pauseLabel: string;
+    unit: string;
+  };
   reward: string;
 };
 
@@ -27,30 +38,51 @@ export type DemoMissionStep = {
   label: string;
 };
 
+const avatars = {
+  forge: "/images/agents/forge.webp",
+  guardian: "/images/agents/guardian.webp",
+  professional: "/images/agents/daniel.jpg",
+  signal: "/images/agents/signal.webp",
+  sprint: "/images/agents/sprint.webp",
+  strategy: "/images/agents/strategy.webp",
+  validation: "/images/agents/validation.webp",
+};
+
 export const demoPaths: DemoPath[] = [
   {
     accent: "from-sky-400 via-cyan-300 to-violet-500",
     agents: [
       {
-        accent: "from-sky-400 to-cyan-500",
-        focus: "Découpe la mission et protège l’essentiel.",
-        initials: "NI",
-        name: "Kairo",
-        role: "Stratège de mission",
-      },
-      {
-        accent: "from-violet-400 to-fuchsia-500",
-        focus: "Transforme les contraintes en parcours clair.",
-        initials: "UX",
-        name: "Sena",
-        role: "Architecte expérience",
-      },
-      {
         accent: "from-amber-300 to-orange-500",
-        focus: "Livre une première version légère et contrôlée.",
-        initials: "BL",
-        name: "Rin",
-        role: "Builder rapide",
+        avatarUrl: avatars.sprint,
+        focus: "Transforme l’intention en premier mouvement clair.",
+        initials: "AR",
+        name: "Aro",
+        role: "Éclaireur d’élan",
+      },
+      {
+        accent: "from-slate-500 to-cyan-500",
+        avatarUrl: avatars.strategy,
+        focus: "Découpe la mission et protège l’essentiel.",
+        initials: "SO",
+        name: "Soren",
+        role: "Tacticien de mission",
+      },
+      {
+        accent: "from-rose-400 to-emerald-500",
+        avatarUrl: avatars.validation,
+        focus: "Valide les choix et préserve la qualité du parcours.",
+        initials: "CE",
+        name: "Celya",
+        role: "Gardienne de validation",
+      },
+      {
+        accent: "from-rose-500 to-violet-600",
+        avatarUrl: avatars.guardian,
+        focus: "Anticipe les risques avant qu’ils ne ralentissent la mission.",
+        initials: "VE",
+        name: "Veyr",
+        role: "Gardien de fiabilité",
       },
     ],
     description: "Précision, mouvement et itérations courtes pour passer de l’idée à l’action.",
@@ -58,31 +90,24 @@ export const demoPaths: DemoPath[] = [
     id: "ninja",
     name: "Voie Ninja",
     objective: "Gagner en clarté sans ralentir l’élan.",
+    resource: {
+      initial: 82,
+      label: "Élan de mission",
+      pauseLabel: "Pause tactique recommandée",
+      unit: "élan",
+    },
     reward: "+120 XP · Focus débloqué",
   },
   {
     accent: "from-emerald-300 via-lime-400 to-amber-400",
     agents: [
       {
-        accent: "from-emerald-400 to-lime-500",
-        focus: "Repère les opportunités et les risques invisibles.",
-        initials: "HU",
-        name: "Nyra",
-        role: "Éclaireuse produit",
-      },
-      {
-        accent: "from-amber-300 to-orange-500",
-        focus: "Compare les options et trace la meilleure piste.",
-        initials: "SP",
-        name: "Oren",
-        role: "Analyste terrain",
-      },
-      {
         accent: "from-cyan-400 to-blue-500",
-        focus: "Teste le parcours avant d’engager plus de ressources.",
-        initials: "QA",
-        name: "Mika",
-        role: "Vérificatrice d’impact",
+        avatarUrl: avatars.signal,
+        focus: "Repère les opportunités, les signaux et les zones de risque.",
+        initials: "LI",
+        name: "Lio",
+        role: "Éclaireur de signaux",
       },
     ],
     description: "Exploration, décision et validation pour les projets qui demandent du flair.",
@@ -90,31 +115,24 @@ export const demoPaths: DemoPath[] = [
     id: "hunter",
     name: "Voie Hunter",
     objective: "Trouver la piste la plus prometteuse avant de construire.",
+    resource: {
+      initial: 76,
+      label: "Charge d’observation",
+      pauseLabel: "Pause de reconnaissance recommandée",
+      unit: "signaux",
+    },
     reward: "+140 XP · Radar débloqué",
   },
   {
     accent: "from-fuchsia-400 via-violet-500 to-indigo-500",
     agents: [
       {
-        accent: "from-fuchsia-400 to-violet-500",
-        focus: "Donne une forme élégante à l’intention initiale.",
-        initials: "MG",
-        name: "Astra",
-        role: "Directrice créative",
-      },
-      {
-        accent: "from-indigo-400 to-blue-500",
-        focus: "Compose les systèmes et les interactions qui enchantent.",
-        initials: "SY",
-        name: "Elio",
-        role: "Mage système",
-      },
-      {
-        accent: "from-pink-400 to-rose-500",
-        focus: "Vérifie que l’émotion sert réellement l’usage.",
-        initials: "CX",
-        name: "Luma",
-        role: "Gardienne de cohérence",
+        accent: "from-orange-400 to-rose-500",
+        avatarUrl: avatars.forge,
+        focus: "Transforme une vision en expérience expressive et utilisable.",
+        initials: "FA",
+        name: "Faro",
+        role: "Forgeur d’expériences",
       },
     ],
     description: "Créativité structurée et expériences mémorables pour les projets ambitieux.",
@@ -122,38 +140,41 @@ export const demoPaths: DemoPath[] = [
     id: "mage",
     name: "Voie Mage",
     objective: "Transformer une vision en expérience qui marque.",
+    resource: {
+      initial: 74,
+      label: "Flux créatif",
+      pauseLabel: "Pause de recharge créative recommandée",
+      unit: "flux",
+    },
     reward: "+150 XP · Grimoire débloqué",
   },
   {
     accent: "from-slate-300 via-sky-400 to-teal-400",
     agents: [
       {
-        accent: "from-slate-400 to-sky-500",
-        focus: "Cadre les priorités, la valeur et les décisions.",
-        initials: "PM",
-        name: "Ari",
-        role: "Pilote de produit",
-      },
-      {
-        accent: "from-teal-400 to-emerald-500",
-        focus: "Stabilise l’architecture et les livrables.",
-        initials: "EN",
-        name: "Noa",
-        role: "Ingénieure solution",
-      },
-      {
-        accent: "from-amber-300 to-orange-500",
-        focus: "Prépare un passage clair vers la livraison.",
-        initials: "OP",
-        name: "Tess",
-        role: "Responsable opérations",
+        accent: "from-slate-500 to-sky-500",
+        avatarUrl: avatars.professional,
+        focus: "Cadre les priorités, résout les incidents et protège la livraison.",
+        initials: "DA",
+        name: "Daniel",
+        role: "Pilote d’opérations",
       },
     ],
     description: "Une voie directe, fiable et structurée pour exécuter comme une équipe produit.",
     icon: "briefcase",
     id: "professional",
+    incident: {
+      label: "Incident de synchronisation simulé",
+      resolvedBy: "Daniel isole le blocage, applique le correctif et relance le contrôle.",
+    },
     name: "Voie Professionnel",
     objective: "Passer d’un besoin à un plan livrable et mesurable.",
+    resource: {
+      initial: 88,
+      label: "Capacité opératoire",
+      pauseLabel: "Pause de diagnostic recommandée",
+      unit: "capacité",
+    },
     reward: "+110 XP · Tableau de bord débloqué",
   },
 ];
@@ -181,7 +202,7 @@ export const demoMissionSteps: DemoMissionStep[] = [
     label: "Construire la première version",
   },
   {
-    agentIndex: 2,
+    agentIndex: 3,
     artifact: "Contrôle qualité · mission.log",
     description: "Les états essentiels, le mobile et la suite de mission sont vérifiés.",
     id: "review",
@@ -191,4 +212,12 @@ export const demoMissionSteps: DemoMissionStep[] = [
 
 export function getDemoPath(id: DemoPathId): DemoPath {
   return demoPaths.find((path) => path.id === id) ?? demoPaths[0];
+}
+
+export function getPathAgent(path: DemoPath, missionStep: DemoMissionStep): DemoAgent {
+  return path.agents[missionStep.agentIndex % path.agents.length];
+}
+
+export function resourceForStep(path: DemoPath, stepIndex: number): number {
+  return Math.max(0, path.resource.initial - Math.min(stepIndex, 4) * 20);
 }

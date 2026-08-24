@@ -11,3 +11,8 @@
 - [x] Construire un parcours de mission cliquable montrant orchestration, rôles agents, progression et canvas
 - [x] Préparer des emplacements d’avatars pour les personnages fournis par l’utilisateur
 - [x] Valider et publier la démo sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Diagnostiquer pourquoi le lien public de démo ne correspond pas au workspace attendu côté utilisateur
+- [x] Définir la première escouade originale à partir des sept avatars reçus et des quatre voies
+- [x] Intégrer les portraits fournis avec rôles, compétences et jauges d’énergie dans la démo
+- [x] Ajouter des états de pause et des incidents de progression au mode Professionnel
+- [ ] Vérifier et publier l’enrichissement de démo sur `feat/idealy-live-backend` sans fusionner vers `main`
