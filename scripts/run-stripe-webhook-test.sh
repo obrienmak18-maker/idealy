@@ -54,6 +54,7 @@ STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-sk_test_idealy_local_webhook_test}
 STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_idealy_local_test}
 STRIPE_PRICE_ID_PRO=${TEST_STRIPE_PRICE_ID_PRO:-price_test_pro}
 STRIPE_PRICE_ID_BUSINESS=${TEST_STRIPE_PRICE_ID_BUSINESS:-price_test_business}
+STRIPE_CREDIT_PACKS_JSON={"test-credits-25":25}
 APP_ORIGIN=http://127.0.0.1:3000
 EOF
 
@@ -81,6 +82,7 @@ SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
 STRIPE_WEBHOOK_SECRET="${STRIPE_WEBHOOK_SECRET:-whsec_idealy_local_test}" \
 TEST_STRIPE_PRICE_ID_PRO="${TEST_STRIPE_PRICE_ID_PRO:-price_test_pro}" \
 TEST_STRIPE_PRICE_ID_BUSINESS="${TEST_STRIPE_PRICE_ID_BUSINESS:-price_test_business}" \
+TEST_STRIPE_CREDIT_PACK_ID="test-credits-25" \
 WEBHOOK_URL="http://127.0.0.1:54321/functions/v1/stripe-webhook" \
 STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-sk_test_idealy_local_webhook_test}" \
 node scripts/test-stripe-webhook.mjs

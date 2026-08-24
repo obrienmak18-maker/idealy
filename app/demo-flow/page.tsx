@@ -90,6 +90,7 @@ export default function DemoFlowPage() {
   const isCompleted = stepIndex >= demoMissionSteps.length;
   const currentStep = demoMissionSteps[Math.min(stepIndex, demoMissionSteps.length - 1)];
   const activeAgent = getPathAgent(path, currentStep);
+  const currentLevel = path.levels?.[Math.min(stepIndex, (path.levels?.length ?? 1) - 1)];
   const resource = Math.min(100, resourceForStep(path, stepIndex) + recoveryBoost);
   const requiresPause = !isCompleted && resource <= 30;
   const PathIcon = pathIcons[path.icon];
@@ -204,6 +205,18 @@ export default function DemoFlowPage() {
                 ? `${path.reward}. Votre première version est prête à explorer.`
                 : path.objective}
             </p>
+            {currentLevel ? (
+              <div className="mt-3 rounded-xl border border-sky-400/20 bg-sky-400/5 px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-700 dark:text-sky-300">
+                    {currentLevel.title}
+                  </p>
+                  <span className="rounded-full bg-background px-2 py-0.5 text-[9px] font-medium text-muted-foreground">Simulation</span>
+                </div>
+                <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{currentLevel.objective}</p>
+                <p className="mt-1.5 text-[10px] font-medium text-foreground/80">{currentLevel.signal}</p>
+              </div>
+            ) : null}
           </div>
 
           <div className="border-b border-border/55 p-3">
@@ -635,11 +648,15 @@ function AgentPortrait({
 
   return (
     <span className={cn("relative flex shrink-0 overflow-hidden bg-gradient-to-br shadow-sm", dimensions, agent.accent)}>
-      <img
-        alt={`Portrait de ${agent.name}`}
-        className="size-full object-cover"
-        src={agent.avatarUrl}
-      />
+      {agent.avatarUrl ? (
+        <img
+          alt={`Portrait de ${agent.name}`}
+          className="size-full object-cover"
+          src={agent.avatarUrl}
+        />
+      ) : (
+        <span aria-hidden="true" className="m-auto text-[10px] font-bold text-white">{agent.initials}</span>
+      )}
       <span className="sr-only">{agent.initials}</span>
     </span>
   );

@@ -1,6 +1,6 @@
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getCreditRefillFromCheckout } from "./stripe-webhook.ts";
+import { getCreditRefillFromCheckout, parseCreditPackCatalog } from "./stripe-webhook.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2025-02-24.acacia",
@@ -51,7 +51,11 @@ Deno.serve(async (req) => {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      const refill = getCreditRefillFromCheckout(event, session);
+      const refill = getCreditRefillFromCheckout(
+        event,
+        session,
+        parseCreditPackCatalog(Deno.env.get("STRIPE_CREDIT_PACKS_JSON")),
+      );
       if (!refill) return response("ignored");
 
       const { error } = await admin.rpc("grant_user_credits", {

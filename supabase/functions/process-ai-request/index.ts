@@ -419,12 +419,15 @@ serve(async (req) => {
       return streamUI({ headers, missionId: input.missionId, phase: input.uiPhase, progress: input.uiProgress });
     }
 
-    const { data: energySnapshot } = await supabaseAdmin
-      .from('user_energy')
-      .select('updated_at')
-      .eq('id', user.id)
-      .maybeSingle();
-    if (energySnapshot?.updated_at && Date.now() - new Date(energySnapshot.updated_at).getTime() < 3_000) {
+    const { data: requestSlot, error: requestSlotError } = await supabaseAdmin
+      .rpc('acquire_ai_request_slot', {
+        p_minimum_interval_seconds: 3,
+        p_user_id: user.id,
+      });
+    if (requestSlotError) {
+      throw new Error(`AI request rate guard failed: ${requestSlotError.message}`);
+    }
+    if (requestSlot !== true) {
       return jsonError('Too many requests. Please wait a few seconds.', 429, headers, 'RATE_LIMIT');
     }
 
@@ -454,16 +457,35 @@ serve(async (req) => {
       return jsonError('idempotencyKey is invalid.', 400, headers);
     }
 
+    if (input.workspaceStream && input.missionId) {
+      const { data: mission, error: missionError } = await supabaseAdmin
+        .from('missions')
+        .select('id')
+        .eq('id', input.missionId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (missionError) {
+        throw new Error(`Mission ownership check failed: ${missionError.message}`);
+      }
+      if (!mission) {
+        return jsonError('Mission not found.', 404, headers, 'MISSION_NOT_FOUND');
+      }
+    }
+
     const resolution = await resolveAIProvider(user.id, supabaseAdmin, { provider, model, mode });
     const managed = resolution.mode !== 'byok';
     const intentCategory = input.intentCategory ?? 'EXECUTION';
     let energyRemaining: number | null = null;
 
-    // Conversation is intentionally free of the managed usage gate. IDEATION
-    // and EXECUTION are the only costly pathways; BYOK bypasses managed credits.
-    if (managed && intentCategory !== 'CONVERSATION') {
+    // Every centrally managed inference consumes credits. BYOK requests still
+    // bypass the managed balance, but not the server-side request pacing.
+    if (managed) {
       const idempotencyKey = input.idempotencyKey?.trim() || `${user.id}:${crypto.randomUUID()}`;
-      const amount = intentCategory === 'IDEATION' ? 3 : 10;
+      const amount = intentCategory === 'CONVERSATION'
+        ? 1
+        : intentCategory === 'IDEATION'
+          ? 3
+          : 10;
       try {
         const debit = await consumeManagedCredit(supabaseAdmin, {
           userId: user.id,

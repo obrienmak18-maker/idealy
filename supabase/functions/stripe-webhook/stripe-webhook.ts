@@ -8,6 +8,8 @@ export type CheckoutSession = {
   metadata?: Record<string, string> | null;
 };
 
+export type CreditPackCatalog = Record<string, number>;
+
 export type CreditRefill = {
   userId: string;
   amount: number;
@@ -22,17 +24,36 @@ function positiveInteger(value: unknown): number | null {
   return parsed;
 }
 
+export function parseCreditPackCatalog(value: string | undefined): CreditPackCatalog {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([packId, credits]) => {
+        const amount = positiveInteger(credits);
+        return packId.trim() && amount ? [[packId.trim(), amount]] : [];
+      }),
+    );
+  } catch {
+    return {};
+  }
+}
+
 /**
- * Checkout credit refills are opt-in: a Stripe session must carry both
- * metadata.user_id and metadata.credit_amount. Subscription checkouts without
- * credit metadata do not change the user's balance.
+ * Credit refills are opt-in. The amount always comes from a server-owned
+ * pack catalogue; client metadata can only name a configured pack.
+ * Subscription checkouts never change a credit balance.
  */
 export function getCreditRefillFromCheckout(
   event: CheckoutSessionCompletedEvent,
   session: CheckoutSession,
+  creditPackCatalog: CreditPackCatalog,
 ): CreditRefill | null {
+  if (session.mode !== 'payment') return null;
   const userId = session.metadata?.user_id?.trim();
-  const amount = positiveInteger(session.metadata?.credit_amount);
+  const packId = session.metadata?.credit_pack_id?.trim();
+  const amount = packId ? positiveInteger(creditPackCatalog[packId]) : null;
   if (!userId || !amount) return null;
 
   return {

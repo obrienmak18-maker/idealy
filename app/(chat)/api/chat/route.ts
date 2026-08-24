@@ -67,7 +67,7 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 export const maxDuration = 60;
 
 function shouldUseIdealyEdgeProvider() {
-  return process.env.IDEALY_AI_PROVIDER === "supabase-function";
+  return isProductionEnvironment || process.env.IDEALY_AI_PROVIDER === "supabase-function";
 }
 
 async function getSupabaseAccessToken(request: Request) {
@@ -319,7 +319,7 @@ export async function POST(request: Request) {
       id: session.user.id,
     });
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerHour) {
+    if (messageCount >= entitlementsByUserType[userType].maxMessagesPerHour) {
       return new ChatbotError("rate_limit:chat").toResponse();
     }
 

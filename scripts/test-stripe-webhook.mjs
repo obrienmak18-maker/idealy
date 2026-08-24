@@ -57,7 +57,7 @@ function signatureFor(payload) {
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-function checkoutEvent(creditAmount) {
+function checkoutEvent() {
   const now = Math.floor(Date.now() / 1000);
   return {
     id: `evt_idealy_test_${runId}_checkout_completed`,
@@ -73,7 +73,11 @@ function checkoutEvent(creditAmount) {
         object: 'checkout.session',
         mode: 'payment',
         payment_status: 'paid',
-        metadata: { user_id: userId, credit_amount: String(creditAmount) },
+        metadata: {
+          user_id: userId,
+          credit_amount: '100000',
+          credit_pack_id: process.env.TEST_STRIPE_CREDIT_PACK_ID || 'test-credits-25',
+        },
       },
     },
   };
@@ -160,6 +164,22 @@ async function readCredits(userId) {
   return rows[0];
 }
 
+async function rpc(name, payload) {
+  return supabaseRequest(`/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+async function rpcFailure(name, payload) {
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    headers: apiHeaders,
+    body: JSON.stringify(payload),
+  });
+  if (response.ok) throw new Error(`${name} unexpectedly succeeded`);
+}
+
 async function readState(userId) {
   const subscriptions = await supabaseRequest(
     `/rest/v1/subscriptions?stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}&select=user_id,stripe_customer_id,stripe_subscription_id,stripe_price_id,status,plan,cancel_at_period_end&limit=1`,
@@ -196,14 +216,41 @@ try {
     body: JSON.stringify({ stripe_customer_id: customerId, plan: 'free' }),
   });
 
-  const checkout = checkoutEvent(25);
+  const checkout = checkoutEvent();
   await sendEvent(checkout);
   let credits = await readCredits(userId);
   assertEqual(credits?.balance, 125, 'checkout.credits.balance');
   await sendEvent(checkout);
   credits = await readCredits(userId);
   assertEqual(credits?.balance, 125, 'checkout.retry.balance');
-  console.log('✓ checkout credits refill is idempotent');
+  console.log('✓ checkout credits refill uses the server pack and is idempotent');
+
+  await rpc('consume_ai_credit', {
+    p_user_id: userId,
+    p_mission_id: null,
+    p_idempotency_key: `ai:test:${runId}`,
+    p_amount: 10,
+    p_reason: 'ai:execution:test',
+  });
+  await rpc('refund_ai_credit', {
+    p_user_id: userId,
+    p_mission_id: null,
+    p_debit_idempotency_key: `ai:test:${runId}`,
+    p_refund_idempotency_key: `refund:test:${runId}:one`,
+    p_amount: 7,
+    p_reason: 'ai:mission-stop-refund',
+  });
+  await rpcFailure('refund_ai_credit', {
+    p_user_id: userId,
+    p_mission_id: null,
+    p_debit_idempotency_key: `ai:test:${runId}`,
+    p_refund_idempotency_key: `refund:test:${runId}:two`,
+    p_amount: 4,
+    p_reason: 'ai:mission-stop-refund',
+  });
+  credits = await readCredits(userId);
+  assertEqual(credits?.balance, 122, 'refund.cumulative.balance');
+  console.log('✓ cumulative refunds cannot exceed the original AI debit');
 
   await sendEvent(subscriptionEvent('customer.subscription.created', {
     status: 'trialing',

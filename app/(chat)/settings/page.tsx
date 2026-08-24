@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ArrowLeftIcon,
   BellIcon,
@@ -8,6 +10,7 @@ import {
   ShieldCheckIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const sections = [
   {
@@ -43,7 +46,55 @@ const sections = [
   },
 ];
 
+type BillingStatus = {
+  active: boolean;
+  cancelAtPeriodEnd: boolean;
+  creditsBalance: number | null;
+  planId: "free" | "pro" | "business";
+  status: string;
+};
+
 export default function SettingsPage() {
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [openingPortal, setOpeningPortal] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/idealy/billing/status", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json() as BillingStatus & { error?: string };
+        if (!response.ok) throw new Error(payload.error ?? "Statut indisponible");
+        if (active) setBilling(payload);
+      })
+      .catch(() => {
+        if (active) setBillingError("Impossible de synchroniser le statut pour le moment.");
+      });
+    return () => { active = false; };
+  }, []);
+
+  async function openBillingPortal() {
+    setOpeningPortal(true);
+    setBillingError(null);
+    try {
+      const response = await fetch("/api/idealy/billing/portal", { method: "POST" });
+      const payload = await response.json() as { error?: string; url?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error ?? "Portail indisponible");
+      window.location.assign(payload.url);
+    } catch (error) {
+      setBillingError(error instanceof Error ? error.message : "Portail indisponible.");
+    } finally {
+      setOpeningPortal(false);
+    }
+  }
+
+  const planLabel = billing?.active
+    ? billing.planId === "business" ? "Plan Business" : "Plan Pro"
+    : "Plan découverte";
+  const balanceLabel = billing?.creditsBalance === null || billing?.creditsBalance === undefined
+    ? "Solde de crédits indisponible"
+    : `${billing.creditsBalance} crédits disponibles`;
+
   return (
     <main className="min-h-dvh bg-background px-6 py-10 text-foreground sm:px-10">
       <div className="mx-auto max-w-3xl">
@@ -71,28 +122,34 @@ export default function SettingsPage() {
                   Votre plan
                 </span>
               </div>
-              <h2 className="text-xl font-semibold">Plan découverte</h2>
+              <h2 className="text-xl font-semibold">{planLabel}</h2>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                82 énergie disponible. Passez à un plan supérieur pour prolonger
-                vos missions et connecter davantage d’outils.
+                {balanceLabel}. Les montants, limites et droits affichés sont issus
+                du backend de facturation lorsqu’il est disponible.
               </p>
             </div>
             <span className="rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">
-              Démo
+              {billing?.active ? billing.status : "À synchroniser"}
             </span>
           </div>
+          {billing?.cancelAtPeriodEnd ? (
+            <p className="mt-4 text-sm text-amber-500">L’annulation est prévue à la fin de la période en cours.</p>
+          ) : null}
+          {billingError ? <p className="mt-4 text-sm text-destructive">{billingError}</p> : null}
           <div className="mt-5 flex flex-wrap gap-2">
-            <button
+            <Link
               className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-85"
-              type="button"
+              href="/welcome#plans"
             >
               Voir les offres
-            </button>
+            </Link>
             <button
               className="rounded-lg border border-border/60 px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+              disabled={openingPortal}
+              onClick={openBillingPortal}
               type="button"
             >
-              Gérer la facturation
+              {openingPortal ? "Ouverture…" : "Gérer la facturation"}
             </button>
           </div>
         </section>

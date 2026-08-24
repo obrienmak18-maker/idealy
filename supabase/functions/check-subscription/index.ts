@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
     const [
       { data: profile, error: profileError },
       { data: subscription, error: subscriptionError },
+      { data: credits, error: creditsError },
     ] = await Promise.all([
       admin
         .from("profiles")
@@ -59,10 +60,16 @@ Deno.serve(async (req) => {
         .order("current_period_end", { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle(),
+      admin
+        .from("user_credits")
+        .select("balance")
+        .eq("user_id", user.id)
+        .maybeSingle(),
     ]);
 
     if (profileError) throw profileError;
     if (subscriptionError) throw subscriptionError;
+    if (creditsError) throw creditsError;
 
     const active = Boolean(
       subscription && ["active", "trialing"].includes(subscription.status),
@@ -76,6 +83,7 @@ Deno.serve(async (req) => {
       planId: subscription?.plan ?? profile?.plan ?? "free",
       currentPeriodEnd: periodEnd,
       cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
+      creditsBalance: credits?.balance ?? null,
       status: subscription?.status ?? "none",
       stripeCustomerId: profile?.stripe_customer_id ?? null,
     });

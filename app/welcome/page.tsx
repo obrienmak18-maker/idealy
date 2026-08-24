@@ -33,22 +33,22 @@ const voices = [
 
 const plans = [
   {
-    detail: "10 missions par mois",
+    detail: "100 crédits de découverte pour tester des missions courtes. Le renouvellement n’est pas encore annoncé.",
     highlight: false,
-    name: "Starter",
-    price: "Gratuit",
+    name: "Découverte",
+    price: "100 crédits",
   },
   {
-    detail: "100 missions et projets illimités",
+    detail: "Allocation, tarif et droits à publier uniquement après validation du catalogue Stripe côté serveur.",
     highlight: true,
     name: "Pro",
-    price: "24 € / mois",
+    price: "Bientôt configuré",
   },
   {
-    detail: "Pour les équipes et la production",
+    detail: "Offre équipe à définir après configuration du catalogue de prix et des contrôles d’usage.",
     highlight: false,
     name: "Business",
-    price: "89 € / mois",
+    price: "Sur configuration",
   },
 ];
 
@@ -207,8 +207,8 @@ export default function WelcomePage() {
             Commencez gratuitement
           </h2>
           <p className="mt-2 text-sm text-white/55">
-            Une mission correspond à une demande complète adressée à l’équipe
-            d’agents.
+            Les offres payantes ne sont présentées comme disponibles qu’après
+            vérification de leur catalogue et de leurs droits côté serveur.
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-3">

@@ -86,7 +86,9 @@ jobs:
       - name: Run migration and RLS contract
         env:
           PGPASSWORD: postgres
-        run: psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/mission-files.sql
+        run: |
+          psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/mission-files.sql
+          psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/billing-integrity.sql
 
       - name: Stop local Supabase
         if: always()

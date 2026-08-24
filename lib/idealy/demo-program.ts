@@ -2,7 +2,7 @@ export type DemoPathId = "ninja" | "hunter" | "mage" | "professional";
 
 export type DemoAgent = {
   accent: string;
-  avatarUrl: string;
+  avatarUrl?: string;
   focus: string;
   initials: string;
   name: string;
@@ -17,6 +17,11 @@ export type DemoPath = {
   icon: "crosshair" | "telescope" | "sparkles" | "briefcase";
   id: DemoPathId;
   incident?: { label: string; resolvedBy: string };
+  levels?: Array<{
+    objective: string;
+    signal: string;
+    title: string;
+  }>;
   name: string;
   objective: string;
   resource: { initial: number; label: string; pauseLabel: string; unit: string };
@@ -110,11 +115,22 @@ export const demoPaths: DemoPath[] = [
     accent: "from-slate-300 via-sky-400 to-teal-400",
     agents: [
       { accent: "from-slate-500 to-sky-500", avatarUrl: avatars.daniel, focus: "Cadre les priorités, résout les incidents et protège la livraison.", initials: "DA", name: "Daniel", role: "Pilote d’opérations", specialty: "Diagnostic & livraison" },
+      { accent: "from-violet-500 to-fuchsia-500", focus: "Traduit le signal utilisateur en priorité nette et maintient le cap produit pendant l’incident.", initials: "MB", name: "Maya Brooks", role: "Lead produit", specialty: "Triage & décisions" },
+      { accent: "from-emerald-500 to-cyan-500", focus: "Mesure l’impact, isole les dépendances fragiles et définit le garde-fou qui évite le retour du bug.", initials: "JR", name: "Jordan Reed", role: "Ingénieur fiabilité", specialty: "Observabilité & garde-fous" },
+      { accent: "from-orange-500 to-rose-500", focus: "Répare le flux affecté, prépare une remise en service progressive et documente le rollback.", initials: "EC", name: "Ethan Cole", role: "Ingénieur intégration", specialty: "Remédiation & release" },
+      { accent: "from-amber-400 to-slate-600", focus: "Vérifie les scénarios critiques, confirme la résolution et transforme le retour d’incident en apprentissage exploitable.", initials: "AM", name: "Avery Morgan", role: "Analyste qualité", specialty: "Validation & post-mortem" },
     ],
-    description: "Une voie directe, fiable et structurée pour exécuter comme une équipe produit.",
+    description: "Une voie d’exécution orientée opérations : signaler, contenir, corriger, valider et apprendre d’un incident.",
     icon: "briefcase",
     id: "professional",
-    incident: { label: "Incident de synchronisation simulé", resolvedBy: "Daniel isole le blocage, applique le correctif et relance le contrôle." },
+    incident: { label: "Incident de synchronisation simulé", resolvedBy: "L’escouade applique un triage, une remédiation et une validation progressive. La démonstration ne modifie aucune donnée réelle." },
+    levels: [
+      { title: "Niveau 1 · Triage", objective: "Rendre le signal exploitable en moins de cinq minutes.", signal: "Impact qualifié · périmètre identifié" },
+      { title: "Niveau 2 · Confinement", objective: "Réduire le risque sans masquer le diagnostic.", signal: "Dépendance isolée · retour arrière prêt" },
+      { title: "Niveau 3 · Remédiation", objective: "Livrer le correctif minimal et vérifiable.", signal: "Correctif préparé · contrôle de régression" },
+      { title: "Niveau 4 · Validation", objective: "Confirmer le rétablissement avec des scénarios réels.", signal: "Parcours critique validé · monitoring stable" },
+      { title: "Niveau 5 · Passage de relais", objective: "Transformer l’incident en amélioration durable.", signal: "Post-mortem prêt · action préventive assignée" },
+    ],
     name: "Voie Professionnel",
     objective: "Passer d’un besoin à un plan livrable et mesurable.",
     resource: { initial: 88, label: "Capacité opératoire", pauseLabel: "Pause de diagnostic recommandée", unit: "capacité" },
@@ -127,6 +143,7 @@ export const demoMissionSteps: DemoMissionStep[] = [
   { agentIndex: 1, artifact: "Carte d’expérience · journey.tsx", description: "Le parcours principal et ses moments de décision sont clarifiés.", id: "shape", label: "Dessiner le parcours" },
   { agentIndex: 2, artifact: "Première version · app/page.tsx", description: "Une interface interactive est préparée pour être explorée dans le canvas.", id: "build", label: "Construire la première version" },
   { agentIndex: 3, artifact: "Contrôle qualité · mission.log", description: "Les états essentiels, le mobile et la suite de mission sont vérifiés.", id: "review", label: "Vérifier et préparer la suite" },
+  { agentIndex: 4, artifact: "Passage de relais · release.md", description: "Les décisions, garde-fous et prochaines améliorations sont consignés avant la livraison.", id: "handoff", label: "Transmettre et apprendre" },
 ];
 
 export function getDemoPath(id: DemoPathId): DemoPath {

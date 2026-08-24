@@ -16,17 +16,27 @@ export function getIdealyApiUrl() {
 }
 
 export function getIdealyAiFunctionUrl() {
-  const configuredFunctionUrl = process.env.IDEALY_AI_FUNCTION_URL?.trim();
-  if (configuredFunctionUrl) {
-    return configuredFunctionUrl.replace(/\/$/, "");
+  return getIdealySupabaseFunctionUrl("process-ai-request");
+}
+
+export function getIdealySupabaseFunctionUrl(functionName: string) {
+  if (!/^[a-z0-9-]+$/.test(functionName)) {
+    throw new Error("Invalid Supabase function name.");
+  }
+
+  if (functionName === "process-ai-request") {
+    const configuredFunctionUrl = process.env.IDEALY_AI_FUNCTION_URL?.trim();
+    if (configuredFunctionUrl) {
+      return configuredFunctionUrl.replace(/\/$/, "");
+    }
   }
 
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
   if (supabaseUrl) {
-    return `${supabaseUrl.replace(/\/$/, "")}/functions/v1/process-ai-request`;
+    return `${supabaseUrl.replace(/\/$/, "")}/functions/v1/${functionName}`;
   }
 
-  return `${getIdealyApiUrl()}/functions/v1/process-ai-request`.replace(
+  return `${getIdealyApiUrl()}/functions/v1/${functionName}`.replace(
     /\/$/,
     ""
   );
