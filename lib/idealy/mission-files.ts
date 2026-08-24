@@ -63,3 +63,25 @@ export function languageFromMissionFilePath(path: string) {
   };
   return extension ? languages[extension] ?? extension : undefined;
 }
+
+export function mergeMissionFileEvent(
+  state: { files: MissionFile[]; lastSequence: number },
+  event: MissionFileEvent
+) {
+  if (event.sequence <= state.lastSequence) return state;
+  const files = [...state.files];
+  if (event.file) {
+    const existingIndex = files.findIndex(
+      (file) =>
+        file.missionId === event.file?.missionId &&
+        file.path === event.file.path &&
+        file.version === event.file.version
+    );
+    if (existingIndex >= 0) {
+      files[existingIndex] = { ...files[existingIndex], ...event.file };
+    } else {
+      files.push(event.file);
+    }
+  }
+  return { files, lastSequence: event.sequence };
+}

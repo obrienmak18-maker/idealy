@@ -7,42 +7,8 @@ import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
 import { artifactDefinitions } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
-import type { MissionFile, MissionFileEvent } from "@/lib/idealy/mission-files";
-
-function applyMissionFileEvent(
-  current: Record<string, unknown> | null,
-  event: MissionFileEvent
-) {
-  const metadata = current ?? {};
-  const lastSequence = Number(metadata.missionFileLastSequence ?? 0);
-  if (event.sequence <= lastSequence) {
-    return metadata;
-  }
-
-  const files = Array.isArray(metadata.missionFiles)
-    ? [...(metadata.missionFiles as MissionFile[])]
-    : [];
-  if (event.file) {
-    const existingIndex = files.findIndex(
-      (file) =>
-        file.missionId === event.file?.missionId &&
-        file.path === event.file.path &&
-        file.version === event.file.version
-    );
-    if (existingIndex >= 0) {
-      files[existingIndex] = { ...files[existingIndex], ...event.file };
-    } else {
-      files.push(event.file);
-    }
-  }
-
-  return {
-    ...metadata,
-    missionFileLastSequence: event.sequence,
-    missionFileStatus: event.eventType,
-    missionFiles: files,
-  };
-}
+import type { MissionFileEvent } from "@/lib/idealy/mission-files";
+import { mergeMissionFileEvent } from "@/lib/idealy/mission-files";
 
 export function DataStreamHandler() {
   const { dataStream, setDataStream } = useDataStream();
@@ -65,9 +31,21 @@ export function DataStreamHandler() {
       }
 
       if (delta.type === "data-idealy-file-event") {
-        setMetadata((current: Record<string, unknown> | null) =>
-          applyMissionFileEvent(current, delta.data)
-        );
+        setMetadata((current: Record<string, unknown> | null) => {
+          const merged = mergeMissionFileEvent(
+            {
+              files: Array.isArray(current?.missionFiles) ? current.missionFiles : [],
+              lastSequence: Number(current?.missionFileLastSequence ?? 0),
+            },
+            delta.data
+          );
+          return {
+            ...(current ?? {}),
+            missionFileLastSequence: merged.lastSequence,
+            missionFileStatus: delta.data.eventType,
+            missionFiles: merged.files,
+          };
+        });
         continue;
       }
 

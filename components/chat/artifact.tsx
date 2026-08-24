@@ -103,6 +103,15 @@ function PureArtifact({
       : null,
     fetcher
   );
+  const missionId = typeof metadata?.missionId === "string" ? metadata.missionId : null;
+  const missionFileSequence = Number(metadata?.missionFileLastSequence ?? 0);
+  const missionWorkspaceKey = missionId
+    ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/idealy/missions/${missionId}/files?afterSequence=${missionFileSequence}`
+    : null;
+  const { data: missionWorkspace } = useSWR<{
+    files: MissionFile[];
+    lastSequence: number;
+  }>(missionWorkspaceKey, fetcher, { shouldRetryOnError: false });
 
   const [mode, setMode] = useState<"edit" | "diff">("edit");
   const [activeView, setActiveView] = useState<
@@ -204,6 +213,23 @@ function PureArtifact({
     }
     el.scrollTo({ top: el.scrollHeight });
   }, [artifact.status]);
+
+  useEffect(() => {
+    if (!missionWorkspace?.files?.length) {
+      return;
+    }
+    setMetadata((current: Record<string, unknown> | null) => {
+      const currentSequence = Number(current?.missionFileLastSequence ?? 0);
+      if (currentSequence >= missionWorkspace.lastSequence && Array.isArray(current?.missionFiles)) {
+        return current;
+      }
+      return {
+        ...(current ?? {}),
+        missionFileLastSequence: missionWorkspace.lastSequence,
+        missionFiles: missionWorkspace.files,
+      };
+    });
+  }, [missionWorkspace, setMetadata]);
 
   useEffect(() => {
     if (missionFiles.length === 0) {
