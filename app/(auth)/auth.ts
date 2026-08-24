@@ -1,9 +1,13 @@
 import { compare } from "bcrypt-ts";
-import NextAuth, { type DefaultSession } from "next-auth";
+import NextAuth, {
+  CredentialsSignin,
+  type DefaultSession,
+} from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { DUMMY_PASSWORD } from "@/lib/constants";
 import {
+  createUser,
   createGuestUser,
   getUser,
   linkUserToSupabaseUser,
@@ -15,6 +19,15 @@ import {
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
+
+class IdealyCredentialsSignin extends CredentialsSignin {
+  constructor(
+    code: "confirmation_required" | "invalid_credentials" | "service_unavailable"
+  ) {
+    super();
+    this.code = code;
+  }
+}
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -112,70 +125,90 @@ export const {
         const email = String(credentials.email ?? "demo@idealy.local");
         const password = String(credentials.password ?? "demo-password");
 
-        if (process.env.DEMO_MODE === "true") {
-          await compare(password, DUMMY_PASSWORD);
+        try {
+          if (process.env.DEMO_MODE === "true") {
+            await compare(password, DUMMY_PASSWORD);
+            return {
+              email,
+              id: "demo-user",
+              name: "Visiteur démo",
+              type: "regular",
+            };
+          }
+
+          const supabaseAuth = await signInWithSupabasePassword(email, password);
+
+          if (supabaseAuth.configured) {
+            if (supabaseAuth.status === "confirmation_required") {
+              throw new IdealyCredentialsSignin("confirmation_required");
+            }
+
+            if (supabaseAuth.status === "unavailable") {
+              throw new IdealyCredentialsSignin("service_unavailable");
+            }
+
+            if (
+              supabaseAuth.status !== "authenticated" ||
+              !supabaseAuth.accessToken ||
+              !supabaseAuth.userId
+            ) {
+              await compare(password, DUMMY_PASSWORD);
+              throw new IdealyCredentialsSignin("invalid_credentials");
+            }
+          }
+
+          let [user] = await getUser(email);
+
+          // Supabase is the credential authority when configured. This creates
+          // the local workspace record only for a successfully verified account
+          // left unmapped by a previous interrupted registration.
+          if (!user && supabaseAuth.status === "authenticated") {
+            await createUser(email, password);
+            [user] = await getUser(email);
+          }
+
+          if (!user?.password) {
+            await compare(password, DUMMY_PASSWORD);
+            throw new IdealyCredentialsSignin("invalid_credentials");
+          }
+
+          if (!supabaseAuth.configured) {
+            const passwordsMatch = await compare(password, user.password);
+            if (!passwordsMatch) {
+              throw new IdealyCredentialsSignin("invalid_credentials");
+            }
+          }
+
+          if (supabaseAuth.userId) {
+            await linkUserToSupabaseUser({
+              localUserId: user.id,
+              supabaseUserId: supabaseAuth.userId,
+            });
+          }
+
           return {
-            email,
-            id: "demo-user",
-            name: "Visiteur démo",
+            ...user,
+            ...(supabaseAuth.accessToken
+              ? { supabaseAccessToken: supabaseAuth.accessToken }
+              : {}),
+            ...(supabaseAuth.expiresAt
+              ? { supabaseAccessTokenExpiresAt: supabaseAuth.expiresAt }
+              : {}),
+            ...(supabaseAuth.refreshToken
+              ? { supabaseRefreshToken: supabaseAuth.refreshToken }
+              : {}),
+            ...(supabaseAuth.userId
+              ? { supabaseUserId: supabaseAuth.userId }
+              : {}),
             type: "regular",
           };
+        } catch (error) {
+          if (error instanceof IdealyCredentialsSignin) {
+            throw error;
+          }
+
+          throw new IdealyCredentialsSignin("service_unavailable");
         }
-
-        const users = await getUser(email);
-
-        if (users.length === 0) {
-          await compare(password, DUMMY_PASSWORD);
-          return null;
-        }
-
-        const [user] = users;
-
-        if (!user.password) {
-          await compare(password, DUMMY_PASSWORD);
-          return null;
-        }
-
-        const passwordsMatch = await compare(password, user.password);
-
-        if (!passwordsMatch) {
-          return null;
-        }
-
-        const supabaseAuth = await signInWithSupabasePassword(email, password);
-
-        if (
-          supabaseAuth.configured &&
-          (supabaseAuth.status !== "authenticated" ||
-            !supabaseAuth.accessToken ||
-            !supabaseAuth.userId)
-        ) {
-          return null;
-        }
-
-        if (supabaseAuth.userId) {
-          await linkUserToSupabaseUser({
-            localUserId: user.id,
-            supabaseUserId: supabaseAuth.userId,
-          });
-        }
-
-        return {
-          ...user,
-          ...(supabaseAuth.accessToken
-            ? { supabaseAccessToken: supabaseAuth.accessToken }
-            : {}),
-          ...(supabaseAuth.expiresAt
-            ? { supabaseAccessTokenExpiresAt: supabaseAuth.expiresAt }
-            : {}),
-          ...(supabaseAuth.refreshToken
-            ? { supabaseRefreshToken: supabaseAuth.refreshToken }
-            : {}),
-          ...(supabaseAuth.userId
-            ? { supabaseUserId: supabaseAuth.userId }
-            : {}),
-          type: "regular",
-        };
       },
       credentials: {
         email: { label: "Email", type: "email" },

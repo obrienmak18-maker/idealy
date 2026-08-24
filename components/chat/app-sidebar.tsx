@@ -104,7 +104,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 <SidebarMenuButton
                   asChild
                   className="!size-12 !overflow-visible !px-0 items-center justify-center group-data-[collapsible=icon]:!size-12 group-data-[collapsible=icon]:!overflow-visible group-data-[collapsible=icon]:group-hover/logo:opacity-0"
-                  tooltip="Chatbot"
+                  tooltip="Idealy"
                 >
                   <Link href="/" onClick={closeMobile}>
                     <IdealyLogo animated className="flex-none drop-shadow-[0_0_10px_rgb(56_189_248_/_0.34)] [&_svg]:!size-10" compact size={40} />
@@ -120,7 +120,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     </SidebarMenuButton>
                   </TooltipTrigger>
                   <TooltipContent className="hidden md:block" side="right">
-                    Open sidebar
+                    Ouvrir la barre latérale
                   </TooltipContent>
                 </Tooltip>
               </div>

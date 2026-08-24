@@ -51,6 +51,9 @@ jobs:
       - name: Connector registry contract
         run: pnpm test:connectors
 
+      - name: Authentication outcome contract
+        run: pnpm test:auth-outcome
+
       - name: Build application
         run: pnpm build
 

@@ -29,20 +29,20 @@ function TypewriterText({ text }: { text: string }) {
 
 const greetings = [
   {
-    subtitle: "Ask a question, write code, or explain an idea.",
-    title: "What can I help you with?",
+    subtitle: "Décrivez une idée, un besoin ou une ambition à concrétiser.",
+    title: "Quelle mission lançons-nous ?",
   },
   {
-    subtitle: "Start with a thought, a problem, or a bold direction.",
-    title: "What will you bring to life today?",
+    subtitle: "Partez d’une intention, Idealy vous aide à trouver la bonne suite.",
+    title: "Que voulez-vous faire naître aujourd’hui ?",
   },
   {
-    subtitle: "Describe your mission and let’s shape the next step.",
-    title: "Ready to build something meaningful?",
+    subtitle: "Exposez votre objectif, puis avançons avec une direction claire.",
+    title: "Prêt à construire quelque chose d’utile ?",
   },
   {
-    subtitle: "Explore ideas, create a plan, or turn a prompt into progress.",
-    title: "Where should we begin?",
+    subtitle: "Explorez, planifiez et transformez une idée en progrès concret.",
+    title: "Par où commençons-nous ?",
   },
 ];
 

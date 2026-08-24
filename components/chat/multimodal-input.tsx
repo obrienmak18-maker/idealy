@@ -157,10 +157,10 @@ function PureMultimodalInput({
   const speechBaseInputRef = useRef("");
   const [promptHintIndex, setPromptHintIndex] = useState(0);
   const promptHints = [
-    "Ask anything...",
-    "Describe the app you want to build...",
-    "Explain your idea and let’s shape it together...",
-    "Write a mission for your next project...",
+    "Décrivez ce que vous souhaitez créer…",
+    "Parlez-nous de votre prochaine application…",
+    "Expliquez votre idée, Idealy vous aide à la structurer…",
+    "Lancez une mission pour votre prochain projet…",
   ];
 
   useEffect(() => {

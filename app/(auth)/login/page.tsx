@@ -10,6 +10,16 @@ import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
 import { type LoginActionState, login } from "../actions";
 
+const loginMessages = {
+  confirmation_required:
+    "Confirmez d’abord votre adresse e-mail, puis reconnectez-vous.",
+  invalid_credentials: "L’adresse e-mail ou le mot de passe est incorrect.",
+  invalid_data:
+    "Saisissez une adresse e-mail valide et un mot de passe de 6 caractères minimum.",
+  service_unavailable:
+    "Le service de connexion est momentanément indisponible. Réessayez dans un instant.",
+} as const;
+
 export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -21,20 +31,50 @@ export default function Page() {
   );
 
   const { update: updateSession } = useSession();
+  const feedback =
+    state.status in loginMessages
+      ? loginMessages[state.status as keyof typeof loginMessages]
+      : null;
+
+  const getSafeCallbackUrl = () => {
+    const callbackUrl = new URLSearchParams(window.location.search).get(
+      "callbackUrl"
+    );
+
+    return callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//")
+      ? callbackUrl
+      : "/";
+  };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
-    if (state.status === "failed") {
-      toast({ description: "Invalid credentials!", type: "error" });
+    if (state.status === "invalid_credentials") {
+      toast({
+        description: "L’adresse e-mail ou le mot de passe est incorrect.",
+        type: "error",
+      });
+    } else if (state.status === "confirmation_required") {
+      toast({
+        description:
+          "Confirmez d’abord votre adresse e-mail, puis reconnectez-vous.",
+        type: "error",
+      });
+    } else if (state.status === "service_unavailable") {
+      toast({
+        description:
+          "Le service de connexion est momentanément indisponible. Réessayez dans un instant.",
+        type: "error",
+      });
     } else if (state.status === "invalid_data") {
       toast({
-        description: "Failed validating your submission!",
+        description:
+          "Saisissez une adresse e-mail valide et un mot de passe de 6 caractères minimum.",
         type: "error",
       });
     } else if (state.status === "success") {
       setIsSuccessful(true);
       updateSession();
-      router.push("/");
+      router.push(getSafeCallbackUrl());
       router.refresh();
     }
   }, [state.status]);
@@ -46,19 +86,30 @@ export default function Page() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">
+        Heureux de vous revoir
+      </h1>
       <p className="text-sm text-muted-foreground">
-        Sign in to your account to continue
+        Connectez-vous pour reprendre votre mission.
       </p>
+      {feedback ? (
+        <p
+          aria-live="polite"
+          className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          {feedback}
+        </p>
+      ) : null}
       <AuthForm action={handleSubmit} defaultEmail={email}>
-        <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
+        <SubmitButton isSuccessful={isSuccessful}>Se connecter</SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
-          {"No account? "}
+          {"Pas encore de compte ? "}
           <Link
             className="text-foreground underline-offset-4 hover:underline"
             href="/register"
           >
-            Sign up
+            Créer un compte
           </Link>
         </p>
       </AuthForm>
