@@ -15,4 +15,4 @@
 - [x] Définir la première escouade originale à partir des sept avatars reçus et des quatre voies
 - [x] Intégrer les portraits fournis avec rôles, compétences et jauges d’énergie dans la démo
 - [x] Ajouter des états de pause et des incidents de progression au mode Professionnel
-- [ ] Vérifier et publier l’enrichissement de démo sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Vérifier et publier l’enrichissement de démo sur `feat/idealy-live-backend` sans fusionner vers `main`
