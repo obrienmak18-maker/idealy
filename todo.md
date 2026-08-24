@@ -10,4 +10,4 @@
 - [x] Concevoir les quatre voies de progression : Ninja, Hunter, Mage et Professionnel
 - [x] Construire un parcours de mission cliquable montrant orchestration, rôles agents, progression et canvas
 - [x] Préparer des emplacements d’avatars pour les personnages fournis par l’utilisateur
-- [ ] Valider et publier la démo sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Valider et publier la démo sur `feat/idealy-live-backend` sans fusionner vers `main`

@@ -15,3 +15,5 @@ La troisième étape a affiché le livrable de Mika et ramené le canvas sur la 
 Après correction du calcul terminal, un nouveau parcours a été démarré sur la Voie Ninja : la première étape affiche bien Kairo, le livrable `brief.md`, la vue Code et 36 % de progression. La vérification de l’achèvement final se poursuit sur ce build.
 
 Validation terminale : après les quatre étapes de la Voie Ninja, le workspace affiche désormais **100 %**, la récompense « +120 XP · Focus débloqué », les quatre livrables, l’état « Workspace prêt » et l’action « Rejouer la mission ». Le défaut visuel à 99 % est donc corrigé dans le build local validé.
+
+Le déploiement Netlify de la démo a été contrôlé sur `https://idealy-ai.netlify.app/demo-flow`. La route est accessible sans session, présente les quatre voies, l’équipe Ninja et le canvas dès l’ouverture. Un clic public sur « Démarrer la mission » a produit le premier livrable de Kairo, 36 % de progression et la vue Code, sans connexion ni appel IA réel.
