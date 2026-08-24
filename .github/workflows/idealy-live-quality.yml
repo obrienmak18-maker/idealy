@@ -51,6 +51,38 @@ jobs:
       - name: Build application
         run: pnpm build
 
+  supabase-local:
+    name: Local Supabase migration and RLS contract
+    needs: backend-and-next
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase database
+        run: supabase db start
+
+      - name: Reset local database from migrations
+        run: supabase db reset --no-seed
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Run migration and RLS contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/mission-files.sql
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
+
   webhook-test:
     name: Local Stripe webhook contract
     needs: backend-and-next
