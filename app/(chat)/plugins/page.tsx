@@ -9,8 +9,11 @@ import {
   PlugZapIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { listConnectorDefinitions } from "@/lib/idealy/connectors";
-import type { ConnectorCategory } from "@/lib/idealy/connectors";
+import { GitHubConnectButton } from "@/components/connectors/github-connect-button";
+import {
+  listConnectorDefinitions,
+  type ConnectorCategory,
+} from "@/lib/idealy/connectors";
 
 const categoryLabels: Record<ConnectorCategory, string> = {
   billing: "Facturation",
@@ -99,9 +102,12 @@ export default function PluginsPage() {
                   </p>
                 </div>
               </div>
-              <span className="shrink-0 rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">
-                {availabilityLabel(connector.availability)}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                {connector.id === "github" ? <GitHubConnectButton /> : null}
+                <span className="rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">
+                  {availabilityLabel(connector.availability)}
+                </span>
+              </div>
             </article>
           ))}
         </div>
