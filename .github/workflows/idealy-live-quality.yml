@@ -54,6 +54,9 @@ jobs:
       - name: Authentication outcome contract
         run: pnpm test:auth-outcome
 
+      - name: Demo multi-agent program contract
+        run: pnpm test:demo-program
+
       - name: Build application
         run: pnpm build
 

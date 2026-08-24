@@ -6,3 +6,8 @@
 - [x] Remplacer les éléments publics « Powered by AI Gateway » et « Chatbot » par des éléments Idealy
 - [x] Tester authentification, redirection protégée et retour d’erreur sur le site live
 - [x] Publier les correctifs sur `feat/idealy-live-backend` et redéployer Netlify
+- [x] Cartographier l’interface actuelle pour insérer une démo multi-agents sans remplacer le workspace existant
+- [x] Concevoir les quatre voies de progression : Ninja, Hunter, Mage et Professionnel
+- [x] Construire un parcours de mission cliquable montrant orchestration, rôles agents, progression et canvas
+- [x] Préparer des emplacements d’avatars pour les personnages fournis par l’utilisateur
+- [ ] Valider et publier la démo sur `feat/idealy-live-backend` sans fusionner vers `main`

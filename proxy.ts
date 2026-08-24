@@ -27,7 +27,7 @@ export async function proxy(request: NextRequest) {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
   if (!token) {
-    if (["/login", "/register"].includes(pathname)) {
+    if (["/demo-flow", "/login", "/register"].includes(pathname)) {
       return NextResponse.next();
     }
 

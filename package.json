@@ -24,7 +24,8 @@
     "test": "export PLAYWRIGHT=True && pnpm exec playwright test",
     "test:design-engine": "tsx scripts/test-design-engine.ts",
     "test:connectors": "tsx scripts/test-connectors.ts",
-    "test:auth-outcome": "tsx scripts/test-auth-outcome.ts"
+    "test:auth-outcome": "tsx scripts/test-auth-outcome.ts",
+    "test:demo-program": "tsx scripts/test-demo-program.ts"
   },
   "dependencies": {
     "@ai-sdk/otel": "^1.0.15",
