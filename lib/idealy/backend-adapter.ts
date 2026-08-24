@@ -1,6 +1,12 @@
 import { getToken } from "next-auth/jwt";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { getIdealyAiFunctionUrl } from "./config";
+import {
+  buildDesignSpecification,
+  designSpecificationToPrompt,
+  runDesignCritic,
+  type DesignSpecification,
+} from "./design-engine";
 
 export type IdealyIntentCategory = "CONVERSATION" | "IDEATION" | "EXECUTION";
 
@@ -16,6 +22,8 @@ export type MissionPlan = {
   v1Scope: string;
   agents: MissionPlanAgent[];
   nextStep: string;
+  design: DesignSpecification;
+  designCritic: import("./design-engine").DesignCriticResult;
 };
 
 export type IdealyProject = {
@@ -47,7 +55,7 @@ type IdealyMissionResponse = {
   status?: unknown;
 };
 
-const MISSION_PLAN_SYSTEM_PROMPT = `You are the Idealy mission planner. Return only valid JSON, with no markdown fences and no extra text. The JSON must contain exactly these useful fields: projectKind (string), intention (string), v1Scope (string), agents (array of 1 to 8 objects with name, responsibility, result strings), and nextStep (string). Keep the first version practical and explain what each specialized agent will deliver.`;
+const MISSION_PLAN_SYSTEM_PROMPT = `You are the Idealy mission planner. Return only valid JSON, with no markdown fences and no extra text. The JSON must contain exactly these useful fields: projectKind (string), intention (string), v1Scope (string), agents (array of 1 to 8 objects with name, responsibility, result strings), and nextStep (string). Keep the first version practical and explain what each specialized agent will deliver. The Design Engine specification appended to this prompt is authoritative for visual strategy; do not silently override explicit user technology choices.`;
 
 function isIntentCategory(value: unknown): value is IdealyIntentCategory {
   return (
@@ -57,7 +65,7 @@ function isIntentCategory(value: unknown): value is IdealyIntentCategory {
   );
 }
 
-function parseMissionPlan(value: unknown): MissionPlan {
+function parseMissionPlan(value: unknown): Omit<MissionPlan, "design" | "designCritic"> {
   if (!value || typeof value !== "object") {
     throw new Error("Le backend Idealy n’a pas renvoyé de plan de mission.");
   }
@@ -380,6 +388,8 @@ export async function createIdealyMissionPlan({
   provider?: string;
   request: Request;
 }): Promise<MissionPlan> {
+  const design = buildDesignSpecification(prompt);
+  const designCritic = runDesignCritic(design);
   const payload = await callProcessAIRequest<IdealyPlanResponse>(request, {
     idempotencyKey,
     intentCategory: "IDEATION",
@@ -391,8 +401,8 @@ export async function createIdealyMissionPlan({
     planOnly: true,
     prompt,
     stream: false,
-    systemPrompt: MISSION_PLAN_SYSTEM_PROMPT,
+    systemPrompt: `${MISSION_PLAN_SYSTEM_PROMPT}\n\n${designSpecificationToPrompt(design)}`,
   });
 
-  return parseMissionPlan(payload.plan);
+  return { ...parseMissionPlan(payload.plan), design, designCritic };
 }

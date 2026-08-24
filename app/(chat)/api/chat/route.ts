@@ -33,6 +33,7 @@ import {
 } from "@/lib/idealy/backend-adapter";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
 import { getIdealyDirectProviderModel } from "@/lib/idealy/provider-registry";
+import { designSpecificationToPrompt, type DesignSpecification } from "@/lib/idealy/design-engine";
 import { injectFreeIdealyBadge } from "@/lib/branding/free-badge";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
@@ -112,6 +113,7 @@ async function streamIdealyEdgeResponse({
   intentCategory,
   messages,
   missionId,
+  designSpecification,
   request,
 }: {
   dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
@@ -120,6 +122,7 @@ async function streamIdealyEdgeResponse({
   intentCategory: "CONVERSATION" | "IDEATION" | "EXECUTION";
   messages: ChatMessage[];
   missionId?: string;
+  designSpecification?: DesignSpecification;
   request: Request;
 }) {
   const supabaseAccessToken = await getSupabaseAccessToken(request);
@@ -144,7 +147,7 @@ async function streamIdealyEdgeResponse({
       mode: "auto",
       prompt: getIdealyPrompt(messages),
       stream: true,
-      systemPrompt: systemPrompt({
+      systemPrompt: `${systemPrompt({
         requestHints: {
           city: undefined,
           country: undefined,
@@ -152,7 +155,7 @@ async function streamIdealyEdgeResponse({
           longitude: undefined,
         },
         supportsTools: false,
-      }),
+      })}${designSpecification ? `\n\n${designSpecificationToPrompt(designSpecification)}` : ""}`,
     }),
     headers: {
       Authorization: `Bearer ${supabaseAccessToken}`,
@@ -554,6 +557,7 @@ export async function POST(request: Request) {
               intentCategory,
               messages: uiMessages,
               missionId,
+              designSpecification: missionPlan?.design,
               request,
             });
             if (projectId) {

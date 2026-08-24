@@ -42,6 +42,12 @@ jobs:
       - name: Typecheck application
         run: pnpm typecheck
 
+      - name: Design Engine contract
+        run: pnpm test:design-engine
+
+      - name: Mission files contract
+        run: pnpm test:mission-files
+
       - name: Build application
         run: pnpm build
 
