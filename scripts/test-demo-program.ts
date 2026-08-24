@@ -15,7 +15,7 @@ assert.ok(demoPaths.every((path) => path.agents.every((agent) => agent.avatarUrl
 assert.ok(demoPaths.every((path) => path.resource.initial > 0));
 assert.equal(demoMissionSteps.length, 4, "The mission should expose four concrete steps.");
 assert.equal(getDemoPath("mage").name, "Voie Mage");
-assert.equal(getPathAgent(getDemoPath("hunter"), demoMissionSteps[3]).name, "Lio");
+assert.equal(getPathAgent(getDemoPath("hunter"), demoMissionSteps[3]).name, "Netero");
 assert.ok(resourceForStep(getDemoPath("ninja"), 2) < getDemoPath("ninja").resource.initial);
 
 console.log("Demo multi-agent program contract passed.");

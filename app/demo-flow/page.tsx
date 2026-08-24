@@ -14,8 +14,10 @@ import {
   FolderKanbanIcon,
   LayoutDashboardIcon,
   MonitorIcon,
+  MousePointer2Icon,
   PanelRightIcon,
   PauseCircleIcon,
+  PenLineIcon,
   PlayIcon,
   RefreshCwIcon,
   RocketIcon,
@@ -79,6 +81,7 @@ export default function DemoFlowPage() {
   const [isCanvasOpen, setIsCanvasOpen] = useState(true);
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const [showRoster, setShowRoster] = useState(true);
+  const [showUxStudio, setShowUxStudio] = useState(true);
   const [selectedFile, setSelectedFile] = useState(codeFiles[0]);
   const [recoveryBoost, setRecoveryBoost] = useState(0);
 
@@ -300,7 +303,7 @@ export default function DemoFlowPage() {
                           ) : null}
                         </span>
                         <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
-                          {agent.role}
+                          {agent.role} · {agent.specialty}
                         </span>
                       </span>
                     </button>
@@ -547,6 +550,20 @@ export default function DemoFlowPage() {
                     })}
                   </div>
                   <button
+                    aria-label={showUxStudio ? "Masquer le studio UX" : "Afficher le studio UX"}
+                    aria-pressed={showUxStudio}
+                    className={cn(
+                      "rounded-lg border p-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      showUxStudio
+                        ? "border-violet-400/45 bg-violet-500/10 text-violet-600 dark:text-violet-300"
+                        : "border-border/65 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                    onClick={() => setShowUxStudio((value) => !value)}
+                    type="button"
+                  >
+                    <UsersRoundIcon className="size-3.5" />
+                  </button>
+                  <button
                     aria-label="Réinitialiser la preview"
                     className="rounded-lg border border-border/65 bg-background p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => {
@@ -571,10 +588,12 @@ export default function DemoFlowPage() {
               <div className="min-h-0 flex-1 overflow-y-auto p-3 md:p-4">
                 {activeView === "preview" ? (
                   <DemoPreview
+                    activeAgent={activeAgent}
                     device={device}
                     path={path}
                     previewPage={previewPage}
                     setPreviewPage={setPreviewPage}
+                    showUxStudio={showUxStudio}
                     stepIndex={stepIndex}
                   />
                 ) : null}
@@ -627,16 +646,20 @@ function AgentPortrait({
 }
 
 function DemoPreview({
+  activeAgent,
   device,
   path,
   previewPage,
   setPreviewPage,
+  showUxStudio,
   stepIndex,
 }: {
+  activeAgent: ReturnType<typeof getDemoPath>["agents"][number];
   device: "desktop" | "tablet" | "mobile";
   path: ReturnType<typeof getDemoPath>;
   previewPage: PreviewPage;
   setPreviewPage: (page: PreviewPage) => void;
+  showUxStudio: boolean;
   stepIndex: number;
 }) {
   const previewWidth =
@@ -659,7 +682,7 @@ function DemoPreview({
           </span>
         </div>
 
-        <div className="bg-[radial-gradient(circle_at_20%_0%,rgba(125,211,252,0.25),transparent_33%),radial-gradient(circle_at_90%_20%,rgba(196,181,253,0.34),transparent_38%),#f8fafc] p-5 md:p-7">
+        <div className="relative bg-[radial-gradient(circle_at_20%_0%,rgba(125,211,252,0.25),transparent_33%),radial-gradient(circle_at_90%_20%,rgba(196,181,253,0.34),transparent_38%),#f8fafc] p-5 md:p-7">
           <div className="mb-9 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 font-semibold">
               <span className={cn("size-3 rounded-sm bg-gradient-to-br", path.accent)} />
@@ -766,6 +789,32 @@ function DemoPreview({
                 </div>
               </div>
             </>
+          ) : null}
+
+          {showUxStudio ? (
+            <div aria-label="Simulation de collaboration UX" className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+              <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full border border-violet-300/70 bg-white/90 px-2.5 py-1 text-[9px] font-semibold text-violet-700 shadow-sm backdrop-blur-sm">
+                <UsersRoundIcon className="size-3" /> Studio UX actif
+              </div>
+              <div className="idealy-ux-selection" />
+              <div className="idealy-ux-stroke" />
+              <div className="idealy-ux-cursor idealy-ux-cursor--lead">
+                <MousePointer2Icon className="size-4 fill-sky-500 text-white drop-shadow-sm" />
+                <span className="rounded-md bg-sky-600 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm">{activeAgent.name}</span>
+              </div>
+              <div className="idealy-ux-cursor idealy-ux-cursor--designer">
+                <MousePointer2Icon className="size-4 fill-violet-500 text-white drop-shadow-sm" />
+                <span className="rounded-md bg-violet-600 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm">UX Designer</span>
+              </div>
+              <div className="idealy-ux-cursor idealy-ux-cursor--reviewer">
+                <PenLineIcon className="size-4 rounded bg-amber-400 p-0.5 text-white shadow-sm" />
+                <span className="rounded-md bg-amber-500 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm">Revue UX</span>
+              </div>
+              <div className="absolute bottom-4 right-4 max-w-44 rounded-xl border border-amber-300/70 bg-white/95 p-2.5 text-[10px] leading-4 text-slate-600 shadow-lg backdrop-blur-sm">
+                <span className="font-semibold text-amber-700">Annotation active</span>
+                <p className="mt-0.5">Le parcours est ajusté dans le canvas, étape par étape.</p>
+              </div>
+            </div>
           ) : null}
         </div>
       </div>

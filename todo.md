@@ -16,3 +16,7 @@
 - [x] Intégrer les portraits fournis avec rôles, compétences et jauges d’énergie dans la démo
 - [x] Ajouter des états de pause et des incidents de progression au mode Professionnel
 - [x] Vérifier et publier l’enrichissement de démo sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Recenser et préparer les avatars utilisateur pour les voies Ninja, Hunter, Mage et Professionnel
+- [x] Remplacer les portraits générés de la démo par les avatars fournis
+- [x] Ajouter un mode de collaboration UX simulée avec curseurs, sélections et annotations dans le canvas
+- [ ] Valider et publier cette démo enrichie sur `feat/idealy-live-backend` sans fusionner vers `main`

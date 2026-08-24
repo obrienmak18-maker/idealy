@@ -762,6 +762,94 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
   }
 }
 
+/* Demonstration-only UX studio: makes agent work legible without connecting a live collaboration service. */
+.idealy-ux-selection {
+  position: absolute;
+  top: 29%;
+  left: 10%;
+  width: 47%;
+  height: 29%;
+  border: 2px solid rgb(59 130 246 / 0.72);
+  border-radius: 0.75rem;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.09);
+  animation: idealy-ux-selection 4.8s var(--ease-smooth) infinite;
+}
+
+.idealy-ux-stroke {
+  position: absolute;
+  top: 54%;
+  left: 23%;
+  width: 38%;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, rgb(245 158 11 / 0.8), transparent);
+  transform: rotate(-7deg);
+  animation: idealy-ux-stroke 3.4s ease-in-out infinite;
+}
+
+.idealy-ux-cursor {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  will-change: transform;
+}
+
+.idealy-ux-cursor--lead {
+  top: 38%;
+  left: 19%;
+  animation: idealy-ux-lead 5.2s var(--ease-smooth) infinite;
+}
+
+.idealy-ux-cursor--designer {
+  top: 64%;
+  left: 57%;
+  animation: idealy-ux-designer 6.2s var(--ease-smooth) infinite;
+}
+
+.idealy-ux-cursor--reviewer {
+  top: 27%;
+  left: 64%;
+  animation: idealy-ux-reviewer 5.8s var(--ease-smooth) infinite;
+}
+
+@keyframes idealy-ux-lead {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  42% { transform: translate3d(8.5rem, 3.5rem, 0) scale(1.04); }
+  74% { transform: translate3d(4rem, 6.5rem, 0) scale(0.98); }
+}
+
+@keyframes idealy-ux-designer {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  40% { transform: translate3d(-9rem, -4.5rem, 0) scale(1.04); }
+  76% { transform: translate3d(-4.5rem, 2rem, 0) scale(0.98); }
+}
+
+@keyframes idealy-ux-reviewer {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-5deg); }
+  45% { transform: translate3d(-5rem, 5rem, 0) rotate(4deg); }
+  76% { transform: translate3d(-10rem, 2rem, 0) rotate(-2deg); }
+}
+
+@keyframes idealy-ux-selection {
+  0%, 100% { opacity: 0.45; transform: scale(0.96); }
+  45% { opacity: 1; transform: scale(1); }
+  78% { opacity: 0.6; transform: scale(0.985); }
+}
+
+@keyframes idealy-ux-stroke {
+  0%, 100% { opacity: 0.1; transform: rotate(-7deg) scaleX(0.7); }
+  50% { opacity: 1; transform: rotate(-7deg) scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idealy-ux-selection,
+  .idealy-ux-stroke,
+  .idealy-ux-cursor {
+    animation: none;
+  }
+}
+
 /* Idealy brand mark: a four-point idea spark carried by two orbiting paths. */
 .idealy-logo {
   display: inline-flex;
