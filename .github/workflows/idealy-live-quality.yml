@@ -63,6 +63,12 @@ jobs:
       - name: Intent routing contract
         run: node scripts/test-intent-routing.mjs
 
+      - name: Supabase table contract
+        run: node scripts/test-supabase-table-contract.mjs
+
+      - name: External action confirmation contract
+        run: node scripts/test-external-action-confirmation-contract.mjs
+
       - name: Workspace event replay contract
         run: node scripts/test-workspace-event-replay-contract.mjs
 

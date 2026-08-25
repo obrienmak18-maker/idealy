@@ -8,6 +8,10 @@ const streamHandler = await readFile(
   "components/chat/data-stream-handler.tsx",
   "utf8"
 );
+const workspaceStream = await readFile(
+  "supabase/functions/process-ai-request/index.ts",
+  "utf8"
+);
 
 for (const requiredFragment of [
   "mission_file_events?select=",
@@ -44,6 +48,25 @@ for (const requiredFragment of [
   if (!streamHandler.includes(requiredFragment)) {
     throw new Error(`Workspace canvas recovery is missing: ${requiredFragment}`);
   }
+}
+
+for (const requiredFragment of [
+  "file_started",
+  "file_content",
+  "file_saved",
+  "build_log",
+  "parseWorkspaceFrame",
+  "pendingFiles",
+  "providerPending",
+  "abortController.abort()",
+]) {
+  if (!workspaceStream.includes(requiredFragment)) {
+    throw new Error(`Workspace streaming protocol is missing: ${requiredFragment}`);
+  }
+}
+
+if (workspaceStream.includes("let accumulated = ''")) {
+  throw new Error("Workspace streaming must not accumulate the full provider response.");
 }
 
 console.log("Workspace event replay contract passed.");

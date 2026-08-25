@@ -9,7 +9,7 @@ const workspaceTopBar = await readFile(resolve(root, "components/chat/build-top-
 for (const expected of ["mission_agent_runs", "mission_action_confirmations", "confirmation_token_hash", "REVOKE ALL", "GRANT SELECT"]) {
   if (!migration.includes(expected)) throw new Error(`Missing migration protection: ${expected}`);
 }
-for (const expected of ["architect", "builder", "reviewer", "idempotencyKey", "workspaceStream", "agent_failed", "user_id"]) {
+for (const expected of ["architect", "builder", "reviewer", "idempotencyKey", "workspaceStream", "agent_failed", "user_id", "reusedPersistedPlan", "isMissionPlan", "validateWorkspaceStructure", "structural-preflight", "validation_result"]) {
   if (!orchestrator.includes(expected)) throw new Error(`Missing squad contract: ${expected}`);
 }
 for (const expected of ["/squad", "crypto.randomUUID", "Run squad", "missionReplayNonce"]) {

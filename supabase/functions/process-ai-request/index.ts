@@ -90,9 +90,10 @@ const MAX_SYSTEM_PROMPT_CHARS = 20_000;
 const MAX_OUTPUT_TOKENS = 8_000;
 const MAX_IDEMPOTENCY_KEY_CHARS = 180;
 const WORKSPACE_SYSTEM_PROMPT = `
-Tu es le Builder d’Idealy. Pour une mission EXECUTION, réponds uniquement avec un JSON valide, sans markdown ni texte autour, selon ce contrat :
-{"project":{"name":"nom-kebab-case","description":"description courte","stack":"react-vite-typescript","fileTree":[{"path":"package.json","content":"contenu complet","type":"json"}]}}
-Génère une première version verticale réellement utilisable. Inclus au minimum package.json, index.html, src/main.tsx, src/App.tsx et src/App.css pour une application web. Chaque fichier doit avoir un chemin relatif sûr, un contenu complet et aucun secret. N’ajoute jamais de chemin absolu, de segment .., de mot de passe ou de clé API. Retourne tous les fichiers dans fileTree et ne retourne rien d’autre.`;
+Tu es le Builder d’Idealy. Pour une mission EXECUTION, réponds uniquement avec des lignes NDJSON valides, sans markdown ni texte autour. Une ligne par événement, dans cet ordre pour chaque fichier :
+{"type":"file_started","path":"src/App.tsx","language":"tsx"}
+{"type":"file_content","path":"src/App.tsx","content":"contenu complet du fichier"}
+Tu peux émettre {"type":"build_log","message":"..."} entre les fichiers. N’émets jamais file_saved : le serveur calcule le checksum et confirme l’écriture. Inclus au minimum package.json, index.html, src/main.tsx, src/App.tsx et src/App.css pour une application web. Chaque chemin doit être relatif, sûr, unique ; chaque contenu doit être complet ; aucun secret, chemin absolu ou segment .. n’est autorisé.`;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getCorsHeaders(req: Request): Record<string, string> {
@@ -176,12 +177,6 @@ function parseMissionPlan(content: unknown): MissionPlan | null {
   }
 }
 
-type GeneratedFile = {
-  content: string;
-  path: string;
-  type?: string;
-};
-
 function normalizeWorkspacePath(path: string) {
   const normalized = path.trim().replaceAll('\\', '/').replace(/^\.\//, '');
   if (!normalized || normalized.startsWith('/') || normalized.includes('..') || normalized.length > 240) {
@@ -190,34 +185,35 @@ function normalizeWorkspacePath(path: string) {
   return normalized;
 }
 
-function generatedFilesFromContent(content: string): GeneratedFile[] {
-  const clean = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+type WorkspaceFrame =
+  | { language?: string; path: string; type: 'file_started' }
+  | { content: string; path: string; type: 'file_content' }
+  | { message: string; type: 'build_log' };
+
+function parseWorkspaceFrame(content: string): WorkspaceFrame | null {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(clean);
+    parsed = JSON.parse(content);
   } catch {
-    return [];
+    return null;
   }
-  if (!parsed || typeof parsed !== 'object') return [];
-  const envelope = parsed as { project?: { fileTree?: unknown; files?: unknown } };
-  const project = envelope.project;
-  if (!project || typeof project !== 'object') return [];
-  const result: GeneratedFile[] = [];
-  if (Array.isArray(project.fileTree)) {
-    for (const candidate of project.fileTree) {
-      if (!candidate || typeof candidate !== 'object') continue;
-      const file = candidate as { path?: unknown; content?: unknown; type?: unknown };
-      if (typeof file.path === 'string' && typeof file.content === 'string') {
-        result.push({ content: file.content, path: normalizeWorkspacePath(file.path), type: typeof file.type === 'string' ? file.type : undefined });
-      }
-    }
+  if (!parsed || typeof parsed !== 'object') return null;
+  const frame = parsed as { content?: unknown; language?: unknown; message?: unknown; path?: unknown; type?: unknown };
+  if (frame.type === 'build_log' && typeof frame.message === 'string') {
+    return { message: frame.message.slice(0, 2_000), type: 'build_log' };
   }
-  if (result.length === 0 && project.files && typeof project.files === 'object' && !Array.isArray(project.files)) {
-    for (const [path, value] of Object.entries(project.files as Record<string, unknown>)) {
-      if (typeof value === 'string') result.push({ content: value, path: normalizeWorkspacePath(path) });
-    }
+  if (frame.type === 'file_started' && typeof frame.path === 'string') {
+    return {
+      ...(typeof frame.language === 'string' ? { language: frame.language.slice(0, 80) } : {}),
+      path: normalizeWorkspacePath(frame.path),
+      type: 'file_started',
+    };
   }
-  return result.slice(0, 500);
+  if (frame.type === 'file_content' && typeof frame.path === 'string' && typeof frame.content === 'string') {
+    if (frame.content.length > 300_000) throw new Error('Generated file content is too large.');
+    return { content: frame.content, path: normalizeWorkspacePath(frame.path), type: 'file_content' };
+  }
+  return null;
 }
 
 async function checksum(content: string) {
@@ -277,72 +273,127 @@ async function streamWorkspaceBuild(
   input: {
     idempotencyKey: string;
     missionId: string;
+    signal?: AbortSignal;
   },
 ) {
   const reader = llmRes.body?.getReader();
   if (!reader) throw new Error('Workspace provider returned no stream.');
   const decoder = new TextDecoder();
   let pending = '';
-  let accumulated = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    pending += decoder.decode(value, { stream: true });
-    const lines = pending.split('\\n');
-    pending = lines.pop() ?? '';
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const raw = line.slice(6).trim();
-      if (!raw || raw === '[DONE]') continue;
-      try {
-        const chunk = JSON.parse(raw) as { choices?: Array<{ delta?: { content?: string } }> };
-        accumulated += chunk.choices?.[0]?.delta?.content ?? '';
-      } catch {
-        // Ignore an incomplete upstream frame.
-      }
+  let providerPending = '';
+  const pendingFiles = new Map<string, { language?: string; version: number }>();
+  let savedFileCount = 0;
+
+  const persistFrame = async (frame: WorkspaceFrame) => {
+    if (input.signal?.aborted) throw new DOMException('Workspace stream cancelled.', 'AbortError');
+    if (frame.type === 'build_log') {
+      await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
+        eventType: 'build_log',
+        idempotencyKey: `${input.idempotencyKey}:log:${savedFileCount}:${await checksum(frame.message)}`,
+        missionId: input.missionId,
+        payload: { message: frame.message },
+      });
+      return;
     }
-  }
 
-  const files = generatedFilesFromContent(accumulated);
-  if (files.length === 0) throw new Error('The builder returned no valid files.');
+    if (frame.type === 'file_started') {
+      if (pendingFiles.has(frame.path)) throw new Error(`Duplicate file_started frame for ${frame.path}.`);
+      const version = 1;
+      const { error } = await supabaseAdmin.from('mission_files').upsert({
+        content: '',
+        language: frame.language ?? null,
+        mission_id: input.missionId,
+        path: frame.path,
+        source: 'builder',
+        status: 'writing',
+        version,
+      }, { onConflict: 'mission_id,path,version' });
+      if (error) throw new Error(`Mission file write failed: ${error.message}`);
+      pendingFiles.set(frame.path, { language: frame.language, version });
+      await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
+        eventType: 'file_started',
+        file: { missionId: input.missionId, path: frame.path, status: 'writing', version },
+        fileVersion: version,
+        idempotencyKey: `${input.idempotencyKey}:file:${frame.path}:${version}:started`,
+        missionId: input.missionId,
+        path: frame.path,
+        payload: { language: frame.language ?? null },
+      });
+      return;
+    }
 
-  for (const [index, file] of files.entries()) {
-    const version = 1;
-    const idempotencyBase = `${input.idempotencyKey}:file:${file.path}:${version}`;
-    const baseFile = {
-      content: file.content,
-      language: file.type ?? null,
-      mission_id: input.missionId,
-      path: file.path,
-      source: 'builder',
-      status: 'writing',
-      version,
-    };
-    const { error: writingError } = await supabaseAdmin.from('mission_files').upsert(baseFile, { onConflict: 'mission_id,path,version' });
-    if (writingError) throw new Error(`Mission file write failed: ${writingError.message}`);
+    const pendingFile = pendingFiles.get(frame.path);
+    if (!pendingFile) throw new Error(`file_content requires a preceding file_started frame for ${frame.path}.`);
+    const fileChecksum = await checksum(frame.content);
+    const { error } = await supabaseAdmin.from('mission_files').update({
+      checksum: fileChecksum,
+      content: frame.content,
+      status: 'saved',
+    }).eq('mission_id', input.missionId).eq('path', frame.path).eq('version', pendingFile.version);
+    if (error) throw new Error(`Mission file save failed: ${error.message}`);
     await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
-      eventType: 'file_started',
-      file: { missionId: input.missionId, path: file.path, status: 'writing', version },
-      fileVersion: version,
-      idempotencyKey: `${idempotencyBase}:started`,
+      eventType: 'file_content',
+      file: { content: frame.content, language: pendingFile.language, missionId: input.missionId, path: frame.path, status: 'writing', version: pendingFile.version },
+      fileVersion: pendingFile.version,
+      idempotencyKey: `${input.idempotencyKey}:file:${frame.path}:${pendingFile.version}:content`,
       missionId: input.missionId,
-      path: file.path,
-      payload: { index, total: files.length },
+      path: frame.path,
+      payload: { bytes: frame.content.length },
     });
-
-    const fileChecksum = await checksum(file.content);
-    const { error: savedError } = await supabaseAdmin.from('mission_files').update({ checksum: fileChecksum, status: 'saved' }).eq('mission_id', input.missionId).eq('path', file.path).eq('version', version);
-    if (savedError) throw new Error(`Mission file save failed: ${savedError.message}`);
     await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
       eventType: 'file_saved',
-      file: { checksum: fileChecksum, content: file.content, language: file.type, missionId: input.missionId, path: file.path, status: 'saved', version },
-      fileVersion: version,
-      idempotencyKey: `${idempotencyBase}:saved`,
+      file: { checksum: fileChecksum, content: frame.content, language: pendingFile.language, missionId: input.missionId, path: frame.path, status: 'saved', version: pendingFile.version },
+      fileVersion: pendingFile.version,
+      idempotencyKey: `${input.idempotencyKey}:file:${frame.path}:${pendingFile.version}:saved`,
       missionId: input.missionId,
-      path: file.path,
-      payload: { index, total: files.length },
+      path: frame.path,
+      payload: { checksum: fileChecksum },
     });
+    pendingFiles.delete(frame.path);
+    savedFileCount += 1;
+  };
+
+  const consumeProviderLine = async (line: string) => {
+    if (!line.startsWith('data: ')) return;
+    const raw = line.slice(6).trim();
+    if (!raw || raw === '[DONE]') return;
+    const chunk = JSON.parse(raw) as { choices?: Array<{ delta?: { content?: string } }> };
+    const content = chunk.choices?.[0]?.delta?.content;
+    if (!content) return;
+    pending += content;
+    const frames = pending.split('\n');
+    pending = frames.pop() ?? '';
+    for (const frameLine of frames) {
+      const frame = parseWorkspaceFrame(frameLine.trim());
+      if (!frame) throw new Error('Builder emitted an invalid workspace frame.');
+      await persistFrame(frame);
+    }
+  };
+
+  try {
+    while (true) {
+      if (input.signal?.aborted) throw new DOMException('Workspace stream cancelled.', 'AbortError');
+      const { done, value } = await reader.read();
+      if (done) break;
+      providerPending += decoder.decode(value, { stream: true });
+      const providerLines = providerPending.split('\n');
+      providerPending = providerLines.pop() ?? '';
+      for (const line of providerLines) await consumeProviderLine(line);
+    }
+    if (providerPending.trim()) await consumeProviderLine(providerPending);
+    const tail = pending.trim();
+    if (tail) {
+      const frame = parseWorkspaceFrame(tail);
+      if (!frame) throw new Error('Builder ended with an invalid workspace frame.');
+      await persistFrame(frame);
+    }
+  } finally {
+    if (input.signal?.aborted) await reader.cancel().catch(() => undefined);
+    reader.releaseLock();
   }
+
+  if (pendingFiles.size > 0) throw new Error('Builder ended before saving every started file.');
+  if (savedFileCount === 0) throw new Error('The builder returned no valid files.');
 
   await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
     eventType: 'validation_result',
@@ -354,7 +405,7 @@ async function streamWorkspaceBuild(
     eventType: 'mission_completed',
     idempotencyKey: `${input.idempotencyKey}:completed`,
     missionId: input.missionId,
-    payload: { fileCount: files.length },
+    payload: { fileCount: savedFileCount },
   });
 
   const assistantMessage = 'La première version de votre application a été générée et enregistrée dans le workspace. Les fichiers sont disponibles dans l’onglet Code.';
@@ -544,11 +595,13 @@ serve(async (req) => {
     if (stream) {
       if (input.workspaceStream && input.missionId) {
         const encoder = new TextEncoder();
+        const abortController = new AbortController();
         const workspaceReadable = new ReadableStream<Uint8Array>({
           start(controller) {
             streamWorkspaceBuild(llmRes, controller, encoder, supabaseAdmin, {
               idempotencyKey: input.idempotencyKey?.trim() || `${user.id}:${input.missionId}:workspace`,
               missionId: input.missionId as string,
+              signal: abortController.signal,
             })
               .then(() => controller.close())
               .catch((error) => {
@@ -558,6 +611,7 @@ serve(async (req) => {
               });
           },
           cancel() {
+            abortController.abort();
             void llmRes.body?.cancel();
           },
         });

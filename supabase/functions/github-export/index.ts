@@ -5,6 +5,21 @@ import { decryptIntegrationToken } from '../_shared/integrationCrypto.ts';
 
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+
+async function sha256(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function exportPayloadDigest(projectName: string, files: Record<string, string>) {
+  const manifest = await Promise.all(
+    Object.entries(files)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(async ([path, content]) => ({ path, checksum: await sha256(content) })),
+  );
+  return sha256(JSON.stringify({ projectName: projectName.trim(), files: manifest }));
+}
 
 async function githubFetch(url: string, token: string, options: RequestInit = {}) {
   const res = await fetch(url, {
@@ -35,8 +50,11 @@ Deno.serve(async (request) => {
   if ('error' in auth) return corsResponse({ error: auth.error }, auth.status, request);
 
   try {
-    const { projectName, files } = await request.json();
+    const { confirmationToken, files, missionId, projectName } = await request.json();
     if (
+      typeof confirmationToken !== "string" ||
+      confirmationToken.length < 32 ||
+      !UUID_PATTERN.test(missionId ?? "") ||
       typeof projectName !== 'string' ||
       projectName.trim().length === 0 ||
       projectName.length > 100 ||
@@ -71,6 +89,37 @@ Deno.serve(async (request) => {
 
     if (integrationError || !integration || integration.status !== 'active') {
       return corsResponse({ error: 'GitHub not connected. Please connect GitHub in Connectors.' }, 400, request);
+    }
+
+    const { data: mission, error: missionError } = await admin
+      .from("missions")
+      .select("id")
+      .eq("id", missionId)
+      .eq("user_id", auth.user.id)
+      .maybeSingle();
+    if (missionError || !mission) return corsResponse({ error: "Mission not found." }, 404, request);
+
+    const payloadDigest = await exportPayloadDigest(projectName, files as Record<string, string>);
+    const confirmationTokenHash = await sha256(confirmationToken);
+    const { data: confirmation, error: confirmationError } = await admin
+      .from("mission_action_confirmations")
+      .update({ consumed_at: new Date().toISOString(), status: "consumed" })
+      .eq("mission_id", missionId)
+      .eq("user_id", auth.user.id)
+      .eq("integration_id", integration.id)
+      .eq("operation", "github:export")
+      .eq("confirmation_token_hash", confirmationTokenHash)
+      .eq("status", "approved")
+      .is("consumed_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .select("id,resource_snapshot")
+      .maybeSingle();
+    if (confirmationError || !confirmation) {
+      return corsResponse({ error: "A valid one-time export confirmation is required." }, 409, request);
+    }
+    const snapshot = confirmation.resource_snapshot as { payload_digest?: unknown } | null;
+    if (!snapshot || snapshot.payload_digest !== payloadDigest) {
+      return corsResponse({ error: "The confirmation does not match this export payload." }, 409, request);
     }
 
     const { data: credential, error: credentialError } = await admin

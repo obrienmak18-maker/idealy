@@ -26,15 +26,9 @@ export type MissionPlan = {
   designCritic: import("./design-engine").DesignCriticResult;
 };
 
-export type IdealyProject = {
-  id: string;
-  status: string | null;
-};
-
 export type IdealyMission = {
   id: string;
   status: string | null;
-  projectId?: string;
 };
 
 export type IdealyMissionFileEvent = {
@@ -66,11 +60,6 @@ type IdealyIntentResponse = {
 
 type IdealyPlanResponse = {
   plan?: unknown;
-};
-
-type IdealyProjectResponse = {
-  id?: unknown;
-  status?: unknown;
 };
 
 type IdealyMissionResponse = {
@@ -275,71 +264,14 @@ export async function classifyIdealyIntent(
   return payload.intent;
 }
 
-export async function createIdealyProject({
-  prompt,
-  request,
-}: {
-  prompt: string;
-  request: Request;
-}): Promise<IdealyProject> {
-  const { userId } = await getSupabaseServerContext(request);
-  const payload = await callSupabaseRest<IdealyProjectResponse[]>(
-    request,
-    "projects",
-    {
-      body: JSON.stringify({
-        description: prompt,
-        name: prompt.slice(0, 120),
-        owner_id: userId,
-        status: "draft",
-        template: "blank",
-      }),
-      headers: {
-        Prefer: "return=representation",
-      },
-      method: "POST",
-    }
-  );
-  const project = Array.isArray(payload) ? payload[0] : null;
-
-  if (!project || typeof project.id !== "string") {
-    throw new Error("Supabase n’a pas renvoyé l’identifiant de projet.");
-  }
-
-  return {
-    id: project.id,
-    status: typeof project.status === "string" ? project.status : null,
-  };
-}
-
-export async function updateIdealyProject({
-  projectId,
-  request,
-  status,
-}: {
-  projectId: string;
-  request: Request;
-  status: "draft" | "generating" | "ready" | "archived";
-}) {
-  await callSupabaseRest<unknown>(request, `projects?id=eq.${projectId}`, {
-    body: JSON.stringify({ status }),
-    headers: {
-      Prefer: "return=minimal",
-    },
-    method: "PATCH",
-  });
-}
-
 export async function createIdealyMission({
   chatId,
   intentCategory,
-  projectId,
   prompt,
   request,
 }: {
   chatId: string;
   intentCategory: IdealyIntentCategory;
-  projectId?: string;
   prompt: string;
   request: Request;
 }): Promise<IdealyMission> {
@@ -349,16 +281,17 @@ export async function createIdealyMission({
     "missions",
     {
       body: JSON.stringify({
-        input: {
+        brief: {
           chatId,
           intentCategory,
           prompt,
           version: 1,
         },
-        ...(projectId ? { project_id: projectId } : {}),
-        kind: "chat",
-        status: "queued",
+        dna: { intentCategory, stage: "planning" },
+        status: "draft",
+        title: prompt.slice(0, 120) || "Nouvelle mission",
         user_id: userId,
+        way: "professional",
       }),
       headers: {
         Prefer: "return=representation",
@@ -374,66 +307,37 @@ export async function createIdealyMission({
 
   return {
     id: mission.id,
-    projectId,
     status: typeof mission.status === "string" ? mission.status : null,
   };
 }
 
 export async function updateIdealyMission({
-  input,
+  brief,
+  dna,
   missionId,
   request,
   status,
+  validation,
 }: {
-  input: Record<string, unknown>;
+  brief?: Record<string, unknown>;
+  dna?: Record<string, unknown>;
   missionId: string;
   request: Request;
   status: "draft" | "planned" | "building" | "ready" | "needs-fix" | "published";
+  validation?: Record<string, unknown>;
 }) {
   await callSupabaseRest<unknown>(request, `missions?id=eq.${missionId}`, {
-    body: JSON.stringify({ input, status }),
+    body: JSON.stringify({
+      ...(brief ? { brief } : {}),
+      ...(dna ? { dna } : {}),
+      ...(validation ? { validation } : {}),
+      status,
+    }),
     headers: {
       Prefer: "return=minimal",
     },
     method: "PATCH",
   });
-}
-
-export async function createIdealyAgentRuns({
-  missionId,
-  plan,
-  projectId,
-  request,
-}: {
-  missionId: string;
-  plan: MissionPlan;
-  projectId?: string;
-  request: Request;
-}) {
-  const { userId } = await getSupabaseServerContext(request);
-  await callSupabaseRest<unknown[]>(
-    request,
-    "agent_runs",
-    {
-      body: JSON.stringify(
-        plan.agents.map((agent) => ({
-          ...(projectId ? { project_id: projectId } : {}),
-          agent_type: agent.name,
-          input: {
-            missionId,
-            responsibility: agent.responsibility,
-            result: agent.result,
-          },
-          status: "queued",
-          user_id: userId,
-        }))
-      ),
-      headers: {
-        Prefer: "return=minimal",
-      },
-      method: "POST",
-    }
-  );
 }
 
 export async function createIdealyMissionPlan({

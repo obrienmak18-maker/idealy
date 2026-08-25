@@ -79,7 +79,10 @@ export function DataStreamHandler() {
   useEffect(() => {
     if (!missionFiles.length) return;
     const firstSavedFile = missionFiles.find(
-      (file) => typeof file.content === "string" && file.status !== "error"
+      (file) =>
+        typeof file.content === "string" &&
+        file.content.length > 0 &&
+        (file.status === "saved" || file.status === "validated")
     );
     if (!firstSavedFile) return;
 
@@ -177,16 +180,26 @@ export function DataStreamHandler() {
           eventFile && typeof eventFile.content === "string"
             ? eventFile.content
             : "";
+        const hasCoherentFile =
+          eventContent.length > 0 &&
+          (delta.data.eventType === "file_content" ||
+            delta.data.eventType === "file_saved");
         const isTerminalEvent =
           delta.data.eventType === "mission_completed" ||
           delta.data.eventType === "mission_error";
         setArtifact((current) => ({
           ...current,
           content: eventContent || current.content,
-          isVisible: true,
-          kind: "code",
-          status: isTerminalEvent ? "idle" : "streaming",
-          title: current.title || "Mission workspace",
+          ...(hasCoherentFile
+            ? {
+                isVisible: true,
+                kind: "code" as const,
+                status: isTerminalEvent ? "idle" : "streaming",
+                title: current.title || "Mission workspace",
+              }
+            : current.isVisible
+              ? { status: isTerminalEvent ? "idle" : "streaming" }
+              : {}),
         }));
         setMetadata((current: Record<string, unknown> | null) => {
           const merged = mergeMissionFileEvent(

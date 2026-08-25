@@ -21,6 +21,7 @@ export type MissionFileEventType =
   | "mission_started"
   | "agent_started"
   | "file_started"
+  | "file_content"
   | "file_saved"
   | "build_log"
   | "validation_result"

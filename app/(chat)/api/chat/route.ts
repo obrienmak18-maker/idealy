@@ -24,12 +24,9 @@ import {
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import {
   classifyIdealyIntent,
-  createIdealyAgentRuns,
   createIdealyMission,
-  createIdealyProject,
   createIdealyMissionPlan,
   updateIdealyMission,
-  updateIdealyProject,
 } from "@/lib/idealy/backend-adapter";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
 import { getIdealyDirectProviderModel } from "@/lib/idealy/provider-registry";
@@ -491,7 +488,6 @@ export async function POST(request: Request) {
               ? `chat:${id}:${message.id}`
               : `chat:${id}:continuation`;
 
-          let projectId: string | undefined;
           let missionId: string | undefined;
           let missionPlan:
             | Awaited<ReturnType<typeof createIdealyMissionPlan>>
@@ -507,20 +503,9 @@ export async function POST(request: Request) {
             // intention d’exécution ouvre un projet, une mission et le VFS.
             if (intentCategory === "EXECUTION") {
               writeWaitingStatus("thinking", "Creating the mission workspace...");
-              const project = await createIdealyProject({
-                prompt: idealyPrompt,
-                request,
-              });
-              projectId = project.id;
-              await updateIdealyProject({
-                projectId,
-                request,
-                status: "generating",
-              });
               const mission = await createIdealyMission({
                 chatId: id,
                 intentCategory,
-                projectId,
                 prompt: idealyPrompt,
                 request,
               });
@@ -538,59 +523,43 @@ export async function POST(request: Request) {
               });
               dataStream.write({ data: missionPlan, type: "data-idealy-plan" });
               await updateIdealyMission({
-                input: { intentCategory, plan: missionPlan },
+                dna: { intentCategory, plan: missionPlan, stage: "planned" },
                 missionId,
                 request,
                 status: "planned",
-              });
-              await createIdealyAgentRuns({
-                missionId,
-                plan: missionPlan,
-                projectId,
-                request,
               });
             }
           }
 
           try {
-            await streamIdealyEdgeResponse({
-              dataStream,
-              directModel,
-              idempotencyKey: `${idempotencyKey}:run`,
-              intentCategory,
-              messages: uiMessages,
-              missionId,
-              designSpecification: missionPlan?.design,
-              request,
-            });
-            if (projectId) {
-              await updateIdealyProject({
-                projectId,
-                request,
-                status: "ready",
+            if (intentCategory === "EXECUTION" && missionId && missionPlan) {
+              const assistantId = generateId();
+              dataStream.write({ id: assistantId, type: "text-start" });
+              dataStream.write({
+                delta: `Plan enregistré pour **${missionPlan.projectKind}**. L’escouade reste en attente de votre validation : ouvrez le workspace puis choisissez **Run squad** pour lancer Architecte, Builder et Reviewer.`,
+                id: assistantId,
+                type: "text-delta",
               });
-            }
-            if (missionId && missionPlan) {
-              await updateIdealyMission({
-                input: { plan: missionPlan },
+              dataStream.write({ id: assistantId, type: "text-end" });
+            } else {
+              await streamIdealyEdgeResponse({
+                dataStream,
+                directModel,
+                idempotencyKey: `${idempotencyKey}:run`,
+                intentCategory,
+                messages: uiMessages,
                 missionId,
+                designSpecification: missionPlan?.design,
                 request,
-                status: "ready",
               });
             }
             stopWaitingStatus();
           } catch (error) {
-            if (projectId) {
-              await updateIdealyProject({
-                projectId,
-                request,
-                status: "draft",
-              }).catch(() => undefined);
-            }
             if (missionId) {
               await updateIdealyMission({
-                input: {
+                validation: {
                   error: error instanceof Error ? error.message : String(error),
+                  status: "failed",
                 },
                 missionId,
                 request,

@@ -36,6 +36,28 @@ function summary(value: unknown) {
   };
 }
 
+function isMissionPlan(value: unknown): value is MissionPlan & { agents: unknown[] } {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as MissionPlan;
+  return Array.isArray(candidate.agents) && candidate.agents.length > 0;
+}
+
+function validateWorkspaceStructure(files: Array<{ checksum: string | null; path: string; status: string }>) {
+  const expectedPaths = ["package.json", "index.html"];
+  const savedPaths = new Set(files.map((file) => file.path));
+  const missing = expectedPaths.filter((path) => !savedPaths.has(path));
+  const invalid = files
+    .filter((file) => !file.checksum || file.status !== "saved" || file.path.startsWith("/") || file.path.includes(".."))
+    .map((file) => file.path);
+  return {
+    checks: { expectedPaths, savedFileCount: files.length },
+    invalid,
+    missing,
+    source: "structural-preflight",
+    status: missing.length === 0 && invalid.length === 0 ? "passed" : "needs-fix",
+  };
+}
+
 async function invokeProcess(input: {
   authorization: string;
   body: Record<string, unknown>;
@@ -164,23 +186,37 @@ Deno.serve(async (request) => {
     activeAgent = "architect";
     await updateRun("architect", { started_at: new Date().toISOString(), status: "running" });
     await appendEvent(admin, "agent_started", missionId, `${runKey}:architect:started`, { agent: "architect", runKey });
-    const architect = await invokeProcess({
-      authorization,
-      anonKey,
-      supabaseUrl,
-      body: {
-        idempotencyKey: `${runKey}:architect`,
-        intentCategory: "IDEATION",
-        missionId,
-        mode: "auto",
-        planOnly: true,
-        prompt: `Établis le plan strictement borné de cette mission Idealy. Propose uniquement Architecte, Builder et Reviewer, chacun une seule fois. N’ajoute aucun outil externe, aucune publication et aucune action sur un compte tiers. Contexte mission : ${missionContext}`,
-      },
-    });
+    const persistedPlan =
+      mission.dna && typeof mission.dna === "object"
+        ? (mission.dna as { plan?: unknown }).plan
+        : undefined;
+    const architect = isMissionPlan(persistedPlan)
+      ? { plan: persistedPlan, reusedPersistedPlan: true }
+      : await invokeProcess({
+          authorization,
+          anonKey,
+          supabaseUrl,
+          body: {
+            idempotencyKey: `${runKey}:architect`,
+            intentCategory: "IDEATION",
+            missionId,
+            mode: "auto",
+            planOnly: true,
+            prompt: `Établis le plan strictement borné de cette mission Idealy. Propose uniquement Architecte, Builder et Reviewer, chacun une seule fois. N’ajoute aucun outil externe, aucune publication et aucune action sur un compte tiers. Contexte mission : ${missionContext}`,
+          },
+        });
     const plan = architect.plan as MissionPlan | undefined;
-    if (!plan || !Array.isArray(plan.agents)) throw new Error("ARCHITECT_INVALID_PLAN");
-    await updateRun("architect", { completed_at: new Date().toISOString(), output_summary: summary({ plan }), status: "succeeded" });
-    await appendEvent(admin, "agent_completed", missionId, `${runKey}:architect:completed`, { agent: "architect", runKey });
+    if (!isMissionPlan(plan)) throw new Error("ARCHITECT_INVALID_PLAN");
+    await updateRun("architect", {
+      completed_at: new Date().toISOString(),
+      output_summary: summary({ plan, reusedPersistedPlan: architect.reusedPersistedPlan === true }),
+      status: "succeeded",
+    });
+    await appendEvent(admin, "agent_completed", missionId, `${runKey}:architect:completed`, {
+      agent: "architect",
+      reusedPersistedPlan: architect.reusedPersistedPlan === true,
+      runKey,
+    });
 
     await delay(3_200);
     activeAgent = "builder";
@@ -215,6 +251,14 @@ Deno.serve(async (request) => {
       .order("path")
       .limit(500);
     if (filesError) throw new Error(`REVIEWER_FILE_READ_FAILED:${filesError.message}`);
+    const validation = validateWorkspaceStructure(files ?? []);
+    await appendEvent(admin, "validation_result", missionId, `${runKey}:validation:structural`, validation);
+    const { error: validationUpdateError } = await admin
+      .from("missions")
+      .update({ validation })
+      .eq("id", missionId)
+      .eq("user_id", auth.user.id);
+    if (validationUpdateError) throw new Error(`VALIDATION_PERSISTENCE_FAILED:${validationUpdateError.message}`);
     const reviewer = await invokeProcess({
       authorization,
       anonKey,
@@ -224,20 +268,25 @@ Deno.serve(async (request) => {
         intentCategory: "IDEATION",
         missionId,
         mode: "auto",
-        prompt: `Agis comme Reviewer. Évalue uniquement les métadonnées de fichiers et le plan. Réponds avec un rapport court : état, risques, tests manquants et prochaine action. Ne publie rien et ne modifie aucun fichier. Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
+        prompt: `Agis comme Reviewer. Évalue uniquement les métadonnées de fichiers, le préflight structurel et le plan. Réponds avec un rapport court : état, risques, tests manquants et prochaine action. Ne publie rien et ne modifie aucun fichier. Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préflight : ${JSON.stringify(validation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
       },
     });
     await updateRun("reviewer", { completed_at: new Date().toISOString(), output_summary: summary(reviewer), status: "succeeded" });
     await appendEvent(admin, "agent_completed", missionId, `${runKey}:reviewer:completed`, { agent: "reviewer", runKey });
-    await appendEvent(admin, "mission_completed", missionId, `${runKey}:mission:completed`, { runKey, source: "orchestrate-mission" });
-    await admin.from("missions").update({ status: "ready" }).eq("id", missionId).eq("user_id", auth.user.id);
+    const missionStatus = validation.status === "passed" ? "ready" : "needs-fix";
+    await appendEvent(admin, "mission_completed", missionId, `${runKey}:mission:completed`, {
+      runKey,
+      source: "orchestrate-mission",
+      validationStatus: validation.status,
+    });
+    await admin.from("missions").update({ status: missionStatus }).eq("id", missionId).eq("user_id", auth.user.id);
 
     const { data: completedRuns } = await admin.from("mission_agent_runs")
       .select("id,agent_key,status,output_summary,error_code,started_at,completed_at")
       .eq("mission_id", missionId)
       .eq("run_key", runKey)
       .order("step_index");
-    return corsResponse({ missionId, runKey, runs: completedRuns ?? [], status: "ready" }, 200, request);
+    return corsResponse({ missionId, runKey, runs: completedRuns ?? [], status: missionStatus, validation }, 200, request);
   } catch (error) {
     const code = error instanceof Error ? error.message.slice(0, 180) : "MISSION_RUN_FAILED";
     if (activeAgent) {

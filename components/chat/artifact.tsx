@@ -589,7 +589,7 @@ function PureArtifact({
               <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] text-amber-200">Demo mode</span>
             </div>
             <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">
-              {[{ name: "users", rows: "—", note: "Authentication" }, { name: "projects", rows: "—", note: "Generated apps" }, { name: "documents", rows: "—", note: "Versions & code" }].map((table) => (
+              {[{ name: "missions", rows: "—", note: "Mission state" }, { name: "mission_files", rows: "—", note: "Generated workspace" }, { name: "mission_agent_runs", rows: "—", note: "Persisted execution" }].map((table) => (
                 <div className="rounded-xl border border-sidebar-border/60 bg-background/25 p-4" key={table.name}>
                   <div className="flex items-center gap-2"><DatabaseIcon className="size-3.5 text-violet-300" /><span className="font-mono text-sm">{table.name}</span></div>
                   <p className="mt-3 text-[11px] text-muted-foreground">{table.note}</p>
@@ -597,7 +597,7 @@ function PureArtifact({
                 </div>
               ))}
             </div>
-            <div className="mx-5 rounded-xl border border-dashed border-violet-300/25 bg-violet-300/5 p-4 text-[11px] leading-5 text-muted-foreground">The live database connection will appear here once the backend is connected. The demo keeps this surface read-only.</div>
+            <div className="mx-5 rounded-xl border border-dashed border-violet-300/25 bg-violet-300/5 p-4 text-[11px] leading-5 text-muted-foreground">Cette vue reste en lecture seule. Les données affichées proviennent du workspace de mission après une exécution authentifiée.</div>
           </div>
         ) : (
           <div className="flex h-full min-h-0 overflow-hidden">

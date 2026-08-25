@@ -232,6 +232,16 @@ try {
     p_amount: 10,
     p_reason: 'ai:execution:test',
   });
+  await rpc('consume_ai_credit', {
+    p_user_id: userId,
+    p_mission_id: null,
+    p_idempotency_key: `ai:test:${runId}`,
+    p_amount: 10,
+    p_reason: 'ai:execution:test',
+  });
+  credits = await readCredits(userId);
+  assertEqual(credits?.balance, 115, 'ai.debit.retry.balance');
+  console.log('✓ retried AI debit is idempotent');
   await rpc('refund_ai_credit', {
     p_user_id: userId,
     p_mission_id: null,

@@ -25,7 +25,7 @@ function headersFor(request?: Request): Record<string, string> {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, stripe-signature",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Methods": "POST, GET, PATCH, OPTIONS",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };

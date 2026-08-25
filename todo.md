@@ -47,3 +47,14 @@
 - [x] Empêcher une intention d’idéation de créer un projet, une mission ou un workspace d’exécution
 - [x] Ajouter la reprise bornée et séquencée du journal VFS avec réhydratation du canvas sous RLS Supabase
 - [x] Raccorder le lancement visible de l’escouade Architecte → Builder → Reviewer à une mission existante avec clé d’idempotence et reprise VFS
+- [x] Vérifier chaque appel métier contre les tables et privilèges réellement définis par les migrations Supabase
+- [x] Remplacer toute écriture mission héritée vers `agent_runs` par le contrat unique `mission_agent_runs`
+- [x] Ajouter un contrat CI refusant toute table métier absente des migrations versionnées
+- [x] Concevoir et implémenter des frames VFS structurées sans accumulation globale du flux fournisseur
+- [x] Garder la preview fermée avant cohérence minimale des fichiers et connecter le VFS réel au canvas
+- [x] Évaluer la validation déterministe et la self-correction bornée de `main` sans prétendre exécuter WebContainer si indisponible
+- [x] Ajouter un préflight structurel persistant qui empêche une mission incohérente d’être marquée prête
+- [x] Étendre le test de crédit idempotent aux retries d’exécution ; l’exécution Supabase locale reste déléguée à la CI Docker
+- [x] Ajouter une confirmation one-shot liée à mission, intégration et digest avant l’export GitHub
+- [ ] Auditer l’état final des connecteurs OAuth avec un compte utilisateur et la configuration non sensible disponible
+- [ ] Préparer la procédure contrôlée de remplacement de `main` sans l’exécuter

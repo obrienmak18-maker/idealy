@@ -10,4 +10,10 @@ if (source.includes('if (intentCategory !== "CONVERSATION")')) {
   throw new Error("IDEATION must not create a mission as a side effect.");
 }
 
+for (const expected of ["Plan enregistré pour", "Run squad"]) {
+  if (!source.includes(expected)) {
+    throw new Error(`Execution must wait for a user-confirmed squad launch: ${expected}`);
+  }
+}
+
 console.log("Intent routing contract passed.");
