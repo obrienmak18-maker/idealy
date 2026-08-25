@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { authenticate } from "../_shared/auth.ts";
-import { corsResponse, optionsResponse } from "../_shared/cors.ts";
+import { authenticate } from "./auth.ts";
+import { corsResponse, optionsResponse } from "./cors.ts";
 
 type SquadRequest = {
   idempotencyKey?: unknown;
