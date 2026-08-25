@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest) {
 
   if (!token) {
     if (
-      ["/demo-flow", "/login", "/register", "/about", "/docs", "/privacy", "/terms"].includes(pathname) ||
+      ["/demo-flow", "/login", "/register", "/welcome", "/about", "/docs", "/privacy", "/terms"].includes(pathname) ||
       pathname.startsWith("/images/agents/")
     ) {
       return NextResponse.next();

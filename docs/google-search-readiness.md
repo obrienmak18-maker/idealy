@@ -23,7 +23,7 @@ Le référencement d’Idealy doit venir de pages utiles, lisibles et honnêtes 
 
 ## Limites actuelles
 
-La propriété Search Console n’est pas créée dans cette itération et aucun sitemap n’est soumis, car les accès au compte Google ne sont pas disponibles. La landing canonique est actuellement `/welcome`, car `/` est l’espace authentifié et redirige vers la connexion. Quand le domaine propre sera prêt, `NEXT_PUBLIC_SITE_URL` devra être remplacé et les pages publiques devront être contrôlées à nouveau.
+La propriété Search Console n’est pas créée dans cette itération et aucun sitemap n’est soumis, car les accès au compte Google ne sont pas disponibles. La landing canonique `/welcome` est maintenant publique et indexable ; `/` reste l’espace authentifié et redirige vers la connexion. Quand le domaine propre sera prêt, `NEXT_PUBLIC_SITE_URL` devra être remplacé et les pages publiques devront être contrôlées à nouveau.
 
 ## Références
 

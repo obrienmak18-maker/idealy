@@ -66,3 +66,4 @@
 - [x] Auditer robots, sitemap, métadonnées, contenu public et canonicals pour Google Search
 - [x] Ajouter les fondations SEO indexables et préparer la soumission Search Console sans la déclencher
 - [ ] Vérifier le domaine dans Google Search Console puis soumettre le sitemap et demander l’indexation des pages publiques
+- [x] Rendre `/welcome` réellement publique afin que la landing incluse au sitemap ne redirige pas vers la connexion
