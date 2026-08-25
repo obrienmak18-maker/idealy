@@ -41,9 +41,9 @@
 - [x] Auditer les différences fonctionnelles et de schéma entre `main` et `feat/idealy-live-backend`
 - [x] Décider et documenter la source d’autorité de chaque capacité métier, sans seconde identité ou seconde base métier
 - [ ] Rapporter de `main` uniquement les capacités vérifiées compatibles avec les contrats Supabase de live
-- [ ] Vérifier le streaming de fichiers, la reprise SSE, le VFS et le déclenchement réel du workspace
+- [x] Vérifier le streaming de fichiers, la reprise SSE, le VFS et le déclenchement réel du workspace
 - [ ] Vérifier les exports, snapshots, preview et connecteurs selon les confirmations et permissions par utilisateur
-- [ ] Valider la convergence sur `feat/idealy-live-backend` sans modifier ni fusionner `main`
+- [x] Valider la convergence sur `feat/idealy-live-backend` sans modifier ni fusionner `main`
 - [x] Empêcher une intention d’idéation de créer un projet, une mission ou un workspace d’exécution
 - [x] Ajouter la reprise bornée et séquencée du journal VFS avec réhydratation du canvas sous RLS Supabase
 - [x] Raccorder le lancement visible de l’escouade Architecte → Builder → Reviewer à une mission existante avec clé d’idempotence et reprise VFS
@@ -57,4 +57,4 @@
 - [x] Étendre le test de crédit idempotent aux retries d’exécution ; l’exécution Supabase locale reste déléguée à la CI Docker
 - [x] Ajouter une confirmation one-shot liée à mission, intégration et digest avant l’export GitHub
 - [ ] Auditer l’état final des connecteurs OAuth avec un compte utilisateur et la configuration non sensible disponible
-- [ ] Préparer la procédure contrôlée de remplacement de `main` sans l’exécuter
+- [x] Préparer la procédure contrôlée de remplacement de `main` sans l’exécuter

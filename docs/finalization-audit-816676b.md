@@ -79,6 +79,10 @@ L’export GitHub exige maintenant une confirmation persistante `github:export` 
 
 Le déploiement Netlify `6a8cfba6d725004c91b7642f` a bien compilé Next.js, mais Netlify a interrompu sa publication parce que son scanner a détecté la valeur configurée de `SUPABASE_URL` dans le guide OAuth versionné. Le scan a été conservé actif : la valeur a été remplacée par un placeholder de procédure dans la documentation, plutôt que d’exclure une règle ou de désactiver la protection. Une nouvelle publication n’est tentée qu’après validation de ce correctif.
 
+Le correctif documentaire a passé la CI `32801183005`, puis le déploiement Netlify `6a8cfe112bdaf2a1b7e66e7c` est devenu `ready` avec un scan de 1 049 fichiers ne retournant aucune correspondance. Les versions actives Supabase sont `process-ai-request` v17, `orchestrate-mission` v2, `github-export` v12 et `mission-action-confirmation` v1. Le libellé `main` dans le détail Netlify reste celui de l’upload API ; il ne correspond pas à un merge Git vers la branche `main`.
+
+Le conseiller de sécurité Supabase relève trois avis de niveau `INFO` : `credit_ledger`, `user_ai_keys` et `user_credits` ont la RLS activée sans policy navigateur. Ce comportement est intentionnel dans le modèle live : les privilèges client sont révoqués et les opérations passent exclusivement par les Edge Functions avec service role. Ces avis restent à réévaluer à chaque évolution de privilèges ; ils ne justifient pas l’ajout d’une policy permissive.
+
 Le workflow `Idealy Live Quality` s’exécute sur les pushes de `feat/idealy-live-backend`, les pull requests vers `main` ou la branche live, et déclenche manuellement. Il contrôle le typecheck, le build, les contrats statiques, le reset Supabase local/RLS et le webhook Stripe local. Il ne prouve pas à lui seul un déploiement Supabase ou Netlify de production.
 
 ## Suite ordonnée
