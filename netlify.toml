@@ -1,10 +1,10 @@
 [build]
-  # Commande de build explicite pour publier l’application opérationnelle Zeno
-  # et conserver les autres packages du monorepo indépendants
-  command = "pnpm --filter @workspace/zeno run build"
+  # Commande de build explicite pour éviter de builder mockup-sandbox
+  # qui nécessite des variables d'environnement spécifiques à Replit
+  command = "pnpm --filter @workspace/idealy run build"
   
-  # Dossier de publication correspondant à la sortie du build Vite de Zeno
-  publish = "artifacts/zeno/dist/public"
+  # Dossier de publication correspondant à la sortie du build Vite de idealy
+  publish = "artifacts/idealy/dist/public"
 
 [build.environment]
   # Variables d'environnement pour le build
