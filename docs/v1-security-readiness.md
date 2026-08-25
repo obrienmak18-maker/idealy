@@ -21,6 +21,8 @@ La revue examine les routes Next, les Edge Functions, les migrations, les contra
 
 Ces protections ont été publiées le 25 août 2026 : `create-checkout-session` v27, `create-billing-portal` v11, `check-subscription` v12, `cancel-subscription` v11, `vercel-deploy` v11, `vercel-status` v11 et `designer-tools` v1 sont toutes `ACTIVE` avec vérification JWT. Les fonctions sont désactivées par une réponse contrôlée, et non supprimées : leur réactivation impose donc de livrer le contrat de sécurité décrit dans le tableau ci-dessus.
 
+La version v3 de `orchestrate-mission` a également été déployée et vérifiée `ACTIVE` avec JWT. Elle conserve les protections d’ownership, d’idempotence, de VFS et de validation tout en relayant uniquement des directives de voix originales ; elle ne permet ni imitation de personnages existants ni annonce de résultats non observés.
+
 ## État GitHub OAuth
 
 Le flux actuel garde déjà un state aléatoire haché à durée courte, une consommation atomique, un callback fixe et un chiffrement des tokens côté serveur. Cependant, la demande `repo user` reste large et la V1 ne stocke pas encore de refresh token expirable ni de vérificateur PKCE. GitHub recommande des scopes minimaux, des tokens expirables et le PKCE pour le flux authorization-code ; GitHub Apps sont préférables quand les permissions fines par dépôt sont requises. [2] [3] [4]

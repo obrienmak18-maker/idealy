@@ -48,7 +48,7 @@ La variable de chiffrement est validée pour AES-GCM dans le code partagé ; la 
 4. Déployer le frontend Netlify depuis la branche live après la CI et les vérifications Edge. Vérifier l’état `ready`, le scan de secrets et les routes publiques prévues.
 5. Exécuter les tests authentifiés séparément lorsque le compte de test est disponible : mission/VFS, OAuth GitHub, puis Stripe **test mode**. Ne jamais combiner un test technique et une publication externe réelle.
 
-> L’orchestrateur de cette itération inclut des directives de voix pour les agents. Le code source ne devient actif en production qu’après un déploiement Edge réussi et une vérification de version.
+> L’orchestrateur de cette itération inclut des directives de voix pour les agents et a été vérifié `ACTIVE` en version v3 avec JWT le 25 août 2026. Toute évolution ultérieure doit à nouveau suivre le déploiement Edge et la vérification de version.
 
 ## Runbooks
 

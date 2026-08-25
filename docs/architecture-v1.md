@@ -64,7 +64,7 @@ Les avatars fournis par le créateur restent réservés au contexte de démonstr
 | `/api/idealy/process-ai-request` | Bearer explicite ou session | Le bearer est requis ; l’`apikey` de Supabase vient uniquement de la configuration serveur. | L’Edge Function applique les limites fournisseur et crédits. |
 | `/api/files/upload` | JPEG/PNG ≤ 5 Mo | Session requise et chemin public isolé par utilisateur/UUID. | Les fichiers sont publics par conception : jamais de données sensibles. |
 | `process-ai-request` | Prompt/plan/run | JWT, limite de débit, crédits, allowlist de fournisseurs et VFS structuré. | Disponibilité d’un fournisseur à vérifier en environnement réel. |
-| `orchestrate-mission` | Mission + idempotence | Ownership, idempotence, runs et validation persistés. | Nouveau code de voix à déployer après validation. |
+| `orchestrate-mission` | Mission + idempotence | Ownership, idempotence, runs, validation persistés et directives de voix originales. | Version v3 `ACTIVE` avec JWT, le 25 août 2026. |
 | `github-export` | Mission + confirmation | Confirmation one-shot liée au digest et à l’intégration. | OAuth GitHub réel non certifié. |
 | Stripe | JWT, origine fixe et webhook signé | CORS strict, retours fixes, erreurs génériques et idempotence checkout. | Checkout test réel à effectuer. |
 
