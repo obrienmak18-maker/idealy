@@ -7,14 +7,134 @@ import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
 import { artifactDefinitions } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
-import type { MissionFileEvent } from "@/lib/idealy/mission-files";
+import type { MissionFile, MissionFileEvent } from "@/lib/idealy/mission-files";
 import { mergeMissionFileEvent } from "@/lib/idealy/mission-files";
+
+type MissionReplayResponse = {
+  events: Array<{
+    created_at: string;
+    event_type: MissionFileEvent["eventType"];
+    file_version: number | null;
+    mission_id: string;
+    path: string | null;
+    payload: Record<string, unknown>;
+    sequence: number;
+  }>;
+  files: Array<{
+    checksum: string | null;
+    content: string;
+    id: string;
+    language: string | null;
+    mission_id: string;
+    path: string;
+    status: MissionFile["status"];
+    updated_at: string;
+    version: number;
+  }>;
+  lastSequence: number;
+};
+
+function mergeWorkspaceSnapshot(
+  currentFiles: MissionFile[],
+  incomingFiles: MissionReplayResponse["files"]
+) {
+  const files = new Map(
+    currentFiles.map((file) => [`${file.missionId}:${file.path}:${file.version}`, file])
+  );
+
+  for (const file of incomingFiles) {
+    const key = `${file.mission_id}:${file.path}:${file.version}`;
+    const existing = files.get(key);
+    files.set(key, {
+      ...(existing ?? {}),
+      checksum: file.checksum ?? undefined,
+      content: file.content,
+      id: file.id,
+      language: file.language ?? undefined,
+      missionId: file.mission_id,
+      path: file.path,
+      status: file.status,
+      updatedAt: file.updated_at,
+      version: file.version,
+    });
+  }
+
+  return [...files.values()];
+}
 
 export function DataStreamHandler() {
   const { dataStream, setDataStream } = useDataStream();
   const { mutate } = useSWRConfig();
 
-  const { artifact, setArtifact, setMetadata } = useArtifact();
+  const { artifact, metadata, setArtifact, setMetadata } = useArtifact();
+
+  const missionId =
+    typeof metadata?.missionId === "string" ? metadata.missionId : null;
+  const lastSequence = Number(metadata?.missionFileLastSequence ?? 0);
+
+  useEffect(() => {
+    if (!missionId || !Number.isSafeInteger(lastSequence) || lastSequence < 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const hydrateWorkspace = async () => {
+      try {
+        const response = await fetch(
+          `/api/idealy/missions/${missionId}/events?afterSequence=${lastSequence}`,
+          { cache: "no-store", signal: controller.signal }
+        );
+        if (!response.ok) return;
+        const replay = (await response.json()) as MissionReplayResponse;
+        if (controller.signal.aborted || !Array.isArray(replay.events) || !Array.isArray(replay.files)) {
+          return;
+        }
+
+        setMetadata((current: Record<string, unknown> | null) => {
+          const currentLastSequence = Number(current?.missionFileLastSequence ?? 0);
+          const currentFiles = Array.isArray(current?.missionFiles)
+            ? (current.missionFiles as MissionFile[])
+            : [];
+          const mergedEvents = replay.events.reduce(
+            (state, event) =>
+              mergeMissionFileEvent(state, {
+                eventType: event.event_type,
+                missionId: event.mission_id,
+                path: event.path ?? undefined,
+                payload: event.payload,
+                sequence: event.sequence,
+              }),
+            { files: currentFiles, lastSequence: currentLastSequence }
+          );
+          const missionFiles = mergeWorkspaceSnapshot(mergedEvents.files, replay.files);
+          const nextLastSequence = Math.max(
+            mergedEvents.lastSequence,
+            Number.isSafeInteger(replay.lastSequence) ? replay.lastSequence : 0
+          );
+
+          if (
+            nextLastSequence === currentLastSequence &&
+            missionFiles.length === currentFiles.length
+          ) {
+            return current;
+          }
+
+          return {
+            ...(current ?? {}),
+            missionFileLastSequence: nextLastSequence,
+            missionFiles,
+          };
+        });
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.warn("Workspace event replay unavailable", error);
+        }
+      }
+    };
+
+    void hydrateWorkspace();
+    return () => controller.abort();
+  }, [lastSequence, missionId, setMetadata]);
 
   useEffect(() => {
     if (!dataStream?.length) {

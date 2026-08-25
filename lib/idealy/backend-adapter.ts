@@ -37,6 +37,29 @@ export type IdealyMission = {
   projectId?: string;
 };
 
+export type IdealyMissionFileEvent = {
+  created_at: string;
+  event_type: string;
+  file_version: number | null;
+  id: string;
+  mission_id: string;
+  path: string | null;
+  payload: Record<string, unknown>;
+  sequence: number;
+};
+
+export type IdealyMissionFile = {
+  checksum: string | null;
+  content: string;
+  id: string;
+  language: string | null;
+  mission_id: string;
+  path: string;
+  status: "pending" | "writing" | "saved" | "validated" | "error";
+  updated_at: string;
+  version: number;
+};
+
 type IdealyIntentResponse = {
   intent?: unknown;
 };
@@ -194,6 +217,46 @@ async function callSupabaseRest<T>(
   }
 
   return payload as T;
+}
+
+export async function listIdealyMissionFileEvents({
+  afterSequence,
+  missionId,
+  request,
+}: {
+  afterSequence: number;
+  missionId: string;
+  request: Request;
+}): Promise<IdealyMissionFileEvent[]> {
+  const events = await callSupabaseRest<IdealyMissionFileEvent[]>(
+    request,
+    `mission_file_events?select=id,mission_id,sequence,event_type,path,file_version,payload,created_at&mission_id=eq.${encodeURIComponent(missionId)}&sequence=gt.${afterSequence}&order=sequence.asc&limit=100`,
+    {
+      cache: "no-store",
+      method: "GET",
+    }
+  );
+
+  return Array.isArray(events) ? events : [];
+}
+
+export async function listIdealyMissionFiles({
+  missionId,
+  request,
+}: {
+  missionId: string;
+  request: Request;
+}): Promise<IdealyMissionFile[]> {
+  const files = await callSupabaseRest<IdealyMissionFile[]>(
+    request,
+    `mission_files?select=id,mission_id,path,content,language,version,status,checksum,updated_at&mission_id=eq.${encodeURIComponent(missionId)}&order=path.asc,version.desc&limit=500`,
+    {
+      cache: "no-store",
+      method: "GET",
+    }
+  );
+
+  return Array.isArray(files) ? files : [];
 }
 
 export async function classifyIdealyIntent(

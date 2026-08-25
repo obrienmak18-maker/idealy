@@ -38,3 +38,11 @@
 - [ ] Étendre le catalogue de connecteurs OAuth par utilisateur sans marquer un fournisseur actif avant son OAuth validé
 - [x] Définir le modèle d’intégration MCP utilisateur et ses contrôles de permission, sans stocker de secret en clair
 - [ ] Tester, documenter et publier cette étape sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Auditer les différences fonctionnelles et de schéma entre `main` et `feat/idealy-live-backend`
+- [x] Décider et documenter la source d’autorité de chaque capacité métier, sans seconde identité ou seconde base métier
+- [ ] Rapporter de `main` uniquement les capacités vérifiées compatibles avec les contrats Supabase de live
+- [ ] Vérifier le streaming de fichiers, la reprise SSE, le VFS et le déclenchement réel du workspace
+- [ ] Vérifier les exports, snapshots, preview et connecteurs selon les confirmations et permissions par utilisateur
+- [ ] Valider la convergence sur `feat/idealy-live-backend` sans modifier ni fusionner `main`
+- [x] Empêcher une intention d’idéation de créer un projet, une mission ou un workspace d’exécution
+- [x] Ajouter la reprise bornée et séquencée du journal VFS avec réhydratation du canvas sous RLS Supabase

@@ -60,6 +60,12 @@ jobs:
       - name: Mission squad contract
         run: node scripts/test-mission-squad-contract.mjs
 
+      - name: Intent routing contract
+        run: node scripts/test-intent-routing.mjs
+
+      - name: Workspace event replay contract
+        run: node scripts/test-workspace-event-replay-contract.mjs
+
       - name: Build application
         run: pnpm build
 

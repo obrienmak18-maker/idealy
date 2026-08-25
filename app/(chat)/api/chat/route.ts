@@ -502,7 +502,10 @@ export async function POST(request: Request) {
             intentCategory = await classifyIdealyIntent(request, idealyPrompt);
             dataStream.write({ data: intentCategory, type: "data-idealy-intent" });
 
-            if (intentCategory !== "CONVERSATION") {
+            // Une discussion ou une idéation restent sans effet de bord : elles
+            // peuvent produire une réponse et une proposition, mais seule une
+            // intention d’exécution ouvre un projet, une mission et le VFS.
+            if (intentCategory === "EXECUTION") {
               writeWaitingStatus("thinking", "Creating the mission workspace...");
               const project = await createIdealyProject({
                 prompt: idealyPrompt,
