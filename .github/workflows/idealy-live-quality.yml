@@ -57,6 +57,9 @@ jobs:
       - name: Demo multi-agent program contract
         run: pnpm test:demo-program
 
+      - name: Mission squad contract
+        run: node scripts/test-mission-squad-contract.mjs
+
       - name: Build application
         run: pnpm build
 
@@ -96,6 +99,7 @@ jobs:
         run: |
           psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/mission-files.sql
           psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/billing-integrity.sql
+          psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/mission-agent-orchestration.sql
 
       - name: Stop local Supabase
         if: always()
