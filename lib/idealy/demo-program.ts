@@ -57,18 +57,22 @@ const avatars = {
   zeref: "/images/agents/mage/avatar_zeref.webp",
 };
 
+// Les portraits fournis sont conservés comme éléments visuels de la démo.
+// Les noms et consignes de mission ci-dessous sont des rôles originaux Idealy :
+// ils ne représentent ni ne reproduisent des personnages de franchises existantes.
+
 export const demoPaths: DemoPath[] = [
   {
     accent: "from-sky-400 via-cyan-300 to-violet-500",
     agents: [
-      { accent: "from-amber-300 to-orange-500", avatarUrl: avatars.naruto, focus: "Déclenche l’élan et transforme l’intention en action.", initials: "NA", name: "Naruto", role: "Pilote d’élan", specialty: "Impulsion chakra" },
-      { accent: "from-slate-500 to-cyan-500", avatarUrl: avatars.shikamaru, focus: "Découpe la mission et anticipe les chemins critiques.", initials: "SH", name: "Shikamaru", role: "Stratège de mission", specialty: "Tactique ombre" },
-      { accent: "from-rose-400 to-emerald-500", avatarUrl: avatars.sakura, focus: "Valide les choix et remet l’équipe d’aplomb quand une étape fatigue le parcours.", initials: "SA", name: "Sakura", role: "Gardienne de qualité", specialty: "Soin de mission" },
-      { accent: "from-rose-500 to-violet-600", avatarUrl: avatars.sasuke, focus: "Sécurise les choix sensibles et coupe les régressions avant livraison.", initials: "SS", name: "Sasuke", role: "Gardien de précision", specialty: "Foudre de contrôle" },
-      { accent: "from-slate-300 to-indigo-500", avatarUrl: avatars.kakashi, focus: "Relit les décisions critiques et transforme l’expérience en raccourcis fiables.", initials: "KA", name: "Kakashi", role: "Mentor technique", specialty: "Lecture de patterns" },
-      { accent: "from-yellow-300 to-sky-500", avatarUrl: avatars.minato, focus: "Accélère les passages entre les étapes et débloque les goulots.", initials: "MI", name: "Minato", role: "Accélérateur de flux", specialty: "Déplacement éclair" },
-      { accent: "from-red-500 to-violet-700", avatarUrl: avatars.madara, focus: "Met la stratégie sous tension afin de révéler les angles morts du plan.", initials: "MA", name: "Madara", role: "Test de résilience", specialty: "Pression stratégique" },
-      { accent: "from-emerald-400 to-violet-500", avatarUrl: avatars.orochimaru, focus: "Explore les voies non conventionnelles et propose des pistes expérimentales.", initials: "OR", name: "Orochimaru", role: "Chercheur expérimental", specialty: "Recherche avancée" },
+      { accent: "from-amber-300 to-orange-500", avatarUrl: avatars.naruto, focus: "Déclenche l’élan et transforme l’intention en action.", initials: "KA", name: "Kairo Vale", role: "Pilote d’élan", specialty: "Impulsion de mission" },
+      { accent: "from-slate-500 to-cyan-500", avatarUrl: avatars.shikamaru, focus: "Découpe la mission et anticipe les chemins critiques.", initials: "SO", name: "Solenne Hart", role: "Stratège de mission", specialty: "Tactique de flux" },
+      { accent: "from-rose-400 to-emerald-500", avatarUrl: avatars.sakura, focus: "Valide les choix et remet l’équipe d’aplomb quand une étape fatigue le parcours.", initials: "MA", name: "Maya Kline", role: "Gardienne de qualité", specialty: "Soin de mission" },
+      { accent: "from-rose-500 to-violet-600", avatarUrl: avatars.sasuke, focus: "Sécurise les choix sensibles et coupe les régressions avant livraison.", initials: "RA", name: "Raven Ward", role: "Gardien de précision", specialty: "Contrôle de livraison" },
+      { accent: "from-slate-300 to-indigo-500", avatarUrl: avatars.kakashi, focus: "Relit les décisions critiques et transforme l’expérience en raccourcis fiables.", initials: "EL", name: "Elian Frost", role: "Mentor technique", specialty: "Lecture de patterns" },
+      { accent: "from-yellow-300 to-sky-500", avatarUrl: avatars.minato, focus: "Accélère les passages entre les étapes et débloque les goulots.", initials: "NI", name: "Niko Swift", role: "Accélérateur de flux", specialty: "Relais rapide" },
+      { accent: "from-red-500 to-violet-700", avatarUrl: avatars.madara, focus: "Met la stratégie sous tension afin de révéler les angles morts du plan.", initials: "DO", name: "Dorian Ash", role: "Test de résilience", specialty: "Pression stratégique" },
+      { accent: "from-emerald-400 to-violet-500", avatarUrl: avatars.orochimaru, focus: "Explore les voies non conventionnelles et propose des pistes expérimentales.", initials: "LY", name: "Lyra Vale", role: "Chercheuse expérimentale", specialty: "Recherche avancée" },
     ],
     description: "Précision, mouvement et itérations courtes pour passer de l’idée à l’action.",
     icon: "crosshair",
@@ -81,11 +85,11 @@ export const demoPaths: DemoPath[] = [
   {
     accent: "from-emerald-300 via-lime-400 to-amber-400",
     agents: [
-      { accent: "from-cyan-400 to-blue-500", avatarUrl: avatars.gon, focus: "Poursuit l’objectif, garde l’élan et rend les choix visibles.", initials: "GO", name: "Gon", role: "Éclaireur de piste", specialty: "Nen de découverte" },
-      { accent: "from-slate-300 to-cyan-500", avatarUrl: avatars.ging, focus: "Trouve les indices faibles et les raccourcis qui font avancer l’enquête.", initials: "GI", name: "Ging", role: "Explorateur de signaux", specialty: "Nen d’exploration" },
-      { accent: "from-amber-400 to-rose-500", avatarUrl: avatars.merum, focus: "Met les hypothèses à l’épreuve avec des questions de niveau expert.", initials: "ME", name: "Merum", role: "Arbitre de décisions", specialty: "Nen de confrontation" },
-      { accent: "from-emerald-400 to-amber-500", avatarUrl: avatars.netero, focus: "Valide les étapes importantes avant que l’équipe n’engage davantage de ressources.", initials: "NE", name: "Netero", role: "Maître de validation", specialty: "Nen de maîtrise" },
-      { accent: "from-violet-400 to-slate-700", avatarUrl: avatars.chrollo, focus: "Compare des méthodes opposées pour enrichir les solutions disponibles.", initials: "CH", name: "Chrollo", role: "Analyste de méthodes", specialty: "Nen d’analyse" },
+      { accent: "from-cyan-400 to-blue-500", avatarUrl: avatars.gon, focus: "Poursuit l’objectif, garde l’élan et rend les choix visibles.", initials: "AR", name: "Ari Nova", role: "Éclaireur de piste", specialty: "Radar de découverte" },
+      { accent: "from-slate-300 to-cyan-500", avatarUrl: avatars.ging, focus: "Trouve les indices faibles et les raccourcis qui font avancer l’enquête.", initials: "IL", name: "Ilias Ford", role: "Explorateur de signaux", specialty: "Lecture d’exploration" },
+      { accent: "from-amber-400 to-rose-500", avatarUrl: avatars.merum, focus: "Met les hypothèses à l’épreuve avec des questions de niveau expert.", initials: "MI", name: "Mira Crown", role: "Arbitre de décisions", specialty: "Confrontation d’hypothèses" },
+      { accent: "from-emerald-400 to-amber-500", avatarUrl: avatars.netero, focus: "Valide les étapes importantes avant que l’équipe n’engage davantage de ressources.", initials: "TH", name: "Theo Arc", role: "Maître de validation", specialty: "Validation de piste" },
+      { accent: "from-violet-400 to-slate-700", avatarUrl: avatars.chrollo, focus: "Compare des méthodes opposées pour enrichir les solutions disponibles.", initials: "SO", name: "Soren Vale", role: "Analyste de méthodes", specialty: "Analyse comparative" },
     ],
     description: "Exploration, décision et validation pour les projets qui demandent du flair.",
     icon: "telescope",
@@ -98,10 +102,10 @@ export const demoPaths: DemoPath[] = [
   {
     accent: "from-fuchsia-400 via-violet-500 to-indigo-500",
     agents: [
-      { accent: "from-orange-400 to-rose-500", avatarUrl: avatars.natsu, focus: "Transforme une vision en première version expressive et utilisable.", initials: "NA", name: "Natsu", role: "Forgeur d’expériences", specialty: "Mana de feu créatif" },
-      { accent: "from-red-400 to-sky-500", avatarUrl: avatars.erza, focus: "Change d’outillage quand la mission demande une autre forme de protection.", initials: "ER", name: "Erza", role: "Gardienne de structure", specialty: "Mana d’armure" },
-      { accent: "from-indigo-500 to-violet-700", avatarUrl: avatars.zeref, focus: "Analyse les conséquences longues et les zones de fragilité de l’expérience.", initials: "ZE", name: "Zeref", role: "Analyste de risques", specialty: "Mana d’équilibre" },
-      { accent: "from-cyan-400 to-violet-700", avatarUrl: avatars.acnologia, focus: "Pousse la solution à ses limites pour vérifier qu’elle résiste à la complexité.", initials: "AC", name: "Acnologia", role: "Épreuve de résilience", specialty: "Mana de stress-test" },
+      { accent: "from-orange-400 to-rose-500", avatarUrl: avatars.natsu, focus: "Transforme une vision en première version expressive et utilisable.", initials: "NA", name: "Naya Ember", role: "Forgeuse d’expériences", specialty: "Élan créatif" },
+      { accent: "from-red-400 to-sky-500", avatarUrl: avatars.erza, focus: "Change d’outillage quand la mission demande une autre forme de protection.", initials: "AR", name: "Aria Steel", role: "Gardienne de structure", specialty: "Architecture adaptable" },
+      { accent: "from-indigo-500 to-violet-700", avatarUrl: avatars.zeref, focus: "Analyse les conséquences longues et les zones de fragilité de l’expérience.", initials: "ZE", name: "Zev Mora", role: "Analyste de risques", specialty: "Équilibre produit" },
+      { accent: "from-cyan-400 to-violet-700", avatarUrl: avatars.acnologia, focus: "Pousse la solution à ses limites pour vérifier qu’elle résiste à la complexité.", initials: "KA", name: "Kael Drake", role: "Épreuve de résilience", specialty: "Stress-test créatif" },
     ],
     description: "Créativité structurée et expériences mémorables pour les projets ambitieux.",
     icon: "sparkles",

@@ -15,7 +15,7 @@ assert.ok(demoPaths.every((path) => path.agents.every((agent) => agent.avatarUrl
 assert.ok(demoPaths.every((path) => path.resource.initial > 0));
 assert.equal(demoMissionSteps.length, 5, "The mission should expose five concrete steps.");
 assert.equal(getDemoPath("mage").name, "Voie Mage");
-assert.equal(getPathAgent(getDemoPath("hunter"), demoMissionSteps[3]).name, "Netero");
+assert.equal(getPathAgent(getDemoPath("hunter"), demoMissionSteps[3]).role, "Maître de validation");
 assert.ok(resourceForStep(getDemoPath("ninja"), 2) < getDemoPath("ninja").resource.initial);
 assert.equal(getDemoPath("professional").agents.length, 5, "Professional should have an operational squad.");
 assert.equal(getDemoPath("professional").levels?.length, 5, "Professional should expose five operation levels.");

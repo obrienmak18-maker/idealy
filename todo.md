@@ -84,3 +84,7 @@
 - [x] Borner la taille des écritures de documents hérités pour limiter la consommation de stockage
 - [x] Relier les quatre voies à des profils d’agents originaux et contraints dans les plans et l’orchestration réels
 - [ ] Résoudre le quota Netlify puis publier et vérifier la branche live avec un nouveau déploiement `ready`
+- [x] Créer une entrée de démonstration locale, accessible sans compte et indépendante de Netlify
+- [x] Construire un scénario démo contrôlable : idée, plan, escouade, fichiers et aperçu
+- [x] Identifier explicitement les données et événements locaux afin de ne pas les présenter comme une production persistante
+- [x] Tester le mode démo local, documenter son accès navigateur et vérifier que `main` reste intacte

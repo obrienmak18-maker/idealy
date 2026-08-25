@@ -2,6 +2,7 @@
 
 import {
   ArrowRightIcon,
+  BookOpenCheckIcon,
   BriefcaseBusinessIcon,
   CheckCircle2Icon,
   ChevronRightIcon,
@@ -82,6 +83,7 @@ export default function DemoFlowPage() {
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const [showRoster, setShowRoster] = useState(true);
   const [showUxStudio, setShowUxStudio] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const [selectedFile, setSelectedFile] = useState(codeFiles[0]);
   const [recoveryBoost, setRecoveryBoost] = useState(0);
 
@@ -121,6 +123,7 @@ export default function DemoFlowPage() {
     setPreviewPage("home");
     setIsCanvasOpen(true);
     setIsCanvasExpanded(false);
+    setShowGuide(false);
   };
 
   const recoverMission = () => {
@@ -158,6 +161,14 @@ export default function DemoFlowPage() {
             type="button"
           >
             Recommencer
+          </button>
+          <button
+            aria-expanded={showGuide}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => setShowGuide((value) => !value)}
+            type="button"
+          >
+            <BookOpenCheckIcon className="size-3.5" /> Guide vidéo
           </button>
         </div>
       </header>
@@ -380,6 +391,30 @@ export default function DemoFlowPage() {
             </div>
 
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 md:p-5">
+              {showGuide ? (
+                <section className="rounded-2xl border border-sky-400/25 bg-sky-400/10 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold">Parcours de présentation</p>
+                      <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                        Une séquence locale de cinq étapes pour expliquer Idealy sans compte, paiement, publication ni appel IA externe.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-background px-2 py-1 text-[10px] font-medium text-sky-700 dark:text-sky-300">Local</span>
+                  </div>
+                  <ol className="mt-3 grid gap-2 text-[11px] leading-5 sm:grid-cols-2">
+                    {[
+                      "1. Choisir une voie et formuler l’idée.",
+                      "2. Lancer le plan de mission.",
+                      "3. Montrer les rôles de l’escouade.",
+                      "4. Ouvrir Preview, Code, Données et Console.",
+                      "5. Terminer puis rejouer la mission.",
+                    ].map((item) => (
+                      <li className="rounded-lg bg-background/70 px-2.5 py-2 text-muted-foreground" key={item}>{item}</li>
+                    ))}
+                  </ol>
+                </section>
+              ) : null}
               <div className="ml-auto max-w-[92%] rounded-2xl rounded-tr-md bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground shadow-sm">
                 {mission || demoPrompt}
               </div>
@@ -595,6 +630,17 @@ export default function DemoFlowPage() {
                   >
                     <PanelRightIcon className="size-3.5" />
                   </button>
+                  <button
+                    aria-label="Afficher le canvas en mode présentation"
+                    className="hidden items-center gap-1.5 rounded-lg bg-foreground px-2.5 py-2 text-[11px] font-semibold text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex"
+                    onClick={() => {
+                      setActiveView("preview");
+                      setIsCanvasExpanded(true);
+                    }}
+                    type="button"
+                  >
+                    <MonitorIcon className="size-3.5" /> Présenter
+                  </button>
                 </div>
               </div>
 
@@ -694,8 +740,8 @@ function DemoPreview({
           <span className="truncate rounded-md bg-slate-100 px-2 py-1 text-[10px] text-slate-500">
             idealy.demo / {previewPage}
           </span>
-          <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600">
-            <span className="size-1.5 rounded-full bg-emerald-500" /> live
+          <span className="flex items-center gap-1 text-[10px] font-medium text-sky-700">
+            <span className="size-1.5 rounded-full bg-sky-500" /> aperçu local
           </span>
         </div>
 
@@ -811,7 +857,7 @@ function DemoPreview({
           {showUxStudio ? (
             <div aria-label="Simulation de collaboration UX" className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
               <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full border border-violet-300/70 bg-white/90 px-2.5 py-1 text-[9px] font-semibold text-violet-700 shadow-sm backdrop-blur-sm">
-                <UsersRoundIcon className="size-3" /> Studio UX actif
+                <UsersRoundIcon className="size-3" /> Studio UX illustré
               </div>
               <div className="idealy-ux-selection" />
               <div className="idealy-ux-stroke" />
@@ -828,8 +874,8 @@ function DemoPreview({
                 <span className="rounded-md bg-amber-500 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm">Revue UX</span>
               </div>
               <div className="absolute bottom-4 right-4 max-w-44 rounded-xl border border-amber-300/70 bg-white/95 p-2.5 text-[10px] leading-4 text-slate-600 shadow-lg backdrop-blur-sm">
-                <span className="font-semibold text-amber-700">Annotation active</span>
-                <p className="mt-0.5">Le parcours est ajusté dans le canvas, étape par étape.</p>
+                <span className="font-semibold text-amber-700">Annotation illustrée</span>
+                <p className="mt-0.5">Le parcours montre le type d’ajustement que le canvas peut rendre visible.</p>
               </div>
             </div>
           ) : null}
