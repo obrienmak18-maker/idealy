@@ -7,10 +7,31 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 
 export const metadata: Metadata = {
+  applicationName: "Idealy",
   description:
-    "Idealy est votre espace de création assistée pour transformer une intention en projet concret.",
-  metadataBase: new URL("https://idealy-ai.netlify.app"),
-  title: "Idealy",
+    "Idealy aide à transformer une idée en mission, plan de projet et application assistée par IA.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://idealy-ai.netlify.app",
+  ),
+  title: {
+    default: "Idealy — Transformez une idée en projet",
+    template: "%s | Idealy",
+  },
+  openGraph: {
+    description:
+      "Clarifiez une idée, planifiez votre projet et construisez avec un workspace assisté par IA.",
+    locale: "fr_FR",
+    siteName: "Idealy",
+    type: "website",
+  },
+  robots: {
+    follow: true,
+    googleBot: { follow: true, index: true },
+    index: true,
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export const viewport = {

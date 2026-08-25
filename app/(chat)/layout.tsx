@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Script from "next/script";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import { AppSidebar } from "@/components/chat/app-sidebar";
 import { DataStreamProvider } from "@/components/chat/data-stream-provider";
@@ -8,6 +9,10 @@ import { ChatShell } from "@/components/chat/shell";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
 import { auth } from "../(auth)/auth";
+
+export const metadata: Metadata = {
+  robots: { follow: false, index: false },
+};
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

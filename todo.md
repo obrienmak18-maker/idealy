@@ -63,3 +63,6 @@
 - [x] Préparer la documentation et les contrats OAuth Google sans activer de fournisseur ni stocker de secret
 - [ ] Configurer un domaine Idealy propriétaire, créer les projets Google Test/Production et vérifier les domaines dans Search Console
 - [ ] Implémenter puis tester le flux OAuth Google utilisateur avec callback Edge, refresh token chiffré et révocation
+- [x] Auditer robots, sitemap, métadonnées, contenu public et canonicals pour Google Search
+- [x] Ajouter les fondations SEO indexables et préparer la soumission Search Console sans la déclencher
+- [ ] Vérifier le domaine dans Google Search Console puis soumettre le sitemap et demander l’indexation des pages publiques
