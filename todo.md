@@ -83,3 +83,4 @@
 - [x] Empêcher le proxy IA Next de transmettre une clé Supabase fournie par le client
 - [x] Borner la taille des écritures de documents hérités pour limiter la consommation de stockage
 - [x] Relier les quatre voies à des profils d’agents originaux et contraints dans les plans et l’orchestration réels
+- [ ] Résoudre le quota Netlify puis publier et vérifier la branche live avec un nouveau déploiement `ready`

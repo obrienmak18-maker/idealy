@@ -44,6 +44,12 @@ L’audit statique a confirmé que l’API d’escouade relaie vers l’Edge Fun
 
 Les contrôles backend de crédits, webhook signé, idempotence et remboursement borné sont couverts par les contrats locaux/CI. Les pages publiques n’annoncent pas de prix réels non configurés. En revanche, aucun smoke test utilisateur complet de checkout n’a été exécuté dans cette session et l’interface ne propose pas encore un parcours d’achat de production validé. Idealy peut être préparé pour une bêta payante, mais ne doit pas être qualifié de paiement public certifié avant ce test et la validation du catalogue Stripe.
 
+L’advisor de sécurité Supabase du 25 août 2026 signale `user_credits`, `credit_ledger` et `user_ai_keys` avec RLS activée mais sans policy. Dans cette architecture, les trois tables sont volontairement fermées aux rôles `anon` et `authenticated` ; la CI vérifie notamment l’absence de privilèges directs sur les tables de crédits et l’usage de fonctions réservées au rôle de service. Cet avis est donc un rappel de conception, non la preuve d’un accès public. Toute future lecture utilisateur devra passer par une vue, un RPC ou une policy limitée et testée, jamais par une policy générale. [5]
+
+## Publication frontend
+
+La CI du commit `88889e5` et celle du commit documentaire `380a1eb` ont réussi. `orchestrate-mission` v3 est actif côté Supabase. En revanche, Netlify a refusé le déploiement `6a8d87c932e515cea1722fb0` avant build avec le message `Skipped due to account credit usage exceeded`. Le dernier déploiement Netlify vérifié `ready` reste `6a8d1930ddbff0e70de831b2` et ne contient pas cette itération V1. Ce blocage ne touche ni `main` ni les Edge Functions publiées ; il doit être résolu dans le compte Netlify avant une nouvelle tentative, suivie d’une vérification de build et de scan de secrets.
+
 ## Risques ouverts avant V1 publique
 
 | Priorité | Point ouvert | Condition de fermeture |
@@ -53,6 +59,7 @@ Les contrôles backend de crédits, webhook signé, idempotence et remboursement
 | Haute | Parcours checkout réel Stripe. | Produits/prix validés, mode test, webhook, portail et annulation contrôlés sans paiement réel. |
 | Moyenne | Intégrations Vercel et designer. | OAuth individuel, confirmations persistantes, limites, crédits et tests dédiés. |
 | Moyenne | Validation de build/auto-correction. | Environnement de validation explicite ; ne pas annoncer WebContainer tant qu’il n’est pas réellement exécutable. |
+| Haute | Publication frontend V1 bloquée par quota Netlify. | Quota Netlify disponible, nouveau deploy `ready`, scan de secrets propre et vérification des routes. |
 
 ## Références
 
@@ -60,3 +67,4 @@ Les contrôles backend de crédits, webhook signé, idempotence et remboursement
 [2]: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/best-practices-for-creating-an-oauth-app "GitHub — OAuth App best practices"
 [3]: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps "GitHub — OAuth App scopes"
 [4]: https://github.blog/changelog/2025-07-14-pkce-support-for-oauth-and-github-app-authentication/ "GitHub — PKCE support for OAuth"
+[5]: ../supabase/tests/billing-integrity.sql "Contrat CI : RLS et privilèges des crédits"
