@@ -33,8 +33,8 @@
 - [x] Ajouter les pages produit professionnelles : à propos, documentation, confidentialité, conditions et contact
 - [x] Valider, documenter et publier cette consolidation sur `feat/idealy-live-backend` sans fusionner vers `main`
 - [ ] Vérifier et compléter la configuration OAuth GitHub pour les utilisateurs finaux sur Supabase Edge et Netlify
-- [ ] Ajouter le schéma persistant des runs, outils autorisés et confirmations d’action de mission
-- [ ] Construire le premier flux réel et borné Architecte → Builder → Reviewer avec journal, budget et idempotence
+- [x] Ajouter le schéma persistant des runs, outils autorisés et confirmations d’action de mission
+- [x] Construire le premier flux réel et borné Architecte → Builder → Reviewer avec journal, budget et idempotence
 - [ ] Étendre le catalogue de connecteurs OAuth par utilisateur sans marquer un fournisseur actif avant son OAuth validé
-- [ ] Définir le modèle d’intégration MCP utilisateur et ses contrôles de permission, sans stocker de secret en clair
+- [x] Définir le modèle d’intégration MCP utilisateur et ses contrôles de permission, sans stocker de secret en clair
 - [ ] Tester, documenter et publier cette étape sur `feat/idealy-live-backend` sans fusionner vers `main`
