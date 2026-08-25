@@ -69,6 +69,12 @@ jobs:
       - name: External action confirmation contract
         run: node scripts/test-external-action-confirmation-contract.mjs
 
+      - name: Billing security contract
+        run: node scripts/test-billing-security-contract.mjs
+
+      - name: Shared external connector guard
+        run: node scripts/test-shared-external-connector-guard.mjs
+
       - name: Workspace event replay contract
         run: node scripts/test-workspace-event-replay-contract.mjs
 
