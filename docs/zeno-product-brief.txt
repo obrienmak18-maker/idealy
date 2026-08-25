@@ -1,0 +1,2325 @@
+PROJECT: ZENO
+ROLE: Senior Product Engineer + Product Architect + UX Engineer + UI Engineer
+
+You are not starting a new project from scratch.
+
+You have already received two existing Zeno design/export ZIP files:
+
+1. The Stitch Zeno School OS export
+2. The UXPilot Zeno export
+
+You MUST inspect and understand both before making major changes.
+
+The Stitch export should be treated as the primary visual/design foundation.
+
+The UXPilot export should be treated as a secondary source of UX ideas, flows and screens that may be merged when they improve the product.
+
+Do NOT blindly merge the two.
+Do NOT duplicate screens.
+Do NOT create two versions of the same feature.
+
+Your responsibility is to turn the existing work into one coherent, production-quality product.
+
+==================================================
+0. THE PRODUCT
+==================================================
+
+Zeno is a school operating system designed first for schools in the Democratic Republic of the Congo.
+
+It is NOT merely:
+
+- a student database
+- an ERP
+- a dashboard
+- an attendance application
+- a payment application
+
+It is the operational system through which a school manages its daily life.
+
+Zeno should connect:
+
+School
+→ Academic structure
+→ Academic year
+→ Classes
+→ Students
+→ Teachers
+→ Staff
+→ Subjects
+→ Timetable
+→ Attendance
+→ Grades
+→ Assessments
+→ Reports
+→ Documents
+→ Administration
+→ Finance
+→ School history
+
+The fundamental product philosophy is:
+
+"COMPLEX BEHIND. SIMPLE IN FRONT."
+
+The database, permissions, workflows and business logic may be complex.
+
+The interface must feel simple.
+
+A school director should not need months of training.
+
+A teacher should be able to understand their dashboard immediately.
+
+A secretary should be able to register a student quickly.
+
+An accountant should immediately understand the financial situation.
+
+==================================================
+1. THE EMOTIONAL GOAL
+==================================================
+
+Zeno must not feel like an old administrative ERP.
+
+It must create a feeling of:
+
+"Wow. This software actually understands my school."
+
+The product should feel:
+
+- calm
+- intelligent
+- precise
+- trustworthy
+- modern
+- premium
+- human
+- useful
+
+The user should feel that Zeno is helping them rather than asking them to manage software.
+
+Avoid building a collection of forms and tables.
+
+Build an experience.
+
+==================================================
+2. RESEARCH CONTEXT: DRC
+==================================================
+
+Zeno is designed for the Democratic Republic of the Congo.
+
+Do NOT assume a generic American, European or international school structure.
+
+The official DRC education system includes:
+
+- preschool / maternelle
+- basic education
+- secondary education / humanités
+- general humanities
+- technical humanities
+- professional humanities
+- technical and vocational education/training contexts
+
+The primary cycle covers:
+
+1ère primaire
+2ème primaire
+3ème primaire
+4ème primaire
+5ème primaire
+6ème primaire
+
+The terminal cycle of basic education includes:
+
+7ème année
+8ème année
+
+Secondary education / humanities includes configurable pathways and options.
+
+The official Ministry of Education currently describes general, technical and professional humanities.
+
+IMPORTANT:
+
+Do not hard-code every possible option or assume every school offers the same programs.
+
+The application must be configurable.
+
+Official terminology and rules can evolve.
+
+Where a rule is uncertain or establishment-dependent:
+
+MAKE IT CONFIGURABLE.
+
+Never invent a legal rule.
+
+==================================================
+3. SCHOOL TYPE VS SCHOOL STRUCTURE
+==================================================
+
+This distinction is fundamental.
+
+Do NOT treat:
+
+"Complexe scolaire"
+"Institut"
+"Collège"
+"Lycée"
+"École"
+
+as automatic definitions of the school's academic structure.
+
+These are establishment names/forms and cannot alone determine what the school teaches.
+
+The system must separately store:
+
+A. MANAGEMENT / LEGAL STATUS
+
+Examples:
+
+- Public
+- Public conventioned
+- Public non-conventioned
+- Private accredited
+- Other / configurable
+
+B. ESTABLISHMENT FORM / NAME
+
+Examples:
+
+- École
+- Complexe scolaire
+- Institut
+- Collège
+- Lycée
+- Groupe scolaire
+- Other
+
+C. EDUCATIONAL LEVELS
+
+Examples:
+
+- Maternelle
+- Primaire
+- 7ème–8ème
+- Humanités générales
+- Humanités techniques
+- Humanités professionnelles
+- Other configurable programs
+
+These three concepts must never be conflated.
+
+==================================================
+4. ONBOARDING = THE BRAIN OF ZENO
+==================================================
+
+The onboarding is one of the most important parts of the entire application.
+
+The school should not receive a generic application.
+
+Zeno should construct the appropriate environment based on how the school works.
+
+The onboarding should be progressive.
+
+Never present one giant form.
+
+--------------------------------------------------
+STEP 1 — WELCOME
+--------------------------------------------------
+
+"Bienvenue dans Zeno."
+
+Subtitle:
+
+"Configurons votre école en quelques étapes."
+
+Show a visual progress indicator.
+
+--------------------------------------------------
+STEP 2 — SCHOOL IDENTITY
+--------------------------------------------------
+
+Collect:
+
+- School name
+- Logo
+- Province
+- City
+- Address
+- Contact information
+- Optional school code / official identifier
+- Academic year
+
+The interface must feel premium and extremely simple.
+
+--------------------------------------------------
+STEP 3 — ESTABLISHMENT TYPE
+--------------------------------------------------
+
+Ask:
+
+"Comment votre établissement se présente-t-il ?"
+
+Options:
+
+École
+Complexe scolaire
+Institut
+Collège
+Lycée
+Groupe scolaire
+Autre
+
+IMPORTANT:
+
+Explain subtly:
+
+"Cette information décrit votre établissement. Elle ne détermine pas automatiquement les niveaux enseignés."
+
+--------------------------------------------------
+STEP 4 — MANAGEMENT STATUS
+--------------------------------------------------
+
+Ask:
+
+"Quel est le statut de votre établissement ?"
+
+Possible configurable options:
+
+Public
+Public conventionné
+Public non conventionné
+Privé agréé
+Autre
+
+Do not assume legal status from the establishment name.
+
+--------------------------------------------------
+STEP 5 — EDUCATIONAL STRUCTURE
+--------------------------------------------------
+
+Ask:
+
+"Quels niveaux votre établissement propose-t-il ?"
+
+Selectable:
+
+Maternelle
+Primaire
+7ème–8ème année
+Humanités générales
+Humanités techniques
+Humanités professionnelles
+Autre
+
+Multiple selections allowed.
+
+--------------------------------------------------
+STEP 6 — GENERATE THE STRUCTURE
+--------------------------------------------------
+
+Based on previous selections, Zeno proposes a structure.
+
+Example:
+
+Maternelle
+
+1ère maternelle
+2ème maternelle
+3ème maternelle
+
+Primaire
+
+1ère primaire
+2ème primaire
+3ème primaire
+4ème primaire
+5ème primaire
+6ème primaire
+
+Basic education:
+
+7ème année
+8ème année
+
+Humanities:
+
+1ère
+2ème
+3ème
+4ème
+
+Technical / professional pathways:
+
+Allow configurable sections/options/programs.
+
+The director can edit everything.
+
+Zeno proposes.
+The director confirms.
+
+--------------------------------------------------
+STEP 7 — CLASSES
+--------------------------------------------------
+
+Create classes from levels.
+
+Examples:
+
+6ème primaire A
+6ème primaire B
+
+8ème A
+8ème B
+
+4ème Humanités Scientifiques A
+
+Technical option:
+Électricité
+
+etc.
+
+Class naming must be configurable.
+
+--------------------------------------------------
+STEP 8 — SUBJECTS
+--------------------------------------------------
+
+Create subjects based on the academic structure.
+
+But never assume a universal list.
+
+Allow:
+
+Add subject
+Edit subject
+Archive subject
+Assign subject to levels
+Assign teacher to subject
+
+--------------------------------------------------
+STEP 9 — STAFF
+--------------------------------------------------
+
+Add:
+
+Director
+Deputy director
+Teachers
+Secretary
+Accountant
+Administrative staff
+Other staff
+
+--------------------------------------------------
+STEP 10 — ROLES AND PERMISSIONS
+--------------------------------------------------
+
+The director decides what each role can access.
+
+Do NOT expose technical permission jargon.
+
+Use human language.
+
+Example:
+
+"Peut consulter les élèves"
+"Peut modifier les dossiers"
+"Peut enregistrer les présences"
+"Peut saisir les notes"
+"Peut consulter les finances"
+
+--------------------------------------------------
+STEP 11 — FINISH
+--------------------------------------------------
+
+Show:
+
+"Votre école est prête."
+
+Summary:
+
+42 classes
+1,284 students
+73 staff
+8 levels
+etc.
+
+CTA:
+
+"Entrer dans Zeno"
+
+This should feel like a real product moment.
+
+==================================================
+5. MULTI-SCHOOL ARCHITECTURE
+==================================================
+
+Zeno must be multi-tenant.
+
+One school must NEVER access another school's data.
+
+Every important entity must belong to the appropriate school/tenant.
+
+Users may belong to one or multiple schools if the architecture supports it.
+
+Permissions must be evaluated server-side.
+
+Never rely only on frontend hiding.
+
+The existing access guard must be preserved and improved, not replaced unnecessarily.
+
+The application must always resolve:
+
+school
+→ user
+→ role
+→ permissions
+
+before rendering protected product data.
+
+==================================================
+6. ACADEMIC YEAR
+==================================================
+
+Academic year is a first-class entity.
+
+Example:
+
+2026–2027
+
+The school must be able to create a new academic year.
+
+Never destroy previous data when a new year begins.
+
+Historical data remains accessible.
+
+The director should see:
+
+Current year
+Previous years
+
+==================================================
+7. YEAR-END TRANSITION
+==================================================
+
+This is a major Zeno workflow.
+
+At the end of the year:
+
+Zeno should help the director prepare the next academic year.
+
+Example:
+
+5ème A
+→ proposed 6ème A
+
+5ème B
+→ proposed 6ème B
+
+6ème
+→ proposed 7ème
+
+The director reviews and confirms.
+
+Possible states:
+
+Promoted
+Repeating
+Transferred
+Graduated
+Withdrawn
+Other configurable status
+
+Do NOT automatically alter history.
+
+Create new academic-year enrollment records.
+
+The student remains the same person.
+
+==================================================
+8. STUDENT MODEL
+==================================================
+
+A student is not simply a row.
+
+A student has a persistent identity across academic years.
+
+Student profile should contain:
+
+Identity
+Enrollment
+Academic history
+Current class
+Previous classes
+Attendance
+Grades
+Assessments
+Bulletins
+Documents
+Administrative history
+Status changes
+
+Example:
+
+KEVIN MUKENDI
+
+Current:
+6ème primaire A
+
+History:
+
+2024–2025
+4ème primaire A
+
+2025–2026
+5ème primaire A
+
+2026–2027
+6ème primaire A
+
+The profile should provide a timeline.
+
+==================================================
+9. STUDENT REGISTRATION
+==================================================
+
+Secretary should be able to:
+
++ Ajouter un élève
+
+The process should be progressive.
+
+Step:
+
+Identity
+→ Academic placement
+→ Documents
+→ Enrollment
+→ Confirmation
+
+Avoid enormous forms.
+
+Show only relevant fields.
+
+If the school has only primary:
+do not show irrelevant humanities fields.
+
+If the school has technical programs:
+show relevant options.
+
+==================================================
+10. EXCEL / CSV IMPORT
+==================================================
+
+This is a core feature.
+
+Flow:
+
+UPLOAD
+→ ANALYZE
+→ MAP
+→ PREVIEW
+→ VALIDATE
+→ IMPORT
+→ RESULT
+
+Example:
+
+"300 lignes détectées"
+
+287 ready
+
+9 incomplete
+
+4 possible duplicates
+
+The user must be able to resolve errors.
+
+Never silently import bad data.
+
+Mapping should support:
+
+Nom
+Prénom
+Date de naissance
+Sexe
+Classe
+Matricule
+etc.
+
+But mapping must be flexible.
+
+The school may use different column names.
+
+==================================================
+11. DUPLICATE DETECTION
+==================================================
+
+Zeno should identify likely duplicates.
+
+Example:
+
+Jean Mukendi
+Jean-Mukendi
+Jean MUKENDI
+
+Do not automatically merge uncertain records.
+
+Show:
+
+"Possible duplicate"
+
+and let the authorized user decide.
+
+==================================================
+12. DIRECTOR EXPERIENCE
+==================================================
+
+The director has the broadest operational access.
+
+But the director dashboard must NOT be a wall of statistics.
+
+The central question is:
+
+"Que dois-je savoir aujourd'hui ?"
+
+Dashboard example:
+
+Bonjour, Monsieur le Directeur.
+
+Aujourd'hui
+
+1,284 élèves
+73 enseignants
+42 classes
+
+À votre attention:
+
+3 appels non effectués
+2 enseignants absents
+8 dossiers incomplets
+1 conflit de planning
+
+The director can resolve issues directly.
+
+The dashboard should prioritize actions, not decoration.
+
+==================================================
+13. DIRECTOR NAVIGATION
+==================================================
+
+Possible navigation:
+
+Accueil
+Élèves
+Personnel
+Classes
+Académique
+Planning
+Présences
+Notes
+Bulletins
+Administration
+Finances
+Rapports
+Notifications
+Paramètres
+
+BUT:
+
+The navigation is dynamic.
+
+Do not show modules irrelevant to the school.
+
+==================================================
+14. TEACHER EXPERIENCE
+==================================================
+
+Teacher gets a completely different workspace.
+
+The teacher should see:
+
+Aujourd'hui
+Mes classes
+Mon planning
+Mes élèves
+Présences
+Notes
+Devoirs / évaluations
+Notifications
+
+Teacher must NOT see:
+
+School-wide finances
+Other teachers' private information
+Administrative configuration
+Unassigned classes
+
+Teacher permissions are scoped to assigned classes and subjects.
+
+==================================================
+15. TEACHER ASSIGNMENT
+==================================================
+
+Director assigns:
+
+Teacher
+→ Subject
+→ Class
+→ Academic year
+→ Schedule
+
+Optional:
+
+Teacher
+→ Class teacher / Titulaire
+
+The teacher dashboard updates automatically.
+
+The teacher should never manually configure their classes.
+
+==================================================
+16. CLASS EXPERIENCE
+==================================================
+
+Each class has a workspace.
+
+Example:
+
+6ème primaire A
+
+Overview
+Students
+Teachers
+Subjects
+Timetable
+Attendance
+Grades
+Assessments
+Documents
+
+Show:
+
+32 students
+3 teachers
+8 subjects
+
+Today's schedule.
+
+Current academic status.
+
+==================================================
+17. CLASS TEACHER / TITULAIRE
+==================================================
+
+A class can have a designated titular/class teacher.
+
+The titular can have additional authorized responsibilities.
+
+Do not automatically give them access to everything.
+
+Permissions must remain configurable.
+
+==================================================
+18. TIMETABLE
+==================================================
+
+Timetable connects:
+
+Teacher
+Class
+Subject
+Time
+Room
+Academic year
+
+It must detect conflicts.
+
+Example:
+
+"Impossible : Patrick est déjà assigné à 6ème A à 10h00."
+
+Also:
+
+"6ème B n'a aucun enseignant de mathématiques mardi à 14h."
+
+Changes must propagate to relevant views.
+
+==================================================
+19. ATTENDANCE
+==================================================
+
+Attendance is a signature Zeno experience.
+
+Teacher opens a scheduled class.
+
+Zeno already knows:
+
+Teacher
+Class
+Subject
+Date
+Time
+
+Therefore the teacher should not re-enter them.
+
+Students appear.
+
+Default:
+
+Present
+
+Teacher marks:
+
+Absent
+Late
+
+Then:
+
+"Valider l'appel"
+
+Show confirmation:
+
+34 présents
+1 absent
+2 en retard
+
+After validation:
+
+- save attendance
+- record teacher
+- record timestamp
+- update statistics
+- notify relevant authorized users
+- make data available to director/secretary
+
+Never make the teacher repeat information.
+
+==================================================
+20. ATTENDANCE REMINDER
+==================================================
+
+When a scheduled lesson begins:
+
+show a subtle reminder.
+
+"Il est temps de faire l'appel de 6ème A."
+
+If device/browser permissions allow:
+support a subtle sound.
+
+Do not use annoying notifications.
+
+==================================================
+21. LOW CONNECTIVITY
+==================================================
+
+This is important for the DRC context.
+
+The product should be designed for unstable connections.
+
+Attendance should ideally support:
+
+Open
+→ mark students
+→ save locally
+→ synchronize when connection returns
+
+Show synchronization status clearly.
+
+Example:
+
+"Enregistré sur cet appareil"
+"Synchronisation en cours"
+"Synchronisé"
+
+Do not lose attendance because the network briefly fails.
+
+The architecture should prepare for offline-capable workflows.
+
+==================================================
+22. TEACHER ABSENCE
+==================================================
+
+The school must manage staff absences.
+
+Director sees:
+
+Patrick est absent aujourd'hui.
+
+Affected classes:
+
+6A — 08:00
+6B — 10:00
+6A — 14:00
+
+Possible action:
+
+"Trouver un remplacement"
+
+The system should help identify available qualified teachers.
+
+Do not automatically assign a replacement without authorization.
+
+==================================================
+23. TEACHER WORKLOAD
+==================================================
+
+Director can see:
+
+Teacher
+Weekly hours
+Classes
+Subjects
+
+Example:
+
+Patrick
+
+18 h / semaine
+4 classes
+2 subjects
+
+Detect:
+
+Schedule conflicts
+Overload
+Under-assignment
+
+Use warnings, not alarmist visuals.
+
+==================================================
+24. GRADES
+==================================================
+
+Teacher enters grades only for authorized classes/subjects.
+
+Grade structure should support configurable:
+
+Periods
+Assessments
+Assignments
+Exams
+Coefficients
+Maximum scores
+Appreciations
+
+Do not assume one universal grading system.
+
+==================================================
+25. GRADE VALIDATION
+==================================================
+
+The existing Stitch flow for grade validation should be preserved and improved.
+
+Possible workflow:
+
+Teacher enters grades
+→ submits
+→ responsible person reviews
+→ validates
+→ locks if required
+
+Show status:
+
+Draft
+Submitted
+Pending
+Validated
+Returned
+
+Keep an audit history.
+
+==================================================
+26. REPORT CARDS / BULLETINS
+==================================================
+
+Bulletins are a major output.
+
+A bulletin should combine:
+
+Student
+Academic year
+Class
+Period
+Subjects
+Grades
+Averages
+Appreciations
+Attendance if configured
+Final result if applicable
+Authorized signatures
+
+The system should support:
+
+Preview
+Validate
+Generate PDF
+Print
+Archive
+
+Do not hard-code one school format.
+
+Allow configurable templates.
+
+==================================================
+27. EXAMS AND CERTIFICATION
+==================================================
+
+Prepare the product architecture for school exams and national certification workflows.
+
+Relevant DRC contexts include official examinations/certifications such as:
+
+ENAFEP
+TENASOSP
+EXETAT
+
+Do NOT invent official rules.
+
+Do NOT claim Zeno is an official ministry platform.
+
+Design the internal school workflows around preparation, tracking, documents and results.
+
+Any official integration should be a future, separately validated feature.
+
+==================================================
+28. SECRETARY EXPERIENCE
+==================================================
+
+Secretary is administrative operations.
+
+Dashboard:
+
+Nouvelles inscriptions
+Dossiers incomplets
+Changements de classe
+Documents
+Students
+Search
+
+Secretary should be extremely fast.
+
+Common actions:
+
+Ajouter élève
+Importer
+Modifier dossier
+Affecter classe
+Transférer
+Archiver
+
+==================================================
+29. ACCOUNTANT EXPERIENCE
+==================================================
+
+Accountant gets a finance-focused workspace.
+
+Dashboard:
+
+Expected
+Collected
+Outstanding
+Due
+Recent payments
+
+Sections:
+
+Fees
+Invoices
+Payments
+Balances
+Expenses
+Reports
+
+Do not mix academic clutter into the accountant dashboard.
+
+==================================================
+30. SCHOOL FEES
+==================================================
+
+Fees must be configurable by school.
+
+Possible:
+
+Registration
+Tuition
+Transport
+Uniform
+Meals
+Activities
+Other fees
+
+Support:
+
+Full payment
+Partial payment
+Outstanding balance
+Payment status
+Payment reference
+
+==================================================
+31. MOBILE MONEY — FUTURE-READY
+==================================================
+
+Prepare the architecture for future integration with:
+
+Orange Money
+Airtel Money
+M-Pesa
+Other locally relevant providers
+
+IMPORTANT:
+
+A phone number alone does NOT prove which student a payment belongs to.
+
+Payment identity should use:
+
+School
+Invoice
+Student
+Amount
+Transaction/reference
+Payment provider
+Date/time
+
+Future flow:
+
+Parent/user receives invoice/reference
+→ makes Mobile Money payment
+→ provider returns transaction reference
+→ Zeno reconciles
+→ payment is attached to invoice/student
+
+Do not implement fake payment integration.
+
+If provider APIs are not connected, clearly label it as simulation/test mode.
+
+==================================================
+32. DOCUMENT MANAGEMENT
+==================================================
+
+Create a document layer.
+
+Possible documents:
+
+Student documents
+Administrative documents
+Reports
+Bulletins
+Lists
+School documents
+
+Permissions must apply.
+
+Do not expose sensitive documents to unauthorized users.
+
+==================================================
+33. SEARCH
+==================================================
+
+Universal search.
+
+Director can search broadly.
+
+Teacher search is permission-scoped.
+
+Secretary can search administrative records.
+
+Example:
+
+Search:
+"Kevin Mukendi"
+
+Director:
+full authorized profile
+
+Teacher:
+only if Kevin is in their assigned class
+
+Secretary:
+administrative profile
+
+Same search.
+Different results.
+
+==================================================
+34. NOTIFICATIONS
+==================================================
+
+Notifications should be actionable.
+
+Teacher:
+
+"Appel de 6A à faire."
+
+Secretary:
+
+"Le dossier de Kevin est incomplet."
+
+Director:
+
+"2 enseignants sont absents aujourd'hui."
+
+Accountant:
+
+"17 paiements restent en attente."
+
+Do not create social-media-style notification noise.
+
+==================================================
+35. ACTIVITY LOG / AUDIT
+==================================================
+
+Record important actions.
+
+Examples:
+
+Patrick marked Jean absent.
+Marie changed Kevin's class.
+Director created teacher account.
+Accountant recorded payment.
+Director validated grades.
+
+Store:
+
+Who
+What
+When
+Relevant entity
+
+This is important for trust and accountability.
+
+==================================================
+36. CUSTOM ROLES
+==================================================
+
+Director can create custom roles.
+
+Example:
+
+Directeur adjoint
+
+Permissions:
+
+Students:
+View
+Edit
+
+Teachers:
+View
+
+Attendance:
+View
+Edit
+
+Finance:
+No access
+
+Reports:
+View
+
+Use human-readable permission labels.
+
+==================================================
+37. ACCESS CONTROL
+==================================================
+
+Security must be enforced server-side.
+
+Never trust frontend-only hiding.
+
+Every protected request must verify:
+
+User
+School
+Role
+Permission
+Resource ownership/scope
+
+Examples:
+
+Teacher cannot access another school's student.
+
+Teacher cannot access another teacher's private information unless explicitly authorized.
+
+Accountant cannot edit grades.
+
+Secretary cannot access financial data unless granted.
+
+Director can access everything within their school.
+
+==================================================
+38. MULTIPLE ROLES
+==================================================
+
+A person may have more than one role if the architecture permits.
+
+Example:
+
+Director + Teacher
+
+Or:
+
+Secretary + Accountant
+
+The UI should adapt to the active role.
+
+Do not create duplicate accounts unnecessarily.
+
+==================================================
+39. MOBILE
+==================================================
+
+Teacher experience must be excellent on mobile.
+
+Attendance should be designed primarily for quick touch interaction.
+
+Buttons must be large enough.
+
+Tables should transform into usable mobile lists.
+
+Director can use desktop-heavy layouts.
+
+Do NOT simply shrink desktop pages.
+
+Create intentional responsive layouts.
+
+==================================================
+40. DESIGN SYSTEM
+==================================================
+
+The Stitch design system is the visual foundation.
+
+Preserve its strengths:
+
+- Inter typography
+- Zeno Blue
+- generous whitespace
+- clean hierarchy
+- subtle shadows
+- restrained cards
+- 8px spacing rhythm
+- modern institutional aesthetic
+
+The current visual language should remain recognizable.
+
+Do not randomly introduce:
+
+- neon colors
+- excessive gradients
+- glassmorphism everywhere
+- giant rounded cards
+- cartoon illustrations
+- excessive shadows
+- visual clutter
+
+The target quality is:
+
+Apple-level clarity
+Google-level usability
+OpenAI-level restraint
+
+But do not copy those brands.
+
+==================================================
+41. INFORMATION DENSITY
+==================================================
+
+Zeno manages large amounts of information.
+
+Do not solve everything with cards.
+
+Prefer:
+
+Clear headings
+Lists
+Tables when appropriate
+Tabs
+Inline actions
+Progressive disclosure
+
+Use cards only when they improve comprehension.
+
+==================================================
+42. DASHBOARD DESIGN
+==================================================
+
+Dashboards should prioritize:
+
+What matters
+What needs action
+What changed
+What is next
+
+Do not prioritize:
+
+Random statistics
+Decorative charts
+Empty KPI cards
+
+Every dashboard element should answer:
+
+"So what?"
+
+==================================================
+43. EMPTY STATES
+==================================================
+
+Every empty state must help the user.
+
+Example:
+
+"No students yet."
+
+Then:
+
+"Add a student"
+"Import an Excel file"
+
+No blank screens.
+
+==================================================
+44. LOADING STATES
+==================================================
+
+Use skeletons where appropriate.
+
+Do not show blank white screens.
+
+==================================================
+45. ERROR STATES
+==================================================
+
+Never expose technical errors to users.
+
+Bad:
+
+ERR_403_PERMISSION
+
+Good:
+
+"Vous n'avez pas accès à cette information."
+
+Technical details should remain available to developers/logging systems.
+
+==================================================
+46. CONFIRMATION STATES
+==================================================
+
+Important actions require confirmation.
+
+Examples:
+
+Delete
+Archive
+Validate grades
+Close academic year
+Finalize report cards
+
+Use clear consequences.
+
+==================================================
+47. DATA INTEGRITY
+==================================================
+
+Never silently delete important school history.
+
+Prefer:
+
+Archive
+Deactivate
+Close
+Transfer
+
+Keep historical records.
+
+Academic data must be auditable.
+
+==================================================
+48. PERFORMANCE
+==================================================
+
+The product should support schools with:
+
+Hundreds of students
+Thousands of students
+Dozens/hundreds of teachers
+Many classes
+Multiple academic years
+
+Do not load huge datasets unnecessarily.
+
+Use pagination/search/filtering where appropriate.
+
+==================================================
+49. REALISTIC DATA
+==================================================
+
+Use realistic Congolese names and school structures in demo data.
+
+Examples:
+
+Kevin Mukendi
+Sarah Kabeya
+Patrick Ilunga
+Marie Tshisekedi
+
+But do not overuse fake stereotypes.
+
+Demo data should feel like a real school.
+
+==================================================
+50. THE CORE ZENO MAGIC
+==================================================
+
+Zeno must reduce repeated work.
+
+Example:
+
+Director assigns:
+
+Patrick
+→ Mathématiques
+→ 6A
+→ Monday 08:00
+
+Zeno automatically updates:
+
+Patrick's schedule
+6A's schedule
+Teacher dashboard
+Class workspace
+Attendance context
+Director's schedule
+Reminder system
+
+The teacher should NOT configure this again.
+
+Another example:
+
+Teacher validates attendance.
+
+Automatically:
+
+Attendance saved
+→ class statistics updated
+→ student history updated
+→ authorized staff can see result
+→ director dashboard updates
+
+Another example:
+
+Director moves student from 6A to 6B.
+
+Automatically:
+
+Student class changes
+→ 6A list updates
+→ 6B list updates
+→ teacher access updates
+→ timetable relationships update if necessary
+→ history records the change
+
+This is what makes Zeno an operating system rather than a collection of pages.
+
+==================================================
+51. ROLE-SPECIFIC HOME SCREENS
+==================================================
+
+DIRECTOR:
+
+"Que se passe-t-il dans mon école ?"
+
+TEACHER:
+
+"Qu'est-ce que j'ai à faire aujourd'hui ?"
+
+SECRETARY:
+
+"Quels dossiers dois-je traiter ?"
+
+ACCOUNTANT:
+
+"Quelle est la situation financière ?"
+
+Each role gets a different answer.
+
+==================================================
+52. SCREEN INVENTORY
+==================================================
+
+Use the existing Stitch and UXPilot screens as the foundation.
+
+Preserve useful existing screens.
+
+Unify duplicates.
+
+Add missing screens.
+
+The final product should cover at minimum:
+
+AUTH
+
+- Login
+- Password recovery
+- Invitation
+- First access
+
+ONBOARDING
+
+- Welcome
+- School identity
+- Establishment form
+- Management status
+- Educational levels
+- Academic structure
+- Classes
+- Subjects
+- Staff
+- Roles
+- Permissions
+- Completion
+
+DIRECTOR
+
+- Dashboard
+- Students
+- Student profile
+- Student import
+- Import mapping
+- Import preview
+- Import errors
+- Staff
+- Teacher profile
+- Classes
+- Class workspace
+- Subjects
+- Academic structure
+- Timetable
+- Attendance overview
+- Grades overview
+- Grade validation
+- Bulletins
+- Fees
+- Finance
+- Reports
+- Notifications
+- Activity
+- School settings
+- Academic year
+- Year transition
+- Roles
+- Permissions
+
+TEACHER
+
+- Dashboard
+- Today
+- My classes
+- My students
+- Class workspace
+- Attendance
+- Attendance confirmation
+- Grades
+- Grade submission
+- Assessments
+- Timetable
+- Teacher absence
+- Notifications
+
+SECRETARY
+
+- Dashboard
+- Students
+- New enrollment
+- Student profile
+- Import
+- Documents
+- Incomplete files
+- Transfers
+- Class assignment
+- Search
+
+ACCOUNTANT
+
+- Dashboard
+- Fees
+- Invoices
+- Invoice details
+- Payments
+- Payment details
+- Outstanding balances
+- Expenses
+- Reports
+
+SYSTEM
+
+- Search
+- Notifications
+- Activity
+- Help
+- Empty states
+- Loading states
+- Errors
+- Access denied
+- Offline state
+- Synchronization state
+- Renewal
+
+==================================================
+53. CONDITIONAL UI ENGINE
+==================================================
+
+This is a critical product requirement.
+
+The interface must adapt based on configuration.
+
+IF school has Maternelle:
+show Maternelle features.
+
+IF not:
+hide them.
+
+IF school has Primary:
+show 1ère–6ème Primary.
+
+IF school has 7ème/8ème:
+show Basic Education workflows.
+
+IF school has General Humanities:
+show relevant Humanities structure.
+
+IF school has Technical Humanities:
+show configurable technical options.
+
+IF school has Professional Humanities:
+show configurable professional programs.
+
+IF school only operates Primary:
+do not clutter the interface with Humanities features.
+
+IF teacher teaches only Math:
+do not show irrelevant subjects.
+
+IF teacher has only 6A and 6B:
+do not show 6C.
+
+IF accountant:
+finance-focused navigation.
+
+IF secretary:
+administrative navigation.
+
+IF director:
+full school operations.
+
+The system should feel individually configured for every school.
+
+==================================================
+54. WHAT NOT TO DO
+==================================================
+
+Do NOT:
+
+- rebuild the entire project unnecessarily
+- discard the existing Stitch design
+- create generic school-management UI
+- hard-code one school structure
+- assume "Complexe scolaire" means all levels
+- expose every feature to every user
+- create fake buttons
+- use static mock data where real data should exist
+- duplicate features
+- create unnecessary pages
+- create dashboards full of meaningless charts
+- overuse cards
+- hide security logic only in the frontend
+- silently delete historical data
+- pretend to integrate Mobile Money without a real provider
+- invent official DRC rules
+- claim official government integration
+- create a parent/student portal in the current product
+
+Parents and students are NOT application users in the current Zeno scope.
+
+==================================================
+55. PARENT / STUDENT PORTAL
+==================================================
+
+Explicitly excluded from the first product scope.
+
+Do not build parent accounts.
+
+Do not build student accounts.
+
+However:
+
+Design the data architecture so a future portal can be added without rewriting the system.
+
+Future possibilities may include:
+
+Parent payment
+Student results
+Attendance
+Notifications
+Documents
+
+But this is FUTURE.
+
+==================================================
+56. ANNUAL LICENSE
+==================================================
+
+Zeno is intended to be sold as an annual school license.
+
+Example:
+
+Zeno
+2026–2027
+
+The school pays for the academic year.
+
+The system must support:
+
+Active
+Expiring soon
+Expired
+Renewed
+
+When expired:
+
+Do not delete data.
+
+Show a renewal state.
+
+The school should retain historical information according to the product's data-retention policy.
+
+==================================================
+57. FUTURE REVENUE
+==================================================
+
+The product architecture should allow future paid modules.
+
+Possible future modules:
+
+Mobile Money reconciliation
+Advanced reports
+Automated communications
+Document generation
+Advanced analytics
+Multi-campus management
+Backup/archive
+Premium support
+
+But do not clutter the initial interface.
+
+Build the architecture so these can be added later.
+
+==================================================
+58. MULTI-CAMPUS / COMPLEX SCHOOL
+==================================================
+
+A complex school may eventually have:
+
+Campus A
+Campus B
+Campus C
+
+Prepare the data model for this.
+
+Do not necessarily expose multi-campus UI in the first release unless needed.
+
+But avoid an architecture that makes it impossible later.
+
+==================================================
+59. OFFICIAL / LEGAL CAUTION
+==================================================
+
+Zeno is a private software product.
+
+Do not present Zeno as:
+
+- an official Ministry platform
+- a government-certified system
+- an official examination platform
+
+Unless an official integration is actually established.
+
+Official terminology can be reflected where appropriate.
+
+Legal or regulatory rules must remain configurable where necessary.
+
+==================================================
+60. PRODUCT QUALITY BAR
+==================================================
+
+The final product must feel like a serious SaaS product.
+
+Not:
+
+"AI generated dashboard."
+
+It should feel designed by a world-class product team.
+
+Every screen must have:
+
+Purpose
+Hierarchy
+Clear action
+Correct permissions
+Loading state
+Empty state
+Error state
+Success state
+Responsive behavior
+
+==================================================
+61. ENGINEERING QUALITY
+==================================================
+
+Do not only make the UI look correct.
+
+The flows must work.
+
+A button called:
+
+"Ajouter un élève"
+
+must actually add the student.
+
+"Importer"
+
+must actually process the file.
+
+"Valider l'appel"
+
+must actually persist attendance.
+
+"Attribuer l'enseignant"
+
+must actually update assignments.
+
+"Changer de classe"
+
+must actually update the student's current enrollment.
+
+"Créer l'année scolaire"
+
+must actually create the academic-year context.
+
+No fake interactions.
+
+==================================================
+62. TESTING
+==================================================
+
+Test realistic flows.
+
+TEST 1:
+
+Director creates school
+→ chooses Primary
+→ creates 6A
+→ creates teacher
+→ assigns Math
+→ assigns teacher to 6A
+
+Teacher logs in
+→ sees 6A
+→ sees Math
+→ sees timetable
+→ opens attendance
+→ validates
+
+Director logs in
+→ sees attendance result.
+
+TEST 2:
+
+Secretary imports 300 students
+→ mapping
+→ preview
+→ errors
+→ correction
+→ import
+
+TEST 3:
+
+Director creates new academic year
+→ proposes student promotion
+→ validates
+→ previous year remains accessible.
+
+TEST 4:
+
+Teacher attempts to access another class
+→ denied.
+
+TEST 5:
+
+Accountant attempts to edit grades
+→ denied.
+
+TEST 6:
+
+School without Humanities
+→ Humanities navigation is absent.
+
+TEST 7:
+
+Technical Humanities school
+→ technical options appear.
+
+TEST 8:
+
+Connection interruption during attendance
+→ local state preserved
+→ synchronization occurs after reconnection.
+
+==================================================
+63. DESIGN REVIEW BEFORE COMPLETION
+==================================================
+
+Before considering the work complete, review every screen.
+
+Ask:
+
+Does this screen need to exist?
+
+Does the user understand it immediately?
+
+Is the primary action obvious?
+
+Is there unnecessary information?
+
+Does it respect permissions?
+
+Does it adapt to school configuration?
+
+Does it work on mobile?
+
+Does it have empty/loading/error states?
+
+Does it feel like Zeno?
+
+==================================================
+64. FINAL VISUAL DIRECTION
+==================================================
+
+Keep the existing Stitch design language as the foundation.
+
+The visual target is:
+
+Premium
+Minimal
+Institutional
+Human
+Confident
+
+Use:
+
+Zeno Blue
+Neutral surfaces
+Inter
+Generous whitespace
+Subtle shadows
+Soft tonal layering
+8px spacing system
+8–16px standard radii
+24px structural radii
+
+Avoid visual noise.
+
+The interface should feel expensive without looking luxurious.
+
+==================================================
+65. THE FINAL TEST
+==================================================
+
+Imagine a real Congolese school director opens Zeno for the first time.
+
+They should NOT think:
+
+"Where is the settings menu?"
+
+They should think:
+
+"Zeno already understands what my school needs."
+
+Imagine a teacher opens the application at 07:55.
+
+They should think:
+
+"Ah, I have Math in 6A at 08:00."
+
+Then:
+
+"Time for attendance."
+
+They tap.
+
+They finish.
+
+Done.
+
+Imagine the secretary.
+
+They receive an Excel file with 400 students.
+
+They upload it.
+
+Zeno identifies the columns.
+
+It finds duplicates.
+
+It explains the errors.
+
+They confirm.
+
+Done.
+
+Imagine the director at the end of the day.
+
+They open Zeno.
+
+It tells them:
+
+3 calls still missing.
+2 teachers absent.
+8 student files incomplete.
+1 timetable conflict.
+
+They can act immediately.
+
+That is Zeno.
+
+==================================================
+66. FINAL PRODUCT PRINCIPLE
+==================================================
+
+ZENO IS NOT A DATABASE WITH A PRETTY INTERFACE.
+
+ZENO IS THE OPERATING SYSTEM OF THE SCHOOL.
+
+Complex behind.
+
+Simple in front.
+
+Every piece of complexity should exist to make the user's life easier.
+
+Build the system with that principle everywhere.
+
+==================================================
+67. IMPLEMENTATION STRATEGY
+==================================================
+
+Do not implement everything blindly at once.
+
+Use this order:
+
+PHASE 1
+Core architecture
+Authentication
+Multi-school isolation
+Roles
+Permissions
+Academic year
+School configuration
+
+PHASE 2
+Students
+Classes
+Teachers
+Subjects
+Assignments
+
+PHASE 3
+Timetable
+Attendance
+Teacher workflows
+
+PHASE 4
+Grades
+Assessments
+Bulletins
+Validation
+
+PHASE 5
+Secretary workflows
+Documents
+Administrative operations
+
+PHASE 6
+Accounting
+Fees
+Invoices
+Payments
+
+PHASE 7
+Reports
+Analytics
+Advanced workflows
+
+PHASE 8
+Offline synchronization
+Mobile Money
+Future integrations
+
+At every phase:
+
+Keep the existing design system.
+
+Do not create a second visual language.
+
+==================================================
+68. MOST IMPORTANT INSTRUCTION
+==================================================
+
+DO NOT JUST FOLLOW THIS PROMPT LITERALLY.
+
+Think.
+
+If an existing screen from Stitch is better than a newly proposed screen, keep the existing one.
+
+If UXPilot contains a better workflow, integrate the idea.
+
+If both contain duplicates, unify them.
+
+If a requirement is ambiguous, make it configurable rather than inventing a rule.
+
+If the current architecture already solves a problem correctly, do not rewrite it unnecessarily.
+
+If you discover a product inconsistency, fix the underlying workflow rather than adding another screen.
+
+The final result must feel like ONE PRODUCT.
+
+Not:
+
+Stitch + UXPilot + random AI-generated screens.
+
+It must feel like:
+
+ZENO.
+
+==================================================
+69. SUCCESS CRITERIA
+==================================================
+
+The project is successful when:
+
+1. A school can configure itself during onboarding.
+2. Zeno automatically adapts to that school's educational structure.
+3. A director can configure staff, classes and subjects.
+4. Teachers automatically see only their assignments.
+5. Teachers can take attendance quickly.
+6. Attendance automatically flows into the school's operational data.
+7. Secretaries can manage student records efficiently.
+8. Excel imports are safe and understandable.
+9. Grades and bulletins have a real workflow.
+10. Accountants have a dedicated financial experience.
+11. Permissions are enforced.
+12. Academic years preserve history.
+13. The product works for different school structures.
+14. The UI remains simple despite complex backend logic.
+15. The entire product feels premium and coherent.
+16. The user experiences the "Zeno moment":
+    "This application understands my school."
+
+BUILD ZENO.
