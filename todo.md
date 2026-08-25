@@ -58,3 +58,8 @@
 - [x] Ajouter une confirmation one-shot liée à mission, intégration et digest avant l’export GitHub
 - [ ] Auditer l’état final des connecteurs OAuth avec un compte utilisateur et la configuration non sensible disponible
 - [x] Préparer la procédure contrôlée de remplacement de `main` sans l’exécuter
+- [ ] Exécuter un smoke test authentifié de mission, escouade, VFS et replay avant toute décision de remplacement de `main`
+- [x] Auditer les domaines, redirections, scopes et écrans de consentement requis pour Google Cloud Console
+- [x] Préparer la documentation et les contrats OAuth Google sans activer de fournisseur ni stocker de secret
+- [ ] Configurer un domaine Idealy propriétaire, créer les projets Google Test/Production et vérifier les domaines dans Search Console
+- [ ] Implémenter puis tester le flux OAuth Google utilisateur avec callback Edge, refresh token chiffré et révocation
