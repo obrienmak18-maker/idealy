@@ -9,7 +9,7 @@ on:
       functions:
         description: "Fonctions Edge à déployer, séparées par des espaces"
         required: false
-        default: "integration-connect integration-callback integration-status github-export process-ai-request"
+        default: "integration-connect integration-callback integration-status github-export process-ai-request orchestrate-mission mission-action-confirmation stripe-webhook check-subscription create-billing-portal create-checkout-session cancel-subscription refund-ai-credit designer-tools vercel-deploy vercel-status"
         type: string
 
 permissions:
@@ -31,7 +31,7 @@ jobs:
 
       - name: Deploy selected Edge functions
         env:
-          FUNCTIONS: ${{ inputs.functions || 'integration-connect integration-callback integration-status github-export process-ai-request' }}
+          FUNCTIONS: ${{ inputs.functions || 'integration-connect integration-callback integration-status github-export process-ai-request orchestrate-mission mission-action-confirmation stripe-webhook check-subscription create-billing-portal create-checkout-session cancel-subscription refund-ai-credit designer-tools vercel-deploy vercel-status' }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
