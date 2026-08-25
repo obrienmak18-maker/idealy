@@ -44,12 +44,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    const filename = (formData.get("file") as File).name;
-    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
     const fileBuffer = await file.arrayBuffer();
+    const ownerSegment = session.user.id
+      .replace(/[^a-zA-Z0-9_-]/g, "_")
+      .slice(0, 80) || "authenticated-user";
+    const extension = file.type === "image/png" ? "png" : "jpg";
+    const pathname = `uploads/${ownerSegment}/${crypto.randomUUID()}.${extension}`;
 
     try {
-      const data = await put(`${safeName}`, fileBuffer, {
+      const data = await put(pathname, fileBuffer, {
         access: "public",
       });
 

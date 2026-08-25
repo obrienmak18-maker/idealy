@@ -75,6 +75,18 @@ jobs:
       - name: Shared external connector guard
         run: node scripts/test-shared-external-connector-guard.mjs
 
+      - name: Legacy API security contract
+        run: node scripts/test-legacy-api-security-contract.mjs
+
+      - name: Chat request contract
+        run: node scripts/test-chat-request-contract.mjs
+
+      - name: Next AI proxy contract
+        run: node scripts/test-next-ai-proxy-contract.mjs
+
+      - name: Agent personas contract
+        run: node scripts/test-agent-personas-contract.mjs
+
       - name: Workspace event replay contract
         run: node scripts/test-workspace-event-replay-contract.mjs
 

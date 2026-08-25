@@ -10,10 +10,10 @@ import {
 import { ChatbotError } from "@/lib/errors";
 
 const documentSchema = z.object({
-  content: z.string(),
+  content: z.string().max(1_000_000),
   isManualEdit: z.boolean().optional(),
   kind: z.enum(["text", "code", "image", "sheet"]),
-  title: z.string(),
+  title: z.string().min(1).max(240),
 });
 
 export async function GET(request: Request) {
@@ -147,6 +147,10 @@ export async function DELETE(request: Request) {
   const documents = await getDocumentsById({ id });
 
   const [document] = documents;
+
+  if (!document) {
+    return new ChatbotError("not_found:document").toResponse();
+  }
 
   if (document.userId !== session.user.id) {
     return new ChatbotError("forbidden:document").toResponse();

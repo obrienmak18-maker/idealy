@@ -28,16 +28,13 @@ export async function POST(request: Request) {
 
   try {
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY?.trim();
-    const clientApiKey = request.headers.get("apikey")?.trim();
     const response = await fetch(getIdealyAiFunctionUrl(), {
       body: await request.text(),
       headers: {
         Authorization: authorization,
         "Content-Type":
           request.headers.get("content-type") ?? "application/json",
-        ...(clientApiKey || supabaseAnonKey
-          ? { apikey: clientApiKey ?? supabaseAnonKey }
-          : {}),
+        ...(supabaseAnonKey ? { apikey: supabaseAnonKey } : {}),
         "x-client-info": "idealy-next-workspace",
       },
       method: "POST",

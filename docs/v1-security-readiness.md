@@ -14,6 +14,12 @@ La revue examine les routes Next, les Edge Functions, les migrations, les contra
 | Création de checkout | Risque de création concurrente de session ou d’abonnement. | Recherche d’abonnement actif, idempotence Stripe du client et de la session, profil requis. | `test-billing-security-contract.mjs` |
 | Vercel | Un jeton serveur partagé pouvait théoriquement publier pour n’importe quel utilisateur authentifié. | Les routes de déploiement et de statut sont désactivées jusqu’à OAuth individuel et confirmation one-shot. | `test-shared-external-connector-guard.mjs` |
 | Outils de conception | Recherche/génération d’image authentifiée mais sans mission, débit, crédits ni idempotence. | La fonction est désactivée jusqu’à un contrat mission, cadence, crédits, idempotence et politique fournisseur. | `test-shared-external-connector-guard.mjs` |
+| Import d’images héritées | Nom de Blob fourni par le client, global et prévisible ; risque de collision ou d’écrasement. | Chemin public désormais segmenté par utilisateur avec UUID non prédictible ; formats JPEG/PNG et 5 Mo restent imposés. Les imports sont toujours publics par conception : ils ne doivent contenir aucune donnée sensible. | `test-legacy-api-security-contract.mjs` |
+| Documents hérités | Écriture de contenu non bornée et suppression d’un document absent susceptible de produire une erreur serveur. | Contenu plafonné à 1 000 000 caractères, titre borné et ressource absente renvoyée en 404 contrôlée. | `test-legacy-api-security-contract.mjs` |
+| Requêtes de chat héritées | Tableaux et identifiants de modèle insuffisamment bornés ; URL de pièce jointe non contrainte au transport sécurisé. | Taille des listes plafonnée et URLs d’images limitées à HTTPS. | `test-chat-request-contract.mjs` |
+| Proxy IA Next | L’appelant pouvait substituer l’en-tête `apikey` relayé au backend. | La clé anonyme utilisée par le proxy vient exclusivement de sa configuration serveur ; un bearer demeure obligatoire. | `test-next-ai-proxy-contract.mjs` |
+
+Ces protections ont été publiées le 25 août 2026 : `create-checkout-session` v27, `create-billing-portal` v11, `check-subscription` v12, `cancel-subscription` v11, `vercel-deploy` v11, `vercel-status` v11 et `designer-tools` v1 sont toutes `ACTIVE` avec vérification JWT. Les fonctions sont désactivées par une réponse contrôlée, et non supprimées : leur réactivation impose donc de livrer le contrat de sécurité décrit dans le tableau ci-dessus.
 
 ## État GitHub OAuth
 
@@ -25,6 +31,12 @@ Le flux actuel garde déjà un state aléatoire haché à durée courte, une con
 | OAuth GitHub utilisable publiquement | Non certifié : configuration et test réel d’un compte utilisateur manquent. |
 | Scopes minimaux et migration vers GitHub App | Chantier recommandé avant extension du connecteur à la production large. |
 | Révocation utilisateur et expiration/rotation token | Chantier requis avant certification complète. |
+
+## Frontières d’identité et routes héritées
+
+Supabase Auth et les tables Supabase restent l’autorité des missions, crédits, intégrations, paiements, runs et fichiers de workspace. Auth.js ne fait que porter une session chiffrée côté serveur afin de donner au runtime Next un accès contrôlé au JWT Supabase ; le callback de session ne sérialise pas ces jetons vers `session.user`. `lib/db` garde encore l’historique conversationnel et les artefacts hérités, avec une correspondance locale–Supabase : il ne doit pas devenir une seconde autorité métier.
+
+L’audit statique a confirmé que l’API d’escouade relaie vers l’Edge Function sous JWT, laquelle applique l’autorisation de mission ; que le guest flow est réservé au mode démo dans sa route dédiée ; et que les routes d’historique, de vote et de documents vérifient le propriétaire local avant lecture ou écriture. L’architecture conserve cependant deux couches pour l’historique de chat ; sa suppression ou migration ne doit pas être faite sans migration de données et test de régression.
 
 ## Paiements et crédits : qualification honnête
 

@@ -19,6 +19,16 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 const RUN_KEY_PATTERN = /^[a-zA-Z0-9:_-]{16,180}$/;
 const PROCESS_FUNCTION = "process-ai-request";
 
+function voiceDirection(way: unknown) {
+  const profiles: Record<string, string> = {
+    hunter: "Voix d’exploration méthodique : comparer les pistes, expliciter les hypothèses et annoncer le prochain essai vérifiable.",
+    mage: "Voix de création structurée : être inventif sans sacrifier les contraintes, les fichiers attendus ou les faits observables.",
+    ninja: "Voix tactique : être concis, découper les dépendances et avancer par étapes courtes et contrôlées.",
+    professional: "Voix opérationnelle : être calme, précis, centré sur les faits, les risques et le prochain livrable vérifiable.",
+  };
+  return `${profiles[typeof way === "string" ? way : ""] ?? profiles.professional} Ne pas imiter, citer ou revendiquer l’identité d’un personnage ou d’une franchise existante. Ne jamais annoncer une action, un test, une publication ou un état live non observé.`;
+}
+
 function delay(milliseconds: number) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
@@ -132,7 +142,7 @@ Deno.serve(async (request) => {
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data: mission, error: missionError } = await admin
     .from("missions")
-    .select("id,title,brief,contracts,dna,status")
+    .select("id,title,brief,contracts,dna,status,way")
     .eq("id", missionId)
     .eq("user_id", auth.user.id)
     .maybeSingle();
@@ -156,6 +166,7 @@ Deno.serve(async (request) => {
     dna: mission.dna ?? {},
     title: mission.title,
   }).slice(0, 18_000);
+  const missionVoice = voiceDirection(mission.way);
   const inputDigest = await sha256(missionContext);
   const agents = ["architect", "builder", "reviewer"] as const;
   const { error: insertError } = await admin.from("mission_agent_runs").insert(
@@ -202,7 +213,7 @@ Deno.serve(async (request) => {
             missionId,
             mode: "auto",
             planOnly: true,
-            prompt: `Établis le plan strictement borné de cette mission Idealy. Propose uniquement Architecte, Builder et Reviewer, chacun une seule fois. N’ajoute aucun outil externe, aucune publication et aucune action sur un compte tiers. Contexte mission : ${missionContext}`,
+            prompt: `Établis le plan strictement borné de cette mission Idealy. Propose uniquement Architecte, Builder et Reviewer, chacun une seule fois. N’ajoute aucun outil externe, aucune publication et aucune action sur un compte tiers. ${missionVoice} Contexte mission : ${missionContext}`,
           },
         });
     const plan = architect.plan as MissionPlan | undefined;
@@ -231,7 +242,7 @@ Deno.serve(async (request) => {
         intentCategory: "EXECUTION",
         missionId,
         mode: "auto",
-        prompt: `Construis uniquement la première version conforme au plan suivant. Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. Plan : ${JSON.stringify(plan).slice(0, 12_000)}. Contexte : ${missionContext}`,
+        prompt: `Construis uniquement la première version conforme au plan suivant. Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 12_000)}. Contexte : ${missionContext}`,
         stream: true,
         workspaceStream: true,
       },
@@ -268,7 +279,7 @@ Deno.serve(async (request) => {
         intentCategory: "IDEATION",
         missionId,
         mode: "auto",
-        prompt: `Agis comme Reviewer. Évalue uniquement les métadonnées de fichiers, le préflight structurel et le plan. Réponds avec un rapport court : état, risques, tests manquants et prochaine action. Ne publie rien et ne modifie aucun fichier. Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préflight : ${JSON.stringify(validation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
+        prompt: `Agis comme Reviewer. Évalue uniquement les métadonnées de fichiers, le préflight structurel et le plan. Réponds avec un rapport court : état, risques, tests manquants et prochaine action. Ne publie rien et ne modifie aucun fichier. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préflight : ${JSON.stringify(validation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
       },
     });
     await updateRun("reviewer", { completed_at: new Date().toISOString(), output_summary: summary(reviewer), status: "succeeded" });

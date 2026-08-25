@@ -7,6 +7,12 @@ import {
   runDesignCritic,
   type DesignSpecification,
 } from "./design-engine";
+import {
+  getMissionPersona,
+  missionPersonaPrompt,
+  normalizeMissionWay,
+  type MissionWay,
+} from "./agent-personas";
 
 export type IdealyIntentCategory = "CONVERSATION" | "IDEATION" | "EXECUTION";
 
@@ -269,13 +275,17 @@ export async function createIdealyMission({
   intentCategory,
   prompt,
   request,
+  way = "professional",
 }: {
   chatId: string;
   intentCategory: IdealyIntentCategory;
   prompt: string;
   request: Request;
+  way?: MissionWay;
 }): Promise<IdealyMission> {
   const { userId } = await getSupabaseServerContext(request);
+  const missionWay = normalizeMissionWay(way);
+  const persona = getMissionPersona(missionWay);
   const payload = await callSupabaseRest<IdealyMissionResponse[]>(
     request,
     "missions",
@@ -287,11 +297,11 @@ export async function createIdealyMission({
           prompt,
           version: 1,
         },
-        dna: { intentCategory, stage: "planning" },
+        dna: { intentCategory, stage: "planning", voiceProfile: persona },
         status: "draft",
         title: prompt.slice(0, 120) || "Nouvelle mission",
         user_id: userId,
-        way: "professional",
+        way: missionWay,
       }),
       headers: {
         Prefer: "return=representation",
@@ -347,6 +357,7 @@ export async function createIdealyMissionPlan({
   prompt,
   provider,
   request,
+  way = "professional",
 }: {
   idempotencyKey: string;
   missionId?: string;
@@ -354,6 +365,7 @@ export async function createIdealyMissionPlan({
   prompt: string;
   provider?: string;
   request: Request;
+  way?: MissionWay;
 }): Promise<MissionPlan> {
   const design = buildDesignSpecification(prompt);
   const designCritic = runDesignCritic(design);
@@ -368,7 +380,7 @@ export async function createIdealyMissionPlan({
     planOnly: true,
     prompt,
     stream: false,
-    systemPrompt: `${MISSION_PLAN_SYSTEM_PROMPT}\n\n${designSpecificationToPrompt(design)}`,
+    systemPrompt: `${MISSION_PLAN_SYSTEM_PROMPT}\n\n${designSpecificationToPrompt(design)}${missionPersonaPrompt(way)}`,
   });
 
   return { ...parseMissionPlan(payload.plan), design, designCritic };

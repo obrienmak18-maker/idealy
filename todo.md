@@ -68,12 +68,18 @@
 - [ ] Vérifier le domaine dans Google Search Console puis soumettre le sitemap et demander l’indexation des pages publiques
 - [ ] Établir le registre de risques V1, les critères de mise en bêta et les preuves de préparation au paiement
 - [ ] Auditer les autorisations, entrées, sorties, crédits, Stripe, OAuth, exports et secrets par scénario d’attaque autorisé
-- [ ] Produire une documentation de handoff claire pour les développeurs humains : architecture, données, fonctions, tests et exploitation
-- [ ] Formaliser des personnalités d’agents distinctes, originales et non imitatives pour les voix Ninja, Mana et Hunter
+- [x] Produire une documentation de handoff claire pour les développeurs humains : architecture, données, fonctions, tests et exploitation
+- [x] Formaliser des personnalités d’agents distinctes, originales et non imitatives pour les voix Ninja, Mana et Hunter
 - [ ] Rendre la progression des runs et des fichiers plus lisible en direct sans simuler des résultats non persistés
 - [ ] Tester les parcours de monétisation sans lancer de paiement réel ni annoncer une offre non configurée
 - [ ] Réévaluer la transition vers `main` après les preuves V1, sans l’exécuter automatiquement
-- [ ] Durcir les fonctions Stripe : origine stricte, redirections fixes, erreurs publiques génériques et suppression des identifiants Stripe inutiles
-- [ ] Désactiver les déploiements Vercel partagés jusqu’à l’implémentation d’une intégration OAuth individuelle et d’une confirmation persistante
-- [ ] Encadrer les outils de conception : mission obligatoire, limites de débit, crédits serveur et erreurs non révélatrices pour éviter une consommation IA non bornée
+- [x] Durcir les fonctions Stripe : origine stricte, redirections fixes, erreurs publiques génériques et suppression des identifiants Stripe inutiles
+- [x] Désactiver les déploiements Vercel partagés jusqu’à l’implémentation d’une intégration OAuth individuelle et d’une confirmation persistante
+- [x] Désactiver les outils de conception jusqu’à l’ajout d’un contrat mission, cadence, crédits, idempotence et politique fournisseur
 - [x] Rendre `/welcome` réellement publique afin que la landing incluse au sitemap ne redirige pas vers la connexion
+- [x] Isoler les chemins d’import public par utilisateur et fichier unique, avec contrat de sécurité des pièces jointes
+- [x] Corriger la suppression de document hérité lorsque la ressource demandée est absente
+- [x] Borner les requêtes de chat héritées et accepter uniquement des pièces jointes HTTPS attendues
+- [x] Empêcher le proxy IA Next de transmettre une clé Supabase fournie par le client
+- [x] Borner la taille des écritures de documents hérités pour limiter la consommation de stockage
+- [x] Relier les quatre voies à des profils d’agents originaux et contraints dans les plans et l’orchestration réels

@@ -520,6 +520,7 @@ export async function POST(request: Request) {
                 prompt: idealyPrompt,
                 ...(directModel ? { provider: directModel.edgeProvider } : {}),
                 request,
+                way: "professional",
               });
               dataStream.write({ data: missionPlan, type: "data-idealy-plan" });
               await updateIdealyMission({
