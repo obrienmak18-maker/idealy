@@ -53,6 +53,8 @@ Le 25 août 2026, l’inventaire du projet Supabase de production `vhucjkyktdflw
 
 La branche live expose désormais `GET /api/idealy/missions/:missionId/events?afterSequence=N`. La route consulte `mission_file_events` et `mission_files` avec le JWT Supabase de la session ; la RLS conserve donc l’autorisation de lecture au propriétaire de la mission. Le client fusionne les événements strictement croissants avec le snapshot de fichiers après une interruption de flux. Cette amélioration rend la réhydratation robuste, mais ne transforme pas encore le flux fournisseur en chunks de fichier persistés à mesure de leur génération.
 
+Lorsqu’un chat a déjà créé une mission d’exécution, le workspace affiche désormais l’action **Run squad**. Elle appelle le proxy authentifié de mission avec une clé d’idempotence aléatoire, attend le run persistant Architecte → Builder → Reviewer et déclenche ensuite une relecture du journal VFS. Aucun bouton n’existe sans `missionId`, et cette action ne publie, n’exporte ni ne contacte un connecteur tiers.
+
 ## Périmètre sûr de la prochaine itération
 
 1. Stabiliser un contrat d’intention partagé `CONVERSATION` / `IDEATION` / `EXECUTION` entre la route Next et `process-ai-request`.

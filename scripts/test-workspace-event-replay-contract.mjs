@@ -4,6 +4,10 @@ const [adapter, route] = await Promise.all([
   readFile("lib/idealy/backend-adapter.ts", "utf8"),
   readFile("app/api/idealy/missions/[missionId]/events/route.ts", "utf8"),
 ]);
+const streamHandler = await readFile(
+  "components/chat/data-stream-handler.tsx",
+  "utf8"
+);
 
 for (const requiredFragment of [
   "mission_file_events?select=",
@@ -28,6 +32,17 @@ for (const requiredFragment of [
 ]) {
   if (!route.includes(requiredFragment)) {
     throw new Error(`Workspace replay route is missing: ${requiredFragment}`);
+  }
+}
+
+for (const requiredFragment of [
+  "Mission workspace",
+  "missionFiles.length",
+  "data-idealy-file-event",
+  "isVisible: true",
+]) {
+  if (!streamHandler.includes(requiredFragment)) {
+    throw new Error(`Workspace canvas recovery is missing: ${requiredFragment}`);
   }
 }
 

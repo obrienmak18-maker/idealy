@@ -71,6 +71,27 @@ export function DataStreamHandler() {
   const missionId =
     typeof metadata?.missionId === "string" ? metadata.missionId : null;
   const lastSequence = Number(metadata?.missionFileLastSequence ?? 0);
+  const missionReplayNonce = Number(metadata?.missionReplayNonce ?? 0);
+  const missionFiles = Array.isArray(metadata?.missionFiles)
+    ? (metadata.missionFiles as MissionFile[])
+    : [];
+
+  useEffect(() => {
+    if (!missionFiles.length) return;
+    const firstSavedFile = missionFiles.find(
+      (file) => typeof file.content === "string" && file.status !== "error"
+    );
+    if (!firstSavedFile) return;
+
+    setArtifact((current) => ({
+      ...current,
+      content: current.content || firstSavedFile.content || "",
+      isVisible: true,
+      kind: "code",
+      status: "idle",
+      title: current.title || "Mission workspace",
+    }));
+  }, [missionFiles, setArtifact]);
 
   useEffect(() => {
     if (!missionId || !Number.isSafeInteger(lastSequence) || lastSequence < 0) {
@@ -134,7 +155,7 @@ export function DataStreamHandler() {
 
     void hydrateWorkspace();
     return () => controller.abort();
-  }, [lastSequence, missionId, setMetadata]);
+  }, [lastSequence, missionId, missionReplayNonce, setMetadata]);
 
   useEffect(() => {
     if (!dataStream?.length) {
@@ -151,6 +172,22 @@ export function DataStreamHandler() {
       }
 
       if (delta.type === "data-idealy-file-event") {
+        const eventFile = delta.data.file;
+        const eventContent =
+          eventFile && typeof eventFile.content === "string"
+            ? eventFile.content
+            : "";
+        const isTerminalEvent =
+          delta.data.eventType === "mission_completed" ||
+          delta.data.eventType === "mission_error";
+        setArtifact((current) => ({
+          ...current,
+          content: eventContent || current.content,
+          isVisible: true,
+          kind: "code",
+          status: isTerminalEvent ? "idle" : "streaming",
+          title: current.title || "Mission workspace",
+        }));
         setMetadata((current: Record<string, unknown> | null) => {
           const merged = mergeMissionFileEvent(
             {

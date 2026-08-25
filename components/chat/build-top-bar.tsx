@@ -15,9 +15,11 @@ import {
   Share2,
   Smartphone,
   Star,
+  Sparkles,
   Tablet,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useArtifact } from "@/hooks/use-artifact";
 
 type WorkspaceView = "preview" | "code" | "database";
 type Device = "desktop" | "tablet" | "mobile";
@@ -33,6 +35,7 @@ const previewPages: PreviewPage[] = [
 ];
 
 export function BuildTopBar() {
+  const { metadata, setMetadata } = useArtifact();
   const [title, setTitle] = useState("UI/UX analysis");
   const [favorite, setFavorite] = useState(false);
   const [view, setView] = useState<WorkspaceView>("preview");
@@ -44,6 +47,9 @@ export function BuildTopBar() {
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const pageMenuRef = useRef<HTMLDivElement>(null);
+  const missionId =
+    typeof metadata?.missionId === "string" ? metadata.missionId : null;
+  const [isSquadRunning, setIsSquadRunning] = useState(false);
 
   useEffect(() => {
     const closeMenus = (event: Event) => {
@@ -105,6 +111,40 @@ export function BuildTopBar() {
     const nextTitle = window.prompt("Renommer le projet", title);
     if (nextTitle?.trim()) {
       setTitle(nextTitle.trim());
+    }
+  };
+
+  const runSquad = async () => {
+    if (!missionId || isSquadRunning) return;
+    setIsSquadRunning(true);
+    setStatus("Running squad");
+    try {
+      const idempotencyKey = `squad:${missionId}:${crypto.randomUUID()}`;
+      const response = await fetch(
+        `/api/idealy/missions/${missionId}/squad`,
+        {
+          body: JSON.stringify({ idempotencyKey }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        }
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; status?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "L’escouade n’a pas pu démarrer.");
+      }
+      setMetadata((current: Record<string, unknown> | null) => ({
+        ...(current ?? {}),
+        missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
+        missionSquadStatus: payload?.status ?? "ready",
+      }));
+      setStatus("Squad complete");
+    } catch (error) {
+      console.error("Mission squad launch failed", error);
+      setStatus("Squad unavailable");
+    } finally {
+      setIsSquadRunning(false);
     }
   };
 
@@ -317,6 +357,19 @@ export function BuildTopBar() {
         >
           <Share2 className="size-4" />
         </button>
+        {missionId ? (
+          <button
+            aria-busy={isSquadRunning}
+            aria-label="Run mission squad"
+            className="hidden h-8 items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-400/10 px-2.5 text-[11px] font-semibold text-sky-200 transition hover:bg-sky-400/20 disabled:cursor-wait disabled:opacity-60 lg:inline-flex"
+            disabled={isSquadRunning}
+            onClick={runSquad}
+            type="button"
+          >
+            <Sparkles className={`size-3.5 ${isSquadRunning ? "animate-pulse" : ""}`} />
+            {isSquadRunning ? "Building" : "Run squad"}
+          </button>
+        ) : null}
         <button
           aria-label="Publish"
           className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
