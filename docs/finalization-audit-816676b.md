@@ -77,6 +77,8 @@ L’export GitHub exige maintenant une confirmation persistante `github:export` 
 | Netlify | Le déploiement `6a8ce1ca5dcd8dec441125c6` est `ready`; son scan de secrets n’a trouvé aucune correspondance. Il est étiqueté `main` par un upload API, sans merge Git. | Ne pas l’assimiler à la branche Git `main`; publier seulement après validation de la branche live. |
 | OAuth GitHub | Les fonctions sont actives, mais l’outil de lecture Netlify ne fournit pas les noms de variables d’environnement. | Ne pas affirmer que les secrets OAuth sont configurés ; le flux devra être vérifié avec un compte utilisateur autorisé. |
 
+Le déploiement Netlify `6a8cfba6d725004c91b7642f` a bien compilé Next.js, mais Netlify a interrompu sa publication parce que son scanner a détecté la valeur configurée de `SUPABASE_URL` dans le guide OAuth versionné. Le scan a été conservé actif : la valeur a été remplacée par un placeholder de procédure dans la documentation, plutôt que d’exclure une règle ou de désactiver la protection. Une nouvelle publication n’est tentée qu’après validation de ce correctif.
+
 Le workflow `Idealy Live Quality` s’exécute sur les pushes de `feat/idealy-live-backend`, les pull requests vers `main` ou la branche live, et déclenche manuellement. Il contrôle le typecheck, le build, les contrats statiques, le reset Supabase local/RLS et le webhook Stripe local. Il ne prouve pas à lui seul un déploiement Supabase ou Netlify de production.
 
 ## Suite ordonnée

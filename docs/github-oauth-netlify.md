@@ -7,7 +7,7 @@ Chaque utilisateur connecté dans Idealy peut associer **son propre compte GitHu
 | Composant | Valeur à configurer | Rôle |
 |---|---|---|
 | GitHub OAuth App | **Homepage URL** : `https://idealy-ai.netlify.app` | Page publique de l’application affichée à l’utilisateur. |
-| GitHub OAuth App | **Authorization callback URL** : `https://vhucjkyktdflwocrmzhe.supabase.co/functions/v1/integration-callback` | GitHub renvoie le code d’autorisation à la fonction Edge, pas directement au navigateur. |
+| GitHub OAuth App | **Authorization callback URL** : `https://<votre-ref-Supabase>.supabase.co/functions/v1/integration-callback` | Reprenez l’URL de fonction affichée dans le tableau de bord Supabase ; GitHub renvoie le code d’autorisation à la fonction Edge, pas directement au navigateur. |
 | Supabase Edge secrets | `GITHUB_OAUTH_CLIENT_ID` et `GITHUB_OAUTH_CLIENT_SECRET` | Identifient uniquement l’application OAuth Idealy auprès de GitHub. |
 | Supabase Edge secrets | `APP_ORIGIN=https://idealy-ai.netlify.app` | Retourne l’utilisateur vers Idealy après succès ou erreur OAuth. |
 | Supabase Edge secrets | `INTEGRATION_ENCRYPTION_KEY` | Chiffre les jetons utilisateur avant écriture en base. Elle doit être aléatoire, longue, privée et stable ; sa rotation demande une procédure dédiée. |
@@ -17,9 +17,9 @@ Chaque utilisateur connecté dans Idealy peut associer **son propre compte GitHu
 
 Dans GitHub, ouvrez les paramètres développeur du compte ou de l’organisation qui possède Idealy, puis créez une **OAuth App** nommée `Idealy`. Inscrivez l’URL publique et l’URL de callback ci-dessus. Copiez le Client ID et générez le Client Secret uniquement dans les interfaces sécurisées de secrets Supabase ; ne les envoyez pas par message et ne les versionnez jamais.
 
-Déployez ensuite les fonctions `integration-connect`, `integration-callback`, `integration-status` et `github-export` avec les secrets présents. Sur Idealy, l’utilisateur ouvre **Plugins & connecteurs**, choisit GitHub et accepte les droits demandés. Le statut doit devenir `Connecté` seulement après le retour OAuth, la vérification de son profil GitHub et l’écriture chiffrée du jeton.
+Déployez ensuite les fonctions `integration-connect`, `integration-callback`, `integration-status`, `mission-action-confirmation` et `github-export` avec les secrets présents. Sur Idealy, l’utilisateur ouvre **Plugins & connecteurs**, choisit GitHub et accepte les droits demandés. Le statut doit devenir `Connecté` seulement après le retour OAuth, la vérification de son profil GitHub et l’écriture chiffrée du jeton.
 
-> Le flux actuel demande `repo user`, car l’export existant peut créer un dépôt privé et y écrire des fichiers. Cette portée est large : aucune écriture GitHub ne doit partir automatiquement d’un agent. L’export doit être précédé d’une confirmation décrivant le compte, le dépôt, les fichiers et la branche.
+> Le flux actuel demande `repo user`, car l’export existant peut créer un dépôt privé et y écrire des fichiers. Cette portée est large : aucune écriture GitHub ne doit partir automatiquement d’un agent. L’export est lié à une confirmation de mission expirante et à usage unique, qui couvre le compte, la mission et le digest des fichiers.
 
 GitHub recommande l’usage de scopes minimaux, d’un `state` aléatoire et, lorsque possible, de PKCE. Le `state` à usage unique est déjà présent dans Idealy. Avant d’activer l’expiration des jetons GitHub, ajoutez le stockage chiffré du refresh token et son renouvellement côté Edge ; l’implémentation actuelle ne doit pas annoncer ce support. [1] [2]
 
