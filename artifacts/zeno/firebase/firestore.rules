@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function authenticated() { return request.auth != null; }
+    function schoolId() { return request.auth.token.school_id; }
+    function role() { return request.auth.token.role; }
+    function sameSchool(id) { return authenticated() && schoolId() == id; }
+    function admin() { return authenticated() && role() == 'ADMINISTRATEUR'; }
+    function teacher() { return authenticated() && role() == 'PROFESSEUR'; }
+    function accountant() { return authenticated() && role() == 'COMPTABLE'; }
+
+    match /profiles/{userId} {
+      allow read: if authenticated() && (request.auth.uid == userId || (admin() && resource.data.school_id == schoolId()));
+      allow create: if admin() && request.resource.data.school_id == schoolId();
+      allow update: if authenticated() && (request.auth.uid == userId || (admin() && resource.data.school_id == schoolId()));
+      allow delete: if admin() && resource.data.school_id == schoolId();
+    }
+
+    match /ecoles/{school} {
+      allow read: if sameSchool(school);
+      allow create, update, delete: if admin() && sameSchool(school);
+
+      match /{collection}/{document} {
+        allow read: if sameSchool(school);
+        allow create, update: if sameSchool(school) && (
+          admin() ||
+          (collection == 'notes' && teacher() && request.resource.data.saisiParId == request.auth.uid) ||
+          (collection == 'presences' && teacher() && request.resource.data.enregistreParId == request.auth.uid) ||
+          (collection == 'paiements' && accountant())
+        );
+        allow delete: if admin() && sameSchool(school);
+      }
+
+      match /eleves/{eleveId}/{collection}/{document} {
+        allow read: if sameSchool(school);
+        allow create, update: if sameSchool(school) && (
+          admin() ||
+          (collection == 'notes' && teacher() && request.resource.data.saisiParId == request.auth.uid) ||
+          (collection == 'presences' && teacher() && request.resource.data.enregistreParId == request.auth.uid) ||
+          (collection == 'paiements' && accountant())
+        );
+        allow delete: if admin() && sameSchool(school);
+      }
+
+      match /qr_tokens/{tokenId} {
+        allow read: if true;
+        allow create: if admin() && sameSchool(school);
+        allow update: if admin() && sameSchool(school);
+      }
+
+      match /messages/{messageId} {
+        allow read: if sameSchool(school) && (resource.data.expediteurId == request.auth.uid || resource.data.destinataireId == request.auth.uid);
+        allow create: if sameSchool(school) && request.resource.data.expediteurId == request.auth.uid;
+        allow update: if sameSchool(school) && resource.data.destinataireId == request.auth.uid;
+      }
+    }
+  }
+}

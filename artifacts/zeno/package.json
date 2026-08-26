@@ -10,15 +10,19 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "catalog:",
-    "lucide-react": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "firebase": "^12.17.1",
+    "lucide-react": "catalog:",
+    "qrcode": "^1.5.4",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "typescript": "~5.9.3",
     "vite": "catalog:"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6"
+  }
 }
