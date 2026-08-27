@@ -87,6 +87,9 @@ jobs:
       - name: Agent personas contract
         run: node scripts/test-agent-personas-contract.mjs
 
+      - name: Local workspace demo contract
+        run: node scripts/test-local-workspace-demo-contract.mjs
+
       - name: Workspace event replay contract
         run: node scripts/test-workspace-event-replay-contract.mjs
 

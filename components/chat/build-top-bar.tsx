@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useArtifact } from "@/hooks/use-artifact";
+import { localWorkspaceMetadata } from "@/lib/idealy/local-workspace-demo";
 
 type WorkspaceView = "preview" | "code" | "database";
 type Device = "desktop" | "tablet" | "mobile";
@@ -36,6 +37,7 @@ const previewPages: PreviewPage[] = [
 
 export function BuildTopBar() {
   const { metadata, setMetadata } = useArtifact();
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   const [title, setTitle] = useState("UI/UX analysis");
   const [favorite, setFavorite] = useState(false);
   const [view, setView] = useState<WorkspaceView>("preview");
@@ -118,6 +120,29 @@ export function BuildTopBar() {
     if (!missionId || isSquadRunning) return;
     setIsSquadRunning(true);
     setStatus("Running squad");
+    if (isDemoMode) {
+      setMetadata((current: Record<string, unknown> | null) => ({
+        ...(current ?? {}),
+        missionSquadStatus: "running-local-demo",
+        outputs: [
+          ...(Array.isArray(current?.outputs) ? current.outputs : []),
+          {
+            contents: [{ type: "text", value: "[local] Lyra → Mason → Nova en cours" }],
+            id: `local-squad-${Date.now()}`,
+            status: "running",
+          },
+        ],
+      }));
+      window.setTimeout(() => {
+        setMetadata((current: Record<string, unknown> | null) => ({
+          ...(current ?? {}),
+          ...localWorkspaceMetadata(),
+        }));
+        setStatus("Squad complete");
+        setIsSquadRunning(false);
+      }, 950);
+      return;
+    }
     try {
       const idempotencyKey = `squad:${missionId}:${crypto.randomUUID()}`;
       const response = await fetch(
@@ -373,7 +398,7 @@ export function BuildTopBar() {
         <button
           aria-label="Publish"
           className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
-          onClick={() => window.alert("Publication de la preview préparée.")}
+          onClick={() => window.alert(isDemoMode ? "Démo locale : publication protégée. Aucun déploiement n’est lancé." : "Publication de la preview préparée.")}
           type="button"
         >
           Publish

@@ -16,6 +16,20 @@ Ouvrir ensuite [http://127.0.0.1:3100/demo-flow](http://127.0.0.1:3100/demo-flow
 
 La vérification locale du 25 août 2026 a confirmé que la route charge directement avec son interface complète, ses portraits, les onglets **Preview**, **Code**, **Données** et **Console**, ainsi que les marqueurs explicites `Mode démonstration`, `aperçu local` et `aucune donnée persistée`. Après l’ajout de `allowedDevOrigins`, le scénario avance correctement : le premier clic fait passer la progression de 0 % à 36 %, ajoute le livrable de cadrage et ouvre la projection de fichiers dans l’onglet Code. Aucune requête IA, écriture Supabase, publication ou action Netlify n’a été déclenchée.
 
+## Session workspace complète
+
+Le workspace réel peut aussi être inspecté localement avec `DEMO_MODE=true NEXT_PUBLIC_DEMO_MODE=true PORT=3101 pnpm dev`. Cette session conserve le vrai shell : sidebar, composer, conversation, top bar de build, **Run squad**, appareils, Preview/Code/Database/Console, ouverture de preview, partage, publication et redimensionnement. Une saisie injecte uniquement en mémoire un plan, des messages, une mission et des événements de fichiers. Le canvas reçoit un HTML local par l’événement `data-preview`, sans requête Supabase, IA, Stripe, GitHub, Vercel ou Netlify.
+
+La vérification du workspace complet a confirmé qu’après l’envoi d’une intention, le split view réel s’ouvre avec le message assistant à gauche et l’aperçu **Atelier Nord** à droite. L’iframe reçoit une landing locale lisible avec titre, actions et trois cartes. Cette preuve valide le canvas du vrai shell ; elle ne constitue pas une mission persistée ni un build d’application externe.
+
+Les onglets du canvas ont ensuite été contrôlés dans le même workspace : **Code** affiche le fichier local validé `src/app/page.tsx` dans le vrai éditeur et **Données** affiche le schéma de mission en lecture seule avec le badge `Demo mode`. Les valeurs de tables restent volontairement inconnues plutôt que de simuler un enregistrement Supabase.
+
+Le bouton **Run squad** a été déclenché dans cette session : il affiche d’abord `Building`, puis revient à `Run squad` après la progression locale Lyra → Mason → Nova. En mode démo, ce chemin court-circuite explicitement la requête vers l’orchestrateur Supabase et inscrit seulement un journal en mémoire.
+
+Le menu **More actions** et sa commande **Show Console** ont aussi été vérifiés. La console du vrai canvas affiche les entrées locales de plan et de preview, avec le statut `completed`. Cette interaction n’ouvre aucune connexion réseau externe et garde les informations d’exécution volontairement identifiées comme locales.
+
+Le sélecteur d’appareil a été vérifié dans la vue **Preview** : le format mobile applique le cadre étroit du vrai canvas et conserve l’aperçu Atelier Nord lisible, y compris les actions et les trois cartes. Les formats bureau et tablette réutilisent le même comportement de viewport fourni par le composant Artifact.
+
 Les onglets **Données** et **Console** ont aussi été vérifiés. La vue Données marque le schéma comme `read-only` et précise qu’aucun enregistrement n’est créé. Le journal affiche les étapes terminées et en attente, puis conclut explicitement qu’aucun agent externe n’est invoqué.
 
 ## Parcours conseillé pour une vidéo

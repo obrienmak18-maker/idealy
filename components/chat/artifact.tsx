@@ -92,20 +92,21 @@ function PureArtifact({
   selectedModelId: string;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
   const {
     data: documents,
     isLoading: isDocumentsFetching,
     mutate: mutateDocuments,
   } = useSWR<Document[]>(
-    artifact.documentId !== "init" && artifact.status !== "streaming"
+    artifact.documentId !== "init" && artifact.status !== "streaming" && !isDemoMode
       ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}`
       : null,
     fetcher
   );
   const missionId = typeof metadata?.missionId === "string" ? metadata.missionId : null;
   const missionFileSequence = Number(metadata?.missionFileLastSequence ?? 0);
-  const missionWorkspaceKey = missionId
+  const missionWorkspaceKey = missionId && !isDemoMode
     ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/idealy/missions/${missionId}/files?afterSequence=${missionFileSequence}`
     : null;
   const { data: missionWorkspace } = useSWR<{
@@ -275,6 +276,15 @@ function PureArtifact({
         return;
       }
 
+      if (isDemoMode) {
+        setArtifact((currentArtifact) => ({
+          ...currentArtifact,
+          content: updatedContent,
+        }));
+        setIsContentDirty(false);
+        return;
+      }
+
       mutate<Document[]>(
         `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}`,
         async (currentDocuments) => {
@@ -318,7 +328,7 @@ function PureArtifact({
         { revalidate: false }
       );
     },
-    [artifact, mutate]
+    [artifact, isDemoMode, mutate, setArtifact]
   );
 
   const latestContentRef = useRef<string>("");

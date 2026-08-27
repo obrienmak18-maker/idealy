@@ -65,6 +65,7 @@ function mergeWorkspaceSnapshot(
 export function DataStreamHandler() {
   const { dataStream, setDataStream } = useDataStream();
   const { mutate } = useSWRConfig();
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
   const { artifact, metadata, setArtifact, setMetadata } = useArtifact();
 
@@ -97,7 +98,7 @@ export function DataStreamHandler() {
   }, [missionFiles, setArtifact]);
 
   useEffect(() => {
-    if (!missionId || !Number.isSafeInteger(lastSequence) || lastSequence < 0) {
+    if (isDemoMode || !missionId || !Number.isSafeInteger(lastSequence) || lastSequence < 0) {
       return;
     }
 
@@ -158,7 +159,7 @@ export function DataStreamHandler() {
 
     void hydrateWorkspace();
     return () => controller.abort();
-  }, [lastSequence, missionId, missionReplayNonce, setMetadata]);
+  }, [isDemoMode, lastSequence, missionId, missionReplayNonce, setMetadata]);
 
   useEffect(() => {
     if (!dataStream?.length) {

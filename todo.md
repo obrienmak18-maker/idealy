@@ -88,3 +88,12 @@
 - [x] Construire un scénario démo contrôlable : idée, plan, escouade, fichiers et aperçu
 - [x] Identifier explicitement les données et événements locaux afin de ne pas les présenter comme une production persistante
 - [x] Tester le mode démo local, documenter son accès navigateur et vérifier que `main` reste intacte
+- [x] Préparer le storyboard et les références verticales de la vidéo de présentation Idealy
+- [x] Générer une vidéo verticale avec narration française et ambiance sonore cohérente avec le workspace cible
+- [x] Vérifier et livrer la vidéo sans la présenter comme la bêta déjà publiée
+- [x] Remplacer les visuels conceptuels de la vidéo par les écrans Idealy réellement accessibles et homogénéiser le montage
+- [x] Produire et vérifier une révision de la vidéo centrée sur le workspace authentique plutôt que sur la route démo condensée
+- [x] Créer une session locale complète réutilisant le vrai shell de workspace Idealy
+- [x] Rendre interactifs localement la conversation, les voies, la mission, l’escouade, les fichiers et le canvas
+- [x] Exposer dans la démo les interactions prévues : aperçu, code, données, console, redimensionnement, partage et actions protégées
+- [x] Vérifier la démo complète sans compte, sans Supabase, sans IA externe et sans déploiement

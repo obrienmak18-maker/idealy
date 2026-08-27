@@ -10,6 +10,7 @@ import {
   type ReactNode,
   type SetStateAction,
   useContext,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -25,6 +26,11 @@ import { useAutoResume } from "@/hooks/use-auto-resume";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import type { Vote } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
+import {
+  localAssistantMessage,
+  localUserMessage,
+  localWorkspaceDataStream,
+} from "@/lib/idealy/local-workspace-demo";
 import type { ChatMessage } from "@/lib/types";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
 
@@ -101,7 +107,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const {
     messages,
     setMessages,
-    sendMessage,
+    sendMessage: sendRemoteMessage,
     status,
     stop,
     regenerate,
@@ -175,6 +181,36 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       },
     }),
   });
+
+  const sendMessage: UseChatHelpers<ChatMessage>["sendMessage"] = useCallback(
+    async (message, options) => {
+      if (!isDemoMode) {
+        return sendRemoteMessage(message, options);
+      }
+
+      const text =
+        typeof message === "string"
+          ? message
+          : message?.parts
+              ?.filter((part) => part.type === "text")
+              .map((part) => part.text)
+              .join("") || "Nouvelle mission locale";
+      setMessages((current) => [...current, localUserMessage(text)]);
+      setWaitingStatus({
+        message: "Idealy prépare un parcours local…",
+        modelId: "local-demo",
+        modelName: "Démo locale",
+        phase: "thinking",
+      });
+
+      window.setTimeout(() => {
+        setMessages((current) => [...current, localAssistantMessage()]);
+        setDataStream(localWorkspaceDataStream());
+        setWaitingStatus(undefined);
+      }, 550);
+    },
+    [isDemoMode, sendRemoteMessage, setDataStream, setMessages, setWaitingStatus]
+  );
 
   useEffect(() => {
     if (status === "submitted" || status === "ready" || status === "error") {
