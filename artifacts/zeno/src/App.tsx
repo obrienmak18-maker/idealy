@@ -10,6 +10,7 @@ import {
 import './styles.css';
 import { calculerMoyenne, calculerRang, determinerMention, formatMontant, type GradeInput } from './lib/calculs';
 import { getFirebaseStatus } from './lib/firebase';
+import { signInWithEmailAndPassword, type Auth } from 'firebase/auth';
 
 type Role = 'directeur' | 'professeur' | 'secretaire' | 'comptable';
 type View = 'dashboard' | 'students' | 'student-detail' | 'staff' | 'classes' | 'timetable' | 'qr' | 'bulletins' | 'finance' | 'attendance' | 'grades' | 'messages' | 'settings';
@@ -99,8 +100,64 @@ function uid(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().t
 function readStorage<T>(key: string, fallback: T): T { try { const value = localStorage.getItem(key); return value ? JSON.parse(value) as T : fallback; } catch { return fallback; } }
 function initials(name: string) { return name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase(); }
 
+function EntryScreen({ auth, onAuthenticated }: { auth: Auth | null; onAuthenticated: (role: Role) => void }) {
+  const [manualOpen, setManualOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [manualRole, setManualRole] = useState<Role>('directeur');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError('');
+    if (!email.trim() || password.length < 4) {
+      setError('Saisissez une adresse e-mail et un mot de passe de quatre caractères minimum.');
+      return;
+    }
+    setBusy(true);
+    try {
+      if (auth) await signInWithEmailAndPassword(auth, email.trim(), password);
+      onAuthenticated(manualRole);
+    } catch {
+      setError('Connexion impossible. Vérifiez vos identifiants Firebase et réessayez.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <div className="entry-screen">
+    <div className="entry-camera-bg" aria-hidden="true"><span /><span /><span /><i /><i /></div>
+    <div className="entry-shade" aria-hidden="true" />
+    <main className="entry-content">
+      <header className="entry-brand"><h1>CLASSE</h1><p>Portail Étudiant</p></header>
+      <button className="entry-scan-zone" type="button" onClick={() => { setManualOpen(true); setError(''); }} aria-label="Scanner un QR Code pour se connecter">
+        <span className="entry-corner top-left" /><span className="entry-corner top-right" /><span className="entry-corner bottom-left" /><span className="entry-corner bottom-right" />
+        <span className="entry-scan-line" /><QrCode size={42} strokeWidth={1.4} />
+      </button>
+      {!manualOpen ? <footer className="entry-footer">
+        <div className="entry-instruction"><strong>Scannez votre QR Code pour vous connecter</strong><span>Placez le code au centre du cadre</span></div>
+        <button className="entry-manual-button" type="button" onClick={() => { setManualOpen(true); setError(''); }}><Pencil size={18} /> Saisie manuelle</button>
+        <button className="entry-help-button" type="button" onClick={() => setHelpOpen((open) => !open)}><HelpCircle size={15} /> Besoin d’aide&nbsp;?</button>
+        {helpOpen && <div className="entry-help-card">Demandez à l’administrateur de générer un QR Code actif. Si vous n’avez pas de scanner compatible, utilisez la saisie manuelle avec le compte de votre établissement.</div>}
+      </footer> : <form className="entry-manual-card" onSubmit={submit}>
+        <div className="entry-manual-head"><div><p className="eyebrow">Connexion sécurisée</p><h2>Accéder à votre espace</h2></div><button type="button" className="entry-close" onClick={() => setManualOpen(false)} aria-label="Retour au scan"><X size={18} /></button></div>
+        <label>Adresse e-mail<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder={auth ? 'vous@etablissement.cd' : 'demo@classe.cd'} autoFocus /></label>
+        <label>Mot de passe<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" /></label>
+        <label>Profil de démonstration<select value={manualRole} onChange={(event) => setManualRole(event.target.value as Role)}><option value="directeur">Administrateur</option><option value="professeur">Professeur</option><option value="secretaire">Secrétaire</option><option value="comptable">Comptable</option></select></label>
+        {error && <p className="entry-error" role="alert"><AlertTriangle size={15} />{error}</p>}
+        {!auth && <p className="entry-demo-note"><ShieldCheck size={14} /> Mode démonstration local : les identifiants ne sont pas envoyés.</p>}
+        <button className="button primary entry-submit" disabled={busy}>{busy ? <Loader2 className="spin" size={16} /> : <CheckCircle2 size={16} />} {busy ? 'Connexion…' : 'Se connecter'}</button>
+        <button className="entry-back-button" type="button" onClick={() => setManualOpen(false)}><ArrowLeft size={15} /> Scanner un QR Code</button>
+      </form>}
+    </main>
+  </div>;
+}
+
 export default function App() {
   const [role, setRole] = useState<Role>(() => readStorage('classe-role', 'directeur'));
+  const [authenticated, setAuthenticated] = useState<boolean>(() => readStorage('classe-authenticated', false));
   const [view, setView] = useState<View>('dashboard');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>(() => readStorage('classe-students', initialStudents));
@@ -119,6 +176,7 @@ export default function App() {
   const firebaseStatus = getFirebaseStatus();
 
   useEffect(() => localStorage.setItem('classe-role', JSON.stringify(role)), [role]);
+  useEffect(() => localStorage.setItem('classe-authenticated', JSON.stringify(authenticated)), [authenticated]);
   useEffect(() => localStorage.setItem('classe-students', JSON.stringify(students)), [students]);
   useEffect(() => localStorage.setItem('classe-staff', JSON.stringify(staff)), [staff]);
   useEffect(() => localStorage.setItem('classe-classes', JSON.stringify(classes)), [classes]);
@@ -167,6 +225,8 @@ export default function App() {
     ...staff.filter((item) => `${item.name} ${item.role}`.toLowerCase().includes(globalSearch.toLowerCase())).map((item) => ({ type: 'Personnel', title: item.name, detail: item.role, action: () => navigate('staff') })),
     ...classes.filter((item) => item.name.toLowerCase().includes(globalSearch.toLowerCase())).map((item) => ({ type: 'Classe', title: item.name, detail: `${item.students} élèves · ${item.titular}`, action: () => navigate('classes') })),
   ].slice(0, 8) : [];
+
+  if (!authenticated) return <EntryScreen auth={firebaseStatus.auth} onAuthenticated={(nextRole) => { setRole(nextRole); setView('dashboard'); setAuthenticated(true); }} />;
 
   return <div className="classe-app">
     <button className={`mobile-overlay ${mobileNavOpen ? 'is-open' : ''}`} onClick={() => setMobileNavOpen(false)} aria-label="Fermer la navigation" />
