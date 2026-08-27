@@ -32,6 +32,7 @@ function PureSuggestedActions({
   onSuggestionSelect,
 }: SuggestedActionsProps) {
   const [generation, setGeneration] = useState(0);
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   const suggestedActions = useMemo(() => {
     const offset = generation % suggestions.length;
     return [...suggestions.slice(offset), ...suggestions.slice(0, offset)];
@@ -57,8 +58,31 @@ function PureSuggestedActions({
     [chatId, onSuggestionSelect, sendMessage]
   );
 
+  const startLocalWorkspaceDemo = useCallback(() => {
+    sendMessage({
+      parts: [
+        {
+          text: "Lance la démonstration complète d’Atelier Nord avec plan, escouade, fichiers, aperçu et revue locale.",
+          type: "text",
+        },
+      ],
+      role: "user",
+    });
+  }, [sendMessage]);
+
   return (
     <div className="flex w-full flex-col gap-2.5">
+      {isDemoMode ? (
+        <Button
+          className="w-full rounded-xl border border-sky-400/30 bg-sky-400/10 px-4 py-5 text-sm font-semibold text-sky-900 shadow-[var(--shadow-card)] hover:bg-sky-400/20 dark:text-sky-100"
+          data-testid="start-local-workspace-demo"
+          onClick={startLocalWorkspaceDemo}
+          type="button"
+          variant="ghost"
+        >
+          Ouvrir la démonstration complète
+        </Button>
+      ) : null}
       <div
         className="flex w-full gap-2.5 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible"
         data-testid="suggested-actions"

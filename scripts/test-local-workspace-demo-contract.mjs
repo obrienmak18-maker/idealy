@@ -8,6 +8,7 @@ const [hook, streamHandler, artifact, topBar, localDemo] = await Promise.all([
   readFile("components/chat/build-top-bar.tsx", "utf8"),
   readFile("lib/idealy/local-workspace-demo.ts", "utf8"),
 ]);
+const suggestedActions = await readFile("components/chat/suggested-actions.tsx", "utf8");
 
 assert.match(hook, /if \(!isDemoMode\) \{\s*return sendRemoteMessage/);
 assert.match(hook, /setDataStream\(localWorkspaceDataStream\(\)\)/);
@@ -16,6 +17,8 @@ assert.match(artifact, /artifact\.documentId !== "init" && artifact\.status !== 
 assert.match(artifact, /missionId && !isDemoMode/);
 assert.match(topBar, /if \(isDemoMode\) \{/);
 assert.match(topBar, /Démo locale : publication protégée/);
+assert.match(suggestedActions, /start-local-workspace-demo/);
+assert.match(suggestedActions, /Ouvrir la démonstration complète/);
 assert.match(localDemo, /LOCAL_DEMO_MISSION_ID/);
 assert.match(localDemo, /data-idealy-file-event/);
 assert.doesNotMatch(localDemo, /fetch\s*\(/);

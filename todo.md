@@ -97,3 +97,4 @@
 - [x] Rendre interactifs localement la conversation, les voies, la mission, l’escouade, les fichiers et le canvas
 - [x] Exposer dans la démo les interactions prévues : aperçu, code, données, console, redimensionnement, partage et actions protégées
 - [x] Vérifier la démo complète sans compte, sans Supabase, sans IA externe et sans déploiement
+- [x] Rétablir l’hydratation interactive du workspace de démonstration depuis le lien temporaire exposé

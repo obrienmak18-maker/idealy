@@ -30,6 +30,8 @@ Le menu **More actions** et sa commande **Show Console** ont aussi été vérifi
 
 Le sélecteur d’appareil a été vérifié dans la vue **Preview** : le format mobile applique le cadre étroit du vrai canvas et conserve l’aperçu Atelier Nord lisible, y compris les actions et les trois cartes. Les formats bureau et tablette réutilisent le même comportement de viewport fourni par le composant Artifact.
 
+Le lien temporaire exposé a enfin été vérifié après autorisation de son origine de développement. Le bouton **Ouvrir la démonstration complète** déclenche bien depuis cette URL le vrai shell, l’intention locale, la réponse, le split view et l’aperçu Atelier Nord. Il est donc possible de présenter tout le parcours sans compte et sans Netlify ; la session reste en mémoire et disparaît au rechargement.
+
 Les onglets **Données** et **Console** ont aussi été vérifiés. La vue Données marque le schéma comme `read-only` et précise qu’aucun enregistrement n’est créé. Le journal affiche les étapes terminées et en attente, puis conclut explicitement qu’aucun agent externe n’est invoqué.
 
 ## Parcours conseillé pour une vidéo
