@@ -112,3 +112,4 @@
 - [ ] Encadrer côté serveur l’estimation, la consommation IA, le blocage à zéro et le changement de Voie à 30 jours
 - [ ] Relier le workspace aux états Power contextualisés par Voie sans afficher de recharge, de pack ou de prix Stripe
 - [ ] Valider la migration Power en CI et sur Supabase, puis documenter les garanties réellement vérifiées
+- [ ] Corriger l’assertion du contrat SQL Power sur le verrouillage délégué et revalider la CI Supabase

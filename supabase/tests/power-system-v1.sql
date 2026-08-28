@@ -1,6 +1,7 @@
 DO $$
 DECLARE
   consume_definition TEXT;
+  ensure_definition TEXT;
   monthly_definition TEXT;
   way_change_definition TEXT;
 BEGIN
@@ -64,22 +65,26 @@ BEGIN
 
   SELECT pg_get_functiondef('public.consume_power_points(uuid,uuid,text,text)'::regprocedure)
   INTO consume_definition;
+  SELECT pg_get_functiondef('public.ensure_power_wallet(uuid)'::regprocedure)
+  INTO ensure_definition;
   SELECT pg_get_functiondef('public.grant_monthly_power(uuid,text)'::regprocedure)
   INTO monthly_definition;
   SELECT pg_get_functiondef('public.change_my_power_way(text,text)'::regprocedure)
   INTO way_change_definition;
 
-  IF position('FOR UPDATE' IN consume_definition) = 0
+  IF position('FOR UPDATE' IN ensure_definition) = 0
+    OR position('ensure_power_wallet' IN consume_definition) = 0
     OR position('Insufficient Power Points' IN consume_definition) = 0
     OR position('way_at_operation' IN consume_definition) = 0
     OR position('idempotency_key' IN consume_definition) = 0 THEN
     RAISE EXCEPTION 'Power consumption is missing concurrency, depletion, Way or idempotency guards';
   END IF;
 
-  IF position('monthly_allocation' IN monthly_definition) = 0
+  IF position('SELECT monthly_allocation' IN monthly_definition) = 0
+    OR position('power_plan_policies' IN monthly_definition) = 0
     OR position('last_monthly_allocation_at' IN monthly_definition) = 0
     OR position('Power monthly allocation already granted for current cycle' IN monthly_definition) = 0
-    OR position('p_amount' IN monthly_definition) > 0 THEN
+    OR position('p_amount' IN monthly_definition) <> 0 THEN
     RAISE EXCEPTION 'Monthly Power allocation must derive its amount from policy';
   END IF;
 
