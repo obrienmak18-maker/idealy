@@ -30,8 +30,33 @@ BEGIN
     END IF;
   END LOOP;
 
-  IF has_table_privilege('authenticated', 'public.profiles', 'INSERT, UPDATE, DELETE') THEN
+  IF has_table_privilege('anon', 'public.profiles', 'SELECT') THEN
+    RAISE EXCEPTION 'anon must not read profiles';
+  END IF;
+
+  IF NOT has_table_privilege('authenticated', 'public.profiles', 'SELECT') THEN
+    RAISE EXCEPTION 'authenticated must be able to read its own profile through RLS';
+  END IF;
+
+  IF has_table_privilege('authenticated', 'public.profiles', 'INSERT')
+    OR has_table_privilege('authenticated', 'public.profiles', 'UPDATE')
+    OR has_table_privilege('authenticated', 'public.profiles', 'DELETE') THEN
     RAISE EXCEPTION 'authenticated must not directly mutate profiles';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'profiles'
+      AND policyname IN (
+        'Users can insert their own profile.',
+        'Users can update own profile.',
+        'profiles_update_own',
+        'profiles_select_own'
+      )
+  ) THEN
+    RAISE EXCEPTION 'legacy direct profile policies must be removed';
   END IF;
 
   IF NOT has_function_privilege(
@@ -56,7 +81,8 @@ BEGIN
   INTO onboarding_definition;
   IF position('v_user_id UUID := auth.uid()' IN onboarding_definition) = 0
     OR position('Invalid way' IN onboarding_definition) = 0
-    OR position('onboarding_completed = TRUE' IN onboarding_definition) = 0 THEN
+    OR position('onboarding_completed = TRUE' IN onboarding_definition) = 0
+    OR position('SET search_path = public' IN onboarding_definition) = 0 THEN
     RAISE EXCEPTION 'complete_my_onboarding is missing identity, way or completion guards';
   END IF;
 END;

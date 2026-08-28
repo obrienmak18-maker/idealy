@@ -104,3 +104,4 @@
 - [ ] Étendre l’architecture multi-agent de façon graduelle en conservant Architecte → Builder → Reviewer
 - [ ] Vérifier les dépendances de sécurité, de paiement et d’exploitation avant de rendre les nouvelles capacités publiques
 - [ ] Stabiliser la CI Supabase locale en épinglant le CLI et revalider la migration de profil
+- [ ] Supprimer les anciennes politiques directes de profils et vérifier leurs privilèges effectifs
