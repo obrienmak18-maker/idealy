@@ -111,7 +111,8 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Évite une résolution GitHub de `latest`, susceptible d'être rate-limitée.
+          version: 2.116.0
 
       - name: Release stale local Supabase ports
         run: |
