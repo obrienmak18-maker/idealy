@@ -46,6 +46,9 @@ export default function Page() {
       : "/";
   };
 
+  const getOnboardingUrl = () =>
+    `/onboarding?next=${encodeURIComponent(getSafeCallbackUrl())}`;
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
     if (state.status === "invalid_credentials") {
@@ -74,7 +77,7 @@ export default function Page() {
     } else if (state.status === "success") {
       setIsSuccessful(true);
       updateSession();
-      router.push(getSafeCallbackUrl());
+      router.push(getOnboardingUrl());
       router.refresh();
     }
   }, [state.status]);

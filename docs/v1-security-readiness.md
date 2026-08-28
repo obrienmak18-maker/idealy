@@ -53,6 +53,8 @@ Le 28 août 2026, les migrations `product_profile_foundations` (`20260828005157`
 
 Les avis INFO `RLS enabled, no policy` demeurent attendus pour `user_credits`, `credit_ledger` et `user_ai_keys`, qui sont fermées aux rôles navigateur dans l’architecture actuelle. Ils ne doivent pas être masqués par une policy générale. L’avertissement WARN relatif à `complete_my_onboarding` est suivi comme exception explicitement justifiée et n’est pas une certification de sécurité.
 
+Le parcours client `/onboarding` à six étapes est rendu séparément du shell Live et appelle seulement `GET`/`POST /api/idealy/profile/onboarding`. Cette API récupère le bearer Supabase depuis la session Auth.js côté serveur, rejette les requêtes non authentifiées, exige un `Content-Type` JSON et une origine strictement identique avant toute mutation. Elle valide à nouveau toutes les valeurs avec Zod, puis passe par `complete_my_onboarding`; elle ne reçoit ni plan, ni balance, ni identifiant Stripe, ni droit d’abonnement. En mode `DEMO_MODE`, la même interface produit un résultat exclusivement local et n’appelle aucun service externe.
+
 ## Paiements et crédits : qualification honnête
 
 Les contrôles backend de crédits, webhook signé, idempotence et remboursement borné sont couverts par les contrats locaux/CI. Les pages publiques n’annoncent pas de prix réels non configurés. En revanche, aucun smoke test utilisateur complet de checkout n’a été exécuté dans cette session et l’interface ne propose pas encore un parcours d’achat de production validé. Idealy peut être préparé pour une bêta payante, mais ne doit pas être qualifié de paiement public certifié avant ce test et la validation du catalogue Stripe.
@@ -68,6 +70,7 @@ La CI du commit `88889e5` et celle du commit documentaire `380a1eb` ont réussi.
 | Priorité | Point ouvert | Condition de fermeture |
 |---|---|---|
 | Haute | Smoke test authentifié mission, crédits, escouade, VFS et replay. | Compte de test disponible, exécution réelle sans export externe. |
+| Haute | Smoke test authentifié du premier onboarding. | Session Supabase non privilégiée, profil provisionné, persistance de la voie et redirection vers le workspace vérifiées. |
 | Haute | Configuration et test OAuth GitHub de bout en bout. | Compte de test, scopes documentés, callback, révocation et statut vérifiés. |
 | Haute | Parcours checkout réel Stripe. | Produits/prix validés, mode test, webhook, portail et annulation contrôlés sans paiement réel. |
 | Moyenne | Intégrations Vercel et designer. | OAuth individuel, confirmations persistantes, limites, crédits et tests dédiés. |

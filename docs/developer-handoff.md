@@ -20,8 +20,8 @@ Travaillez uniquement sur `feat/idealy-live-backend` tant que le smoke test auth
 | Zone | Responsabilité | À ne pas faire |
 |---|---|---|
 | `app/(chat)` | UX de chat, workspace, canvas et routes héritées. | Faire de `lib/db` une autorité pour missions ou crédits. |
-| `app/api/idealy` | Proxys Next sécurisés vers Edge. | Accepter une API key contrôlée par le client ou renvoyer des détails internes. |
-| `lib/idealy` | Adaptateur Supabase, design engine, catalogue, personas et type métier. | Introduire un accès direct navigateur aux secrets. |
+| `app/api/idealy` | Proxys Next sécurisés vers Edge et RPC, y compris `profile/onboarding`. | Accepter une API key contrôlée par le client, contourner le contrôle d’origine ou renvoyer des détails internes. |
+| `lib/idealy` | Adaptateur Supabase, design engine, catalogue, personas, contrats produit et onboarding. | Introduire un accès direct navigateur aux secrets ou un `PATCH profiles` depuis le client. |
 | `supabase/migrations` | Schéma canonique, RLS et RPC. | Créer une écriture vers une table non migrée ou modifier des données de production à l’aveugle. |
 | `supabase/functions` | IA, orchestration, OAuth, paiement, export et gardes de connecteurs. | Déployer un jeton partagé comme capacité utilisateur. |
 | `components/chat/data-stream-handler.tsx` | Hydratation des événements et fichiers VFS. | Simuler un état de fichier ou de build inexistant. |
@@ -51,6 +51,10 @@ La variable de chiffrement est validée pour AES-GCM dans le code partagé ; la 
 À la date de ce handoff, le dernier déploiement demandé a été bloqué par la limite de crédits Netlify avant tout build. Après résolution du quota côté compte Netlify, reprenez à l’étape 4 avec la branche live inchangée, puis vérifiez le nouvel ID de déploiement, l’état `ready` et le scan de secrets. Ne déduisez pas du succès de la CI que le frontend est déjà en ligne.
 
 > L’orchestrateur de cette itération inclut des directives de voix pour les agents et a été vérifié `ACTIVE` en version v3 avec JWT le 25 août 2026. Toute évolution ultérieure doit à nouveau suivre le déploiement Edge et la vérification de version.
+
+### Onboarding de profil
+
+`components/onboarding/onboarding-flow.tsx` porte les six étapes visibles ; `app/onboarding/page.tsx` le rend sous `Suspense` afin de conserver la compatibilité de pré-rendu Next. L’interface ne conserve les réponses qu’en mémoire jusqu’à la dernière étape. `app/api/idealy/profile/onboarding/route.ts` lit le JWT Supabase depuis Auth.js, applique les validations de `lib/idealy/onboarding-contract.ts`, et transmet uniquement les paramètres autorisés à la RPC versionnée. `app/(chat)/layout.tsx` redirige un profil régulier, existant et incomplet vers `/onboarding` sans bloquer le workspace lorsque le service de profil est indisponible. Le contrat `pnpm test:onboarding` vérifie cette frontière et est exécuté dans la CI.
 
 ## Runbooks
 

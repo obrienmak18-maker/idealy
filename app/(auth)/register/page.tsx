@@ -8,6 +8,7 @@ import { AuthForm } from "@/components/chat/auth-form";
 import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
 import { type RegisterActionState, register } from "../actions";
+import { isIdealyWay } from "@/lib/idealy/product-contract";
 
 const registerMessages = {
   confirmation_required:
@@ -39,6 +40,13 @@ export default function Page() {
       ? registerMessages[state.status as keyof typeof registerMessages]
       : null;
   const isPositiveFeedback = state.status === "pending_confirmation";
+
+  const getOnboardingUrl = () => {
+    const selectedWay = new URLSearchParams(window.location.search).get("way");
+    return isIdealyWay(selectedWay)
+      ? `/onboarding?way=${encodeURIComponent(selectedWay)}`
+      : "/onboarding";
+  };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
@@ -75,6 +83,7 @@ export default function Page() {
       toast({ description: "Compte Idealy créé.", type: "success" });
       setIsSuccessful(true);
       updateSession();
+      router.push(getOnboardingUrl());
       router.refresh();
     }
   }, [state.status]);

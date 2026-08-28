@@ -90,6 +90,9 @@ jobs:
       - name: Product way and power contract
         run: node scripts/test-product-contract.mjs
 
+      - name: Onboarding profile contract
+        run: pnpm test:onboarding
+
       - name: Local workspace demo contract
         run: node scripts/test-local-workspace-demo-contract.mjs
 

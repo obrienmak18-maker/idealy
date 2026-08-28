@@ -13,6 +13,8 @@ import {
   normalizeMissionWay,
   type MissionWay,
 } from "./agent-personas";
+import { isIdealyWay, type IdealyWay } from "./product-contract";
+import type { OnboardingInput, OnboardingStatus } from "./onboarding-contract";
 
 export type IdealyIntentCategory = "CONVERSATION" | "IDEATION" | "EXECUTION";
 
@@ -71,6 +73,20 @@ type IdealyPlanResponse = {
 type IdealyMissionResponse = {
   id?: unknown;
   status?: unknown;
+};
+
+type IdealyProfileResponse = {
+  first_name?: unknown;
+  id?: unknown;
+  onboarding_completed?: unknown;
+  way?: unknown;
+};
+
+type IdealyOnboardingResponse = {
+  display_name?: unknown;
+  id?: unknown;
+  onboarding_completed?: unknown;
+  way?: unknown;
 };
 
 const MISSION_PLAN_SYSTEM_PROMPT = `You are the Idealy mission planner. Return only valid JSON, with no markdown fences and no extra text. The JSON must contain exactly these useful fields: projectKind (string), intention (string), v1Scope (string), agents (array of 1 to 8 objects with name, responsibility, result strings), and nextStep (string). Keep the first version practical and explain what each specialized agent will deliver. The Design Engine specification appended to this prompt is authoritative for visual strategy; do not silently override explicit user technology choices.`;
@@ -212,6 +228,77 @@ async function callSupabaseRest<T>(
   }
 
   return payload as T;
+}
+
+export async function getMyIdealyOnboardingStatus({
+  request,
+}: {
+  request: Request;
+}): Promise<OnboardingStatus> {
+  const { userId } = await getSupabaseServerContext(request);
+  const profiles = await callSupabaseRest<IdealyProfileResponse[]>(
+    request,
+    `profiles?select=id,first_name,way,onboarding_completed&id=eq.${encodeURIComponent(userId)}&limit=1`,
+    { cache: "no-store", method: "GET" }
+  );
+  const profile = Array.isArray(profiles) ? profiles[0] : null;
+
+  return {
+    firstName:
+      profile && typeof profile.first_name === "string"
+        ? profile.first_name
+        : null,
+    onboardingCompleted: profile?.onboarding_completed === true,
+    profileExists: Boolean(profile && typeof profile.id === "string"),
+    way: isIdealyWay(profile?.way) ? profile.way : null,
+  };
+}
+
+export async function completeMyIdealyOnboarding({
+  input,
+  request,
+}: {
+  input: OnboardingInput;
+  request: Request;
+}): Promise<{
+  displayName: string | null;
+  onboardingCompleted: boolean;
+  way: IdealyWay;
+}> {
+  const records = await callSupabaseRest<IdealyOnboardingResponse[]>(
+    request,
+    "rpc/complete_my_onboarding",
+    {
+      body: JSON.stringify({
+        p_discovery_source: input.discoverySource ?? "",
+        p_experience_level: input.experienceLevel,
+        p_first_name: input.firstName,
+        p_last_name: input.lastName,
+        p_preferred_language: input.preferredLanguage,
+        p_primary_goal: input.primaryGoal,
+        p_project_type: input.projectType,
+        p_timezone: input.timezone,
+        p_way: input.way,
+      }),
+      method: "POST",
+    }
+  );
+  const profile = Array.isArray(records) ? records[0] : null;
+
+  if (
+    !profile ||
+    profile.onboarding_completed !== true ||
+    !isIdealyWay(profile.way)
+  ) {
+    throw new Error("La finalisation du profil Idealy a échoué.");
+  }
+
+  return {
+    displayName:
+      typeof profile.display_name === "string" ? profile.display_name : null,
+    onboardingCompleted: true,
+    way: profile.way,
+  };
 }
 
 export async function listIdealyMissionFileEvents({
