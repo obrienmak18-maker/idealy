@@ -91,7 +91,9 @@ BEGIN
   IF position('interval ''30 days''' IN way_change_definition) = 0
     OR position('last_way_change_at' IN way_change_definition) = 0
     OR position('''way_change''' IN way_change_definition) = 0
-    OR position('amount_points, 0' IN way_change_definition) = 0 THEN
+    OR position('amount_points' IN way_change_definition) = 0
+    OR position('v_balance' IN way_change_definition) = 0
+    OR position('p_way' IN way_change_definition) = 0 THEN
     RAISE EXCEPTION 'Power Way change must enforce cooldown and record a zero-balance transaction';
   END IF;
 END;
