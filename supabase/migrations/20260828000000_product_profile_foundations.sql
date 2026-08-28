@@ -5,6 +5,7 @@
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS first_name TEXT,
   ADD COLUMN IF NOT EXISTS last_name TEXT,
+  ADD COLUMN IF NOT EXISTS way TEXT,
   ADD COLUMN IF NOT EXISTS experience_level TEXT,
   ADD COLUMN IF NOT EXISTS primary_goal TEXT,
   ADD COLUMN IF NOT EXISTS project_type TEXT,

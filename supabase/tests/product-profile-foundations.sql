@@ -9,6 +9,7 @@ BEGIN
   FOREACH onboarding_definition IN ARRAY ARRAY[
     'first_name',
     'last_name',
+    'way',
     'experience_level',
     'primary_goal',
     'project_type',
