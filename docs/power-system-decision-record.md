@@ -1,6 +1,6 @@
-# Décision produit requise — Power System
+# Politique produit approuvée — Power System V1
 
-> **Statut : configuration non approuvée.** Ce document fixe les invariants techniques déjà sûrs et isole les décisions commerciales qui ne doivent pas être inventées dans le code ou l’interface. Tant qu’elles ne sont pas validées, Idealy ne doit afficher ni prix, ni pack, ni allocation chiffrée comme une offre active.
+> **Statut : approuvée le 28 août 2026.** Cette politique est la source de vérité du Power System V1. Les seuls paramètres exécutables sont ceux explicitement indiqués ci-dessous ; toute modification impose d’arrêter l’incrément concerné et d’obtenir une nouvelle validation.
 
 ## Invariants déjà retenus
 
@@ -13,50 +13,51 @@
 | Journal | Toute variation future est append-only, liée à une clé d’idempotence et à une raison contrôlée. | Les retries ne créent jamais une seconde consommation ou recharge. |
 | UX d’épuisement | Les données et le workspace restent consultables à zéro point ; seules les actions IA coûteuses sont bloquées. | L’interface doit expliquer le prochain état sans prétendre proposer un achat disponible. |
 
-## Paramètres à décider par le propriétaire produit
+## Paramètres approuvés pour V1
 
-| Décision | Valeur actuelle | Réponse nécessaire avant implémentation | Impact technique |
+| Décision | Valeur approuvée | Limite V1 | Impact technique |
 |---|---|---|---|
-| Allocation mensuelle Free / Pro / Business | Non définie | Nombre de Power Points attribué à chaque renouvellement. | Wallet, webhook et estimation. |
-| Plafond de wallet par plan | Non défini | Solde maximal autorisé après allocation ou achat. | Protection contre accumulation et logique de crédit. |
-| Régénération | Non définie | Aucune, quotidienne, mensuelle, ou hybride ; préciser montant, cadence et plans éligibles. | Planificateur serveur et affichage du prochain renouvellement. |
-| Coût des actions | Non défini | Coût par type de mission, agent, modèle, export ou action externe. | Estimateur serveur et confirmation liée au digest de mission. |
-| Packs / recharge | Non défini | Produits Stripe, Price IDs, quantités, devise et pays de vente. | Checkout seulement après validation Stripe test mode. |
-| Recharge personnalisée | Non définie | Bornes min/max, arrondi, devise et source de prix serveur. | Validation de quantité et prévention de prix client. |
-| Changement de voie | Non défini | Gratuit/payant/interdit, délai, conservation du solde et historique. | Mutation profil, audit et règles anti-abus. |
-| Rétention du ledger | Non définie | Durée de conservation et accès support/utilisateur. | Politique de confidentialité, export et minimisation. |
+| Allocation mensuelle Free / Pro / Business | **100 / 1 000 / 3 000** Power Points. | Attribution seulement au renouvellement mensuel du cycle. | Wallet, estimation et allocation mensuelle. |
+| Plafond de wallet par plan | Égal à l’allocation du plan : **100 / 1 000 / 3 000**. | Les points non utilisés ne dépassent pas ce plafond. | Protection contre accumulation. |
+| Régénération | **Mensuelle uniquement**, à l’allocation du plan. | Ni régénération quotidienne, ni mécanisme supplémentaire. | Allocation transactionnelle et affichage de cycle. |
+| Coût des actions | Mission IA simple : **10** ; escouade multi-agents : **50**. | Tous les autres coûts restent « À DÉFINIR ». | Estimateur et consommation contrôlée. |
+| Packs / recharge | **Non activés.** | Aucun produit Stripe de recharge, prix ou débit réel. | Aucune intégration checkout de Power. |
+| Recharge personnalisée | **Non activée.** | Aucune valeur ou fourchette inventée. | Hors périmètre. |
+| Changement de voie | Autorisé toutes les **30 jours**, sans attribution ; solde conservé. | L’opération doit être journalisée et contrôlée serveur. | RPC et transaction d’audit. |
+| Rétention du ledger | Non définie. | La rétention reste un chantier confidentialité distinct. | Pas de purge automatique V1. |
 
-## Contrat de configuration à activer plus tard
+## Contrat de configuration V1
 
-La configuration serveur devra être explicitement renseignée, versionnée et validée. Les champs sont volontairement `null` tant qu’une décision commerciale n’a pas été prise.
+La configuration serveur est versionnée dans `lib/idealy/power-policy.ts`. Elle reste internalisée côté serveur pour les opérations de consommation et ne doit pas être remplacée par des valeurs de navigateur.
 
 ```ts
-type PowerPolicy = {
-  version: string;
-  plans: Record<"free" | "pro" | "business", {
-    monthlyAllocation: number | null;
-    walletCap: number | null;
-    regeneration: { amount: number | null; cadence: "none" | "daily" | "monthly" | null };
-  }>;
-  actionCosts: Record<string, number | null>;
+const policy = {
+  version: "power-v1",
+  plans: {
+    free: { monthlyAllocation: 100, walletCap: 100 },
+    pro: { monthlyAllocation: 1_000, walletCap: 1_000 },
+    business: { monthlyAllocation: 3_000, walletCap: 3_000 },
+  },
+  actionCosts: { mission_simple: 10, mission_squad: 50 },
   wayChange: {
-    allowed: boolean | null;
-    cooldownDays: number | null;
-    preservesBalance: boolean | null;
+    cooldownDays: 30,
+    grantsPower: false,
+    preservesBalance: true,
   };
-  packs: "not_configured";
+  regenerationCadence: "monthly",
+  packsEnabled: false,
 };
 ```
 
-Cette structure n’est pas une configuration exécutable et ne doit pas être sérialisée au client avec des valeurs partielles. Une fois les décisions prises, elle deviendra une politique serveur validée par schéma, suivie d’une migration additive `power_wallets` / `power_transactions`, de tests de concurrence et d’un parcours de confirmation.
+Cette configuration ne doit pas être sérialisée au client avec des valeurs partielles. La prochaine étape est une migration additive `power_wallets` / `power_transactions`, suivie de tests de concurrence et d’un parcours de confirmation. Aucun pack, prix ou débit Stripe ne fait partie de cette version.
 
 ## Proposition d’ordre de réalisation
 
-1. Valider les paramètres du tableau, en commençant par les allocations, plafonds, régénération et coûts.
+1. Ajouter les wallets et transactions en parallèle de `user_credits` / `credit_ledger`, avec réconciliation contrôlée et idempotence.
 2. Construire l’estimateur server-first qui produit un devis de Power Points lié au digest de mission, sans débiter.
-3. Ajouter les wallets et transactions en parallèle de `user_credits` / `credit_ledger`, avec réconciliation contrôlée et idempotence.
-4. Faire consommer le nouveau ledger pour une seule action pilote, puis comparer les journaux avant d’étendre les parcours.
-5. Ajouter la présentation contextualisée, le paywall et Stripe uniquement après un catalogue de prix validé en mode test.
+3. Faire consommer le nouveau ledger pour une seule action pilote, puis comparer les journaux avant d’étendre les parcours.
+4. Ajouter la présentation contextualisée et l’état à zéro, sans paywall ni Stripe de recharge.
+5. Traiter tout futur prix, pack ou checkout dans une nouvelle décision produit puis en Stripe test mode.
 
 ## Références internes
 

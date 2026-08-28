@@ -141,6 +141,7 @@ jobs:
           psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/billing-integrity.sql
           psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/mission-agent-orchestration.sql
           psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/product-profile-foundations.sql
+          psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/power-system-v1.sql
 
       - name: Stop local Supabase
         if: always()

@@ -106,4 +106,9 @@
 - [x] Stabiliser la CI Supabase locale en épinglant le CLI et revalider la migration de profil
 - [x] Supprimer les anciennes politiques directes de profils et vérifier leurs privilèges effectifs
 - [x] Implémenter l’onboarding authentifié à six étapes via la RPC de profil, sans écriture directe de plan ou de puissance
-- [ ] Valider les allocations, plafonds, régénération, coûts, packs et règles de changement de voie avant toute migration Power
+- [x] Valider les allocations, plafonds, régénération, coûts, packs et règles de changement de voie avant toute migration Power
+- [x] Versionner la politique Power V1 approuvée : allocations 100/1 000/3 000, plafond par plan, cycle mensuel et coûts 10/50
+- [ ] Ajouter `power_wallets` et `power_transactions` de manière additive avec journal append-only, idempotence et compatibilité des crédits existants
+- [ ] Encadrer côté serveur l’estimation, la consommation IA, le blocage à zéro et le changement de Voie à 30 jours
+- [ ] Relier le workspace aux états Power contextualisés par Voie sans afficher de recharge, de pack ou de prix Stripe
+- [ ] Valider la migration Power en CI et sur Supabase, puis documenter les garanties réellement vérifiées
