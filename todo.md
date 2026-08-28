@@ -106,3 +106,4 @@
 - [x] Stabiliser la CI Supabase locale en épinglant le CLI et revalider la migration de profil
 - [x] Supprimer les anciennes politiques directes de profils et vérifier leurs privilèges effectifs
 - [x] Implémenter l’onboarding authentifié à six étapes via la RPC de profil, sans écriture directe de plan ou de puissance
+- [ ] Valider les allocations, plafonds, régénération, coûts, packs et règles de changement de voie avant toute migration Power
