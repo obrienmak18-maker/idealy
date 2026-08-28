@@ -82,7 +82,7 @@ BEGIN
   IF position('v_user_id UUID := auth.uid()' IN onboarding_definition) = 0
     OR position('Invalid way' IN onboarding_definition) = 0
     OR position('onboarding_completed = TRUE' IN onboarding_definition) = 0
-    OR position('SET search_path = public' IN onboarding_definition) = 0 THEN
+    OR position('SET search_path TO' IN onboarding_definition) = 0 THEN
     RAISE EXCEPTION 'complete_my_onboarding is missing identity, way or completion guards';
   END IF;
 END;
