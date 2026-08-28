@@ -19,6 +19,16 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 const RUN_KEY_PATTERN = /^[a-zA-Z0-9:_-]{16,180}$/;
 const PROCESS_FUNCTION = "process-ai-request";
 
+function powerDepletionMessage(way: unknown) {
+  const resources: Record<string, string> = {
+    hunter: "Nen",
+    mage: "Mana",
+    ninja: "Chakra",
+    professional: "Énergie",
+  };
+  return `Votre ${resources[typeof way === "string" ? way : ""] ?? "Power"} est épuisé.`;
+}
+
 function voiceDirection(way: unknown) {
   const profiles: Record<string, string> = {
     hunter: "Voix d’exploration méthodique : comparer les pistes, expliciter les hypothèses et annoncer le prochain essai vérifiable.",
@@ -180,6 +190,36 @@ Deno.serve(async (request) => {
     })),
   );
   if (insertError) return corsResponse({ error: "Unable to reserve mission run." }, 409, request);
+
+  const { data: powerCharge, error: powerChargeError } = await admin.rpc("consume_power_points", {
+    p_action_type: "mission_squad",
+    p_idempotency_key: `${runKey}:power:mission_squad`,
+    p_mission_id: missionId,
+    p_user_id: auth.user.id,
+  });
+  if (powerChargeError) {
+    await admin.from("mission_agent_runs").delete().eq("mission_id", missionId).eq("run_key", runKey);
+    if (powerChargeError.message.includes("Insufficient Power Points")) {
+      return corsResponse({
+        error: powerDepletionMessage(mission.way),
+        code: "POWER_DEPLETED",
+      }, 402, request);
+    }
+    console.error("Power charge failed before mission squad", powerChargeError);
+    return corsResponse({ error: "La puissance Idealy est momentanément indisponible." }, 503, request);
+  }
+
+  const rawCharge = Array.isArray(powerCharge) ? powerCharge[0] : powerCharge;
+  const charge = rawCharge && typeof rawCharge === "object"
+    ? (rawCharge as Record<string, unknown>)
+    : {};
+  await appendEvent(admin, "power_consumed", missionId, `${runKey}:power:consumed`, {
+    actionType: "mission_squad",
+    amountCharged: typeof charge.amount_charged === "number" ? charge.amount_charged : 50,
+    powerRemaining: typeof charge.power_remaining === "number" ? charge.power_remaining : null,
+    runKey,
+    source: "orchestrate-mission",
+  });
 
   let activeAgent: (typeof agents)[number] | null = null;
   const updateRun = async (agentKey: (typeof agents)[number], values: Record<string, unknown>) => {

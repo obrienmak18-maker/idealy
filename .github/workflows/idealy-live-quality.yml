@@ -93,6 +93,9 @@ jobs:
       - name: Onboarding profile contract
         run: pnpm test:onboarding
 
+      - name: Power orchestration contract
+        run: pnpm test:power-orchestrator
+
       - name: Local workspace demo contract
         run: node scripts/test-local-workspace-demo-contract.mjs
 

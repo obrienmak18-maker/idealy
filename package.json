@@ -26,7 +26,8 @@
     "test:connectors": "tsx scripts/test-connectors.ts",
     "test:auth-outcome": "tsx scripts/test-auth-outcome.ts",
     "test:demo-program": "tsx scripts/test-demo-program.ts",
-    "test:onboarding": "node scripts/test-onboarding-contract.mjs"
+    "test:onboarding": "node scripts/test-onboarding-contract.mjs",
+    "test:power-orchestrator": "node scripts/test-power-orchestrator.mjs"
   },
   "dependencies": {
     "@ai-sdk/otel": "^1.0.15",
