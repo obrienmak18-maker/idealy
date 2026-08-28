@@ -40,6 +40,19 @@ Supabase Auth et les tables Supabase restent l’autorité des missions, crédit
 
 L’audit statique a confirmé que l’API d’escouade relaie vers l’Edge Function sous JWT, laquelle applique l’autorisation de mission ; que le guest flow est réservé au mode démo dans sa route dédiée ; et que les routes d’historique, de vote et de documents vérifient le propriétaire local avant lecture ou écriture. L’architecture conserve cependant deux couches pour l’historique de chat ; sa suppression ou migration ne doit pas être faite sans migration de données et test de régression.
 
+## Profil, voie et onboarding
+
+Le 28 août 2026, les migrations `product_profile_foundations` (`20260828005157`) et `profiles_direct_access_hardening` (`20260828010428`) ont été appliquées puis relues sur le projet Supabase IDEALY. Elles ajoutent les métadonnées d’onboarding et la Voie active à `public.profiles`, normalisent les anciens libellés de voie, et retirent les anciennes politiques `INSERT`/`UPDATE` résiduelles.
+
+| Contrôle de production | Résultat observé | Limite à conserver |
+|---|---|---|
+| RLS `profiles` | Une seule politique demeure : `SELECT` lorsque `auth.uid() = id`. | Cette preuve ne remplace pas le test de parcours avec un compte utilisateur. |
+| Privilèges `anon` | Aucun droit `SELECT` sur `public.profiles`. | Ne jamais accorder un accès public pour simplifier une interface. |
+| Privilèges `authenticated` | `SELECT` est accordé ; `INSERT`, `UPDATE` et `DELETE` sont refusés. | Les changements de plan, Stripe, solde et droits restent serveur-only. |
+| RPC `complete_my_onboarding` | Exécutable uniquement par `authenticated`, avec `auth.uid()`, validations de domaine et `search_path` figé. | L’avertissement Supabase sur une RPC `SECURITY DEFINER` est **intentionnel** : elle est précisément la voie de mutation contrôlée. Toute extension de son corps ou de ses droits exige une revue et un test. |
+
+Les avis INFO `RLS enabled, no policy` demeurent attendus pour `user_credits`, `credit_ledger` et `user_ai_keys`, qui sont fermées aux rôles navigateur dans l’architecture actuelle. Ils ne doivent pas être masqués par une policy générale. L’avertissement WARN relatif à `complete_my_onboarding` est suivi comme exception explicitement justifiée et n’est pas une certification de sécurité.
+
 ## Paiements et crédits : qualification honnête
 
 Les contrôles backend de crédits, webhook signé, idempotence et remboursement borné sont couverts par les contrats locaux/CI. Les pages publiques n’annoncent pas de prix réels non configurés. En revanche, aucun smoke test utilisateur complet de checkout n’a été exécuté dans cette session et l’interface ne propose pas encore un parcours d’achat de production validé. Idealy peut être préparé pour une bêta payante, mais ne doit pas être qualifié de paiement public certifié avant ce test et la validation du catalogue Stripe.
