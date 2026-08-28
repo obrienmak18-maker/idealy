@@ -87,6 +87,9 @@ jobs:
       - name: Agent personas contract
         run: node scripts/test-agent-personas-contract.mjs
 
+      - name: Product way and power contract
+        run: node scripts/test-product-contract.mjs
+
       - name: Local workspace demo contract
         run: node scripts/test-local-workspace-demo-contract.mjs
 
@@ -133,6 +136,7 @@ jobs:
           psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/mission-files.sql
           psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/billing-integrity.sql
           psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/mission-agent-orchestration.sql
+          psql --host 127.0.0.1 --port 54322 --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/tests/product-profile-foundations.sql
 
       - name: Stop local Supabase
         if: always()

@@ -3,32 +3,16 @@
 import { ArrowRightIcon, CheckIcon, SparklesIcon, ZapIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import {
+  wayPresentations,
+  type IdealyWay,
+} from "@/lib/idealy/product-contract";
 
 const voices = [
-  {
-    color: "from-orange-400 to-red-500",
-    description: "Pour avancer vite et transformer une idée en mission.",
-    id: "energy",
-    name: "Energy",
-  },
-  {
-    color: "from-sky-400 to-violet-500",
-    description: "Pour créer avec calme, méthode et profondeur.",
-    id: "mana",
-    name: "Mana",
-  },
-  {
-    color: "from-fuchsia-400 to-yellow-400",
-    description: "Pour équilibrer vision, design, code et impact.",
-    id: "chakra",
-    name: "Chakra",
-  },
-  {
-    color: "from-emerald-400 to-cyan-500",
-    description: "Pour construire solide, précis et prêt à durer.",
-    id: "dwarves",
-    name: "Les Nains",
-  },
+  wayPresentations.mage,
+  wayPresentations.ninja,
+  wayPresentations.hunter,
+  wayPresentations.professional,
 ] as const;
 
 const plans = [
@@ -54,7 +38,7 @@ const plans = [
 
 export default function WelcomePage() {
   const [step, setStep] = useState(0);
-  const [selectedVoice, setSelectedVoice] = useState("energy");
+  const [selectedWay, setSelectedWay] = useState<IdealyWay>("mage");
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-[#09090f] text-white">
@@ -148,27 +132,27 @@ export default function WelcomePage() {
             Votre façon de créer
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-            Choisissez votre première voix
+            Choisissez votre Voie
           </h2>
           <p className="mt-2 text-sm text-white/55">
             Vous pourrez la changer plus tard dans votre espace.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {voices.map((voice) => {
-            const selected = selectedVoice === voice.id;
+          {voices.map((way) => {
+            const selected = selectedWay === way.id;
             return (
               <button
                 className={`rounded-2xl border p-4 text-left transition ${selected ? "border-white/45 bg-white/14 shadow-lg shadow-violet-500/10" : "border-white/10 bg-white/5 hover:bg-white/10"}`}
-                key={voice.id}
-                onClick={() => setSelectedVoice(voice.id)}
+                key={way.id}
+                onClick={() => setSelectedWay(way.id)}
                 type="button"
               >
                 <span
-                  className={`mb-4 block h-1.5 w-14 rounded-full bg-gradient-to-r ${voice.color}`}
+                  className={`mb-4 block h-1.5 w-14 rounded-full bg-gradient-to-r ${way.accentClassName}`}
                 />
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">{voice.name}</span>
+                  <span className="font-medium">{way.label}</span>
                   {selected ? (
                     <span className="flex size-5 items-center justify-center rounded-full bg-white text-black">
                       <CheckIcon className="size-3" />
@@ -176,7 +160,7 @@ export default function WelcomePage() {
                   ) : null}
                 </div>
                 <p className="mt-2 text-xs leading-5 text-white/55">
-                  {voice.description}
+                  {way.description}
                 </p>
               </button>
             );
@@ -189,7 +173,7 @@ export default function WelcomePage() {
             type="button"
           >
             Continuer avec{" "}
-            {voices.find((voice) => voice.id === selectedVoice)?.name}{" "}
+            {wayPresentations[selectedWay].label} {" "}
             <ArrowRightIcon className="size-4" />
           </button>
         </div>
@@ -288,13 +272,13 @@ export default function WelcomePage() {
                   Votre espace est presque prêt.
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-white/55">
-                  Créez votre compte pour conserver vos missions, votre voix et
+                  Créez votre compte pour conserver vos missions, votre Voie et
                   vos projets.
                 </p>
                 <div className="mt-6 grid gap-2">
                   <Link
                     className="rounded-xl bg-white px-4 py-3 text-center text-sm font-medium text-black"
-                    href={`/register?voice=${selectedVoice}`}
+                    href={`/register?way=${selectedWay}`}
                   >
                     Créer mon compte
                   </Link>

@@ -1,11 +1,12 @@
-export const missionWays = [
-  "professional",
-  "ninja",
-  "hunter",
-  "mage",
-] as const;
+import {
+  idealyWays,
+  normalizeIdealyWay,
+  type IdealyWay,
+} from "./product-contract";
 
-export type MissionWay = (typeof missionWays)[number];
+export const missionWays = idealyWays;
+
+export type MissionWay = IdealyWay;
 
 export type MissionPersona = {
   decisionStyle: string;
@@ -63,9 +64,7 @@ export const missionAgentRoster = [
 ] as const;
 
 export function normalizeMissionWay(value: unknown): MissionWay {
-  return typeof value === "string" && missionWays.includes(value as MissionWay)
-    ? (value as MissionWay)
-    : "professional";
+  return normalizeIdealyWay(value);
 }
 
 export function getMissionPersona(value: unknown): MissionPersona {

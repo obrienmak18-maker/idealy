@@ -98,3 +98,8 @@
 - [x] Exposer dans la démo les interactions prévues : aperçu, code, données, console, redimensionnement, partage et actions protégées
 - [x] Vérifier la démo complète sans compte, sans Supabase, sans IA externe et sans déploiement
 - [x] Rétablir l’hydratation interactive du workspace de démonstration depuis le lien temporaire exposé
+- [x] Lire intégralement le document maître Idealy et produire une matrice traçable d’exigences
+- [ ] Distinguer strictement Voie, Power Points, progression et abonnement dans les contrats V1
+- [ ] Concevoir l’estimation, la confirmation et la consommation de puissance côté serveur sans prix inventés
+- [ ] Étendre l’architecture multi-agent de façon graduelle en conservant Architecte → Builder → Reviewer
+- [ ] Vérifier les dépendances de sécurité, de paiement et d’exploitation avant de rendre les nouvelles capacités publiques
