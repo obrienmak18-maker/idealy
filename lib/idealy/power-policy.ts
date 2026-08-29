@@ -11,6 +11,8 @@ export const powerPlanPolicy: Record<
   pro: { monthlyAllocation: 1_000, walletCap: 1_000 },
 };
 
+export const POWER_LOW_BALANCE_COST_MULTIPLIER = 2;
+
 export const powerActionCosts = {
   mission_simple: 10,
   mission_squad: 50,
@@ -20,6 +22,7 @@ export type PowerAction = keyof typeof powerActionCosts;
 
 export const powerPolicy = {
   actionCosts: powerActionCosts,
+  lowBalanceCostMultiplier: POWER_LOW_BALANCE_COST_MULTIPLIER,
   monthlyRenewal: true,
   packsEnabled: false,
   regenerationCadence: "monthly",

@@ -18,7 +18,8 @@ for (const resource of ["Mana", "Chakra", "Nen", "Énergie"]) {
 
 assert.match(contract, /idealyPlans = \["free", "pro", "business"\]/);
 assert.match(contract, /formatPowerPoints/);
-assert.match(contract, /points"} de \$\{resource\}/);
+assert.match(contract, /resource\.startsWith\("É"\)/);
+assert.match(contract, /points"} \$\{separator\}\$\{resource\}/);
 assert.match(personas, /normalizeIdealyWay/);
 assert.match(welcome, /wayPresentations\.mage/);
 assert.match(welcome, /setSelectedWay/);

@@ -196,6 +196,7 @@ Deno.serve(async (request) => {
     p_idempotency_key: `${runKey}:power:mission_squad`,
     p_mission_id: missionId,
     p_user_id: auth.user.id,
+    p_run_id: null,
   });
   if (powerChargeError) {
     await admin.from("mission_agent_runs").delete().eq("mission_id", missionId).eq("run_key", runKey);
@@ -215,8 +216,9 @@ Deno.serve(async (request) => {
     : {};
   await appendEvent(admin, "power_consumed", missionId, `${runKey}:power:consumed`, {
     actionType: "mission_squad",
-    amountCharged: typeof charge.amount_charged === "number" ? charge.amount_charged : 50,
+    amountCharged: typeof charge.amount_charged === "number" ? charge.amount_charged : null,
     powerRemaining: typeof charge.power_remaining === "number" ? charge.power_remaining : null,
+    resourceLabel: typeof charge.resource_label === "string" ? charge.resource_label : null,
     runKey,
     source: "orchestrate-mission",
   });

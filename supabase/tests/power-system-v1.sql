@@ -44,26 +44,28 @@ BEGIN
   END IF;
 
   IF to_regprocedure('public.ensure_power_wallet(uuid)') IS NULL
-    OR to_regprocedure('public.consume_power_points(uuid,uuid,text,text)') IS NULL
+    OR to_regprocedure('public.consume_power_points(uuid,uuid,text,text,uuid)') IS NULL
+    OR to_regprocedure('public.get_my_power_status(text)') IS NULL
     OR to_regprocedure('public.grant_monthly_power(uuid,text)') IS NULL
     OR to_regprocedure('public.change_my_power_way(text,text)') IS NULL THEN
     RAISE EXCEPTION 'Power mutation functions are missing';
   END IF;
 
   IF has_function_privilege('authenticated', 'public.ensure_power_wallet(uuid)', 'EXECUTE')
-    OR has_function_privilege('authenticated', 'public.consume_power_points(uuid,uuid,text,text)', 'EXECUTE')
+    OR has_function_privilege('authenticated', 'public.consume_power_points(uuid,uuid,text,text,uuid)', 'EXECUTE')
     OR has_function_privilege('authenticated', 'public.grant_monthly_power(uuid,text)', 'EXECUTE')
-    OR NOT has_function_privilege('authenticated', 'public.change_my_power_way(text,text)', 'EXECUTE') THEN
+    OR NOT has_function_privilege('authenticated', 'public.change_my_power_way(text,text)', 'EXECUTE')
+    OR NOT has_function_privilege('authenticated', 'public.get_my_power_status(text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'Power function grants do not match the V1 boundary';
   END IF;
 
   IF NOT has_function_privilege('service_role', 'public.ensure_power_wallet(uuid)', 'EXECUTE')
-    OR NOT has_function_privilege('service_role', 'public.consume_power_points(uuid,uuid,text,text)', 'EXECUTE')
+    OR NOT has_function_privilege('service_role', 'public.consume_power_points(uuid,uuid,text,text,uuid)', 'EXECUTE')
     OR NOT has_function_privilege('service_role', 'public.grant_monthly_power(uuid,text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'service_role Power function grants are incomplete';
   END IF;
 
-  SELECT pg_get_functiondef('public.consume_power_points(uuid,uuid,text,text)'::regprocedure)
+  SELECT pg_get_functiondef('public.consume_power_points(uuid,uuid,text,text,uuid)'::regprocedure)
   INTO consume_definition;
   SELECT pg_get_functiondef('public.ensure_power_wallet(uuid)'::regprocedure)
   INTO ensure_definition;
@@ -76,6 +78,7 @@ BEGIN
     OR position('ensure_power_wallet' IN consume_definition) = 0
     OR position('Insufficient Power Points' IN consume_definition) = 0
     OR position('way_at_operation' IN consume_definition) = 0
+    OR position('wallet_id' IN consume_definition) = 0
     OR position('idempotency_key' IN consume_definition) = 0 THEN
     RAISE EXCEPTION 'Power consumption is missing concurrency, depletion, Way or idempotency guards';
   END IF;
@@ -83,7 +86,8 @@ BEGIN
   IF position('SELECT monthly_allocation' IN monthly_definition) = 0
     OR position('power_plan_policies' IN monthly_definition) = 0
     OR position('last_monthly_allocation_at' IN monthly_definition) = 0
-    OR position('Power monthly allocation already granted for current cycle' IN monthly_definition) = 0
+    OR position('power-v1:monthly:' IN monthly_definition) = 0
+    OR position('LEAST(v_cap, v_wallet.balance + v_allocation)' IN monthly_definition) = 0
     OR position('p_amount' IN monthly_definition) <> 0 THEN
     RAISE EXCEPTION 'Monthly Power allocation must derive its amount from policy';
   END IF;
@@ -92,6 +96,7 @@ BEGIN
     OR position('last_way_change_at' IN way_change_definition) = 0
     OR position('''way_change''' IN way_change_definition) = 0
     OR position('amount_points' IN way_change_definition) = 0
+    OR position('conversion'', ''À DÉFINIR' IN way_change_definition) = 0
     OR position('v_balance' IN way_change_definition) = 0
     OR position('p_way' IN way_change_definition) = 0 THEN
     RAISE EXCEPTION 'Power Way change must enforce cooldown and record a zero-balance transaction';
