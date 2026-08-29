@@ -3,6 +3,7 @@ import { classifyIntent } from './intentRouter.ts';
 import { streamUI, type AgentUIPhase } from './streamUI.ts';
 import {
   consumeManagedCredit,
+  consumeManagedPower,
   isSupportedProvider,
   PROVIDER_CONFIGS,
   resolveAIProvider,
@@ -527,29 +528,46 @@ serve(async (req) => {
     const managed = resolution.mode !== 'byok';
     const intentCategory = input.intentCategory ?? 'EXECUTION';
     let energyRemaining: number | null = null;
+    let powerRemaining: number | null = null;
+    let powerResourceLabel: string | null = null;
 
-    // Every centrally managed inference consumes credits. BYOK requests still
-    // bypass the managed balance, but not the server-side request pacing.
-    if (managed) {
+    // Power is the official resource for executable managed AI operations.
+    // Conversation and ideation keep the legacy credit debit until their Power
+    // costs are explicitly specified.
+    if (managed && intentCategory === 'EXECUTION') {
+      const idempotencyKey = `${input.idempotencyKey?.trim() || `${user.id}:${crypto.randomUUID()}`}:power:mission_simple`;
+      try {
+        const debit = await consumeManagedPower(supabaseAdmin, {
+          userId: user.id,
+          missionId: input.missionId,
+          idempotencyKey,
+          actionType: 'mission_simple',
+        });
+        powerRemaining = debit.powerRemaining;
+        powerResourceLabel = debit.resourceLabel;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (/insufficient|power/i.test(message)) {
+          return jsonError('Power insuffisant pour cette mission IA gérée.', 402, headers, 'POWER_DEPLETED');
+        }
+        throw error;
+      }
+    } else if (managed) {
       const idempotencyKey = input.idempotencyKey?.trim() || `${user.id}:${crypto.randomUUID()}`;
-      const amount = intentCategory === 'CONVERSATION'
-        ? 1
-        : intentCategory === 'IDEATION'
-          ? 3
-          : 10;
+      const amount = intentCategory === 'CONVERSATION' ? 1 : 3;
       try {
         const debit = await consumeManagedCredit(supabaseAdmin, {
           userId: user.id,
           missionId: input.missionId,
           idempotencyKey,
           amount,
-          reason: `ai:${intentCategory.toLowerCase()}:${provider}:${model}`,
+          reason: `legacy-ai:${intentCategory.toLowerCase()}:${provider}:${model}`,
         });
         energyRemaining = debit.energyRemaining;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (/insufficient|energy|credit/i.test(message)) {
-          return jsonError('Credits insuffisants pour cette action IA gérée.', 402, headers, 'CREDITS_REQUIRED');
+          return jsonError('Solde legacy insuffisant pour cette action IA gérée.', 402, headers, 'LEGACY_CREDITS_REQUIRED');
         }
         throw error;
       }
@@ -640,6 +658,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         plan,
         energyRemaining,
+        powerRemaining,
+        powerResourceLabel,
         mode: resolution.mode,
         model: resolution.model,
         provider: resolution.provider,
@@ -651,6 +671,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       message,
       energyRemaining,
+      powerRemaining,
+      powerResourceLabel,
       mode: resolution.mode,
       model: resolution.model,
       provider: resolution.provider,

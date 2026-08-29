@@ -65,5 +65,6 @@ export function getWayPresentation(value: unknown): WayPresentation {
 export function formatPowerPoints(value: number, way: unknown): string {
   const safeValue = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
   const resource = getWayPresentation(way).resourceLabel;
-  return `${safeValue} ${safeValue === 1 ? "point" : "points"} de ${resource}`;
+  const separator = resource.startsWith("É") ? "d’" : "de ";
+  return `${safeValue} ${safeValue === 1 ? "point" : "points"} ${separator}${resource}`;
 }

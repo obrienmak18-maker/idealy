@@ -245,6 +245,34 @@ export async function consumeManagedCredit(
   };
 }
 
+export async function consumeManagedPower(
+  supabaseAdmin: SupabaseClient,
+  input: {
+    userId: string;
+    missionId?: string | null;
+    idempotencyKey: string;
+    actionType: "mission_simple" | "mission_squad";
+  },
+): Promise<{ powerRemaining: number; amountCharged: number; alreadyCharged: boolean; resourceLabel: string; way: string }> {
+  const { data, error } = await supabaseAdmin.rpc("consume_power_points", {
+    p_user_id: input.userId,
+    p_mission_id: input.missionId ?? null,
+    p_action_type: input.actionType,
+    p_idempotency_key: input.idempotencyKey,
+    p_run_id: null,
+  });
+
+  if (error) throw new Error(`Power debit failed: ${error.message}`);
+  const result = Array.isArray(data) ? data[0] : data;
+  return {
+    powerRemaining: Number(result?.power_remaining ?? 0),
+    amountCharged: Number(result?.amount_charged ?? 0),
+    alreadyCharged: Boolean(result?.already_charged),
+    resourceLabel: String(result?.resource_label ?? "Power"),
+    way: String(result?.way ?? "professional"),
+  };
+}
+
 export function isSupportedProvider(value: unknown): value is Provider {
   return isProvider(value);
 }

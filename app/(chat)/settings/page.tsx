@@ -54,9 +54,22 @@ type BillingStatus = {
   status: string;
 };
 
+type PowerStatus = {
+  balanceLabel?: string;
+  canExecute?: boolean;
+  costLabel?: string;
+  plan?: "free" | "pro" | "business" | null;
+  resourceLabel?: string;
+  state?: "normal" | "low" | "insufficient" | "depleted" | "unknown";
+  walletCapLabel?: string;
+  way?: string;
+};
+
 export default function SettingsPage() {
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [power, setPower] = useState<PowerStatus | null>(null);
+  const [powerError, setPowerError] = useState<string | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
 
   useEffect(() => {
@@ -69,6 +82,15 @@ export default function SettingsPage() {
       })
       .catch(() => {
         if (active) setBillingError("Impossible de synchroniser le statut pour le moment.");
+      });
+    fetch("/api/idealy/power?action=mission_simple", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json() as PowerStatus & { error?: string };
+        if (!response.ok) throw new Error(payload.error ?? "Power indisponible");
+        if (active) setPower(payload);
+      })
+      .catch(() => {
+        if (active) setPowerError("Impossible de synchroniser le Power pour le moment.");
       });
     return () => { active = false; };
   }, []);
@@ -91,9 +113,16 @@ export default function SettingsPage() {
   const planLabel = billing?.active
     ? billing.planId === "business" ? "Plan Business" : "Plan Pro"
     : "Plan découverte";
-  const balanceLabel = billing?.creditsBalance === null || billing?.creditsBalance === undefined
-    ? "Solde de crédits indisponible"
-    : `${billing.creditsBalance} crédits disponibles`;
+  const balanceLabel = power?.balanceLabel
+    ? `${power.balanceLabel} disponibles`
+    : "Solde Power indisponible";
+  const powerStateLabel = {
+    depleted: "Épuisé",
+    insufficient: "Insuffisant",
+    low: "Faible",
+    normal: "Disponible",
+    unknown: "À synchroniser",
+  }[power?.state ?? "unknown"];
 
   return (
     <main className="min-h-dvh bg-background px-6 py-10 text-foreground sm:px-10">
@@ -124,18 +153,18 @@ export default function SettingsPage() {
               </div>
               <h2 className="text-xl font-semibold">{planLabel}</h2>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                {balanceLabel}. Les montants, limites et droits affichés sont issus
-                du backend de facturation lorsqu’il est disponible.
+                {balanceLabel}. Coût mission simple : {power?.costLabel ?? "À synchroniser"}. Le plan commercial reste séparé de la ressource de Voie.
               </p>
             </div>
             <span className="rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">
-              {billing?.active ? billing.status : "À synchroniser"}
+              {powerStateLabel}
             </span>
           </div>
           {billing?.cancelAtPeriodEnd ? (
             <p className="mt-4 text-sm text-amber-500">L’annulation est prévue à la fin de la période en cours.</p>
           ) : null}
           {billingError ? <p className="mt-4 text-sm text-destructive">{billingError}</p> : null}
+          {powerError ? <p className="mt-2 text-sm text-destructive">{powerError}</p> : null}
           <div className="mt-5 flex flex-wrap gap-2">
             <Link
               className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-85"

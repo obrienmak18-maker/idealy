@@ -13,7 +13,7 @@ Deno.serve(async (request) => {
   return corsResponse(
     {
       error:
-        "Designer tools are unavailable until mission ownership, rate limits, managed credits, idempotency, and provider policy are configured.",
+        "Designer tools are unavailable until mission ownership, rate limits, managed Power, idempotency, and provider policy are configured.",
     },
     503,
     request,

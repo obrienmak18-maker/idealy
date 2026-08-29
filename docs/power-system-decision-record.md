@@ -64,3 +64,20 @@ Cette configuration ne doit pas être sérialisée au client avec des valeurs pa
 [P1]: [Matrice de traçabilité du Document maître](master-document-v1-matrix.md)
 [P2]: [Migration crédits et recharges Stripe](../supabase/migrations/20260815010000_user_credits_and_stripe_refills.sql)
 [P3]: [Registre de préparation sécurité](v1-security-readiness.md)
+
+## Consolidation V2 — 29 août 2026
+
+Power devient le système officiel de capacité pour les opérations IA exécutables. L’unité interne reste **Power Points** ; l’interface doit afficher la ressource de la Voie active : Mage → points de Mana, Ninja → points de Chakra, Hunter → points de Nen, Professional → points d’Énergie. Le plan commercial reste séparé de la Voie : le plan choisit la politique d’allocation/cap, la Voie choisit uniquement le libellé de ressource et la personnalité de parcours.
+
+La migration additive `20260829000000_power_system_v2.sql` consolide le wallet et le ledger sans supprimer les crédits legacy. Elle ajoute un identifiant stable de wallet, rattache chaque transaction au wallet, prévoit un `run_id` optionnel, expose `get_my_power_status()` pour l’estimation authentifiée, et remplace les RPC Power par des versions qui conservent l’idempotence, les verrous transactionnels et les coûts issus de `power_action_policies`.
+
+Règles actives :
+
+- `mission_simple` consomme le coût serveur de la politique active, actuellement 10 Power Points.
+- `mission_squad` consomme le coût serveur de la politique active, actuellement 50 Power Points, une seule fois pour l’opération métier et non une fois par agent.
+- Les allocations mensuelles sont idempotentes par cycle déterministe `YYYY-MM` via la clé `power-v1:monthly:<user_id>:<cycle>`.
+- Un renouvellement respecte le cap du plan avec `LEAST(wallet_cap, balance + allocation)`.
+- Le solde ne peut pas devenir négatif ; un débit insuffisant est refusé avant l’appel fournisseur.
+- Le changement de Voie conserve le solde, n’accorde aucun bonus, applique le cooldown de 30 jours et journalise une transaction `way_change` à montant zéro.
+
+Frontière legacy : `user_credits`, `credit_ledger`, `STRIPE_CREDIT_PACKS_JSON` et `grant_user_credits` restent des mécanismes de facturation/crédits historiques tant qu’un cutover complet n’est pas validé. Power V2 ne dépend pas de packs Stripe et les packs Power restent désactivés. La conversion commerciale, les prix, la rétention du ledger et d’éventuelles mécaniques d’évolution de Voie restent **À DÉFINIR**.

@@ -17,10 +17,10 @@ const voices = [
 
 const plans = [
   {
-    detail: "100 crédits de découverte pour tester des missions courtes. Le renouvellement n’est pas encore annoncé.",
+    detail: "100 points de ressource de Voie pour tester des missions courtes. Le renouvellement mensuel suit la politique Power active.",
     highlight: false,
     name: "Découverte",
-    price: "100 crédits",
+    price: "100 points Power",
   },
   {
     detail: "Allocation, tarif et droits à publier uniquement après validation du catalogue Stripe côté serveur.",
