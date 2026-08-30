@@ -63,15 +63,27 @@ for (const expected of [
     throw new Error(`Power API boundary missing: ${expected}`);
   }
 }
+const simpleMissionBlock = files.simple.slice(
+  files.simple.indexOf("const isSimpleMission"),
+  files.simple.indexOf("// Every centrally managed inference consumes credits"),
+);
 for (const expected of [
   "isSimpleMission",
+  "if (managed && isSimpleMission)",
   "p_action_type: 'mission_simple'",
   "POWER_REQUIRED",
   "workspaceStream !== true",
+  "p_idempotency_key: powerKey",
 ]) {
-  if (!files.simple.includes(expected)) {
+  if (!simpleMissionBlock.includes(expected)) {
     throw new Error(`Simple mission Power debit missing: ${expected}`);
   }
+}
+if (simpleMissionBlock.includes("managed === false")) {
+  throw new Error("BYOK must not reach consume_power_points");
+}
+if (simpleMissionBlock.indexOf("if (managed && isSimpleMission)") > simpleMissionBlock.indexOf("consume_power_points")) {
+  throw new Error("The managed guard must wrap consume_power_points");
 }
 for (const expected of ["PowerStatusBadge", "<PowerStatusBadge />"]) {
   if (!files.sidebar.includes(expected)) {

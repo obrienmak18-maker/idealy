@@ -531,7 +531,7 @@ serve(async (req) => {
     // Simple missions are charged once here. Squad runs are charged once by
     // orchestrate-mission before invoking Architecte, Builder and Reviewer.
     const isSimpleMission = Boolean(input.missionId) && intentCategory === 'EXECUTION' && input.workspaceStream !== true;
-    if (isSimpleMission) {
+    if (managed && isSimpleMission) {
       const powerKey = input.idempotencyKey?.trim() || `${user.id}:mission-simple:${input.missionId}`;
       const { error: powerError } = await supabaseAdmin.rpc('consume_power_points', {
         p_action_type: 'mission_simple',
