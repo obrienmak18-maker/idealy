@@ -14,11 +14,12 @@ import {
   RefreshCw,
   Share2,
   Smartphone,
-  Star,
   Sparkles,
+  Star,
   Tablet,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { PowerStatusBadge } from "@/components/chat/power-status";
 import { useArtifact } from "@/hooks/use-artifact";
 import { localWorkspaceMetadata } from "@/lib/idealy/local-workspace-demo";
 
@@ -117,7 +118,9 @@ export function BuildTopBar() {
   };
 
   const runSquad = async () => {
-    if (!missionId || isSquadRunning) return;
+    if (!missionId || isSquadRunning) {
+      return;
+    }
     setIsSquadRunning(true);
     setStatus("Running squad");
     if (isDemoMode) {
@@ -127,7 +130,9 @@ export function BuildTopBar() {
         outputs: [
           ...(Array.isArray(current?.outputs) ? current.outputs : []),
           {
-            contents: [{ type: "text", value: "[local] Lyra → Mason → Nova en cours" }],
+            contents: [
+              { type: "text", value: "[local] Lyra → Mason → Nova en cours" },
+            ],
             id: `local-squad-${Date.now()}`,
             status: "running",
           },
@@ -145,17 +150,15 @@ export function BuildTopBar() {
     }
     try {
       const idempotencyKey = `squad:${missionId}:${crypto.randomUUID()}`;
-      const response = await fetch(
-        `/api/idealy/missions/${missionId}/squad`,
-        {
-          body: JSON.stringify({ idempotencyKey }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        }
-      );
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string; status?: string }
-        | null;
+      const response = await fetch(`/api/idealy/missions/${missionId}/squad`, {
+        body: JSON.stringify({ idempotencyKey }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        status?: string;
+      } | null;
       if (!response.ok) {
         throw new Error(payload?.error ?? "L’escouade n’a pas pu démarrer.");
       }
@@ -308,14 +311,15 @@ export function BuildTopBar() {
       </div>
 
       <div className="flex min-w-0 items-center justify-end gap-1">
+        <PowerStatusBadge compact />
         <div className="hidden items-center gap-1.5 rounded-full border border-sidebar-border/70 bg-background/20 px-2.5 py-1 text-[10px] font-medium text-muted-foreground lg:flex">
           <CheckCircle2 className="size-3 text-emerald-400" />
           <span>{status === "Refreshing" ? "Updating" : "Running"}</span>
         </div>
         <div className="relative" ref={moreMenuRef}>
           <button
-            aria-label="More actions"
             aria-expanded={moreOpen}
+            aria-label="More actions"
             className={`${controlClass} size-8`}
             onClick={() => setMoreOpen((value) => !value)}
             type="button"
@@ -372,12 +376,18 @@ export function BuildTopBar() {
           onClick={toggleCanvasFullscreen}
           type="button"
         >
-          {isCanvasExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+          {isCanvasExpanded ? (
+            <Minimize2 className="size-4" />
+          ) : (
+            <Maximize2 className="size-4" />
+          )}
         </button>
         <button
           aria-label="Collaboration"
           className={`${controlClass} hidden size-8 md:inline-flex`}
-          onClick={() => window.alert("Collaboration disponible pour cette mission.")}
+          onClick={() =>
+            window.alert("Collaboration disponible pour cette mission.")
+          }
           type="button"
         >
           <Share2 className="size-4" />
@@ -391,14 +401,22 @@ export function BuildTopBar() {
             onClick={runSquad}
             type="button"
           >
-            <Sparkles className={`size-3.5 ${isSquadRunning ? "animate-pulse" : ""}`} />
+            <Sparkles
+              className={`size-3.5 ${isSquadRunning ? "animate-pulse" : ""}`}
+            />
             {isSquadRunning ? "Building" : "Run squad"}
           </button>
         ) : null}
         <button
           aria-label="Publish"
           className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
-          onClick={() => window.alert(isDemoMode ? "Démo locale : publication protégée. Aucun déploiement n’est lancé." : "Publication de la preview préparée.")}
+          onClick={() =>
+            window.alert(
+              isDemoMode
+                ? "Démo locale : publication protégée. Aucun déploiement n’est lancé."
+                : "Publication de la preview préparée."
+            )
+          }
           type="button"
         >
           Publish

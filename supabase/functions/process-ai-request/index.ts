@@ -528,6 +528,25 @@ serve(async (req) => {
     const intentCategory = input.intentCategory ?? 'EXECUTION';
     let energyRemaining: number | null = null;
 
+    // Simple missions are charged once here. Squad runs are charged once by
+    // orchestrate-mission before invoking Architecte, Builder and Reviewer.
+    const isSimpleMission = Boolean(input.missionId) && intentCategory === 'EXECUTION' && input.workspaceStream !== true;
+    if (isSimpleMission) {
+      const powerKey = input.idempotencyKey?.trim() || `${user.id}:mission-simple:${input.missionId}`;
+      const { error: powerError } = await supabaseAdmin.rpc('consume_power_points', {
+        p_action_type: 'mission_simple',
+        p_idempotency_key: powerKey,
+        p_mission_id: input.missionId,
+        p_user_id: user.id,
+      });
+      if (powerError) {
+        if (/insufficient|power/i.test(powerError.message)) {
+          return jsonError('Power insuffisant pour cette mission.', 402, headers, 'POWER_REQUIRED');
+        }
+        throw new Error(`Power debit failed: ${powerError.message}`);
+      }
+    }
+
     // Every centrally managed inference consumes credits. BYOK requests still
     // bypass the managed balance, but not the server-side request pacing.
     if (managed) {

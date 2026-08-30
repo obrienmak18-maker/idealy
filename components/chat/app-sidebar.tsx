@@ -18,12 +18,13 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+import { IdealyLogo } from "@/components/branding/idealy-logo";
+import { PowerStatusBadge } from "@/components/chat/power-status";
 import {
   getChatHistoryPaginationKey,
   SidebarHistory,
 } from "@/components/chat/sidebar-history";
 import { SidebarUserNav } from "@/components/chat/sidebar-user-nav";
-import { IdealyLogo } from "@/components/branding/idealy-logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,7 +108,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   tooltip="Idealy"
                 >
                   <Link href="/" onClick={closeMobile}>
-                    <IdealyLogo animated className="flex-none drop-shadow-[0_0_10px_rgb(56_189_248_/_0.34)] [&_svg]:!size-10" compact size={40} />
+                    <IdealyLogo
+                      animated
+                      className="flex-none drop-shadow-[0_0_10px_rgb(56_189_248_/_0.34)] [&_svg]:!size-10"
+                      compact
+                      size={40}
+                    />
                   </Link>
                 </SidebarMenuButton>
                 <Tooltip>
@@ -185,11 +191,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-sidebar-foreground/60">
                   <span className="flex items-center gap-1">
-                    <ZapIcon className="size-3 text-amber-400" /> Énergie
+                    <ZapIcon className="size-3 text-amber-400" /> Power
                   </span>
-                  <span className="font-medium text-sidebar-foreground/80">
-                    82 / 100
-                  </span>
+                  <PowerStatusBadge />
                 </div>
               </div>
             </SidebarGroupContent>
