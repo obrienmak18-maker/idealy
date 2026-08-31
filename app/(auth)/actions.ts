@@ -5,9 +5,9 @@ import { z } from "zod";
 
 import { createUser, getUser } from "@/lib/db/queries";
 import {
+  type CredentialsAuthenticationOutcome,
   credentialsOutcomeFromCode,
   credentialsOutcomeFromRedirect,
-  type CredentialsAuthenticationOutcome,
 } from "@/lib/idealy/auth-outcome";
 import { signUpWithSupabasePassword } from "@/lib/idealy/supabase-auth";
 
@@ -16,6 +16,10 @@ import { signIn } from "./auth";
 const authFormSchema = z.object({
   email: z.email(),
   password: z.string().min(6),
+});
+
+const registerFormSchema = authFormSchema.extend({
+  terms: z.literal("on"),
 });
 
 export type LoginActionState = {
@@ -78,7 +82,7 @@ export const login = async (
       return { status: "success" };
     }
 
-    return establishCredentialsSession(
+    return await establishCredentialsSession(
       validatedData.email,
       validatedData.password
     );
@@ -109,9 +113,10 @@ export const register = async (
   formData: FormData
 ): Promise<RegisterActionState> => {
   try {
-    const validatedData = authFormSchema.parse({
+    const validatedData = registerFormSchema.parse({
       email: formData.get("email"),
       password: formData.get("password"),
+      terms: formData.get("terms"),
     });
 
     if (process.env.DEMO_MODE !== "true") {

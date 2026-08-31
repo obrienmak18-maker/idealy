@@ -935,3 +935,35 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
     animation: none;
   }
 }
+
+.auth-shimmer-word {
+  background: linear-gradient(
+    110deg,
+    currentColor 20%,
+    rgb(66 133 244) 42%,
+    rgb(52 168 83) 58%,
+    currentColor 80%
+  );
+  background-clip: text;
+  background-size: 220% 100%;
+  color: transparent;
+  -webkit-background-clip: text;
+  animation: auth-shimmer 3.8s ease-in-out infinite;
+}
+
+@keyframes auth-shimmer {
+  0%,
+  100% {
+    background-position: 100% 50%;
+  }
+  50% {
+    background-position: 0% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-shimmer-word {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}

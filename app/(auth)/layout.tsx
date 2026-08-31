@@ -23,17 +23,24 @@ export default function AuthLayout({
           <ArrowLeftIcon className="size-3.5" />
           Retour à Idealy
         </Link>
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-9">
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-5 py-4">
           <IdealyLogo
             animated
             className="mb-1 w-fit [&_.idealy-logo__wordmark]:text-xl"
             size={44}
           />
           <div className="flex flex-col gap-2">
-            <div className="relative rounded-2xl border border-border/55 bg-card/75 p-6 shadow-[var(--shadow-float)] backdrop-blur-sm md:p-7">
-              <div aria-hidden="true" className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/70 via-teal-400/50 via-violet-400/55 to-transparent" />
+            <div className="relative rounded-2xl border border-border/55 bg-card/75 p-5 shadow-[var(--shadow-float)] backdrop-blur-sm md:p-6">
+              <div
+                aria-hidden="true"
+                className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/70 via-teal-400/50 via-violet-400/55 to-transparent"
+              />
               {children}
             </div>
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground/75">
+              L’IA peut se tromper. Vérifiez les informations importantes avant
+              d’agir.
+            </p>
           </div>
         </div>
       </div>
@@ -44,10 +51,12 @@ export default function AuthLayout({
             IDEALY WORKSPACE
           </p>
           <h2 className="text-balance text-3xl font-semibold tracking-tight">
-            Transformez une intention en expérience concrète.
+            Transformez une intention en expérience{" "}
+            <span className="auth-shimmer-word">concrète.</span>
           </h2>
           <p className="mt-3 max-w-lg text-sm text-muted-foreground">
-            Imaginez, structurez et pilotez votre projet depuis un espace de création unifié.
+            Imaginez, structurez et pilotez votre projet depuis un espace de
+            création unifié.
           </p>
         </div>
         <div className="min-h-0 flex-1">

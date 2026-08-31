@@ -58,7 +58,9 @@ async function postSupabaseAuth(
       },
       method: "POST",
     });
-    const payload = (await response.json().catch(() => ({}))) as SupabaseAuthPayload;
+    const payload = (await response
+      .json()
+      .catch(() => ({}))) as SupabaseAuthPayload;
     return { ok: response.ok, payload, status: response.status };
   } catch {
     return { ok: false, payload: {}, status: 0 };
@@ -92,6 +94,45 @@ function authenticatedResult(
     status: "authenticated",
     userId: payload.user?.id ?? null,
   };
+}
+
+export type SupabaseExternalUser = {
+  email: string | null;
+  id: string;
+};
+
+export async function getSupabaseUserWithAccessToken(
+  accessToken: string
+): Promise<SupabaseExternalUser | null> {
+  const config = getSupabaseAuthConfig();
+  if (!config || !accessToken.trim()) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${config.url}/auth/v1/user`, {
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: config.anonKey,
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response
+      .json()
+      .catch(() => null)) as SupabaseExternalUser | null;
+    if (!payload?.id) {
+      return null;
+    }
+
+    return { email: payload.email ?? null, id: payload.id };
+  } catch {
+    return null;
+  }
 }
 
 export async function signInWithSupabasePassword(

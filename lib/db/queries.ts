@@ -44,6 +44,21 @@ export async function getUser(email: string): Promise<User[]> {
   }
 }
 
+export async function getUserBySupabaseUserId(
+  supabaseUserId: string
+): Promise<User | null> {
+  try {
+    const [selectedUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.supabaseUserId, supabaseUserId))
+      .limit(1);
+    return selectedUser ?? null;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
 export async function createUser(email: string, password: string) {
   const hashedPassword = generateHashedPassword(password);
 

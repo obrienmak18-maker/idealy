@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signIn as signInWithAuthJs, useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 
+import { FirebaseProviderActions } from "@/components/auth/firebase-provider-actions";
 import { AuthForm } from "@/components/chat/auth-form";
 import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
+import { signInWithEmailFirebase } from "@/lib/firebase/client";
 import { type LoginActionState, login } from "../actions";
 
 const loginMessages = {
@@ -24,6 +26,7 @@ export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
 
   const [state, formAction] = useActionState<LoginActionState, FormData>(
     login,
@@ -32,11 +35,16 @@ export default function Page() {
 
   const { update: updateSession } = useSession();
   const feedback =
-    state.status in loginMessages
+    firebaseError ??
+    (state.status in loginMessages
       ? loginMessages[state.status as keyof typeof loginMessages]
-      : null;
+      : null);
 
   const getSafeCallbackUrl = () => {
+    if (typeof window === "undefined") {
+      return "/";
+    }
+
     const callbackUrl = new URLSearchParams(window.location.search).get(
       "callbackUrl"
     );
@@ -82,9 +90,52 @@ export default function Page() {
     }
   }, [state.status]);
 
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get("email") as string);
-    formAction(formData);
+  const handleSubmit = async (formData: FormData) => {
+    setEmail(String(formData.get("email") ?? ""));
+    setFirebaseError(null);
+
+    try {
+      const idToken = await signInWithEmailFirebase(
+        String(formData.get("email") ?? "").trim(),
+        String(formData.get("password") ?? "")
+      );
+      const result = await signInWithAuthJs("firebase", {
+        idToken,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        throw new Error("firebase_session_rejected");
+      }
+
+      setIsSuccessful(true);
+      await updateSession();
+      window.location.assign(getOnboardingUrl());
+    } catch (error) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? String(error.code)
+          : "";
+      if (code === "firebase_not_configured") {
+        formAction(formData);
+        return;
+      }
+      if (
+        code === "auth/invalid-credential" ||
+        code === "auth/user-not-found" ||
+        code === "auth/wrong-password"
+      ) {
+        setFirebaseError("L’adresse e-mail ou le mot de passe est incorrect.");
+        return;
+      }
+      if (code === "auth/invalid-email") {
+        setFirebaseError("Saisissez une adresse e-mail valide.");
+        return;
+      }
+      setFirebaseError(
+        "La connexion est indisponible. Vérifiez la configuration Firebase puis réessayez."
+      );
+    }
   };
 
   return (
@@ -116,6 +167,7 @@ export default function Page() {
           </Link>
         </p>
       </AuthForm>
+      <FirebaseProviderActions nextPath={getOnboardingUrl()} />
     </>
   );
 }

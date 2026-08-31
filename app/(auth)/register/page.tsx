@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signIn as signInWithAuthJs, useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
+
+import { FirebaseProviderActions } from "@/components/auth/firebase-provider-actions";
 import { AuthForm } from "@/components/chat/auth-form";
 import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
-import { type RegisterActionState, register } from "../actions";
+import { signUpWithEmailFirebase } from "@/lib/firebase/client";
 import { isIdealyWay } from "@/lib/idealy/product-contract";
+import { type RegisterActionState, register } from "../actions";
 
 const registerMessages = {
   confirmation_required:
@@ -24,10 +27,17 @@ const registerMessages = {
   user_exists: "Un compte existe déjà avec cette adresse e-mail.",
 } as const;
 
+function firebaseErrorCode(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error
+    ? String(error.code)
+    : "";
+}
+
 export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
 
   const [state, formAction] = useActionState<RegisterActionState, FormData>(
     register,
@@ -35,13 +45,19 @@ export default function Page() {
   );
 
   const { update: updateSession } = useSession();
-  const feedback =
+  const legacyFeedback =
     state.status in registerMessages
       ? registerMessages[state.status as keyof typeof registerMessages]
       : null;
-  const isPositiveFeedback = state.status === "pending_confirmation";
+  const feedback = firebaseError ?? legacyFeedback;
+  const isPositiveFeedback =
+    !firebaseError && state.status === "pending_confirmation";
 
   const getOnboardingUrl = () => {
+    if (typeof window === "undefined") {
+      return "/onboarding";
+    }
+
     const selectedWay = new URLSearchParams(window.location.search).get("way");
     return isIdealyWay(selectedWay)
       ? `/onboarding?way=${encodeURIComponent(selectedWay)}`
@@ -88,9 +104,57 @@ export default function Page() {
     }
   }, [state.status]);
 
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get("email") as string);
-    formAction(formData);
+  const handleSubmit = async (formData: FormData) => {
+    setEmail(String(formData.get("email") ?? ""));
+    setFirebaseError(null);
+
+    if (formData.get("terms") !== "on") {
+      setFirebaseError(
+        "Acceptez les conditions d’utilisation et la politique de confidentialité pour continuer."
+      );
+      return;
+    }
+
+    const emailValue = String(formData.get("email") ?? "").trim();
+    const passwordValue = String(formData.get("password") ?? "");
+
+    try {
+      const { idToken } = await signUpWithEmailFirebase(
+        emailValue,
+        passwordValue
+      );
+      const result = await signInWithAuthJs("firebase", {
+        idToken,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        throw new Error("firebase_session_rejected");
+      }
+
+      setIsSuccessful(true);
+      await updateSession();
+      window.location.assign(getOnboardingUrl());
+    } catch (error) {
+      const code = firebaseErrorCode(error);
+      if (code === "firebase_not_configured") {
+        formAction(formData);
+        return;
+      }
+      if (code === "auth/email-already-in-use") {
+        setFirebaseError("Un compte existe déjà avec cette adresse e-mail.");
+        return;
+      }
+      if (code === "auth/invalid-email" || code === "auth/weak-password") {
+        setFirebaseError(
+          "Saisissez une adresse e-mail valide et un mot de passe de 6 caractères minimum."
+        );
+        return;
+      }
+      setFirebaseError(
+        "La création du compte est indisponible. Vérifiez la configuration Firebase puis réessayez."
+      );
+    }
   };
 
   return (
@@ -115,7 +179,28 @@ export default function Page() {
         </p>
       ) : null}
       <AuthForm action={handleSubmit} defaultEmail={email}>
-        <SubmitButton isSuccessful={isSuccessful}>Créer mon compte</SubmitButton>
+        <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+          <input
+            className="mt-0.5 size-4 shrink-0 accent-foreground"
+            name="terms"
+            required
+            type="checkbox"
+          />
+          <span>
+            J’accepte les{" "}
+            <Link className="text-foreground underline" href="/terms">
+              conditions d’utilisation
+            </Link>{" "}
+            et la{" "}
+            <Link className="text-foreground underline" href="/privacy">
+              politique de confidentialité
+            </Link>
+            .
+          </span>
+        </label>
+        <SubmitButton isSuccessful={isSuccessful}>
+          Créer mon compte
+        </SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
           {"Vous avez déjà un compte ? "}
           <Link
@@ -126,6 +211,7 @@ export default function Page() {
           </Link>
         </p>
       </AuthForm>
+      <FirebaseProviderActions nextPath={getOnboardingUrl()} />
     </>
   );
 }

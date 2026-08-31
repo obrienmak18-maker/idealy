@@ -1,28 +1,31 @@
 import { compare } from "bcrypt-ts";
-import NextAuth, {
-  CredentialsSignin,
-  type DefaultSession,
-} from "next-auth";
+import NextAuth, { CredentialsSignin, type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { DUMMY_PASSWORD } from "@/lib/constants";
 import {
-  createUser,
   createGuestUser,
+  createUser,
   getUser,
+  getUserBySupabaseUserId,
   linkUserToSupabaseUser,
 } from "@/lib/db/queries";
 import {
+  getSupabaseUserWithAccessToken,
   refreshSupabaseSession,
   signInWithSupabasePassword,
 } from "@/lib/idealy/supabase-auth";
+import { generateUUID } from "@/lib/utils";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
 
 class IdealyCredentialsSignin extends CredentialsSignin {
   constructor(
-    code: "confirmation_required" | "invalid_credentials" | "service_unavailable"
+    code:
+      | "confirmation_required"
+      | "invalid_credentials"
+      | "service_unavailable"
   ) {
     super();
     this.code = code;
@@ -75,7 +78,8 @@ export const {
           token.supabaseAccessToken = user.supabaseAccessToken;
         }
         if (user.supabaseAccessTokenExpiresAt) {
-          token.supabaseAccessTokenExpiresAt = user.supabaseAccessTokenExpiresAt;
+          token.supabaseAccessTokenExpiresAt =
+            user.supabaseAccessTokenExpiresAt;
         }
         if (user.supabaseRefreshToken) {
           token.supabaseRefreshToken = user.supabaseRefreshToken;
@@ -97,8 +101,7 @@ export const {
 
         if (refreshed.status === "authenticated" && refreshed.accessToken) {
           token.supabaseAccessToken = refreshed.accessToken;
-          token.supabaseAccessTokenExpiresAt =
-            refreshed.expiresAt ?? undefined;
+          token.supabaseAccessTokenExpiresAt = refreshed.expiresAt ?? undefined;
           token.supabaseRefreshToken =
             refreshed.refreshToken ?? token.supabaseRefreshToken;
         } else {
@@ -136,7 +139,10 @@ export const {
             };
           }
 
-          const supabaseAuth = await signInWithSupabasePassword(email, password);
+          const supabaseAuth = await signInWithSupabasePassword(
+            email,
+            password
+          );
 
           if (supabaseAuth.configured) {
             if (supabaseAuth.status === "confirmation_required") {
@@ -214,6 +220,63 @@ export const {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
+    }),
+    Credentials({
+      async authorize(credentials) {
+        const idToken = String(credentials.idToken ?? "").trim();
+        if (!idToken) {
+          return null;
+        }
+
+        const supabaseUser = await getSupabaseUserWithAccessToken(idToken);
+        if (!supabaseUser) {
+          return null;
+        }
+
+        let localUser = await getUserBySupabaseUserId(supabaseUser.id);
+        if (!localUser) {
+          if (!supabaseUser.email) {
+            return null;
+          }
+
+          const [existingEmailUser] = await getUser(supabaseUser.email);
+          if (existingEmailUser) {
+            // An identical email is not proof of ownership. Explicit linking
+            // must happen from an already authenticated account.
+            return null;
+          }
+
+          await createUser(supabaseUser.email, `firebase-${generateUUID()}`);
+          localUser = await getUserBySupabaseUserId(supabaseUser.id);
+          if (!localUser) {
+            const [createdUser] = await getUser(supabaseUser.email);
+            if (!createdUser) {
+              return null;
+            }
+            await linkUserToSupabaseUser({
+              localUserId: createdUser.id,
+              supabaseUserId: supabaseUser.id,
+            });
+            localUser = {
+              ...createdUser,
+              supabaseUserId: supabaseUser.id,
+            };
+          }
+        }
+
+        return {
+          ...localUser,
+          email: supabaseUser.email ?? localUser.email,
+          supabaseAccessToken: idToken,
+          supabaseAccessTokenExpiresAt: Date.now() + 55 * 60 * 1000,
+          supabaseUserId: supabaseUser.id,
+          type: "regular",
+        };
+      },
+      credentials: {
+        idToken: { label: "Firebase ID token", type: "text" },
+      },
+      id: "firebase",
     }),
     Credentials({
       async authorize() {
