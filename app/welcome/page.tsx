@@ -4,8 +4,8 @@ import { ArrowRightIcon, CheckIcon, SparklesIcon, ZapIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import {
-  wayPresentations,
   type IdealyWay,
+  wayPresentations,
 } from "@/lib/idealy/product-contract";
 
 const voices = [
@@ -17,19 +17,22 @@ const voices = [
 
 const plans = [
   {
-    detail: "100 crédits de découverte pour tester des missions courtes. Le renouvellement n’est pas encore annoncé.",
+    detail:
+      "100 crédits de découverte pour tester des missions courtes. Le renouvellement n’est pas encore annoncé.",
     highlight: false,
     name: "Découverte",
     price: "100 crédits",
   },
   {
-    detail: "Allocation, tarif et droits à publier uniquement après validation du catalogue Stripe côté serveur.",
+    detail:
+      "Allocation, tarif et droits à publier uniquement après validation du catalogue Stripe côté serveur.",
     highlight: true,
     name: "Pro",
     price: "Bientôt configuré",
   },
   {
-    detail: "Offre équipe à définir après configuration du catalogue de prix et des contrôles d’usage.",
+    detail:
+      "Offre équipe à définir après configuration du catalogue de prix et des contrôles d’usage.",
     highlight: false,
     name: "Business",
     price: "Sur configuration",
@@ -59,7 +62,45 @@ export default function WelcomePage() {
           </span>
           Idealy
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-1.5 md:flex">
+          <Link
+            className="rounded-lg px-3 py-2 text-sm text-white/65 transition hover:bg-white/10 hover:text-white"
+            href="#product"
+          >
+            Product
+          </Link>
+          <Link
+            className="rounded-lg px-3 py-2 text-sm text-white/65 transition hover:bg-white/10 hover:text-white"
+            href="#plans"
+          >
+            Pricing
+          </Link>
+          <Link
+            className="rounded-lg px-3 py-2 text-sm text-white/65 transition hover:bg-white/10 hover:text-white"
+            href="/about"
+          >
+            About
+          </Link>
+          <Link
+            className="rounded-lg px-3 py-2 text-sm text-white/65 transition hover:bg-white/10 hover:text-white"
+            href="/docs"
+          >
+            Docs
+          </Link>
+          <Link
+            className="ml-2 rounded-lg px-3 py-2 text-sm text-white/70 transition hover:bg-white/10 hover:text-white"
+            href="/login"
+          >
+            Sign in
+          </Link>
+          <Link
+            className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-white/85"
+            href="/register"
+          >
+            Get Started
+          </Link>
+        </div>
+        <div className="flex items-center gap-2 md:hidden">
           <Link
             className="rounded-lg px-3 py-2 text-sm text-white/70 transition hover:bg-white/10 hover:text-white"
             href="/login"
@@ -75,7 +116,10 @@ export default function WelcomePage() {
         </div>
       </nav>
 
-      <section className="relative z-10 mx-auto max-w-5xl px-6 pb-20 pt-16 text-center sm:px-10 sm:pt-24">
+      <section
+        className="relative z-10 mx-auto max-w-5xl px-6 pb-20 pt-16 text-center sm:px-10 sm:pt-24"
+        id="product"
+      >
         <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1.5 text-xs text-white/70 backdrop-blur">
           <ZapIcon className="size-3.5 text-yellow-300" /> Votre espace pour
           transformer une idée en mission
@@ -172,8 +216,7 @@ export default function WelcomePage() {
             onClick={() => setStep(1)}
             type="button"
           >
-            Continuer avec{" "}
-            {wayPresentations[selectedWay].label} {" "}
+            Continuer avec {wayPresentations[selectedWay].label}{" "}
             <ArrowRightIcon className="size-4" />
           </button>
         </div>

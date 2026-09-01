@@ -1,8 +1,9 @@
+"use client";
+
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
 import { RefreshCwIcon } from "lucide-react";
-import { memo, useCallback, useMemo, useState } from "react";
-import { suggestions } from "@/lib/constants";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { ChatMessage } from "@/lib/types";
 import { Suggestion } from "../ai-elements/suggestion";
 import { Button } from "../ui/button";
@@ -15,16 +16,80 @@ type SuggestedActionsProps = {
   onSuggestionSelect?: (prompt: string) => void;
 };
 
-const detailedPrompts: Record<string, string> = {
-  Dijkstra:
-    "Explique puis implémente l’algorithme de Dijkstra dans une interface pédagogique. Ajoute un exemple interactif avec un graphe, des nœuds sélectionnables, l’affichage du chemin optimal et une visualisation étape par étape. Utilise un code clair et commente les décisions importantes.",
-  "Next.js":
-    "Crée une application Next.js moderne avec TypeScript et Tailwind CSS. Ajoute une page d’accueil responsive, une navigation claire, un état de chargement, une gestion d’erreur et des composants réutilisables. Commence par proposer la structure du projet puis génère une première interface fonctionnelle dans la preview.",
-  Weather:
-    "Crée un tableau de bord météo élégant et responsive. Prévois une recherche par ville, les conditions actuelles, la température, les prévisions sur plusieurs jours, des états de chargement et un état vide. Commence par construire l’interface avec des données de démonstration clairement identifiées.",
-  "Write an essay":
-    "Rédige un essai structuré sur le sujet indiqué. Commence par proposer une problématique et un plan en trois parties, puis écris une introduction, des transitions naturelles, des arguments illustrés et une conclusion. Adopte un ton clair, nuancé et adapté au niveau du lecteur.",
+type ProfileContext = {
+  experienceLevel?: string | null;
+  firstName?: string | null;
+  primaryGoal?: string | null;
+  projectType?: string | null;
+  way?: string | null;
 };
+
+type SuggestionEntry = {
+  label: string;
+  prompt: string;
+  tags: string[];
+};
+
+const suggestionCatalog: SuggestionEntry[] = [
+  {
+    label: "Créer une application scolaire",
+    prompt:
+      "Aide-moi à concevoir une application scolaire claire et accessible. Commence par comprendre les utilisateurs (élèves, enseignants et parents), le problème prioritaire, les fonctionnalités essentielles, les données à prévoir et le style d’interface. Propose d’abord une spécification courte avant toute construction.",
+    tags: ["mobile", "web", "prototype", "beginner", "intermediate"],
+  },
+  {
+    label: "Structurer mon idée de produit",
+    prompt:
+      "Aide-moi à clarifier mon idée de produit. Pose les questions utiles sur l’objectif, le public, la proposition de valeur, les contraintes et le résultat attendu, puis transforme les réponses en plan de mission concret avant de construire quoi que ce soit.",
+    tags: ["startup", "saas", "other", "beginner", "non_coder"],
+  },
+  {
+    label: "Construire une première interface",
+    prompt:
+      "Je veux construire une première interface fonctionnelle. Aide-moi à choisir la structure des écrans, le parcours principal, les états vides et de chargement, les données de démonstration et les composants réutilisables. Commence par vérifier que le périmètre est suffisamment clair.",
+    tags: ["web", "site", "prototype", "intermediate", "advanced"],
+  },
+  {
+    label: "Améliorer une expérience existante",
+    prompt:
+      "Aide-moi à améliorer une expérience existante. Analyse d’abord le parcours utilisateur, les points de friction, la hiérarchie visuelle, l’accessibilité et les contraintes techniques. Propose une série de corrections priorisées et attends ma validation avant la construction.",
+    tags: ["internal_tool", "saas", "other", "advanced", "expert"],
+  },
+  {
+    label: "Préparer un prototype de lancement",
+    prompt:
+      "Prépare un prototype de lancement pour mon idée. Clarifie le message principal, le public cible, la preuve de valeur, les sections de la page et les actions attendues. Génère ensuite une structure de contenu précise avant de passer à la preview.",
+    tags: ["site", "prototype", "startup", "beginner", "intermediate"],
+  },
+  {
+    label: "Transformer mon objectif en étapes",
+    prompt:
+      "Transforme mon objectif en étapes de réalisation réalistes. Distingue ce qui doit être compris, planifié, construit et vérifié. Signale les décisions manquantes et propose une première mission courte plutôt qu’un périmètre trop large.",
+    tags: ["mobile", "web", "internal_tool", "non_coder", "beginner"],
+  },
+];
+
+function getSuggestedEntries(profile: ProfileContext, generation: number) {
+  const contextTags = [profile.projectType, profile.experienceLevel].filter(
+    (value): value is string => Boolean(value)
+  );
+  const scored = suggestionCatalog
+    .map((entry, index) => ({
+      entry,
+      index,
+      score:
+        entry.tags.reduce(
+          (total, tag) => total + (contextTags.includes(tag) ? 3 : 0),
+          0
+        ) + (profile.primaryGoal && index % 2 === 0 ? 1 : 0),
+    }))
+    .sort(
+      (left, right) => right.score - left.score || left.index - right.index
+    );
+  const ordered = scored.map(({ entry }) => entry);
+  const offset = generation % ordered.length;
+  return [...ordered.slice(offset), ...ordered.slice(0, offset)].slice(0, 4);
+}
 
 function PureSuggestedActions({
   chatId,
@@ -32,17 +97,37 @@ function PureSuggestedActions({
   onSuggestionSelect,
 }: SuggestedActionsProps) {
   const [generation, setGeneration] = useState(0);
+  const [profile, setProfile] = useState<ProfileContext>({});
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-  const suggestedActions = useMemo(() => {
-    const offset = generation % suggestions.length;
-    return [...suggestions.slice(offset), ...suggestions.slice(0, offset)];
-  }, [generation]);
+
+  useEffect(() => {
+    if (isDemoMode) {
+      return;
+    }
+    const controller = new AbortController();
+    void fetch("/api/idealy/profile/onboarding", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((value: ProfileContext | null) => {
+        if (value) {
+          setProfile(value);
+        }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [isDemoMode]);
+
+  const suggestedActions = useMemo(
+    () => getSuggestedEntries(profile, generation),
+    [generation, profile]
+  );
 
   const handleSuggestionClick = useCallback(
-    (suggestion: string) => {
-      const prompt = detailedPrompts[suggestion] ?? suggestion;
+    (entry: SuggestionEntry) => {
       if (onSuggestionSelect) {
-        onSuggestionSelect(prompt);
+        onSuggestionSelect(entry.prompt);
         return;
       }
       window.history.pushState(
@@ -51,7 +136,7 @@ function PureSuggestedActions({
         `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
       );
       sendMessage({
-        parts: [{ text: prompt, type: "text" }],
+        parts: [{ text: entry.prompt, type: "text" }],
         role: "user",
       });
     },
@@ -92,13 +177,13 @@ function PureSuggestedActions({
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {suggestedActions.map((suggestedAction, index) => (
+        {suggestedActions.map((entry, index) => (
           <motion.div
             animate={{ opacity: 1, y: 0 }}
             className="min-w-[200px] shrink-0 sm:min-w-0 sm:shrink"
             exit={{ opacity: 0, y: 16 }}
             initial={{ opacity: 0, y: 16 }}
-            key={suggestedAction}
+            key={entry.label}
             transition={{
               delay: 0.06 * index,
               duration: 0.4,
@@ -107,10 +192,10 @@ function PureSuggestedActions({
           >
             <Suggestion
               className="h-auto w-full whitespace-nowrap rounded-xl border border-border/50 bg-card/30 px-4 py-3 text-left text-[12px] leading-relaxed text-muted-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-card/60 hover:text-foreground hover:shadow-[var(--shadow-card)] sm:whitespace-normal sm:p-4 sm:text-[13px]"
-              onClick={handleSuggestionClick}
-              suggestion={suggestedAction}
+              onClick={() => handleSuggestionClick(entry)}
+              suggestion={entry.label}
             >
-              {suggestedAction}
+              {entry.label}
             </Suggestion>
           </motion.div>
         ))}
@@ -123,7 +208,7 @@ function PureSuggestedActions({
         variant="ghost"
       >
         <RefreshCwIcon className="mr-1.5 size-3.5" />
-        Regenerate suggestions
+        Nouvelles suggestions
       </Button>
     </div>
   );
@@ -131,18 +216,10 @@ function PureSuggestedActions({
 
 export const SuggestedActions = memo(
   PureSuggestedActions,
-  (prevProps, nextProps) => {
-    if (prevProps.chatId !== nextProps.chatId) {
-      return false;
-    }
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
-      return false;
-    }
-
-    if (prevProps.onSuggestionSelect !== nextProps.onSuggestionSelect) {
-      return false;
-    }
-
-    return true;
-  }
+  (prevProps, nextProps) =>
+    prevProps.chatId === nextProps.chatId &&
+    prevProps.selectedVisibilityType === nextProps.selectedVisibilityType &&
+    prevProps.onSuggestionSelect === nextProps.onSuggestionSelect
 );
+
+export { suggestionCatalog };

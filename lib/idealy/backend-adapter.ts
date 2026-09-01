@@ -1,20 +1,20 @@
 import { getToken } from "next-auth/jwt";
 import { isDevelopmentEnvironment } from "@/lib/constants";
+import {
+  getMissionPersona,
+  type MissionWay,
+  missionPersonaPrompt,
+  normalizeMissionWay,
+} from "./agent-personas";
 import { getIdealyAiFunctionUrl } from "./config";
 import {
   buildDesignSpecification,
+  type DesignSpecification,
   designSpecificationToPrompt,
   runDesignCritic,
-  type DesignSpecification,
 } from "./design-engine";
-import {
-  getMissionPersona,
-  missionPersonaPrompt,
-  normalizeMissionWay,
-  type MissionWay,
-} from "./agent-personas";
-import { isIdealyWay, type IdealyWay } from "./product-contract";
 import type { OnboardingInput, OnboardingStatus } from "./onboarding-contract";
+import { type IdealyWay, isIdealyWay } from "./product-contract";
 
 export type IdealyIntentCategory = "CONVERSATION" | "IDEATION" | "EXECUTION";
 
@@ -76,9 +76,12 @@ type IdealyMissionResponse = {
 };
 
 type IdealyProfileResponse = {
+  experience_level?: unknown;
   first_name?: unknown;
   id?: unknown;
   onboarding_completed?: unknown;
+  primary_goal?: unknown;
+  project_type?: unknown;
   way?: unknown;
 };
 
@@ -89,17 +92,18 @@ type IdealyOnboardingResponse = {
   way?: unknown;
 };
 
-const MISSION_PLAN_SYSTEM_PROMPT = `You are the Idealy mission planner. Return only valid JSON, with no markdown fences and no extra text. The JSON must contain exactly these useful fields: projectKind (string), intention (string), v1Scope (string), agents (array of 1 to 8 objects with name, responsibility, result strings), and nextStep (string). Keep the first version practical and explain what each specialized agent will deliver. The Design Engine specification appended to this prompt is authoritative for visual strategy; do not silently override explicit user technology choices.`;
+const MISSION_PLAN_SYSTEM_PROMPT =
+  "You are the Idealy mission planner. Return only valid JSON, with no markdown fences and no extra text. The JSON must contain exactly these useful fields: projectKind (string), intention (string), v1Scope (string), agents (array of 1 to 8 objects with name, responsibility, result strings), and nextStep (string). Keep the first version practical and explain what each specialized agent will deliver. The Design Engine specification appended to this prompt is authoritative for visual strategy; do not silently override explicit user technology choices.";
 
 function isIntentCategory(value: unknown): value is IdealyIntentCategory {
   return (
-    value === "CONVERSATION" ||
-    value === "IDEATION" ||
-    value === "EXECUTION"
+    value === "CONVERSATION" || value === "IDEATION" || value === "EXECUTION"
   );
 }
 
-function parseMissionPlan(value: unknown): Omit<MissionPlan, "design" | "designCritic"> {
+function parseMissionPlan(
+  value: unknown
+): Omit<MissionPlan, "design" | "designCritic"> {
   if (!value || typeof value !== "object") {
     throw new Error("Le backend Idealy n’a pas renvoyé de plan de mission.");
   }
@@ -107,9 +111,8 @@ function parseMissionPlan(value: unknown): Omit<MissionPlan, "design" | "designC
   const candidate = value as Partial<MissionPlan>;
   const agents = Array.isArray(candidate.agents)
     ? candidate.agents
-        .filter(
-          (agent): agent is MissionPlanAgent =>
-            Boolean(agent && typeof agent === "object")
+        .filter((agent): agent is MissionPlanAgent =>
+          Boolean(agent && typeof agent === "object")
         )
         .map((agent) => ({
           name: typeof agent.name === "string" ? agent.name.trim() : "",
@@ -119,9 +122,7 @@ function parseMissionPlan(value: unknown): Omit<MissionPlan, "design" | "designC
               : "",
           result: typeof agent.result === "string" ? agent.result.trim() : "",
         }))
-        .filter(
-          (agent) => agent.name && agent.responsibility && agent.result
-        )
+        .filter((agent) => agent.name && agent.responsibility && agent.result)
         .slice(0, 8)
     : [];
 
@@ -238,18 +239,30 @@ export async function getMyIdealyOnboardingStatus({
   const { userId } = await getSupabaseServerContext(request);
   const profiles = await callSupabaseRest<IdealyProfileResponse[]>(
     request,
-    `profiles?select=id,first_name,way,onboarding_completed&id=eq.${encodeURIComponent(userId)}&limit=1`,
+    `profiles?select=id,first_name,way,onboarding_completed,experience_level,primary_goal,project_type&id=eq.${encodeURIComponent(userId)}&limit=1`,
     { cache: "no-store", method: "GET" }
   );
   const profile = Array.isArray(profiles) ? profiles[0] : null;
 
   return {
+    experienceLevel:
+      profile && typeof profile.experience_level === "string"
+        ? profile.experience_level
+        : null,
     firstName:
       profile && typeof profile.first_name === "string"
         ? profile.first_name
         : null,
     onboardingCompleted: profile?.onboarding_completed === true,
+    primaryGoal:
+      profile && typeof profile.primary_goal === "string"
+        ? profile.primary_goal
+        : null,
     profileExists: Boolean(profile && typeof profile.id === "string"),
+    projectType:
+      profile && typeof profile.project_type === "string"
+        ? profile.project_type
+        : null,
     way: isIdealyWay(profile?.way) ? profile.way : null,
   };
 }
@@ -420,7 +433,13 @@ export async function updateIdealyMission({
   dna?: Record<string, unknown>;
   missionId: string;
   request: Request;
-  status: "draft" | "planned" | "building" | "ready" | "needs-fix" | "published";
+  status:
+    | "draft"
+    | "planned"
+    | "building"
+    | "ready"
+    | "needs-fix"
+    | "published";
   validation?: Record<string, unknown>;
 }) {
   await callSupabaseRest<unknown>(request, `missions?id=eq.${missionId}`, {
@@ -461,7 +480,7 @@ export async function createIdealyMissionPlan({
     intentCategory: "IDEATION",
     ...(model ? { model } : {}),
     ...(missionId ? { missionId } : {}),
-    maxTokens: 2_000,
+    maxTokens: 2000,
     mode: "auto",
     ...(provider ? { provider } : {}),
     planOnly: true,

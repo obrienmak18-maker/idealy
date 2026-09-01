@@ -14,7 +14,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/api/auth")) {
+  if (pathname.startsWith("/api/auth") || pathname === "/api/idealy/health") {
     return NextResponse.next();
   }
 
@@ -27,8 +27,24 @@ export async function proxy(request: NextRequest) {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
   if (!token) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Une session Idealy authentifiée est requise." },
+        { status: 401 }
+      );
+    }
+
     if (
-      ["/demo-flow", "/login", "/register", "/welcome", "/about", "/docs", "/privacy", "/terms"].includes(pathname) ||
+      [
+        "/demo-flow",
+        "/login",
+        "/register",
+        "/welcome",
+        "/about",
+        "/docs",
+        "/privacy",
+        "/terms",
+      ].includes(pathname) ||
       pathname.startsWith("/images/agents/")
     ) {
       return NextResponse.next();

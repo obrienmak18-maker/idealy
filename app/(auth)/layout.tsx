@@ -18,7 +18,7 @@ export default function AuthLayout({
       <div className="idealy-surface relative z-10 flex w-full flex-col border-border/40 bg-background/85 p-7 backdrop-blur-xl xl:w-[620px] xl:shrink-0 xl:rounded-r-3xl xl:border-r md:p-14">
         <Link
           className="flex w-fit items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-ring"
-          href="/"
+          href="/welcome"
         >
           <ArrowLeftIcon className="size-3.5" />
           Retour à Idealy
