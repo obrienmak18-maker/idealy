@@ -27,6 +27,10 @@ export async function proxy(request: NextRequest) {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
   if (!token) {
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL(`${base}/welcome`, request.url));
+    }
+
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { error: "Une session Idealy authentifiée est requise." },
