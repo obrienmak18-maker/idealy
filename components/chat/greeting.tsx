@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Sparkles, Zap, Flame, Shield, Brain, Terminal } from "lucide-react";
 import { useEffect, useState } from "react";
 
 function TypewriterText({ text }: { text: string }) {
@@ -15,66 +16,89 @@ function TypewriterText({ text }: { text: string }) {
       if (index >= text.length) {
         clearInterval(interval);
       }
-    }, 42);
+    }, 38);
     return () => clearInterval(interval);
   }, [text]);
 
   return (
-    <span aria-label={text}>
+    <span aria-label={text} className="text-foreground">
       {visibleText}
-      <span className="ml-0.5 inline-block h-[1em] w-px animate-pulse bg-current align-[-0.1em]" />
+      <span className="ml-1 inline-block h-[1em] w-[2px] animate-pulse bg-primary align-[-0.1em]" />
     </span>
   );
 }
 
 const greetings = [
   {
-    subtitle: "Décrivez une idée, un besoin ou une ambition à concrétiser.",
-    title: "Quelle mission lançons-nous ?",
+    tag: "Studio IA Pro & Escouade Multi-Agents",
+    icon: Sparkles,
+    title: "Quelle application forgeons-nous aujourd'hui ?",
+    subtitle: "Décrivez votre idée de SaaS, marketplace ou dashboard. Votre escouade d'agents est prête à construire.",
   },
   {
-    subtitle: "Partez d’une intention, Idealy vous aide à trouver la bonne suite.",
-    title: "Que voulez-vous faire naître aujourd’hui ?",
+    tag: "Architecture & Génération Instantanée",
+    icon: Zap,
+    title: "Transformez votre intention en réalité concrète.",
+    subtitle: "Du découpage stratégique au code Next.js avec Live Preview, pilotez chaque étape sans friction.",
   },
   {
-    subtitle: "Exposez votre objectif, puis avançons avec une direction claire.",
-    title: "Prêt à construire quelque chose d’utile ?",
+    tag: "Puissance & Haute Vitesse",
+    icon: Flame,
+    title: "Prêt à dépasser les limites du prototypage ?",
+    subtitle: "L'Architecte cadre, le Builder code, le Designer sublime, et le QA valide la robustesse.",
   },
   {
-    subtitle: "Explorez, planifiez et transformez une idée en progrès concret.",
-    title: "Par où commençons-nous ?",
+    tag: "Workspace Collaboratif & VFS",
+    icon: Brain,
+    title: "Par où commençons-nous la mission ?",
+    subtitle: "Exposez votre besoin, discutez avec l'IA et exportez votre projet complet en ZIP à tout moment.",
   },
 ];
 
 export const Greeting = () => {
   const [index, setIndex] = useState(0);
   const greeting = greetings[index];
+  const IconComponent = greeting.icon;
 
   useEffect(() => {
     const timer = setInterval(() => {
       setIndex((current) => (current + 1) % greetings.length);
-    }, 7200);
+    }, 7800);
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <div className="flex flex-col items-center px-4" key={index}>
+    <div className="relative flex flex-col items-center px-4 pt-6 pb-2 text-center" key={index}>
+      {/* Subtle clean badge */}
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="text-center font-semibold text-2xl tracking-tight text-foreground md:text-3xl"
-        initial={{ opacity: 0, y: 10 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="mb-4 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3.5 py-1 text-xs font-medium text-foreground/80 shadow-xs"
+        initial={{ opacity: 0, y: -6 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <IconComponent className="size-3.5 text-primary" />
+        <span>{greeting.tag}</span>
+      </motion.div>
+
+      {/* Clean elegant title */}
+      <motion.h1
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-2xl font-semibold text-2xl tracking-tight text-foreground md:text-3xl"
+        initial={{ opacity: 0, y: 6 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       >
         <TypewriterText key={`title-${index}`} text={greeting.title} />
-      </motion.div>
-      <motion.div
+      </motion.h1>
+
+      {/* Balanced subtitle */}
+      <motion.p
         animate={{ opacity: 1, y: 0 }}
-        className="mt-3 text-center text-muted-foreground/80 text-sm"
-        initial={{ opacity: 0, y: 10 }}
-        transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="mt-2.5 max-w-lg text-xs leading-relaxed text-muted-foreground md:text-sm"
+        initial={{ opacity: 0, y: 6 }}
+        transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       >
-        <TypewriterText key={`subtitle-${index}`} text={greeting.subtitle} />
-      </motion.div>
+        {greeting.subtitle}
+      </motion.p>
     </div>
   );
 };

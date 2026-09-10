@@ -43,7 +43,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -57,11 +56,13 @@ import {
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useActiveChat } from "@/hooks/use-active-chat";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
-  const { setOpenMobile, toggleSidebar } = useSidebar();
+  const { setOpenMobile, toggleSidebar, state } = useSidebar();
   const { mutate } = useSWRConfig();
+  const { resetToNewChat } = useActiveChat();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
 
   const closeMobile = useCallback(() => {
@@ -74,8 +75,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
 
   const handleNewChat = useCallback(() => {
     setOpenMobile(false);
-    router.push("/");
-  }, [router, setOpenMobile]);
+    resetToNewChat();
+  }, [resetToNewChat, setOpenMobile]);
 
   const handleShowDeleteAllDialog = useCallback(() => {
     setShowDeleteAllDialog(true);
@@ -92,7 +93,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       method: "DELETE",
     });
 
-    toast.success("All chats deleted");
+    toast.success("Historique des discussions supprimé");
   }, [mutate, router]);
 
   return (
@@ -100,43 +101,69 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       <Sidebar collapsible="icon">
         <SidebarHeader className="pb-0 pt-3">
           <SidebarMenu>
-            <SidebarMenuItem className="flex flex-row items-center justify-between">
-              <div className="group/logo relative flex items-center justify-center overflow-visible">
-                <SidebarMenuButton
-                  asChild
-                  className="!size-12 !overflow-visible !px-0 items-center justify-center group-data-[collapsible=icon]:!size-12 group-data-[collapsible=icon]:!overflow-visible group-data-[collapsible=icon]:group-hover/logo:opacity-0"
-                  tooltip="Idealy"
-                >
-                  <Link href="/" onClick={closeMobile}>
-                    <IdealyLogo
-                      animated
-                      className="flex-none drop-shadow-[0_0_10px_rgb(56_189_248_/_0.34)] [&_svg]:!size-10"
-                      compact
-                      size={40}
-                    />
-                  </Link>
-                </SidebarMenuButton>
+            {state === "collapsed" ? (
+              <SidebarMenuItem className="flex items-center justify-center">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <SidebarMenuButton
-                      className="pointer-events-none absolute inset-0 size-8 opacity-0 group-data-[collapsible=icon]:pointer-events-auto group-data-[collapsible=icon]:group-hover/logo:opacity-100"
+                    <button
+                      type="button"
                       onClick={handleToggleSidebar}
+                      className="group/logo relative flex size-9 items-center justify-center rounded-xl p-1 text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent/60 cursor-pointer"
+                      aria-label="Ouvrir la barre latérale"
                     >
-                      <PanelLeftIcon className="size-4" />
-                    </SidebarMenuButton>
+                      {/* Logo visible par défaut, disparaît au hover */}
+                      <div className="flex items-center justify-center transition-all duration-200 ease-out group-hover/logo:scale-75 group-hover/logo:opacity-0">
+                        <IdealyLogo
+                          animated
+                          compact
+                          size={32}
+                        />
+                      </div>
+                      {/* Icône panneau latéral qui apparaît au survol */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-200 ease-out group-hover/logo:scale-100 group-hover/logo:opacity-100 text-sidebar-foreground">
+                        <PanelLeftIcon className="size-4" />
+                      </div>
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent className="hidden md:block" side="right">
                     Ouvrir la barre latérale
                   </TooltipContent>
                 </Tooltip>
-              </div>
-              <div className="group-data-[collapsible=icon]:hidden">
-                <SidebarTrigger className="text-sidebar-foreground/60 transition-colors duration-150 hover:text-sidebar-foreground" />
-              </div>
-            </SidebarMenuItem>
+              </SidebarMenuItem>
+            ) : (
+              <SidebarMenuItem className="flex flex-row items-center justify-between w-full px-1">
+                <Link
+                  href="/"
+                  className="flex items-center gap-2 rounded-xl transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer"
+                >
+                  <IdealyLogo
+                    animated
+                    className="flex-none drop-shadow-[0_0_10px_rgba(56,189,248,0.35)]"
+                    compact={false}
+                    size={34}
+                  />
+                </Link>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={handleToggleSidebar}
+                      className="rounded-lg p-1.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer"
+                      aria-label="Fermer la barre latérale"
+                    >
+                      <PanelLeftIcon className="size-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="hidden md:block" side="right">
+                    Fermer la barre latérale
+                  </TooltipContent>
+                </Tooltip>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
+          {/* 1. Nouvelle discussion */}
           <SidebarGroup className="pt-1">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -144,61 +171,17 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   <SidebarMenuButton
                     className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                     onClick={handleNewChat}
-                    tooltip="New Chat"
+                    tooltip="Nouvelle discussion"
                   >
                     <PenSquareIcon className="size-4" />
-                    <span className="font-medium">New chat</span>
+                    <span className="font-medium">Nouvelle discussion</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                {user ? (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
-                      onClick={handleShowDeleteAllDialog}
-                      tooltip="Delete All Chats"
-                    >
-                      <TrashIcon className="size-4" />
-                      <span className="text-[13px]">Delete all</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ) : null}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-          <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
-            <SidebarGroupContent>
-              <div className="mx-2 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/30 p-3 shadow-[var(--shadow-card)]">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/20 to-orange-400/20 text-violet-400">
-                      <ZapIcon className="size-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[11px] font-semibold text-sidebar-foreground">
-                        Mission en cours
-                      </div>
-                      <div className="text-[10px] text-sidebar-foreground/55">
-                        Progression de votre workspace
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-semibold text-sidebar-foreground/75">
-                    0%
-                  </span>
-                </div>
-                <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-sidebar-border/70">
-                  <div className="h-full w-[8%] rounded-full bg-gradient-to-r from-violet-500 to-orange-400" />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-sidebar-foreground/60">
-                  <span className="flex items-center gap-1">
-                    <ZapIcon className="size-3 text-amber-400" /> Power
-                  </span>
-                  <PowerStatusBadge />
-                </div>
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
-          <SidebarHistory user={user} />
+
+          {/* 2. Outils et ressources : Plugins, Bibliothèque, Documentation */}
           <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
             <SidebarGroupContent>
               <div className="flex flex-col gap-1 px-2">
@@ -246,6 +229,44 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {/* 3. Mission en cours / Workspace progress */}
+          <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
+            <SidebarGroupContent>
+              <div className="mx-2 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/30 p-3 shadow-[var(--shadow-card)]">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/20 to-orange-400/20 text-violet-400">
+                      <ZapIcon className="size-3.5" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-semibold text-sidebar-foreground">
+                        Mission en cours
+                      </div>
+                      <div className="text-[10px] text-sidebar-foreground/55">
+                        Progression de votre workspace
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-semibold text-sidebar-foreground/75">
+                    0%
+                  </span>
+                </div>
+                <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-sidebar-border/70">
+                  <div className="h-full w-[8%] rounded-full bg-gradient-to-r from-violet-500 to-orange-400" />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-sidebar-foreground/60">
+                  <span className="flex items-center gap-1">
+                    <ZapIcon className="size-3 text-amber-400" /> Power
+                  </span>
+                  <PowerStatusBadge />
+                </div>
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {/* 4. Historique des discussions */}
+          <SidebarHistory user={user} />
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border pt-2 pb-3">
           <div className="group-data-[collapsible=icon]:hidden mb-2 flex items-center justify-end px-2">
@@ -303,6 +324,18 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 <DropdownMenuItem asChild>
                   <Link href="/settings#billing">Facturation et plan</Link>
                 </DropdownMenuItem>
+                {user ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+                      onClick={handleShowDeleteAllDialog}
+                    >
+                      <TrashIcon className="mr-2 size-3.5" />
+                      <span>Effacer l’historique</span>
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -317,16 +350,15 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete all chats?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer toutes les discussions ?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete all
-              your chats and remove them from our servers.
+              Cette action est irréversible. Toutes vos discussions enregistrées seront définitivement effacées.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteAll}>
-              Delete All
+              Tout supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -221,10 +221,10 @@ export function ChatShell() {
           <motion.div
             animate={{
               scale: [1, 1.08, 0.96, 1],
-              x: [0, 45, -20, 0],
-              y: [0, 30, 55, 0],
+              x: [0, 30, -15, 0],
+              y: [0, 20, 35, 0],
             }}
-            className="absolute -left-24 -top-32 size-[28rem] rounded-full bg-sky-400/10 blur-3xl"
+            className="absolute -left-20 -top-24 size-[28rem] rounded-full bg-sky-400/10 dark:bg-sky-500/10 blur-3xl"
             transition={{
               duration: 18,
               ease: "easeInOut",
@@ -232,8 +232,8 @@ export function ChatShell() {
             }}
           />
           <motion.div
-            animate={{ x: [0, -30, 35, 0], y: [0, 50, -15, 0] }}
-            className="absolute left-[34%] top-[18%] size-72 rounded-full bg-emerald-400/8 blur-3xl"
+            animate={{ x: [0, -20, 25, 0], y: [0, 30, -15, 0] }}
+            className="absolute left-[35%] top-[15%] size-72 rounded-full bg-teal-400/8 dark:bg-teal-500/8 blur-3xl"
             transition={{
               delay: -4,
               duration: 21,
@@ -243,11 +243,11 @@ export function ChatShell() {
           />
           <motion.div
             animate={{
-              scale: [1, 0.94, 1.06, 1],
-              x: [0, 30, -25, 0],
-              y: [0, -25, 42, 0],
+              scale: [1, 0.95, 1.05, 1],
+              x: [0, 25, -20, 0],
+              y: [0, -20, 30, 0],
             }}
-            className="absolute right-[14%] top-[8%] size-80 rounded-full bg-teal-400/8 blur-3xl"
+            className="absolute right-[10%] top-[6%] size-80 rounded-full bg-violet-400/8 dark:bg-violet-500/10 blur-3xl"
             transition={{
               delay: -8,
               duration: 20,
@@ -256,34 +256,10 @@ export function ChatShell() {
             }}
           />
           <motion.div
-            animate={{ x: [0, 45, -35, 0], y: [0, -35, 15, 0] }}
-            className="absolute bottom-[-10rem] left-[28%] size-96 rounded-full bg-yellow-400/8 blur-3xl"
+            animate={{ x: [0, 30, -25, 0], y: [0, -25, 15, 0] }}
+            className="absolute -bottom-20 right-[25%] size-80 rounded-full bg-sky-400/8 dark:bg-sky-500/8 blur-3xl"
             transition={{
               delay: -12,
-              duration: 24,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
-          <motion.div
-            animate={{
-              scale: [1, 1.05, 0.95, 1],
-              x: [0, -35, 30, 0],
-              y: [0, 20, -35, 0],
-            }}
-            className="absolute -bottom-24 -right-20 size-[30rem] rounded-full bg-orange-400/10 blur-3xl"
-            transition={{
-              delay: -6,
-              duration: 19,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
-          <motion.div
-            animate={{ x: [0, -25, 25, 0], y: [0, 30, -20, 0] }}
-            className="absolute right-[36%] top-[42%] size-64 rounded-full bg-red-400/7 blur-3xl"
-            transition={{
-              delay: -15,
               duration: 22,
               ease: "easeInOut",
               repeat: Number.POSITIVE_INFINITY,
@@ -294,7 +270,7 @@ export function ChatShell() {
         <div className="relative flex min-h-0 flex-1 flex-row overflow-hidden">
           <div
             className={cn(
-              "relative z-10 flex min-w-0 flex-col bg-sidebar",
+              "relative z-10 flex min-w-0 flex-col bg-background",
               !isResizing && "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
             )}
             data-idealy-chat-pane="true"
@@ -308,7 +284,7 @@ export function ChatShell() {
               />
             )}
 
-            <div className="idealy-surface relative flex min-h-0 flex-1 flex-col overflow-hidden md:rounded-tl-[12px] md:border-t md:border-l md:border-border/40">
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
               <Messages
                 addToolApprovalResponse={addToolApprovalResponse}
                 chatId={chatId}
@@ -327,29 +303,31 @@ export function ChatShell() {
                 votes={votes}
               />
 
-              <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
-                {!isReadonly && (
-                  <MultimodalInput
-                    attachments={attachments}
-                    chatId={chatId}
-                    editingMessage={editingMessage}
-                    input={input}
-                    isLoading={isLoading}
-                    messages={messages}
-                    onCancelEdit={handleCancelEdit}
-                    onModelChange={setCurrentModelId}
-                    selectedModelId={currentModelId}
-                    selectedVisibilityType={visibilityType}
-                    sendMessage={
-                      editingMessage ? handleSendEditedMessage : sendMessage
-                    }
-                    setAttachments={setAttachments}
-                    setInput={setInput}
-                    setMessages={setMessages}
-                    status={status}
-                    stop={stop}
-                  />
-                )}
+              <div className="sticky bottom-0 z-10 w-full border-t-0 bg-background/95 px-3 pt-2 pb-3 backdrop-blur-md md:px-4 md:pb-4">
+                <div className="mx-auto flex w-full max-w-3xl gap-2">
+                  {!isReadonly && (
+                    <MultimodalInput
+                      attachments={attachments}
+                      chatId={chatId}
+                      editingMessage={editingMessage}
+                      input={input}
+                      isLoading={isLoading}
+                      messages={messages}
+                      onCancelEdit={handleCancelEdit}
+                      onModelChange={setCurrentModelId}
+                      selectedModelId={currentModelId}
+                      selectedVisibilityType={visibilityType}
+                      sendMessage={
+                        editingMessage ? handleSendEditedMessage : sendMessage
+                      }
+                      setAttachments={setAttachments}
+                      setInput={setInput}
+                      setMessages={setMessages}
+                      status={status}
+                      stop={stop}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>

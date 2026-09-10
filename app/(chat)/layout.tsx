@@ -37,7 +37,11 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
   const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
   let onboardingRequired = false;
 
-  if (process.env.DEMO_MODE !== "true" && session?.user.type === "regular") {
+  if (
+    process.env.DEMO_MODE !== "true" &&
+    session?.user.type === "regular" &&
+    cookieStore.get("idealy_onboarding_completed")?.value !== "true"
+  ) {
     try {
       const requestHeaders = await headers();
       const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "idealy.local";
@@ -50,7 +54,7 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
       onboardingRequired = onboarding.profileExists && !onboarding.onboardingCompleted;
     } catch (error) {
       // An unavailable profile service must not lock an existing workspace.
-      console.error("Unable to evaluate Idealy onboarding gate", error);
+      console.warn("Unable to evaluate Idealy onboarding gate:", (error as Error)?.message || error);
     }
   }
 
@@ -58,23 +62,20 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
-      <AppSidebar user={session?.user} />
-      <SidebarInset>
-        <Toaster
-          position="top-center"
-          theme="system"
-          toastOptions={{
-            className:
-              "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
-          }}
-        />
-        <Suspense fallback={<div className="flex h-dvh" />}>
-          <ActiveChatProvider>
-            <ChatShell />
-          </ActiveChatProvider>
-        </Suspense>
-        {children}
-      </SidebarInset>
+      <ActiveChatProvider>
+        <AppSidebar user={session?.user} />
+        <SidebarInset>
+          <Toaster
+            position="top-center"
+            theme="system"
+            toastOptions={{
+              className:
+                "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
+            }}
+          />
+          {children}
+        </SidebarInset>
+      </ActiveChatProvider>
     </SidebarProvider>
   );
 }

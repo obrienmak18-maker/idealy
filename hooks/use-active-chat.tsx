@@ -3,7 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   type Dispatch,
@@ -53,6 +53,7 @@ type ActiveChatContextValue = {
   setCurrentModelId: (id: string) => void;
   showCreditCardAlert: boolean;
   setShowCreditCardAlert: Dispatch<SetStateAction<boolean>>;
+  resetToNewChat: () => void;
 };
 
 const ActiveChatContext = createContext<ActiveChatContextValue | null>(null);
@@ -64,6 +65,7 @@ function extractChatId(pathname: string): string | null {
 
 export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { setDataStream, setWaitingStatus } = useDataStream();
   const { mutate } = useSWRConfig();
 
@@ -291,6 +293,17 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     { revalidateOnFocus: false }
   );
 
+  const resetToNewChat = useCallback(() => {
+    newChatIdRef.current = generateUUID();
+    setMessages([]);
+    setInput("");
+    setDataStream([]);
+    setWaitingStatus(undefined);
+    if (pathname !== "/") {
+      router.push("/");
+    }
+  }, [pathname, router, setDataStream, setInput, setMessages, setWaitingStatus]);
+
   const value = useMemo<ActiveChatContextValue>(
     () => ({
       addToolApprovalResponse,
@@ -301,6 +314,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       isReadonly,
       messages,
       regenerate,
+      resetToNewChat,
       sendMessage,
       setCurrentModelId,
       setInput,
@@ -329,6 +343,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       votes,
       currentModelId,
       showCreditCardAlert,
+      resetToNewChat,
     ]
   );
 

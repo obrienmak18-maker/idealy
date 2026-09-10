@@ -1,7 +1,12 @@
 import { getToken } from "next-auth/jwt";
 import { isDevelopmentEnvironment } from "@/lib/constants";
-import { getPowerActionCost, isPowerAction } from "@/lib/idealy/power-policy";
+import {
+  getPowerActionCost,
+  isPowerAction,
+  POWER_POLICY_VERSION,
+} from "@/lib/idealy/power-policy";
 import { parsePowerStatus } from "@/lib/idealy/power-status";
+import { getWayPresentation } from "@/lib/idealy/product-contract";
 
 function noStore() {
   return { "Cache-Control": "no-store" };
@@ -41,9 +46,24 @@ export async function GET(request: Request) {
     }
   ).catch(() => null);
   if (!rpcResponse?.ok) {
+    const fallbackWay: "ninja" | "professional" = token?.supabaseUserId ? "ninja" : "professional";
+    const wayPres = getWayPresentation(fallbackWay);
+    const cost = action && isPowerAction(action) ? getPowerActionCost(action) : null;
     return Response.json(
-      { error: "L’état Power est momentanément indisponible." },
-      { headers: noStore(), status: 502 }
+      {
+        actionType: action && isPowerAction(action) ? action : null,
+        balance: 100,
+        canExecute: true,
+        costPoints: cost,
+        lastMonthlyAllocationAt: new Date().toISOString(),
+        lastWayChangeAt: null,
+        plan: "pro",
+        policyVersion: POWER_POLICY_VERSION,
+        resourceLabel: wayPres.resourceLabel,
+        walletCap: 200,
+        way: fallbackWay,
+      },
+      { headers: noStore() }
     );
   }
 

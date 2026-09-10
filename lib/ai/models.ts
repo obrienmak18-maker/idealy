@@ -1,11 +1,23 @@
-export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
+function getDefaultModelId(): string {
+  const getEnv = (name: string) =>
+    process.env[name]?.trim() || process.env[`VITE_${name}`]?.trim() || "";
+
+  if (getEnv("DEEPSEEK_API_KEY")) return "deepseek/deepseek-v3.2";
+  if (getEnv("OPENAI_API_KEY")) return "openai/gpt-oss-120b";
+  if (getEnv("GROQ_API_KEY")) return "groq/llama-3.3-70b-versatile";
+  if (getEnv("GOOGLE_GENERATIVE_AI_API_KEY") || getEnv("GEMINI_API_KEY"))
+    return "google/gemini-2.0-flash";
+  return "deepseek/deepseek-v3.2";
+}
+
+export const DEFAULT_CHAT_MODEL = getDefaultModelId();
 
 export const titleModel = {
   description: "Fast model for title generation",
   gatewayOrder: ["fireworks", "bedrock"],
-  id: "moonshotai/kimi-k2.5",
-  name: "Kimi K2.5",
-  provider: "moonshotai",
+  id: DEFAULT_CHAT_MODEL,
+  name: "DeepSeek / AI Model",
+  provider: "deepseek",
 };
 
 export type ModelCapabilities = {
@@ -27,6 +39,21 @@ export type ChatModel = {
 };
 
 const gatewayChatModels: ChatModel[] = [
+  {
+    capabilities: { reasoning: false, tools: true, vision: true },
+    description: "Modèle Google Gemini 2.0 rapide et multimodal",
+    id: "google/gemini-2.0-flash",
+    name: "Gemini 2.0 Flash",
+    provider: "google",
+  },
+  {
+    capabilities: { reasoning: true, tools: true, vision: true },
+    description: "Modèle Google Gemini 1.5 Pro haute précision",
+    id: "google/gemini-1.5-pro",
+    name: "Gemini 1.5 Pro",
+    provider: "google",
+    reasoningEffort: "medium",
+  },
   {
     description: "Fast and capable model with tool use",
     gatewayOrder: ["bedrock", "deepinfra"],

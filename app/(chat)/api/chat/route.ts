@@ -103,6 +103,13 @@ function getIdealyPrompt(messages: ChatMessage[]) {
     .join("\n\n");
 }
 
+function getUserWayFromRequest(request: Request): string | null {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(/(?:^|;\s*)idealy_user_way=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function streamIdealyEdgeResponse({
   dataStream,
   directModel,
@@ -112,6 +119,7 @@ async function streamIdealyEdgeResponse({
   missionId,
   designSpecification,
   request,
+  userWay,
 }: {
   dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
   directModel?: ReturnType<typeof getIdealyDirectProviderModel>;
@@ -121,6 +129,7 @@ async function streamIdealyEdgeResponse({
   missionId?: string;
   designSpecification?: DesignSpecification;
   request: Request;
+  userWay?: string | null;
 }) {
   const supabaseAccessToken = await getSupabaseAccessToken(request);
   if (!supabaseAccessToken) {
@@ -152,6 +161,7 @@ async function streamIdealyEdgeResponse({
           longitude: undefined,
         },
         supportsTools: false,
+        userWay,
       })}${designSpecification ? `\n\n${designSpecificationToPrompt(designSpecification)}` : ""}`,
     }),
     headers: {
@@ -334,7 +344,7 @@ export async function POST(request: Request) {
     } else if (message?.role === "user") {
       await saveChat({
         id,
-        title: "New chat",
+        title: "Nouvelle discussion",
         userId: session.user.id,
         visibility: selectedVisibilityType,
       });
@@ -443,7 +453,7 @@ export async function POST(request: Request) {
           });
         };
 
-        writeWaitingStatus("waiting", "Waiting...");
+        writeWaitingStatus("waiting", "Connexion à l'IA...");
 
         healthCheckTimer = setTimeout(() => {
           getModelAvailability(chatModel)
@@ -451,14 +461,14 @@ export async function POST(request: Request) {
               if (availability === "impacted") {
                 writeWaitingStatus(
                   "health",
-                  `${modelName} may be slow or unavailable right now...`
+                  `${modelName} met un peu de temps à répondre...`
                 );
               } else {
-                writeWaitingStatus("still-waiting", "Still waiting...");
+                writeWaitingStatus("still-waiting", "Patience, préparation de la réponse...");
               }
             })
             .catch(() => {
-              writeWaitingStatus("still-waiting", "Still waiting...");
+              writeWaitingStatus("still-waiting", "Patience, préparation de la réponse...");
             });
         }, HEALTH_CHECK_DELAY_MS);
 
@@ -468,13 +478,15 @@ export async function POST(request: Request) {
           }
           hasModelActivity = true;
           clearHealthCheckTimer();
-          writeWaitingStatus("thinking", "Thinking...");
+          writeWaitingStatus("thinking", "L'IA réfléchit...");
         };
 
         const stopWaitingStatus = () => {
           hasModelActivity = true;
           clearHealthCheckTimer();
         };
+
+        const userWay = getUserWayFromRequest(request);
 
         if (shouldUseIdealyEdgeProvider()) {
           let intentCategory:
@@ -494,7 +506,7 @@ export async function POST(request: Request) {
             | undefined;
 
           if (idealyPrompt) {
-            writeWaitingStatus("thinking", "Routing your mission...");
+            writeWaitingStatus("thinking", "Analyse de votre mission...");
             intentCategory = await classifyIdealyIntent(request, idealyPrompt);
             dataStream.write({ data: intentCategory, type: "data-idealy-intent" });
 
@@ -502,7 +514,7 @@ export async function POST(request: Request) {
             // peuvent produire une réponse et une proposition, mais seule une
             // intention d’exécution ouvre un projet, une mission et le VFS.
             if (intentCategory === "EXECUTION") {
-              writeWaitingStatus("thinking", "Creating the mission workspace...");
+              writeWaitingStatus("thinking", "Création de l'espace de mission...");
               const mission = await createIdealyMission({
                 chatId: id,
                 intentCategory,
@@ -512,7 +524,7 @@ export async function POST(request: Request) {
               missionId = mission.id;
               dataStream.write({ data: mission.id, type: "data-idealy-mission" });
 
-              writeWaitingStatus("thinking", "Planning the next build step...");
+              writeWaitingStatus("thinking", "Planification de la construction...");
               missionPlan = await createIdealyMissionPlan({
                 idempotencyKey: `${idempotencyKey}:plan`,
                 ...(directModel ? { model: directModel.edgeModel } : {}),
@@ -552,6 +564,7 @@ export async function POST(request: Request) {
                 missionId,
                 designSpecification: missionPlan?.design,
                 request,
+                userWay,
               });
             }
             stopWaitingStatus();
@@ -581,7 +594,7 @@ export async function POST(request: Request) {
                     "updateDocument",
                     "requestSuggestions",
                   ],
-            instructions: systemPrompt({ requestHints, supportsTools }),
+            instructions: systemPrompt({ requestHints, supportsTools, userWay }),
             messages: modelMessages,
             model: getLanguageModel(chatModel),
             onAbort() {

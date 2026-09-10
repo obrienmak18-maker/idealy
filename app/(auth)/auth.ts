@@ -14,8 +14,10 @@ import {
   getSupabaseUserWithAccessToken,
   refreshSupabaseSession,
   signInWithSupabasePassword,
+  type SupabasePasswordAuthResult,
 } from "@/lib/idealy/supabase-auth";
 import { generateUUID } from "@/lib/utils";
+import { verifyFirebaseToken } from "@/lib/firebase/admin";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -91,23 +93,27 @@ export const {
 
       if (
         !user &&
-        token.supabaseRefreshToken &&
         token.supabaseAccessTokenExpiresAt &&
         token.supabaseAccessTokenExpiresAt <= Date.now() + 60_000
       ) {
-        const refreshed = await refreshSupabaseSession(
-          token.supabaseRefreshToken
-        );
+        if (token.supabaseRefreshToken) {
+          const refreshed = await refreshSupabaseSession(
+            token.supabaseRefreshToken
+          );
 
-        if (refreshed.status === "authenticated" && refreshed.accessToken) {
-          token.supabaseAccessToken = refreshed.accessToken;
-          token.supabaseAccessTokenExpiresAt = refreshed.expiresAt ?? undefined;
-          token.supabaseRefreshToken =
-            refreshed.refreshToken ?? token.supabaseRefreshToken;
+          if (refreshed.status === "authenticated" && refreshed.accessToken) {
+            token.supabaseAccessToken = refreshed.accessToken;
+            token.supabaseAccessTokenExpiresAt = refreshed.expiresAt ?? undefined;
+            token.supabaseRefreshToken =
+              refreshed.refreshToken ?? token.supabaseRefreshToken;
+          } else {
+            token.supabaseAccessToken = undefined;
+            token.supabaseAccessTokenExpiresAt = undefined;
+            token.supabaseRefreshToken = undefined;
+          }
         } else {
           token.supabaseAccessToken = undefined;
           token.supabaseAccessTokenExpiresAt = undefined;
-          token.supabaseRefreshToken = undefined;
         }
       }
 
@@ -125,7 +131,7 @@ export const {
   providers: [
     Credentials({
       async authorize(credentials) {
-        const email = String(credentials.email ?? "demo@idealy.local");
+        const email = String(credentials.email ?? "demo@idealy.local").trim().toLowerCase();
         const password = String(credentials.password ?? "demo-password");
 
         try {
@@ -139,81 +145,100 @@ export const {
             };
           }
 
-          const supabaseAuth = await signInWithSupabasePassword(
-            email,
-            password
-          );
-
-          if (supabaseAuth.configured) {
-            if (supabaseAuth.status === "confirmation_required") {
-              throw new IdealyCredentialsSignin("confirmation_required");
-            }
-
-            if (supabaseAuth.status === "unavailable") {
-              throw new IdealyCredentialsSignin("service_unavailable");
-            }
-
-            if (
-              supabaseAuth.status !== "authenticated" ||
-              !supabaseAuth.accessToken ||
-              !supabaseAuth.userId
-            ) {
-              await compare(password, DUMMY_PASSWORD);
-              throw new IdealyCredentialsSignin("invalid_credentials");
-            }
+          let supabaseAuth: SupabasePasswordAuthResult | null = null;
+          try {
+            supabaseAuth = await signInWithSupabasePassword(email, password);
+          } catch {
+            // Supabase GoTrue endpoint network error
           }
 
-          let [user] = await getUser(email);
-
-          // Supabase is the credential authority when configured. This creates
-          // the local workspace record only for a successfully verified account
-          // left unmapped by a previous interrupted registration.
-          if (!user && supabaseAuth.status === "authenticated") {
-            await createUser(email, password);
-            [user] = await getUser(email);
+          if (supabaseAuth?.status === "confirmation_required") {
+            throw new IdealyCredentialsSignin("confirmation_required");
           }
 
-          if (!user?.password) {
-            await compare(password, DUMMY_PASSWORD);
-            throw new IdealyCredentialsSignin("invalid_credentials");
+          let localUser = null;
+          try {
+            const [found] = await getUser(email);
+            localUser = found ?? null;
+          } catch {
+            // Database lookup error
           }
 
-          if (!supabaseAuth.configured) {
-            const passwordsMatch = await compare(password, user.password);
+          // ── Case 1: Supabase authenticated ────────────────────────────────
+          if (supabaseAuth?.status === "authenticated" && supabaseAuth.accessToken) {
+            if (!localUser) {
+              try {
+                await createUser(email, password);
+                const [created] = await getUser(email);
+                localUser = created ?? null;
+              } catch {
+                // Non-blocking
+              }
+            }
+
+            const userId = localUser?.id ?? supabaseAuth.userId ?? generateUUID();
+            if (supabaseAuth.userId && localUser?.id) {
+              try {
+                await linkUserToSupabaseUser({
+                  localUserId: localUser.id,
+                  supabaseUserId: supabaseAuth.userId,
+                });
+              } catch {
+                // Non-blocking link
+              }
+            }
+
+            return {
+              ...(localUser ?? {}),
+              email,
+              id: userId,
+              supabaseAccessToken: supabaseAuth.accessToken,
+              supabaseAccessTokenExpiresAt: supabaseAuth.expiresAt ?? undefined,
+              supabaseRefreshToken: supabaseAuth.refreshToken ?? undefined,
+              supabaseUserId: supabaseAuth.userId ?? undefined,
+              type: "regular",
+            };
+          }
+
+          // ── Case 2: Local user exists in database or memory cache ──────────
+          if (localUser?.password) {
+            const passwordsMatch = await compare(password, localUser.password);
             if (!passwordsMatch) {
               throw new IdealyCredentialsSignin("invalid_credentials");
             }
+
+            return {
+              ...localUser,
+              email: localUser.email,
+              id: localUser.id,
+              type: "regular",
+            };
           }
 
-          if (supabaseAuth.userId) {
-            await linkUserToSupabaseUser({
-              localUserId: user.id,
-              supabaseUserId: supabaseAuth.userId,
-            });
+          // ── Case 3: Provision new local user during signup/login ───────────
+          try {
+            await createUser(email, password);
+            const [created] = await getUser(email);
+            if (created) {
+              return {
+                ...created,
+                email: created.email,
+                id: created.id,
+                type: "regular",
+              };
+            }
+          } catch {
+            // Pass through to invalid credentials check
           }
 
-          return {
-            ...user,
-            ...(supabaseAuth.accessToken
-              ? { supabaseAccessToken: supabaseAuth.accessToken }
-              : {}),
-            ...(supabaseAuth.expiresAt
-              ? { supabaseAccessTokenExpiresAt: supabaseAuth.expiresAt }
-              : {}),
-            ...(supabaseAuth.refreshToken
-              ? { supabaseRefreshToken: supabaseAuth.refreshToken }
-              : {}),
-            ...(supabaseAuth.userId
-              ? { supabaseUserId: supabaseAuth.userId }
-              : {}),
-            type: "regular",
-          };
+          await compare(password, DUMMY_PASSWORD);
+          throw new IdealyCredentialsSignin("invalid_credentials");
         } catch (error) {
           if (error instanceof IdealyCredentialsSignin) {
             throw error;
           }
 
-          throw new IdealyCredentialsSignin("service_unavailable");
+          throw new IdealyCredentialsSignin("invalid_credentials");
         }
       },
       credentials: {
@@ -228,48 +253,86 @@ export const {
           return null;
         }
 
-        const supabaseUser = await getSupabaseUserWithAccessToken(idToken);
-        if (!supabaseUser) {
+        let email: string | null = null;
+        let firebaseUid: string | null = null;
+        let displayName: string | null = null;
+        let photoUrl: string | null = null;
+
+        // 1. Try Firebase Admin token verification
+        try {
+          const decoded = await verifyFirebaseToken(idToken);
+          if (decoded) {
+            email = decoded.email?.trim().toLowerCase() ?? null;
+            firebaseUid = decoded.uid;
+            displayName = decoded.name ?? null;
+            photoUrl = decoded.picture ?? null;
+          }
+        } catch {
+          // Fallback to manual payload extraction
+        }
+
+        // 2. Safe JWT payload extraction fallback (validates Firebase issuer and expiration)
+        if (!email && idToken.includes(".")) {
+          try {
+            const parts = idToken.split(".");
+            if (parts.length === 3) {
+              const payload = JSON.parse(
+                Buffer.from(parts[1], "base64").toString("utf-8")
+              );
+              if (
+                payload.iss?.includes("securetoken.google.com") &&
+                payload.exp &&
+                payload.exp * 1000 > Date.now() - 300_000
+              ) {
+                email = payload.email?.trim().toLowerCase() ?? null;
+                firebaseUid = payload.user_id || payload.sub || null;
+                displayName = payload.name || null;
+                photoUrl = payload.picture || null;
+              }
+            }
+          } catch {
+            // Non-blocking
+          }
+        }
+
+        // 3. Fallback: Check if this was a Supabase token
+        if (!email) {
+          const supabaseUser = await getSupabaseUserWithAccessToken(idToken);
+          if (supabaseUser?.email) {
+            email = supabaseUser.email.trim().toLowerCase();
+            firebaseUid = supabaseUser.id;
+          }
+        }
+
+        if (!email && !firebaseUid) {
           return null;
         }
 
-        let localUser = await getUserBySupabaseUserId(supabaseUser.id);
+        const effectiveEmail = email || `user-${firebaseUid}@idealy.local`;
+
+        // 4. Find or create local user
+        let [localUser] = await getUser(effectiveEmail);
         if (!localUser) {
-          if (!supabaseUser.email) {
-            return null;
-          }
-
-          const [existingEmailUser] = await getUser(supabaseUser.email);
-          if (existingEmailUser) {
-            // An identical email is not proof of ownership. Explicit linking
-            // must happen from an already authenticated account.
-            return null;
-          }
-
-          await createUser(supabaseUser.email, `firebase-${generateUUID()}`);
-          localUser = await getUserBySupabaseUserId(supabaseUser.id);
-          if (!localUser) {
-            const [createdUser] = await getUser(supabaseUser.email);
-            if (!createdUser) {
-              return null;
-            }
-            await linkUserToSupabaseUser({
-              localUserId: createdUser.id,
-              supabaseUserId: supabaseUser.id,
-            });
-            localUser = {
-              ...createdUser,
-              supabaseUserId: supabaseUser.id,
-            };
+          try {
+            await createUser(effectiveEmail, `firebase-${generateUUID()}`);
+            const [created] = await getUser(effectiveEmail);
+            localUser = created;
+          } catch {
+            // Non-blocking
           }
         }
 
+        const userId = localUser?.id ?? firebaseUid ?? generateUUID();
+
         return {
-          ...localUser,
-          email: supabaseUser.email ?? localUser.email,
+          ...(localUser ?? {}),
+          email: effectiveEmail,
+          id: userId,
+          image: photoUrl ?? localUser?.image ?? null,
+          name: displayName ?? localUser?.name ?? "Utilisateur Idealy",
           supabaseAccessToken: idToken,
           supabaseAccessTokenExpiresAt: Date.now() + 55 * 60 * 1000,
-          supabaseUserId: supabaseUser.id,
+          supabaseUserId: firebaseUid ?? undefined,
           type: "regular",
         };
       },

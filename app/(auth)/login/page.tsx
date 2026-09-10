@@ -9,7 +9,10 @@ import { FirebaseProviderActions } from "@/components/auth/firebase-provider-act
 import { AuthForm } from "@/components/chat/auth-form";
 import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
-import { signInWithEmailFirebase } from "@/lib/firebase/client";
+import {
+  isFirebaseConfigured,
+  signInWithEmailFirebase,
+} from "@/lib/firebase/client";
 import { type LoginActionState, login } from "../actions";
 
 const loginMessages = {
@@ -94,11 +97,30 @@ export default function Page() {
     setEmail(String(formData.get("email") ?? ""));
     setFirebaseError(null);
 
+    if (!isFirebaseConfigured()) {
+      formAction(formData);
+      return;
+    }
+
     try {
       const idToken = await signInWithEmailFirebase(
         String(formData.get("email") ?? "").trim(),
         String(formData.get("password") ?? "")
       );
+
+      // ── Ensure role:"authenticated" claim exists ────────────────────────
+      // Idempotent: safe to call on every login. Upgrades pre-existing users
+      // who registered before Custom Claims were deployed.
+      try {
+        await fetch("/api/auth/set-claims", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+      } catch {
+        // Admin SDK not configured yet — continue with login regardless
+      }
+
       const result = await signInWithAuthJs("firebase", {
         idToken,
         redirect: false,
@@ -112,10 +134,14 @@ export default function Page() {
       await updateSession();
       window.location.assign(getOnboardingUrl());
     } catch (error) {
-      const code =
-        typeof error === "object" && error !== null && "code" in error
-          ? String(error.code)
-          : "";
+      let code = "";
+      if (typeof error === "object" && error !== null) {
+        if ("code" in error && typeof (error as { code: unknown }).code === "string") {
+          code = (error as { code: string }).code;
+        } else if ("message" in error && typeof (error as { message: unknown }).message === "string") {
+          code = (error as { message: string }).message;
+        }
+      }
       if (code === "firebase_not_configured") {
         formAction(formData);
         return;

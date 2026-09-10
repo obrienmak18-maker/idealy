@@ -6,6 +6,7 @@ import {
   browserLocalPersistence,
   type ConfirmationResult,
   createUserWithEmailAndPassword,
+  getRedirectResult,
   GoogleAuthProvider,
   getAuth,
   sendPasswordResetEmail,
@@ -13,6 +14,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPhoneNumber,
   signInWithPopup,
+  signInWithRedirect,
   type UserCredential,
 } from "firebase/auth";
 
@@ -29,10 +31,16 @@ function getFirebaseConfig() {
   return { apiKey, appId, authDomain, projectId };
 }
 
+export function isFirebaseConfigured(): boolean {
+  return getFirebaseConfig() !== null;
+}
+
 export function getFirebaseAuth() {
   const config = getFirebaseConfig();
   if (!config) {
-    throw new Error("firebase_not_configured");
+    const error = new Error("firebase_not_configured");
+    (error as unknown as { code: string }).code = "firebase_not_configured";
+    throw error;
   }
 
   const app = getApps().length > 0 ? getApp() : initializeApp(config);
@@ -52,7 +60,7 @@ export async function signInWithEmailFirebase(
 export async function signUpWithEmailFirebase(
   email: string,
   password: string
-): Promise<{ idToken: string; isNewUser: boolean }> {
+): Promise<string> {
   const auth = getFirebaseAuth();
   await setPersistence(auth, browserLocalPersistence);
   const credential = await createUserWithEmailAndPassword(
@@ -60,16 +68,15 @@ export async function signUpWithEmailFirebase(
     email,
     password
   );
-  return { idToken: await credential.user.getIdToken(), isNewUser: true };
+  return credential.user.getIdToken();
 }
 
 export async function sendPhoneCodeFirebase(
   phoneNumber: string,
-  verifier: ApplicationVerifier
+  appVerifier: ApplicationVerifier
 ): Promise<ConfirmationResult> {
   const auth = getFirebaseAuth();
-  await setPersistence(auth, browserLocalPersistence);
-  return signInWithPhoneNumber(auth, phoneNumber, verifier);
+  return signInWithPhoneNumber(auth, phoneNumber, appVerifier);
 }
 
 export async function confirmPhoneCodeFirebase(
@@ -85,8 +92,22 @@ export function requestPasswordResetFirebase(email: string) {
   return sendPasswordResetEmail(auth, email);
 }
 
+export async function checkGoogleRedirectResult(): Promise<string | null> {
+  if (!isFirebaseConfigured()) return null;
+  try {
+    const auth = getFirebaseAuth();
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      return await result.user.getIdToken();
+    }
+  } catch (err) {
+    console.error("[Firebase Redirect Result]", err);
+  }
+  return null;
+}
+
 export async function signInWithGoogleFirebase(): Promise<{
-  credential: UserCredential;
+  credential?: UserCredential;
   idToken: string;
 }> {
   const auth = getFirebaseAuth();
@@ -95,11 +116,29 @@ export async function signInWithGoogleFirebase(): Promise<{
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
 
-  const credential = await signInWithPopup(auth, provider);
-  const idToken = await credential.user.getIdToken();
-  if (!idToken) {
-    throw new Error("firebase_token_unavailable");
-  }
+  try {
+    const credential = await signInWithPopup(auth, provider);
+    const idToken = await credential.user.getIdToken();
+    if (!idToken) {
+      throw new Error("firebase_token_unavailable");
+    }
+    return { credential, idToken };
+  } catch (popupError: unknown) {
+    const errorCode =
+      typeof popupError === "object" && popupError !== null && "code" in popupError
+        ? String((popupError as { code: unknown }).code)
+        : "";
 
-  return { credential, idToken };
+    // If popup is blocked by browser, or user's browser fails popup isolation, fall back to redirect
+    if (
+      errorCode === "auth/popup-blocked" ||
+      errorCode === "auth/cancelled-popup-request" ||
+      errorCode === "auth/internal-error"
+    ) {
+      await signInWithRedirect(auth, provider);
+      return new Promise(() => {}); // Execution will pause and redirect
+    }
+
+    throw popupError;
+  }
 }

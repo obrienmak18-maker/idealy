@@ -32,6 +32,16 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
   },
+  icons: {
+    icon: [
+      { url: "/idealy-mark.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: [
+      { url: "/idealy-mark.svg", type: "image/svg+xml" },
+    ],
+    shortcut: ["/idealy-mark.svg"],
+  },
 };
 
 export const viewport = {

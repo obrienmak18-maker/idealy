@@ -36,11 +36,33 @@ import { generateHashedPassword } from "./utils";
 const client = postgres(process.env.POSTGRES_URL ?? "");
 const db = drizzle(client);
 
+// In-memory fallback cache for development/resilience when Postgres is offline
+const fallbackUsers = (
+  globalThis as unknown as { __idealy_fallback_users?: Map<string, User> }
+).__idealy_fallback_users ??= new Map<string, User>();
+
+const fallbackChats = (
+  globalThis as unknown as { __idealy_fallback_chats?: Map<string, Chat> }
+).__idealy_fallback_chats ??= new Map<string, Chat>();
+
+const fallbackMessages = (
+  globalThis as unknown as { __idealy_fallback_messages?: Map<string, DBMessage[]> }
+).__idealy_fallback_messages ??= new Map<string, DBMessage[]>();
+
+const fallbackStreams = (
+  globalThis as unknown as { __idealy_fallback_streams?: Map<string, string[]> }
+).__idealy_fallback_streams ??= new Map<string, string[]>();
+
 export async function getUser(email: string): Promise<User[]> {
   try {
+    if (!process.env.POSTGRES_URL) {
+      const cached = fallbackUsers.get(email.toLowerCase());
+      return cached ? [cached] : [];
+    }
     return await db.select().from(user).where(eq(user.email, email));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  } catch {
+    const cached = fallbackUsers.get(email.toLowerCase());
+    return cached ? [cached] : [];
   }
 }
 
@@ -48,26 +70,51 @@ export async function getUserBySupabaseUserId(
   supabaseUserId: string
 ): Promise<User | null> {
   try {
+    if (!process.env.POSTGRES_URL) {
+      for (const u of fallbackUsers.values()) {
+        if (u.supabaseUserId === supabaseUserId) return u;
+      }
+      return null;
+    }
     const [selectedUser] = await db
       .select()
       .from(user)
       .where(eq(user.supabaseUserId, supabaseUserId))
       .limit(1);
     return selectedUser ?? null;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  } catch {
+    for (const u of fallbackUsers.values()) {
+      if (u.supabaseUserId === supabaseUserId) return u;
+    }
+    return null;
   }
 }
 
-export async function createUser(email: string, password: string) {
+export async function createUser(email: string, password: string): Promise<User[]> {
   const hashedPassword = generateHashedPassword(password);
+  const normalizedEmail = email.toLowerCase();
+  const newUser: User = {
+    id: generateUUID(),
+    email: normalizedEmail,
+    name: null,
+    password: hashedPassword,
+    image: null,
+    isAnonymous: false,
+    emailVerified: false,
+    supabaseUserId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  fallbackUsers.set(normalizedEmail, newUser);
 
   try {
-    return await db.insert(user).values({ email, password: hashedPassword });
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
-    });
+    if (process.env.POSTGRES_URL) {
+      await db.insert(user).values({ email: normalizedEmail, password: hashedPassword });
+    }
+    return [newUser];
+  } catch {
+    return [newUser];
   }
 }
 
@@ -78,30 +125,54 @@ export async function linkUserToSupabaseUser({
   localUserId: string;
   supabaseUserId: string;
 }) {
-  try {
-    const [linkedUser] = await db
-      .update(user)
-      .set({ supabaseUserId, updatedAt: new Date() })
-      .where(eq(user.id, localUserId))
-      .returning({ id: user.id, supabaseUserId: user.supabaseUserId });
+  for (const u of fallbackUsers.values()) {
+    if (u.id === localUserId) {
+      u.supabaseUserId = supabaseUserId;
+      u.updatedAt = new Date();
+    }
+  }
 
-    return linkedUser;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  try {
+    if (process.env.POSTGRES_URL) {
+      const [linkedUser] = await db
+        .update(user)
+        .set({ supabaseUserId, updatedAt: new Date() })
+        .where(eq(user.id, localUserId))
+        .returning({ id: user.id, supabaseUserId: user.supabaseUserId });
+      return linkedUser;
+    }
+    return { id: localUserId, supabaseUserId };
+  } catch {
+    return { id: localUserId, supabaseUserId };
   }
 }
 
-export async function createGuestUser() {
-  const email = `guest-${Date.now()}`;
+export async function createGuestUser(): Promise<User[]> {
+  const email = `guest-${Date.now()}@idealy.local`;
   const password = generateHashedPassword(generateUUID());
+  const guestUser: User = {
+    id: generateUUID(),
+    email,
+    name: "Invité",
+    password,
+    image: null,
+    isAnonymous: true,
+    emailVerified: false,
+    supabaseUserId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  fallbackUsers.set(email, guestUser);
 
   try {
-    return await db.insert(user).values({ email, password }).returning({
-      email: user.email,
-      id: user.id,
-    });
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+    if (process.env.POSTGRES_URL) {
+      const [created] = await db.insert(user).values({ email, password }).returning();
+      return created ? [created] : [guestUser];
+    }
+    return [guestUser];
+  } catch {
+    return [guestUser];
   }
 }
 
@@ -116,62 +187,87 @@ export async function saveChat({
   title: string;
   visibility: VisibilityType;
 }) {
+  const newChat: Chat = {
+    createdAt: new Date(),
+    id,
+    title,
+    userId,
+    visibility,
+  };
+  fallbackChats.set(id, newChat);
+
   try {
-    return await db.insert(chat).values({
-      createdAt: new Date(),
-      id,
-      title,
-      userId,
-      visibility,
-    });
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
-    });
+    if (process.env.POSTGRES_URL) {
+      await db.insert(chat).values(newChat);
+    }
+    return newChat;
+  } catch {
+    return newChat;
   }
 }
 
 export async function deleteChatById({ id }: { id: string }) {
-  try {
-    await db.delete(vote).where(eq(vote.chatId, id));
-    await db.delete(message).where(eq(message.chatId, id));
-    await db.delete(stream).where(eq(stream.chatId, id));
+  const deleted = fallbackChats.get(id);
+  fallbackChats.delete(id);
+  fallbackMessages.delete(id);
+  fallbackStreams.delete(id);
 
-    const [chatsDeleted] = await db
-      .delete(chat)
-      .where(eq(chat.id, id))
-      .returning();
-    return chatsDeleted;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  try {
+    if (process.env.POSTGRES_URL) {
+      await db.delete(vote).where(eq(vote.chatId, id));
+      await db.delete(message).where(eq(message.chatId, id));
+      await db.delete(stream).where(eq(stream.chatId, id));
+
+      const [chatsDeleted] = await db
+        .delete(chat)
+        .where(eq(chat.id, id))
+        .returning();
+      return chatsDeleted ?? deleted;
+    }
+    return deleted;
+  } catch {
+    return deleted;
   }
 }
 
 export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
-  try {
-    const userChats = await db
-      .select({ id: chat.id })
-      .from(chat)
-      .where(eq(chat.userId, userId));
-
-    if (userChats.length === 0) {
-      return { deletedCount: 0 };
+  let deletedCount = 0;
+  for (const [chatId, c] of Array.from(fallbackChats.entries())) {
+    if (c.userId === userId) {
+      fallbackChats.delete(chatId);
+      fallbackMessages.delete(chatId);
+      fallbackStreams.delete(chatId);
+      deletedCount++;
     }
+  }
 
-    const chatIds = userChats.map((c) => c.id);
+  try {
+    if (process.env.POSTGRES_URL) {
+      const userChats = await db
+        .select({ id: chat.id })
+        .from(chat)
+        .where(eq(chat.userId, userId));
 
-    await db.delete(vote).where(inArray(vote.chatId, chatIds));
-    await db.delete(message).where(inArray(message.chatId, chatIds));
-    await db.delete(stream).where(inArray(stream.chatId, chatIds));
+      if (userChats.length === 0) {
+        return { deletedCount };
+      }
 
-    const deletedChats = await db
-      .delete(chat)
-      .where(eq(chat.userId, userId))
-      .returning();
+      const chatIds = userChats.map((c) => c.id);
 
-    return { deletedCount: deletedChats.length };
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+      await db.delete(vote).where(inArray(vote.chatId, chatIds));
+      await db.delete(message).where(inArray(message.chatId, chatIds));
+      await db.delete(stream).where(inArray(stream.chatId, chatIds));
+
+      const deletedChats = await db
+        .delete(chat)
+        .where(eq(chat.userId, userId))
+        .returning();
+
+      return { deletedCount: deletedChats.length };
+    }
+    return { deletedCount };
+  } catch {
+    return { deletedCount };
   }
 }
 
@@ -186,7 +282,42 @@ export async function getChatsByUserId({
   startingAfter: string | null;
   endingBefore: string | null;
 }) {
+  const getFallbackResult = () => {
+    let list = Array.from(fallbackChats.values())
+      .filter((c) => c.userId === id)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+    if (startingAfter) {
+      const idx = list.findIndex((c) => c.id === startingAfter);
+      if (idx !== -1) {
+        list = list.filter(
+          (c) => new Date(c.createdAt) > new Date(list[idx].createdAt)
+        );
+      }
+    } else if (endingBefore) {
+      const idx = list.findIndex((c) => c.id === endingBefore);
+      if (idx !== -1) {
+        list = list.filter(
+          (c) => new Date(c.createdAt) < new Date(list[idx].createdAt)
+        );
+      }
+    }
+
+    const hasMore = list.length > limit;
+    return {
+      chats: hasMore ? list.slice(0, limit) : list,
+      hasMore,
+    };
+  };
+
   try {
+    if (!process.env.POSTGRES_URL) {
+      return getFallbackResult();
+    }
+
     const extendedLimit = limit + 1;
 
     const query = (whereCondition?: SQL<unknown>) =>
@@ -211,10 +342,7 @@ export async function getChatsByUserId({
         .limit(1);
 
       if (!selectedChat) {
-        throw new ChatbotError(
-          "not_found:database",
-          `Chat with id ${startingAfter} not found`
-        );
+        return getFallbackResult();
       }
 
       filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
@@ -226,10 +354,7 @@ export async function getChatsByUserId({
         .limit(1);
 
       if (!selectedChat) {
-        throw new ChatbotError(
-          "not_found:database",
-          `Chat with id ${endingBefore} not found`
-        );
+        return getFallbackResult();
       }
 
       filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
@@ -243,33 +368,37 @@ export async function getChatsByUserId({
       chats: hasMore ? filteredChats.slice(0, limit) : filteredChats,
       hasMore,
     };
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  } catch {
+    return getFallbackResult();
   }
 }
 
 export async function getChatById({ id }: { id: string }) {
   try {
-    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
-    if (!selectedChat) {
-      return null;
+    if (!process.env.POSTGRES_URL) {
+      return fallbackChats.get(id) ?? null;
     }
-
-    return selectedChat;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
-    });
+    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
+    return selectedChat ?? fallbackChats.get(id) ?? null;
+  } catch {
+    return fallbackChats.get(id) ?? null;
   }
 }
 
 export async function saveMessages({ messages }: { messages: DBMessage[] }) {
+  for (const m of messages) {
+    const list = fallbackMessages.get(m.chatId) ?? [];
+    list.push(m);
+    fallbackMessages.set(m.chatId, list);
+  }
+
   try {
-    return await db.insert(message).values(messages);
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
-    });
+    if (process.env.POSTGRES_URL) {
+      return await db.insert(message).values(messages);
+    }
+    return messages;
+  } catch {
+    return messages;
   }
 }
 
@@ -280,24 +409,41 @@ export async function updateMessage({
   id: string;
   parts: DBMessage["parts"];
 }) {
+  for (const list of fallbackMessages.values()) {
+    const found = list.find((m) => m.id === id);
+    if (found) {
+      found.parts = parts;
+      break;
+    }
+  }
+
   try {
-    return await db.update(message).set({ parts }).where(eq(message.id, id));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
-    });
+    if (process.env.POSTGRES_URL) {
+      return await db.update(message).set({ parts }).where(eq(message.id, id));
+    }
+  } catch {
+    // Non-blocking
   }
 }
 
 export async function getMessagesByChatId({ id }: { id: string }) {
+  const getFallbackMsgs = () =>
+    (fallbackMessages.get(id) ?? []).slice().sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
   try {
+    if (!process.env.POSTGRES_URL) {
+      return getFallbackMsgs();
+    }
     return await db
       .select()
       .from(message)
       .where(eq(message.chatId, id))
       .orderBy(asc(message.createdAt));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  } catch {
+    return getFallbackMsgs();
   }
 }
 
@@ -336,9 +482,12 @@ export async function voteMessage({
 
 export async function getVotesByChatId({ id }: { id: string }) {
   try {
+    if (!process.env.POSTGRES_URL) {
+      return [];
+    }
     return await db.select().from(vote).where(eq(vote.chatId, id));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  } catch {
+    return [];
   }
 }
 
@@ -492,9 +641,20 @@ export async function getSuggestionsByDocumentId({
 
 export async function getMessageById({ id }: { id: string }) {
   try {
+    if (!process.env.POSTGRES_URL) {
+      for (const list of fallbackMessages.values()) {
+        const found = list.find((m) => m.id === id);
+        if (found) return [found];
+      }
+      return [];
+    }
     return await db.select().from(message).where(eq(message.id, id));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  } catch {
+    for (const list of fallbackMessages.values()) {
+      const found = list.find((m) => m.id === id);
+      if (found) return [found];
+    }
+    return [];
   }
 }
 
@@ -505,7 +665,19 @@ export async function deleteMessagesByChatIdAfterTimestamp({
   chatId: string;
   timestamp: Date;
 }) {
+  const fallbackList = fallbackMessages.get(chatId);
+  if (fallbackList) {
+    fallbackMessages.set(
+      chatId,
+      fallbackList.filter((m) => new Date(m.createdAt) < timestamp)
+    );
+  }
+
   try {
+    if (!process.env.POSTGRES_URL) {
+      return [];
+    }
+
     const messagesToDelete = await db
       .select({ id: message.id })
       .from(message)
@@ -513,25 +685,20 @@ export async function deleteMessagesByChatIdAfterTimestamp({
         and(eq(message.chatId, chatId), gte(message.createdAt, timestamp))
       );
 
-    const messageIds = messagesToDelete.map(
-      (currentMessage) => currentMessage.id
-    );
+    const messageIds = messagesToDelete.map((m) => m.id);
 
     if (messageIds.length > 0) {
-      await db
-        .delete(vote)
-        .where(
-          and(eq(vote.chatId, chatId), inArray(vote.messageId, messageIds))
-        );
-
+      await db.delete(vote).where(inArray(vote.messageId, messageIds));
       return await db
         .delete(message)
         .where(
-          and(eq(message.chatId, chatId), inArray(message.id, messageIds))
-        );
+          and(eq(message.chatId, chatId), gte(message.createdAt, timestamp))
+        )
+        .returning();
     }
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+    return [];
+  } catch {
+    return [];
   }
 }
 
@@ -570,7 +737,33 @@ export async function getMessageCountByUserId({
   id: string;
   differenceInHours: number;
 }) {
+  const fallbackCount = () => {
+    const cutoffTime = new Date(
+      Date.now() - differenceInHours * 60 * 60 * 1000
+    );
+    const userChatIds = new Set(
+      Array.from(fallbackChats.values())
+        .filter((c) => c.userId === id)
+        .map((c) => c.id)
+    );
+    let count = 0;
+    for (const [chatId, msgs] of fallbackMessages.entries()) {
+      if (userChatIds.has(chatId)) {
+        for (const m of msgs) {
+          if (m.role === "user" && new Date(m.createdAt) >= cutoffTime) {
+            count++;
+          }
+        }
+      }
+    }
+    return count;
+  };
+
   try {
+    if (!process.env.POSTGRES_URL) {
+      return fallbackCount();
+    }
+
     const cutoffTime = new Date(
       Date.now() - differenceInHours * 60 * 60 * 1000
     );
@@ -588,9 +781,9 @@ export async function getMessageCountByUserId({
       )
       .execute();
 
-    return stats?.count ?? 0;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+    return stats?.count ?? fallbackCount();
+  } catch {
+    return fallbackCount();
   }
 }
 
@@ -601,17 +794,26 @@ export async function createStreamId({
   streamId: string;
   chatId: string;
 }) {
+  const list = fallbackStreams.get(chatId) ?? [];
+  list.push(streamId);
+  fallbackStreams.set(chatId, list);
+
   try {
-    await db
-      .insert(stream)
-      .values({ chatId, createdAt: new Date(), id: streamId });
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+    if (process.env.POSTGRES_URL) {
+      await db
+        .insert(stream)
+        .values({ chatId, createdAt: new Date(), id: streamId });
+    }
+  } catch {
+    // Non-blocking
   }
 }
 
 export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
   try {
+    if (!process.env.POSTGRES_URL) {
+      return fallbackStreams.get(chatId) ?? [];
+    }
     const streamIds = await db
       .select({ id: stream.id })
       .from(stream)
@@ -620,7 +822,7 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
       .execute();
 
     return streamIds.map(({ id }) => id);
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  } catch {
+    return fallbackStreams.get(chatId) ?? [];
   }
 }

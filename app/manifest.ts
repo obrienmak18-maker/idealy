@@ -12,5 +12,19 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Idealy",
     start_url: "/welcome",
     theme_color: "#09090f",
+    icons: [
+      {
+        src: "/idealy-mark.svg",
+        sizes: "any",
+        type: "image/svg+xml",
+        purpose: "maskable",
+      },
+      {
+        src: "/idealy-logo.svg",
+        sizes: "512x512",
+        type: "image/svg+xml",
+        purpose: "any",
+      },
+    ],
   };
 }

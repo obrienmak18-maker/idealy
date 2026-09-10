@@ -236,35 +236,53 @@ export async function getMyIdealyOnboardingStatus({
 }: {
   request: Request;
 }): Promise<OnboardingStatus> {
-  const { userId } = await getSupabaseServerContext(request);
-  const profiles = await callSupabaseRest<IdealyProfileResponse[]>(
-    request,
-    `profiles?select=id,first_name,way,onboarding_completed,experience_level,primary_goal,project_type&id=eq.${encodeURIComponent(userId)}&limit=1`,
-    { cache: "no-store", method: "GET" }
-  );
-  const profile = Array.isArray(profiles) ? profiles[0] : null;
+  try {
+    const { userId } = await getSupabaseServerContext(request);
+    const profiles = await callSupabaseRest<IdealyProfileResponse[]>(
+      request,
+      `profiles?select=id,first_name,way,onboarding_completed,experience_level,primary_goal,project_type&id=eq.${encodeURIComponent(userId)}&limit=1`,
+      { cache: "no-store", method: "GET" }
+    );
+    const profile = Array.isArray(profiles) ? profiles[0] : null;
 
-  return {
-    experienceLevel:
-      profile && typeof profile.experience_level === "string"
-        ? profile.experience_level
-        : null,
-    firstName:
-      profile && typeof profile.first_name === "string"
-        ? profile.first_name
-        : null,
-    onboardingCompleted: profile?.onboarding_completed === true,
-    primaryGoal:
-      profile && typeof profile.primary_goal === "string"
-        ? profile.primary_goal
-        : null,
-    profileExists: Boolean(profile && typeof profile.id === "string"),
-    projectType:
-      profile && typeof profile.project_type === "string"
-        ? profile.project_type
-        : null,
-    way: isIdealyWay(profile?.way) ? profile.way : null,
-  };
+    return {
+      experienceLevel:
+        profile && typeof profile.experience_level === "string"
+          ? profile.experience_level
+          : null,
+      firstName:
+        profile && typeof profile.first_name === "string"
+          ? profile.first_name
+          : null,
+      onboardingCompleted: profile?.onboarding_completed === true,
+      primaryGoal:
+        profile && typeof profile.primary_goal === "string"
+          ? profile.primary_goal
+          : null,
+      profileExists: Boolean(profile && typeof profile.id === "string"),
+      projectType:
+        profile && typeof profile.project_type === "string"
+          ? profile.project_type
+          : null,
+      way: isIdealyWay(profile?.way) ? profile.way : null,
+    };
+  } catch (error) {
+    // If Supabase session is expired, unreachable, or table missing:
+    // Gracefully return status so user is not locked or crashes Next.js
+    console.warn(
+      "Supabase onboarding status check bypassed:",
+      error instanceof Error ? error.message : error
+    );
+    return {
+      experienceLevel: null,
+      firstName: null,
+      onboardingCompleted: true,
+      primaryGoal: null,
+      profileExists: false,
+      projectType: null,
+      way: null,
+    };
+  }
 }
 
 export async function completeMyIdealyOnboarding({

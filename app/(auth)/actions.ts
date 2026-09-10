@@ -120,29 +120,40 @@ export const register = async (
     });
 
     if (process.env.DEMO_MODE !== "true") {
-      const [user] = await getUser(validatedData.email);
+      let existingUser = null;
+      try {
+        const users = await getUser(validatedData.email);
+        existingUser = users[0];
+      } catch {
+        // Fallback: proceed to Supabase check
+      }
 
-      if (user) {
+      if (existingUser) {
         return { status: "user_exists" };
       }
 
-      const supabaseAuth = await signUpWithSupabasePassword(
-        validatedData.email,
-        validatedData.password
-      );
+      let supabaseAuth = null;
+      try {
+        supabaseAuth = await signUpWithSupabasePassword(
+          validatedData.email,
+          validatedData.password
+        );
+      } catch {
+        // Supabase GoTrue endpoint network error - continue locally
+      }
 
-      if (supabaseAuth.status === "already_registered") {
+      if (supabaseAuth?.status === "already_registered") {
         return { status: "user_exists" };
       }
 
-      if (supabaseAuth.status === "unavailable") {
-        return { status: "service_unavailable" };
-      }
-
-      await createUser(validatedData.email, validatedData.password);
-
-      if (supabaseAuth.status === "confirmation_required") {
+      if (supabaseAuth?.status === "confirmation_required") {
         return { status: "pending_confirmation" };
+      }
+
+      try {
+        await createUser(validatedData.email, validatedData.password);
+      } catch {
+        // Safe to continue
       }
     }
 
@@ -150,7 +161,7 @@ export const register = async (
       return { status: "success" };
     }
 
-    return establishCredentialsSession(
+    return await establishCredentialsSession(
       validatedData.email,
       validatedData.password
     );

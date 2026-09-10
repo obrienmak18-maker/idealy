@@ -19,8 +19,10 @@ import {
   Tablet,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { PowerStatusBadge } from "@/components/chat/power-status";
 import { useArtifact } from "@/hooks/use-artifact";
+import { downloadZip } from "@/lib/export/zip";
 import { localWorkspaceMetadata } from "@/lib/idealy/local-workspace-demo";
 
 type WorkspaceView = "preview" | "code" | "database";
@@ -37,7 +39,7 @@ const previewPages: PreviewPage[] = [
 ];
 
 export function BuildTopBar() {
-  const { metadata, setMetadata } = useArtifact();
+  const { artifact, metadata, setMetadata } = useArtifact();
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   const [title, setTitle] = useState("UI/UX analysis");
   const [favorite, setFavorite] = useState(false);
@@ -170,7 +172,10 @@ export function BuildTopBar() {
       setStatus("Squad complete");
     } catch (error) {
       console.error("Mission squad launch failed", error);
-      setStatus("Squad unavailable");
+      const errorMessage =
+        error instanceof Error ? error.message : "L’escouade n’a pas pu démarrer.";
+      setStatus("Squad error");
+      toast.error(errorMessage);
     } finally {
       setIsSquadRunning(false);
     }
@@ -332,7 +337,61 @@ export function BuildTopBar() {
                 className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground"
                 onClick={() => {
                   setMoreOpen(false);
-                  window.alert("Export du projet préparé.");
+                  const files: { path: string; content: string }[] = [];
+                  if (
+                    Array.isArray(metadata?.missionFiles) &&
+                    metadata.missionFiles.length > 0
+                  ) {
+                    for (const f of metadata.missionFiles) {
+                      if (f?.path) {
+                        files.push({
+                          path: f.path,
+                          content: f.content || "",
+                        });
+                      }
+                    }
+                  }
+                  if (files.length === 0 && artifact.content) {
+                    const ext =
+                      artifact.kind === "code"
+                        ? "tsx"
+                        : artifact.kind === "sheet"
+                          ? "csv"
+                          : "txt";
+                    files.push({
+                      path: `src/App.${ext}`,
+                      content: artifact.content,
+                    });
+                    files.push({
+                      path: "README.md",
+                      content: `# ${title || "Idealy Project"}\n\nGenerated with Idealy Studio.`,
+                    });
+                    files.push({
+                      path: "package.json",
+                      content: JSON.stringify(
+                        {
+                          name: (title || "idealy-project")
+                            .toLowerCase()
+                            .replace(/[^a-z0-9]/g, "-"),
+                          private: true,
+                          version: "0.1.0",
+                        },
+                        null,
+                        2
+                      ),
+                    });
+                  }
+                  if (files.length === 0) {
+                    toast.error("Aucun fichier à exporter pour le moment.");
+                    return;
+                  }
+                  downloadZip(
+                    (title || "idealy-project")
+                      .toLowerCase()
+                      .replace(/[^a-z0-9]/g, "-"),
+                    files
+                  );
+                  toast.success("Téléchargement du ZIP lancé !");
                 }}
                 type="button"
               >
@@ -385,9 +444,14 @@ export function BuildTopBar() {
         <button
           aria-label="Collaboration"
           className={`${controlClass} hidden size-8 md:inline-flex`}
-          onClick={() =>
-            window.alert("Collaboration disponible pour cette mission.")
-          }
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              toast.success("Lien de partage copié dans le presse-papier !");
+            } catch {
+              toast.info(`Lien : ${window.location.href}`);
+            }
+          }}
           type="button"
         >
           <Share2 className="size-4" />
@@ -410,13 +474,16 @@ export function BuildTopBar() {
         <button
           aria-label="Publish"
           className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
-          onClick={() =>
-            window.alert(
-              isDemoMode
-                ? "Démo locale : publication protégée. Aucun déploiement n’est lancé."
-                : "Publication de la preview préparée."
-            )
-          }
+          onClick={() => {
+            if (isDemoMode) {
+              toast.info(
+                "Démo locale : publication protégée. Connectez-vous pour publier votre projet."
+              );
+              return;
+            }
+            dispatch("idealy:publish");
+            toast.success("Options de publication ouvertes.");
+          }}
           type="button"
         >
           Publish

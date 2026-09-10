@@ -9,13 +9,16 @@ import { FirebaseProviderActions } from "@/components/auth/firebase-provider-act
 import { AuthForm } from "@/components/chat/auth-form";
 import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
-import { signUpWithEmailFirebase } from "@/lib/firebase/client";
+import {
+  isFirebaseConfigured,
+  signUpWithEmailFirebase,
+} from "@/lib/firebase/client";
 import { isIdealyWay } from "@/lib/idealy/product-contract";
 import { type RegisterActionState, register } from "../actions";
 
 const registerMessages = {
   confirmation_required:
-    "Confirmez d’abord votre adresse e-mail avant de vous connecter.",
+    "Le compte a été créé, mais la connexion n’a pas pu être confirmée. Réessayez de vous connecter.",
   invalid_credentials:
     "Le compte a été créé, mais la connexion n’a pas pu être confirmée. Réessayez de vous connecter.",
   invalid_data:
@@ -28,9 +31,15 @@ const registerMessages = {
 } as const;
 
 function firebaseErrorCode(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error
-    ? String(error.code)
-    : "";
+  if (typeof error === "object" && error !== null) {
+    if ("code" in error && typeof (error as { code: unknown }).code === "string") {
+      return (error as { code: string }).code;
+    }
+    if ("message" in error && typeof (error as { message: unknown }).message === "string") {
+      return (error as { message: string }).message;
+    }
+  }
+  return "";
 }
 
 export default function Page() {
@@ -115,14 +124,34 @@ export default function Page() {
       return;
     }
 
+    if (!isFirebaseConfigured()) {
+      formAction(formData);
+      return;
+    }
+
     const emailValue = String(formData.get("email") ?? "").trim();
     const passwordValue = String(formData.get("password") ?? "");
 
     try {
-      const { idToken } = await signUpWithEmailFirebase(
+      const idToken = await signUpWithEmailFirebase(
         emailValue,
         passwordValue
       );
+
+      // ── Set role:"authenticated" custom claim server-side ────────────────
+      // Required for Supabase Third-Party Auth to grant the Postgres
+      // "authenticated" role. Non-blocking: if Admin SDK is not yet configured
+      // the endpoint returns 503 and we continue anyway.
+      try {
+        await fetch("/api/auth/set-claims", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+      } catch {
+        // Admin SDK not configured yet — will still work with Supabase anon role
+      }
+
       const result = await signInWithAuthJs("firebase", {
         idToken,
         redirect: false,
@@ -211,7 +240,10 @@ export default function Page() {
           </Link>
         </p>
       </AuthForm>
-      <FirebaseProviderActions nextPath={getOnboardingUrl()} />
+      <FirebaseProviderActions
+        nextPath={getOnboardingUrl()}
+        requireTerms={true}
+      />
     </>
   );
 }

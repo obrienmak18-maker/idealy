@@ -1,71 +1,67 @@
-<a href="https://chatbot.ai-sdk.dev/demo">
-  <img alt="Chatbot" src="app/(chat)/opengraph-image.png">
-  <h1 align="center">Chatbot</h1>
-</a>
+# ⚡ Idealy Studio
 
-<p align="center">
-    Chatbot (formerly AI Chatbot) is a free, open-source template built with Next.js and the AI SDK that helps you quickly build powerful chatbot applications.
-</p>
+> **L'IDE IA multi-agents avec gamification par Voies (Mage, Ninja, Hunter, Pro), orchestrateur d'escouade et système de puissance Power.**
 
-<p align="center">
-  <a href="https://chatbot.ai-sdk.dev/docs"><strong>Read Docs</strong></a> ·
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#model-providers"><strong>Model Providers</strong></a> ·
-  <a href="#deploy-your-own"><strong>Deploy Your Own</strong></a> ·
-  <a href="#running-locally"><strong>Running locally</strong></a>
-</p>
-<br/>
+---
 
-## Features
+## 🚀 Vue d'ensemble
 
-- [Next.js](https://nextjs.org) App Router
-  - Advanced routing for seamless navigation and performance
-  - React Server Components (RSCs) and Server Actions for server-side rendering and increased performance
-- [AI SDK](https://ai-sdk.dev/docs/introduction)
-  - Unified API for generating text, structured objects, and tool calls with LLMs
-  - Hooks for building dynamic chat and generative user interfaces
-  - Supports OpenAI, Anthropic, Google, xAI, and other model providers via AI Gateway
-- [shadcn/ui](https://ui.shadcn.com)
-  - Styling with [Tailwind CSS](https://tailwindcss.com)
-  - Component primitives from [Radix UI](https://radix-ui.com) for accessibility and flexibility
-- Data Persistence
-  - [Neon Serverless Postgres](https://vercel.com/marketplace/neon) for saving chat history and user data
-  - [Vercel Blob](https://vercel.com/storage/blob) for efficient file storage
-- [Auth.js](https://authjs.dev)
-  - Simple and secure authentication
+Idealy est une plateforme de développement et de génération d'applications pilotée par IA. Elle combine une interface de workspace interactive (Chat + Canvas de Preview réactif + Visualiseur de code + Console d'exécution) avec un système multi-agents :
+- **Architecte (Lyra / Shikamaru)** : Analyse des besoins, spécification et conception du plan.
+- **Builder (Mason / Naruto)** : Génération de code TypeScript/React, écriture de composants et architecture de fichiers.
+- **Reviewer (Nova / Sasuke)** : Validation qualité, sécurité, vérification des erreurs et optimisation.
 
-## Model Providers
+---
 
-This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) to access multiple AI models through a unified interface. Models are configured in `lib/ai/models.ts` with per-model provider routing. Included models: Mistral, Moonshot, DeepSeek, OpenAI, and xAI.
+## 🛠️ Stack Technique
 
-### AI Gateway Authentication
+- **Frontend & App** : [Next.js 16 App Router](https://nextjs.org), React 19, Tailwind CSS v4, Framer Motion, Radix UI
+- **IA & Orchestration** : [AI SDK](https://ai-sdk.dev), Supabase Edge Functions (`orchestrate-mission`, `process-ai-request`)
+- **Base de données & Auth** : [Supabase](https://supabase.com) (PostgreSQL 17 avec RLS, Supabase Auth, Power System V2)
+- **Monétisation** : [Stripe](https://stripe.com) (Abonnements Pro / Business, gestion de portail et webhooks sécurisés)
+- **Virtual File System (VFS)** : Journal append-only avec replay séquentiel d'événements et export PKZip immédiat
 
-**For Vercel deployments**: Authentication is handled automatically via OIDC tokens.
+---
 
-**For non-Vercel deployments**: You need to provide an AI Gateway API key by setting the `AI_GATEWAY_API_KEY` environment variable in your `.env.local` file.
+## ⚡ Système Power & Énergie
 
-With the [AI SDK](https://ai-sdk.dev/docs/introduction), you can also switch to direct LLM providers like [OpenAI](https://openai.com), [Anthropic](https://anthropic.com), [Cohere](https://cohere.com/), and [many more](https://ai-sdk.dev/providers/ai-sdk-providers) with just a few lines of code.
+Chaque utilisateur dispose d'un portefeuille Power rattaché à sa Voie :
+- **Mage** : *Mana*
+- **Ninja** : *Chakra*
+- **Hunter** : *Nen*
+- **Professionnel** : *Énergie*
 
-## Deploy Your Own
+### Plans et Allocations :
+| Plan | Tarif | Allocation mensuelle | Coût Mission Simple | Coût Mission Escouade |
+|---|---|---|---|---|
+| **Découverte (Free)** | 0 € | 100 Power Points | 10 pts | 50 pts |
+| **Pro** | 29 € / mois | 1 000 Power Points | 10 pts | 50 pts |
+| **Business** | 79 € / mois | 3 000 Power Points | 10 pts | 50 pts |
 
-You can deploy your own version of Chatbot to Vercel with one click:
+---
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/templates/next.js/chatbot)
-
-## Running locally
-
-You will need to use the environment variables [defined in `.env.example`](.env.example) to run Chatbot. It's recommended you use [Vercel Environment Variables](https://vercel.com/docs/projects/environment-variables) for this, but a `.env` file is all that is necessary.
-
-> Note: You should not commit your `.env` file or it will expose secrets that will allow others to control access to your various AI and authentication provider accounts.
-
-1. Install Vercel CLI: `npm i -g vercel`
-2. Link local instance with Vercel and GitHub accounts (creates `.vercel` directory): `vercel link`
-3. Download your environment variables: `vercel env pull`
+## 📦 Commandes utiles
 
 ```bash
-pnpm install
-pnpm db:migrate # Setup database or apply latest database changes
+# Démarrer le serveur de développement
 pnpm dev
+
+# Vérification du typage TypeScript
+pnpm typecheck
+
+# Exécuter les tests contractuels backend
+node scripts/test-intent-routing.mjs
+node scripts/test-mission-squad-contract.mjs
+node scripts/test-power-system-v2.mjs
+
+# Build de production
+pnpm build
 ```
 
-Your app template should now be running on [localhost:3000](http://localhost:3000).
+---
+
+## 🔒 Sécurité & Bonnes Pratiques
+
+- **Clés API serveur** : Stockées exclusivement dans Supabase Secrets et Edge Functions, chiffrées au repos (AES-GCM).
+- **Idempotence garantie** : Toutes les opérations sensibles (Power, facturation, déploiement) sont vérifiées avec clé d'idempotence.
+- **RLS stricte** : Toutes les tables métier sont protégées par Row Level Security.

@@ -40,25 +40,29 @@ export async function generateTitleFromUserMessage({
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return;
+    }
 
-  const [message] = await getMessageById({ id });
-  if (!message) {
-    throw new Error("Message not found");
-  }
+    const [message] = await getMessageById({ id });
+    if (!message) {
+      return;
+    }
 
-  const chat = await getChatById({ id: message.chatId });
-  if (!chat || chat.userId !== session.user.id) {
-    throw new Error("Unauthorized");
-  }
+    const chat = await getChatById({ id: message.chatId });
+    if (!chat || chat.userId !== session.user.id) {
+      return;
+    }
 
-  await deleteMessagesByChatIdAfterTimestamp({
-    chatId: message.chatId,
-    timestamp: message.createdAt,
-  });
+    await deleteMessagesByChatIdAfterTimestamp({
+      chatId: message.chatId,
+      timestamp: message.createdAt,
+    });
+  } catch (error) {
+    console.warn("deleteTrailingMessages skipped non-fatally:", error);
+  }
 }
 
 export async function updateChatVisibility({
