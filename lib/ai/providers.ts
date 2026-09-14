@@ -32,8 +32,7 @@ const deepseekApiKey = getEnvKey("DEEPSEEK_API_KEY");
 const deepseek = deepseekApiKey
   ? createOpenAI({
       apiKey: deepseekApiKey,
-      baseURL: "https://api.deepseek.com/v1",
-      compatibility: "compatible",
+      baseURL: "https://api.deepseek.com",
     })
   : null;
 
@@ -42,7 +41,6 @@ const openaiApiKey = getEnvKey("OPENAI_API_KEY");
 const openai = openaiApiKey
   ? createOpenAI({
       apiKey: openaiApiKey,
-      compatibility: "strict",
     })
   : null;
 
@@ -52,7 +50,6 @@ const groq = groqApiKey
   ? createOpenAI({
       apiKey: groqApiKey,
       baseURL: "https://api.groq.com/openai/v1",
-      compatibility: "compatible",
     })
   : null;
 
@@ -62,7 +59,6 @@ const openrouter = openrouterApiKey
   ? createOpenAI({
       apiKey: openrouterApiKey,
       baseURL: "https://openrouter.ai/api/v1",
-      compatibility: "compatible",
     })
   : null;
 
@@ -72,7 +68,6 @@ const mistral = mistralApiKey
   ? createOpenAI({
       apiKey: mistralApiKey,
       baseURL: "https://api.mistral.ai/v1",
-      compatibility: "compatible",
     })
   : null;
 
@@ -106,12 +101,12 @@ function resolveGeminiModelName(modelId: string): string {
 }
 
 function getAnyAvailableDirectModel() {
-  if (deepseek) return deepseek("deepseek-chat");
-  if (openai) return openai("gpt-4o");
-  if (groq) return groq("llama-3.3-70b-versatile");
-  if (google) return google("gemini-2.0-flash");
-  if (openrouter) return openrouter("auto");
-  if (mistral) return mistral("mistral-large-latest");
+  if (deepseek) return deepseek.chat("deepseek-chat");
+  if (openai) return openai.chat("gpt-4o");
+  if (groq) return groq.chat("llama-3.3-70b-versatile");
+  if (google) return google(resolveGeminiModelName("gemini-2.0-flash"));
+  if (openrouter) return openrouter.chat("auto");
+  if (mistral) return mistral.chat("mistral-large-latest");
   return null;
 }
 
@@ -122,17 +117,17 @@ export function getLanguageModel(modelId: string) {
 
   // DeepSeek
   if (deepseek && (modelId.includes("deepseek") || modelId === "deepseek/deepseek-v3.2")) {
-    return deepseek("deepseek-chat");
+    return deepseek.chat("deepseek-chat");
   }
 
   // OpenAI
   if (openai && (modelId.includes("openai") || modelId.includes("gpt"))) {
-    return openai(modelId.includes("mini") ? "gpt-4o-mini" : "gpt-4o");
+    return openai.chat(modelId.includes("mini") ? "gpt-4o-mini" : "gpt-4o");
   }
 
   // Groq
   if (groq && (modelId.includes("groq") || modelId.includes("llama"))) {
-    return groq("llama-3.3-70b-versatile");
+    return groq.chat("llama-3.3-70b-versatile");
   }
 
   // Google / Gemini
@@ -142,12 +137,12 @@ export function getLanguageModel(modelId: string) {
 
   // Mistral
   if (mistral && modelId.includes("mistral")) {
-    return mistral("mistral-large-latest");
+    return mistral.chat("mistral-large-latest");
   }
 
   // OpenRouter
   if (openrouter && modelId.includes("openrouter")) {
-    return openrouter(modelId.replace(/^openrouter\//, ""));
+    return openrouter.chat(modelId.replace(/^openrouter\//, ""));
   }
 
   // Si on est en environnement local sans Vercel AI Gateway configurée,
@@ -168,10 +163,10 @@ export function getTitleModel() {
   }
 
   // Modèle rapide pour les titres
-  if (groq) return groq("llama-3.3-70b-versatile");
-  if (deepseek) return deepseek("deepseek-chat");
-  if (google) return google("gemini-2.0-flash");
-  if (openai) return openai("gpt-4o-mini");
+  if (groq) return groq.chat("llama-3.3-70b-versatile");
+  if (deepseek) return deepseek.chat("deepseek-chat");
+  if (google) return google(resolveGeminiModelName("gemini-2.0-flash"));
+  if (openai) return openai.chat("gpt-4o-mini");
 
   const direct = getAnyAvailableDirectModel();
   if (direct) return direct;
