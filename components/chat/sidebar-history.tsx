@@ -28,6 +28,8 @@ import type { Chat } from "@/lib/db/schema";
 import { fetcher } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
 import { ChatItem } from "./sidebar-history-item";
+import { useTranslation } from "@/lib/i18n/provider";
+import { useChatCustomizationStore } from "@/lib/stores/use-chat-customization-store";
 
 type GroupedChats = {
   today: Chat[];
@@ -99,6 +101,8 @@ export function getChatHistoryPaginationKey(
 }
 
 export function SidebarHistory({ user }: { user: User | undefined }) {
+  const { t } = useTranslation();
+  const { pinnedChatIds } = useChatCustomizationStore();
   const { setOpenMobile } = useSidebar();
   const pathname = usePathname();
   const id = pathname?.startsWith("/chat/") ? pathname.split("/")[2] : null;
@@ -239,88 +243,117 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
                   return (
                     <div className="flex flex-col gap-4">
-                      {groupedChats.today.length > 0 && (
+                      {chatsFromHistory.some((c) => pinnedChatIds.includes(c.id)) && (
                         <div>
-                          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-                            Today
+                          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-500/80">
+                            {t("sidebar.pinned", "Épinglés")}
                           </div>
-                          {groupedChats.today.map((chat) => (
-                            <ChatItem
-                              chat={chat}
-                              isActive={chat.id === id}
-                              key={chat.id}
-                              onDelete={handleShowDeleteDialog}
-                              setOpenMobile={setOpenMobile}
-                            />
-                          ))}
+                          {chatsFromHistory
+                            .filter((c) => pinnedChatIds.includes(c.id))
+                            .map((chat) => (
+                              <ChatItem
+                                chat={chat}
+                                isActive={chat.id === id}
+                                key={`pinned-${chat.id}`}
+                                onDelete={handleShowDeleteDialog}
+                                setOpenMobile={setOpenMobile}
+                              />
+                            ))}
                         </div>
                       )}
 
-                      {groupedChats.yesterday.length > 0 && (
+                      {groupedChats.today.filter((c) => !pinnedChatIds.includes(c.id)).length > 0 && (
                         <div>
                           <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-                            Yesterday
+                            {t("sidebar.today", "Aujourd'hui")}
                           </div>
-                          {groupedChats.yesterday.map((chat) => (
-                            <ChatItem
-                              chat={chat}
-                              isActive={chat.id === id}
-                              key={chat.id}
-                              onDelete={handleShowDeleteDialog}
-                              setOpenMobile={setOpenMobile}
-                            />
-                          ))}
+                          {groupedChats.today
+                            .filter((c) => !pinnedChatIds.includes(c.id))
+                            .map((chat) => (
+                              <ChatItem
+                                chat={chat}
+                                isActive={chat.id === id}
+                                key={chat.id}
+                                onDelete={handleShowDeleteDialog}
+                                setOpenMobile={setOpenMobile}
+                              />
+                            ))}
                         </div>
                       )}
 
-                      {groupedChats.lastWeek.length > 0 && (
+                      {groupedChats.yesterday.filter((c) => !pinnedChatIds.includes(c.id)).length > 0 && (
                         <div>
                           <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-                            Last 7 days
+                            {t("sidebar.yesterday", "Hier")}
                           </div>
-                          {groupedChats.lastWeek.map((chat) => (
-                            <ChatItem
-                              chat={chat}
-                              isActive={chat.id === id}
-                              key={chat.id}
-                              onDelete={handleShowDeleteDialog}
-                              setOpenMobile={setOpenMobile}
-                            />
-                          ))}
+                          {groupedChats.yesterday
+                            .filter((c) => !pinnedChatIds.includes(c.id))
+                            .map((chat) => (
+                              <ChatItem
+                                chat={chat}
+                                isActive={chat.id === id}
+                                key={chat.id}
+                                onDelete={handleShowDeleteDialog}
+                                setOpenMobile={setOpenMobile}
+                              />
+                            ))}
                         </div>
                       )}
 
-                      {groupedChats.lastMonth.length > 0 && (
+                      {groupedChats.lastWeek.filter((c) => !pinnedChatIds.includes(c.id)).length > 0 && (
                         <div>
                           <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-                            Last 30 days
+                            {t("sidebar.lastWeek", "7 derniers jours")}
                           </div>
-                          {groupedChats.lastMonth.map((chat) => (
-                            <ChatItem
-                              chat={chat}
-                              isActive={chat.id === id}
-                              key={chat.id}
-                              onDelete={handleShowDeleteDialog}
-                              setOpenMobile={setOpenMobile}
-                            />
-                          ))}
+                          {groupedChats.lastWeek
+                            .filter((c) => !pinnedChatIds.includes(c.id))
+                            .map((chat) => (
+                              <ChatItem
+                                chat={chat}
+                                isActive={chat.id === id}
+                                key={chat.id}
+                                onDelete={handleShowDeleteDialog}
+                                setOpenMobile={setOpenMobile}
+                              />
+                            ))}
                         </div>
                       )}
 
-                      {groupedChats.older.length > 0 && (
+                      {groupedChats.lastMonth.filter((c) => !pinnedChatIds.includes(c.id)).length > 0 && (
                         <div>
                           <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-                            Older
+                            {t("sidebar.lastMonth", "30 derniers jours")}
                           </div>
-                          {groupedChats.older.map((chat) => (
-                            <ChatItem
-                              chat={chat}
-                              isActive={chat.id === id}
-                              key={chat.id}
-                              onDelete={handleShowDeleteDialog}
-                              setOpenMobile={setOpenMobile}
-                            />
-                          ))}
+                          {groupedChats.lastMonth
+                            .filter((c) => !pinnedChatIds.includes(c.id))
+                            .map((chat) => (
+                              <ChatItem
+                                chat={chat}
+                                isActive={chat.id === id}
+                                key={chat.id}
+                                onDelete={handleShowDeleteDialog}
+                                setOpenMobile={setOpenMobile}
+                              />
+                            ))}
+                        </div>
+                      )}
+
+                      {groupedChats.older.filter((c) => !pinnedChatIds.includes(c.id)).length > 0 && (
+                        <div>
+                          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
+                            {t("sidebar.older", "Plus anciens")}
+                          </div>
+                          {groupedChats.older
+                            .filter((c) => !pinnedChatIds.includes(c.id))
+                            .map((chat) => (
+                              <ChatItem
+                                chat={chat}
+                                isActive={chat.id === id}
+                                key={chat.id}
+                                onDelete={handleShowDeleteDialog}
+                                setOpenMobile={setOpenMobile}
+                              />
+                            ))}
                         </div>
                       )}
                     </div>
@@ -336,7 +369,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
               <div className="animate-spin">
                 <LoaderIcon />
               </div>
-              <div className="text-[11px]">Loading...</div>
+              <div className="text-[11px]">{t("common.loading", "Chargement...")}</div>
             </div>
           )}
         </SidebarGroupContent>
@@ -345,16 +378,15 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
       <AlertDialog onOpenChange={setShowDeleteDialog} open={showDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t("sidebar.deleteTitle", "Supprimer cette discussion ?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your
-              chat and remove it from our servers.
+              {t("sidebar.deleteDescription", "Cette action est irréversible. La discussion sera définitivement supprimée.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel", "Annuler")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>
-              Continue
+              {t("sidebar.delete", "Supprimer")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -25,8 +25,11 @@ const loginMessages = {
     "Le service de connexion est momentanément indisponible. Réessayez dans un instant.",
 } as const;
 
+import { useTranslation } from "@/lib/i18n/provider";
+
 export default function Page() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
@@ -167,10 +170,10 @@ export default function Page() {
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">
-        Heureux de vous revoir
+        {t("auth.loginTitle") || "Heureux de vous revoir"}
       </h1>
       <p className="text-sm text-muted-foreground">
-        Connectez-vous pour reprendre votre mission.
+        {t("auth.loginSubtitle") || "Connectez-vous pour reprendre votre mission."}
       </p>
       {feedback ? (
         <p
@@ -182,14 +185,17 @@ export default function Page() {
         </p>
       ) : null}
       <AuthForm action={handleSubmit} defaultEmail={email}>
-        <SubmitButton isSuccessful={isSuccessful}>Se connecter</SubmitButton>
+        <SubmitButton isSuccessful={isSuccessful}>
+          {t("auth.submitLogin") || "Se connecter"}
+        </SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
-          {"Pas encore de compte ? "}
+          {t("auth.noAccount") ? `${t("auth.noAccount")} ` : "Pas encore de compte ? "}
           <Link
             className="text-foreground underline-offset-4 hover:underline"
             href="/register"
+            prefetch={true}
           >
-            Créer un compte
+            {t("auth.submitRegister") || "Créer un compte"}
           </Link>
         </p>
       </AuthForm>

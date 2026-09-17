@@ -1,0 +1,258 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "error": "An error occurred",
+    "loading": "Loading…",
+    "retry": "Retry",
+    "delete": "Delete",
+    "back": "Back",
+    "next": "Next",
+    "continue": "Continue",
+    "or": "or",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied!"
+  },
+  "nav": {
+    "product": "Product",
+    "ways": "Ways",
+    "squad": "AI Squad",
+    "pricing": "Pricing",
+    "about": "About",
+    "docs": "Documentation",
+    "signIn": "Sign In",
+    "getStarted": "Get Started",
+    "settings": "Settings",
+    "logout": "Log Out",
+    "newChat": "New Chat"
+  },
+  "hero": {
+    "badge": "Your multi-agent AI studio to turn ideas into production applications",
+    "title1": "Bring your ideas to life.",
+    "title2": "One mission at a time.",
+    "subtitle": "Idealy orchestrates an expert AI squad (Architect, Builder, Reviewer) to transform your vision into clean, production-ready code.",
+    "ctaPrimary": "Start My First Mission",
+    "ctaSecondary": "Explore Plans",
+    "features": [
+      "Describe your project in plain natural language",
+      "The agent squad plans, codes, and validates",
+      "Live preview instantly, iterate, and download as ZIP"
+    ]
+  },
+  "ways": {
+    "tag": "Gamification & Philosophy",
+    "title": "Why choose a Way?",
+    "explanation": "Each Way shapes your working energy (Mana, Chakra, Nen, Energy), personalizes your agents' collaboration style, and guides the architecture methodology of your projects.",
+    "changeNotice": "You can switch your Way at any time in your workspace settings.",
+    "resourceLabel": "Resource",
+    "continueWith": "Choose the {name} and start",
+    "items": {
+      "ninja": {
+        "name": "Way of the Ninja",
+        "resource": "Chakra",
+        "pitch": "Lightning Speed & Surgical Precision",
+        "desc": "Engineered for maximum velocity, eliminating friction, and shipping high-performance code with surgical precision.",
+        "tagline": "Channel your Chakra to code at lightning speed.",
+        "philosophy": "Maximum execution velocity, zero friction, and instant surgical code iterations.",
+        "chiefRole": "Squad Leader & Hokage"
+      },
+      "mage": {
+        "name": "Way of the Mage",
+        "resource": "Mana",
+        "pitch": "Pure Creativity & Deep Exploration",
+        "desc": "Perfect for venturing into bold ideas, prototyping avant-garde concepts, and experimenting with innovative architectures.",
+        "tagline": "Harness your Mana to forge the extraordinary.",
+        "philosophy": "Bold creative exploration, modular abstractions, and elegant software design.",
+        "chiefRole": "Guild Master & Archmage"
+      },
+      "hunter": {
+        "name": "Way of the Hunter",
+        "resource": "Nen",
+        "pitch": "Deep Strategy & Flawless Analytics",
+        "desc": "Designed to hunt down the best architectural patterns, evaluate dependencies, and master every engineering choice.",
+        "tagline": "Hone your Nen to master every technical decision.",
+        "philosophy": "Analytical rigor, tracking technical vulnerabilities, and selecting optimal libraries.",
+        "chiefRole": "Association President & Elite Hunter"
+      },
+      "professional": {
+        "name": "Way of the Pro",
+        "resource": "Energy",
+        "pitch": "Enterprise Rigor & Modern Standards",
+        "desc": "Built to engineer robust, maintainable, long-lasting foundations adhering strictly to modern software engineering best practices.",
+        "tagline": "Mobilize your Energy to build bulletproof systems.",
+        "philosophy": "Strict engineering standards, long-term maintainability, and enterprise robustness.",
+        "chiefRole": "Lead Architect & Staff Engineer"
+      }
+    }
+  },
+  "estimator": {
+    "tag": "Smart Estimator",
+    "title": "Estimate your monthly needs",
+    "subtitle": "Tune your anticipated development volume to discover the perfect plan.",
+    "simpleLabel": "Single missions (1 agent)",
+    "simpleUnit": "month",
+    "squadLabel": "Full squad missions (3 agents)",
+    "squadUnit": "month",
+    "estimatedNeed": "Estimated need:",
+    "perMonth": "Power Points / month",
+    "recommendedFormula": "Recommended plan: ",
+    "freePlan": "Discovery (Free)",
+    "proStandardPlan": "Pro Standard (1,000 pts)",
+    "proBoostPlan": "Pro Boost (2,000 pts)",
+    "businessPlan": "Business Studio (5,000+ pts)"
+  },
+  "pricing": {
+    "tag": "Total Transparency",
+    "title": "Plans built for your ambition",
+    "subtitle": "Start free without a credit card, scale seamlessly as your projects demand more compute power.",
+    "monthly": "Monthly billing",
+    "choosePowerVolume": "Select your Power volume:",
+    "missionsEquivalent": "Equivalent to ~{simples} simple missions or ~{squads} parallel assistants.",
+    "plans": {
+      "free": {
+        "name": "Discovery",
+        "price": "0 €",
+        "period": "Free forever",
+        "badge": "For testing",
+        "desc": "100 execution credits included to test your first applications and explore the studio.",
+        "features": [
+          "100 free execution credits",
+          "Interactive Workspace & Live Preview",
+          "1 active assistant in parallel",
+          "Unlimited project ZIP export",
+          "Secure cloud project backup"
+        ],
+        "cta": "Get Started Free"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "29 €",
+        "period": "per month",
+        "badge": "Most Popular",
+        "desc": "Expanded compute capacity, parallel AI assistants, high-speed models, and full integrations.",
+        "features": [
+          "Customizable Power volume (1,000 to 6,000 credits)",
+          "Parallel AI assistants (Architect, Builder, Reviewer)",
+          "High-speed models & network priority",
+          "Direct export and sync to GitHub",
+          "Full chat history & continuous context",
+          "Priority support within 24h"
+        ],
+        "cta": "Upgrade to Pro"
+      },
+      "business": {
+        "name": "Business Studio",
+        "price": "89 €",
+        "period": "per month",
+        "badge": "Teams & Scale",
+        "desc": "For studios, agencies, and teams demanding maximum horsepower and friction-free collaboration.",
+        "features": [
+          "5,000+ execution credits / month",
+          "Collaborative workspaces & team sharing",
+          "Unlimited connectors & plugins (Figma, Supabase, Slack)",
+          "Custom MCP servers & external REST APIs",
+          "State-of-the-art AI models with zero throttling",
+          "Dedicated 24/7 support with guaranteed SLA"
+        ],
+        "cta": "Contact Studio Team"
+      }
+    }
+  },
+  "auth": {
+    "loginTitle": "Welcome back to Idealy",
+    "loginSubtitle": "Access your workspaces and continue building.",
+    "registerTitle": "Create your Idealy workspace",
+    "registerSubtitle": "Turn your next big idea into a living product.",
+    "emailLabel": "Email address",
+    "passwordLabel": "Password",
+    "submitLogin": "Sign In",
+    "submitRegister": "Create My Account",
+    "haveAccount": "Already have an account?",
+    "noAccount": "Don't have an account yet?",
+    "termsCombined": "I agree to the {terms} and the {privacy}.",
+    "termsLink": "terms of service",
+    "privacyLink": "privacy policy",
+    "turnstileLabel": "Anti-bot security verification",
+    "turnstileVerified": "Human verification confirmed",
+    "googleButton": "Continue with Google",
+    "phoneButton": "Continue with Phone Number",
+    "orDivider": "or"
+  },
+  "onboarding": {
+    "badge": "Creation Space",
+    "title": "A solid foundation before your first mission.",
+    "subtitle": "These details personalize your Way and starting point in the studio.",
+    "steps": {
+      "profile": "Profile & Way",
+      "goal": "Goal",
+      "level": "Experience",
+      "discovery": "Discovery",
+      "ready": "Ready"
+    },
+    "step0": {
+      "title": "Customize your identity and your Way",
+      "subtitle": "Choose your display name and the master Way that will power your builds.",
+      "displayName": "Display name or handle",
+      "displayNamePlaceholder": "E.g. Alex, Neo, KageDev",
+      "chooseVoie": "Select your master Way:",
+      "chooseTone": "Preferred communication style:",
+      "tones": {
+        "concise": "Concise & direct (Immediate code focus)",
+        "educational": "Educational & analytical (Detailed reasoning)",
+        "bold": "Bold & fast (Rapid iterative prototyping)"
+      }
+    }
+  },
+  "workspace": {
+    "searchPlaceholder": "Ask a question, describe an app idea, or request an edit...",
+    "templates": {
+      "title": "Ready-to-Deploy App Templates & Architectures",
+      "subtitle": "Kick off instantly with a battle-tested foundation instead of starting from scratch.",
+      "items": {
+        "crm": {
+          "title": "Internal Tool & Lightweight CRM",
+          "desc": "Client relationship manager, Kanban sales pipeline, and live activity metrics."
+        },
+        "dashboard": {
+          "title": "Analytics & Stripe Dashboard",
+          "desc": "MRR charts, retention curves, user cohort analysis, and Stripe webhook handling."
+        },
+        "learning": {
+          "title": "Learning & Flashcards App",
+          "desc": "Spaced repetition system, interactive quizzes, and gamified progress tracking."
+        },
+        "marketplace": {
+          "title": "Micro-SaaS & Marketplace",
+          "desc": "Multi-role auth, recurring subscriptions, product catalog, and checkout."
+        }
+      }
+    }
+  },
+  "sidebar": {
+    "newChat": "New Chat",
+    "activeMission": "Active Mission",
+    "workspaceProgress": "Workspace progress",
+    "powerAvailable": "Power available",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "rename": "Rename",
+    "delete": "Delete",
+    "deleteAll": "Delete all",
+    "plugins": "Plugins & Connectors",
+    "library": "Library",
+    "documentation": "Documentation",
+    "settings": "Settings",
+    "help": "Help & Support",
+    "logout": "Log Out",
+    "pinned": "Pinned",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "lastWeek": "Last 7 days",
+    "lastMonth": "Last 30 days",
+    "older": "Older",
+    "deleteTitle": "Delete this chat?",
+    "deleteDescription": "This action cannot be undone. This will permanently delete your chat."
+  }
+}

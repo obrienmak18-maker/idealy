@@ -110,6 +110,27 @@ function getUserWayFromRequest(request: Request): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function getUserToneFromRequest(request: Request): string | null {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(/(?:^|;\s*)idealy_user_tone=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function getUserDisplayNameFromRequest(request: Request): string | null {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(/(?:^|;\s*)idealy_user_name=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function getUserLanguageFromRequest(request: Request): string | null {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(/(?:^|;\s*)(?:idealy_lang|NEXT_LOCALE)=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function streamIdealyEdgeResponse({
   dataStream,
   directModel,
@@ -120,6 +141,9 @@ async function streamIdealyEdgeResponse({
   designSpecification,
   request,
   userWay,
+  userTone,
+  userDisplayName,
+  language,
 }: {
   dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
   directModel?: ReturnType<typeof getIdealyDirectProviderModel>;
@@ -130,6 +154,9 @@ async function streamIdealyEdgeResponse({
   designSpecification?: DesignSpecification;
   request: Request;
   userWay?: string | null;
+  userTone?: string | null;
+  userDisplayName?: string | null;
+  language?: string | null;
 }) {
   const supabaseAccessToken = await getSupabaseAccessToken(request);
   if (!supabaseAccessToken) {
@@ -154,6 +181,7 @@ async function streamIdealyEdgeResponse({
       prompt: getIdealyPrompt(messages),
       stream: true,
       systemPrompt: `${systemPrompt({
+        language,
         requestHints: {
           city: undefined,
           country: undefined,
@@ -161,6 +189,8 @@ async function streamIdealyEdgeResponse({
           longitude: undefined,
         },
         supportsTools: false,
+        userDisplayName,
+        userTone,
         userWay,
       })}${designSpecification ? `\n\n${designSpecificationToPrompt(designSpecification)}` : ""}`,
     }),
@@ -487,6 +517,9 @@ export async function POST(request: Request) {
         };
 
         const userWay = getUserWayFromRequest(request);
+        const userTone = getUserToneFromRequest(request);
+        const userDisplayName = getUserDisplayNameFromRequest(request);
+        const userLanguage = getUserLanguageFromRequest(request);
 
         if (shouldUseIdealyEdgeProvider()) {
           let intentCategory:
@@ -565,6 +598,9 @@ export async function POST(request: Request) {
                 designSpecification: missionPlan?.design,
                 request,
                 userWay,
+                userTone,
+                userDisplayName,
+                language: userLanguage,
               });
             }
             stopWaitingStatus();
@@ -594,7 +630,14 @@ export async function POST(request: Request) {
                     "updateDocument",
                     "requestSuggestions",
                   ],
-            instructions: systemPrompt({ requestHints, supportsTools, userWay }),
+            instructions: systemPrompt({
+              language: userLanguage,
+              requestHints,
+              supportsTools,
+              userDisplayName,
+              userTone,
+              userWay,
+            }),
             messages: modelMessages,
             model: getLanguageModel(chatModel),
             onAbort() {
@@ -786,3 +829,36 @@ export async function DELETE(request: Request) {
 
   return Response.json(deletedChat, { status: 200 });
 }
+
+export async function PATCH(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return new ChatbotError("bad_request:api").toResponse();
+  }
+
+  const body = (await request.json().catch(() => ({}))) as { title?: string };
+  const title = body?.title?.trim();
+
+  if (!title) {
+    return new ChatbotError("bad_request:api").toResponse();
+  }
+
+  const session = await auth();
+
+  if (!session?.user) {
+    return new ChatbotError("unauthorized:chat").toResponse();
+  }
+
+  const chat = await getChatById({ id });
+
+  if (chat?.userId !== session.user.id) {
+    return new ChatbotError("forbidden:chat").toResponse();
+  }
+
+  await updateChatTitleById({ chatId: id, title });
+
+  return Response.json({ id, title }, { status: 200 });
+}
+

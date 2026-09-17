@@ -1,0 +1,258 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "error": "Une erreur est survenue",
+    "loading": "Chargement…",
+    "retry": "Réessayer",
+    "delete": "Supprimer",
+    "back": "Retour",
+    "next": "Suivant",
+    "continue": "Continuer",
+    "or": "ou",
+    "close": "Fermer",
+    "copy": "Copier",
+    "copied": "Copié !"
+  },
+  "nav": {
+    "product": "Produit",
+    "ways": "Voies",
+    "squad": "Escouade IA",
+    "pricing": "Tarifs",
+    "about": "À propos",
+    "docs": "Documentation",
+    "signIn": "Se connecter",
+    "getStarted": "Commencer",
+    "settings": "Paramètres",
+    "logout": "Se déconnecter",
+    "newChat": "Nouvelle discussion"
+  },
+  "hero": {
+    "badge": "Votre studio IA multi-agents pour transformer une idée en application",
+    "title1": "Donnez vie à vos idées.",
+    "title2": "Une mission à la fois.",
+    "subtitle": "Idealy orchestre une escouade d'agents IA (Architecte, Builder, Reviewer) pour transformer votre vision en code de production prêt à l'emploi.",
+    "ctaPrimary": "Lancer ma première mission",
+    "ctaSecondary": "Explorer les plans",
+    "features": [
+      "Décrivez votre projet en langage naturel",
+      "L'escouade d'agents génère, teste et valide",
+      "Visualisez en direct, itérez et téléchargez en ZIP"
+    ]
+  },
+  "ways": {
+    "tag": "Gamification & Philosophie",
+    "title": "Pourquoi choisir une Voie ?",
+    "explanation": "Chaque Voie détermine le nom de votre énergie de travail (Mana, Chakra, Nen, Énergie), adapte le style d'accompagnement de vos agents et oriente la méthode de conception de vos projets.",
+    "changeNotice": "Vous pouvez changer de Voie à tout moment depuis vos paramètres.",
+    "resourceLabel": "Ressource",
+    "continueWith": "Choisir la {name} et commencer",
+    "items": {
+      "ninja": {
+        "name": "Voie du Ninja",
+        "resource": "Chakra",
+        "pitch": "Vitesse & Précision Éclair",
+        "desc": "Pensée pour avancer à vitesse maximale, éliminer la friction et produire du code ultra-rapide avec une précision chirurgicale.",
+        "tagline": "Déployez votre Chakra pour coder à la vitesse de l'éclair.",
+        "philosophy": "Vitesse d'exécution maximale, fluidité absolue et itérations chirurgicales sans la moindre friction.",
+        "chiefRole": "Chef d'Escouade & Hokage"
+      },
+      "mage": {
+        "name": "Voie du Mage",
+        "resource": "Mana",
+        "pitch": "Créativité pure & Exploration",
+        "desc": "Idéale pour explorer des idées audacieuses, prototyper de nouveaux concepts et tester des approches innovantes avec méthode.",
+        "tagline": "Canalisez votre Mana pour forger l'inédit.",
+        "philosophy": "Exploration créative audacieuse, architectures modulaires et abstraction élégante.",
+        "chiefRole": "Maître de Guilde & Grand Mage"
+      },
+      "hunter": {
+        "name": "Voie du Hunter",
+        "resource": "Nen",
+        "pitch": "Stratégie & Analyse Pointue",
+        "desc": "Parfaite pour traquer les meilleures solutions techniques, comparer les dépendances et faire des choix optimaux.",
+        "tagline": "Développez votre Nen pour maîtriser chaque décision.",
+        "philosophy": "Rigueur analytique, traque des failles techniques et sélection chirurgicale des meilleures librairies.",
+        "chiefRole": "Président de l'Association & Hunter Élite"
+      },
+      "professional": {
+        "name": "Voie du Pro",
+        "resource": "Énergie",
+        "pitch": "Rigueur & Standards Enterprise",
+        "desc": "Conçue pour bâtir des fondations robustes, durables, évolutives et respectant les meilleures pratiques du génie logiciel.",
+        "tagline": "Mobilisez votre Énergie pour bâtir du solide.",
+        "philosophy": "Standards d'ingénierie stricts, maintenabilité long terme et robustesse enterprise.",
+        "chiefRole": "Lead Architect & Staff Engineer"
+      }
+    }
+  },
+  "estimator": {
+    "tag": "Calculateur Intelligent",
+    "title": "Simulez vos besoins mensuels",
+    "subtitle": "Ajustez vos estimations de développement pour identifier la formule la plus adaptée.",
+    "simpleLabel": "Missions simples (1 agent)",
+    "simpleUnit": "mois",
+    "squadLabel": "Missions complètes (Escouade 3 agents)",
+    "squadUnit": "mois",
+    "estimatedNeed": "Besoin estimé :",
+    "perMonth": "Power Points / mois",
+    "recommendedFormula": "Formule recommandée : ",
+    "freePlan": "Découverte (Gratuit)",
+    "proStandardPlan": "Pro Standard (1 000 pts)",
+    "proBoostPlan": "Pro Boost (2 000 pts)",
+    "businessPlan": "Business Studio (5 000+ pts)"
+  },
+  "pricing": {
+    "tag": "Transparence Totale",
+    "title": "Des offres adaptées à votre ambition",
+    "subtitle": "Commencez gratuitement sans carte bancaire, puis évoluez selon la puissance requise pour vos projets.",
+    "monthly": "Facturation mensuelle",
+    "choosePowerVolume": "Choisissez votre volume Power :",
+    "missionsEquivalent": "Soit ~{simples} missions simples ou ~{squads} assistants parallèles.",
+    "plans": {
+      "free": {
+        "name": "Découverte",
+        "price": "0 €",
+        "period": "Gratuit à vie",
+        "badge": "Pour tester",
+        "desc": "100 crédits d'exécution offerts pour tester vos premières applications et explorer le studio.",
+        "features": [
+          "100 crédits d'exécution offerts",
+          "Accès au Workspace interactif & Live Preview",
+          "1 assistant actif en parallèle",
+          "Export de projet ZIP sans limite",
+          "Sauvegarde cloud sécurisée"
+        ],
+        "cta": "Commencer gratuitement"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "29 €",
+        "period": "par mois",
+        "badge": "Le plus populaire",
+        "desc": "Volume de calcul étendu, assistants IA parallèles, modèles haute vitesse et intégrations complètes.",
+        "features": [
+          "Volume Power personnalisable (1 000 à 6 000 crédits)",
+          "Assistants IA parallèles (Architecte, Builder, Reviewer)",
+          "Modèles haute vitesse & priorité réseau",
+          "Export et synchronisation directe GitHub",
+          "Historique complet et mémoire continue",
+          "Support prioritaire sous 24h"
+        ],
+        "cta": "Passer à Pro"
+      },
+      "business": {
+        "name": "Business Studio",
+        "price": "89 €",
+        "period": "par mois",
+        "badge": "Équipes & Scale",
+        "desc": "Pour les studios, agences et équipes exigeant une puissance maximale et une collaboration fluide.",
+        "features": [
+          "5 000+ crédits d'exécution / mois",
+          "Workspaces collaboratifs & partage d'équipe",
+          "Connecteurs et plugins illimités (Figma, Supabase, Slack)",
+          "Serveurs MCP & API personnalisées débloqués",
+          "Modèles d'IA les plus avancés sans quota",
+          "Support dédié 7j/7 avec SLA garanti"
+        ],
+        "cta": "Contacter l'équipe Studio"
+      }
+    }
+  },
+  "auth": {
+    "loginTitle": "Bon retour sur Idealy",
+    "loginSubtitle": "Retrouvez vos workspaces et poursuivez vos développements.",
+    "registerTitle": "Créez votre espace Idealy",
+    "registerSubtitle": "Donnez une forme concrète à votre prochaine idée.",
+    "emailLabel": "Adresse e-mail",
+    "passwordLabel": "Mot de passe",
+    "submitLogin": "Se connecter",
+    "submitRegister": "Créer mon compte",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "noAccount": "Pas encore de compte ?",
+    "termsCombined": "J’accepte les {terms} et la {privacy}.",
+    "termsLink": "conditions d’utilisation",
+    "privacyLink": "politique de confidentialité",
+    "turnstileLabel": "Vérification de sécurité anti-robot",
+    "turnstileVerified": "Protection humaine validée",
+    "googleButton": "Continuer avec Google",
+    "phoneButton": "Continuer avec un numéro de téléphone",
+    "orDivider": "ou"
+  },
+  "onboarding": {
+    "badge": "Espace de création",
+    "title": "Une base claire avant votre première mission.",
+    "subtitle": "Ces informations personnalisent votre voie et votre point de départ dans le studio.",
+    "steps": {
+      "profile": "Profil & Voie",
+      "goal": "Objectif",
+      "level": "Expérience",
+      "discovery": "Découverte",
+      "ready": "Prêt"
+    },
+    "step0": {
+      "title": "Personnalisez votre identité et votre Voie",
+      "subtitle": "Choisissez votre nom affiché et la Voie qui accompagnera vos créations.",
+      "displayName": "Nom affiché ou pseudo",
+      "displayNamePlaceholder": "Ex: Alex, Neo, KageDev",
+      "chooseVoie": "Sélectionnez votre Voie maîtresse :",
+      "chooseTone": "Style de communication souhaité :",
+      "tones": {
+        "concise": "Concise & directe (Focus code immédiat)",
+        "educational": "Pédagogue & analytique (Explications détaillées)",
+        "bold": "Audacieuse & rapide (Itérations ultra-rapides)"
+      }
+    }
+  },
+  "workspace": {
+    "searchPlaceholder": "Posez une question, décrivez une idée d'app ou demandez une modification...",
+    "templates": {
+      "title": "Templates & Architectures Prêtes à l'Emploi",
+      "subtitle": "Démarrez instantanément avec une base éprouvée plutôt que de partir d'une page blanche.",
+      "items": {
+        "crm": {
+          "title": "Outil Interne & CRM Léger",
+          "desc": "Gestion de clients, pipeline de ventes Kanban et métriques d'activité en temps réel."
+        },
+        "dashboard": {
+          "title": "Dashboard Analytics & Stripe",
+          "desc": "Graphiques de revenus, taux de rétention, cohortes et intégration webhooks Stripe."
+        },
+        "learning": {
+          "title": "App d'Apprentissage & Flashcards",
+          "desc": "Système de répétition espacée, quiz interactifs et suivi de progression gamifié."
+        },
+        "marketplace": {
+          "title": "Micro-SaaS & Marketplace",
+          "desc": "Authentification multi-rôles, paiements récurrents et catalogue de produits."
+        }
+      }
+    }
+  },
+  "sidebar": {
+    "newChat": "Nouvelle discussion",
+    "activeMission": "Mission en cours",
+    "workspaceProgress": "Progression de votre workspace",
+    "powerAvailable": "Power disponible",
+    "pin": "Épingler",
+    "unpin": "Détacher",
+    "rename": "Renommer",
+    "delete": "Supprimer",
+    "deleteAll": "Tout supprimer",
+    "plugins": "Plugins & Connecteurs",
+    "library": "Bibliothèque",
+    "documentation": "Documentation",
+    "settings": "Paramètres",
+    "help": "Aide & Support",
+    "logout": "Se déconnecter",
+    "pinned": "Épinglés",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "lastWeek": "7 derniers jours",
+    "lastMonth": "30 derniers jours",
+    "older": "Plus anciens",
+    "deleteTitle": "Supprimer cette discussion ?",
+    "deleteDescription": "Cette action est irréversible. La discussion sera définitivement supprimée."
+  }
+}

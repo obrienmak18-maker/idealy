@@ -52,6 +52,7 @@ export const onboardingInputSchema = z.object({
     .max(64)
     .regex(/^[A-Za-z0-9_+./-]+$/, "Fuseau horaire invalide.")
     .default("UTC"),
+  tone: z.enum(["concise", "educational", "bold"]).optional(),
   way: z.enum(idealyWays),
 });
 

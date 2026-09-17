@@ -3,6 +3,7 @@
 import {
   BookOpenIcon,
   ChevronDownIcon,
+  HelpCircle,
   PanelLeftIcon,
   PenSquareIcon,
   PlugZapIcon,
@@ -20,6 +21,8 @@ import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { PowerStatusBadge } from "@/components/chat/power-status";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { useTranslation } from "@/lib/i18n/provider";
 import {
   getChatHistoryPaginationKey,
   SidebarHistory,
@@ -60,6 +63,8 @@ import { useActiveChat } from "@/hooks/use-active-chat";
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { burnDownPercentage } = useGamificationStore();
   const { setOpenMobile, toggleSidebar, state } = useSidebar();
   const { mutate } = useSWRConfig();
   const { resetToNewChat } = useActiveChat();
@@ -224,13 +229,13 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                   href="/docs"
                 >
-                  <BookOpenIcon className="size-3.5" /> Documentation
+                  <HelpCircle className="size-3.5" /> {t("sidebar.help") || "Aide & Support"}
                 </Link>
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* 3. Mission en cours / Workspace progress */}
+          {/* 3. Mission en cours / Workspace burn-down meter */}
           <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
             <SidebarGroupContent>
               <div className="mx-2 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/30 p-3 shadow-[var(--shadow-card)]">
@@ -241,19 +246,23 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     </div>
                     <div>
                       <div className="text-[11px] font-semibold text-sidebar-foreground">
-                        Mission en cours
+                        {t("sidebar.activeMission") || "Mission en cours"}
                       </div>
                       <div className="text-[10px] text-sidebar-foreground/55">
-                        Progression de votre workspace
+                        {t("sidebar.powerAvailable") || "Énergie restante"}
                       </div>
                     </div>
                   </div>
                   <span className="text-[11px] font-semibold text-sidebar-foreground/75">
-                    0%
+                    {burnDownPercentage}%
                   </span>
                 </div>
+                {/* Burn-down bar: starts at 100% and decreases as power is consumed */}
                 <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-sidebar-border/70">
-                  <div className="h-full w-[8%] rounded-full bg-gradient-to-r from-violet-500 to-orange-400" />
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-orange-400 transition-all duration-500 ease-out"
+                    style={{ width: `${burnDownPercentage}%` }}
+                  />
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-sidebar-foreground/60">
                   <span className="flex items-center gap-1">

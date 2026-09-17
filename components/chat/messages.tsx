@@ -5,8 +5,10 @@ import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/provider";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
+import { WorkspaceTemplates } from "./workspace-templates";
 import { PreviewMessage, ThinkingMessage } from "./message";
 import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
@@ -46,6 +48,7 @@ function PureMessages({
   onEditMessage,
   onSuggestionSelect,
 }: MessagesProps) {
+  const { t } = useTranslation();
   const {
     containerRef: messagesContainerRef,
     endRef: messagesEndRef,
@@ -72,11 +75,23 @@ function PureMessages({
   }, [scrollToBottom]);
 
   return (
-    <div className="relative flex-1 bg-background">
+    <div className="relative flex-1 bg-background overflow-hidden">
       {messages.length === 0 && !isLoading && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <div className="pointer-events-auto flex w-full max-w-3xl flex-col items-center gap-8 px-4 pb-24">
+        <div className="absolute inset-0 z-10 overflow-y-auto">
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center justify-center gap-7 px-4 py-8 pb-32">
             <Greeting />
+            <WorkspaceTemplates
+              onSelectTemplate={(prompt) => {
+                if (onSuggestionSelect) {
+                  onSuggestionSelect(prompt);
+                } else {
+                  sendMessage({
+                    parts: [{ text: prompt, type: "text" }],
+                    role: "user",
+                  });
+                }
+              }}
+            />
             <SuggestedActions
               chatId={chatId}
               onSuggestionSelect={onSuggestionSelect}
@@ -132,7 +147,7 @@ function PureMessages({
 
       <button
         aria-label="Scroll to bottom"
-        className={`absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full border border-border/50 bg-card/90 px-3.5 shadow-[var(--shadow-float)] backdrop-blur-lg transition-all duration-200 h-7 text-[10px] ${
+        className={`absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border/60 bg-card/95 px-3.5 py-1.5 shadow-[var(--shadow-float)] backdrop-blur-lg transition-all duration-200 text-[11px] font-medium text-foreground cursor-pointer ${
           isAtBottom
             ? "pointer-events-none scale-90 opacity-0"
             : "pointer-events-auto scale-100 opacity-100"
@@ -140,7 +155,8 @@ function PureMessages({
         onClick={handleScrollToBottom}
         type="button"
       >
-        <ArrowDownIcon className="size-3 text-muted-foreground" />
+        <ArrowDownIcon className="size-3.5 text-primary" />
+        <span>{t("workspace.scrollToBottom", "Défiler vers le bas")}</span>
       </button>
     </div>
   );

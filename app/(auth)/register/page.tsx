@@ -42,9 +42,13 @@ function firebaseErrorCode(error: unknown) {
   return "";
 }
 
+import { useTranslation } from "@/lib/i18n/provider";
+
 export default function Page() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
 
@@ -189,10 +193,10 @@ export default function Page() {
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">
-        Créez votre espace Idealy
+        {t("auth.registerTitle") || "Créez votre espace Idealy"}
       </h1>
       <p className="text-sm text-muted-foreground">
-        Donnez une forme concrète à votre prochaine idée.
+        {t("auth.registerSubtitle") || "Donnez une forme concrète à votre prochaine idée."}
       </p>
       {feedback ? (
         <p
@@ -208,41 +212,45 @@ export default function Page() {
         </p>
       ) : null}
       <AuthForm action={handleSubmit} defaultEmail={email}>
-        <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+        <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground cursor-pointer select-none">
           <input
-            className="mt-0.5 size-4 shrink-0 accent-foreground"
+            checked={termsAccepted}
+            className="mt-0.5 size-4 shrink-0 accent-foreground cursor-pointer"
             name="terms"
+            onChange={(e) => setTermsAccepted(e.target.checked)}
             required
             type="checkbox"
           />
           <span>
             J’accepte les{" "}
-            <Link className="text-foreground underline" href="/terms">
+            <Link className="text-foreground underline" href="/terms" prefetch={true}>
               conditions d’utilisation
             </Link>{" "}
             et la{" "}
-            <Link className="text-foreground underline" href="/privacy">
+            <Link className="text-foreground underline" href="/privacy" prefetch={true}>
               politique de confidentialité
             </Link>
             .
           </span>
         </label>
         <SubmitButton isSuccessful={isSuccessful}>
-          Créer mon compte
+          {t("auth.submitRegister") || "Créer mon compte"}
         </SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
-          {"Vous avez déjà un compte ? "}
+          {t("auth.haveAccount") ? `${t("auth.haveAccount")} ` : "Vous avez déjà un compte ? "}
           <Link
             className="text-foreground underline-offset-4 hover:underline"
             href="/login"
+            prefetch={true}
           >
-            Se connecter
+            {t("auth.submitLogin") || "Se connecter"}
           </Link>
         </p>
       </AuthForm>
       <FirebaseProviderActions
         nextPath={getOnboardingUrl()}
         requireTerms={true}
+        termsAccepted={termsAccepted}
       />
     </>
   );

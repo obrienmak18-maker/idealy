@@ -49,6 +49,8 @@ import {
 } from "@/lib/ai/models";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/provider";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import {
   PromptInput,
   PromptInputActionMenu,
@@ -148,7 +150,10 @@ function PureMultimodalInput({
     setLocalStorageInput(input);
   }, [input, setLocalStorageInput]);
 
+  const { language } = useTranslation();
+  const { currentWay } = useGamificationStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
@@ -172,38 +177,8 @@ function PureMultimodalInput({
 
   const toggleSpeechRecognition = useCallback(() => {
     const speechWindow = window as Window & {
-      SpeechRecognition?: new () => {
-        lang: string;
-        interimResults: boolean;
-        continuous: boolean;
-        onresult:
-          | ((event: {
-              results: ArrayLike<
-                ArrayLike<{ transcript: string }> & { isFinal?: boolean }
-              >;
-            }) => void)
-          | null;
-        onend: (() => void) | null;
-        onerror: (() => void) | null;
-        start: () => void;
-        stop: () => void;
-      };
-      webkitSpeechRecognition?: new () => {
-        lang: string;
-        interimResults: boolean;
-        continuous: boolean;
-        onresult:
-          | ((event: {
-              results: ArrayLike<
-                ArrayLike<{ transcript: string }> & { isFinal?: boolean }
-              >;
-            }) => void)
-          | null;
-        onend: (() => void) | null;
-        onerror: (() => void) | null;
-        start: () => void;
-        stop: () => void;
-      };
+      SpeechRecognition?: new () => any;
+      webkitSpeechRecognition?: new () => any;
     };
     const Recognition =
       speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
@@ -214,34 +189,57 @@ function PureMultimodalInput({
     }
 
     if (isListening) {
+      recognitionRef.current?.stop();
       setIsListening(false);
       return;
     }
 
-    const recognition = new Recognition();
-    recognition.lang = "fr-FR";
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((result) => result[0]?.transcript ?? "")
-        .join("")
-        .trim();
-      if (!transcript) {
-        return;
-      }
-      const prefix = speechBaseInputRef.current.trim();
-      setInput(prefix ? `${prefix} ${transcript}` : transcript);
-    };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => {
+    try {
+      const recognition = new Recognition();
+      const speechLang =
+        language === "en" ? "en-US" : language === "es" ? "es-ES" : "fr-FR";
+      recognition.lang = speechLang;
+      recognition.interimResults = true;
+      recognition.continuous = true;
+
+      recognition.onresult = (event: any) => {
+        let finalTranscript = "";
+        let interimTranscript = "";
+        for (let i = 0; i < event.results.length; ++i) {
+          const res = event.results[i];
+          if (res.isFinal) {
+            finalTranscript += (res[0]?.transcript ?? "") + " ";
+          } else {
+            interimTranscript += res[0]?.transcript ?? "";
+          }
+        }
+        const transcript = `${finalTranscript} ${interimTranscript}`.trim();
+        if (!transcript) {
+          return;
+        }
+        const prefix = speechBaseInputRef.current.trim();
+        setInput(prefix ? `${prefix} ${transcript}` : transcript);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+        toast("La dictée vocale a été interrompue.");
+      };
+
+      speechBaseInputRef.current = input;
+      setIsListening(true);
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch {
       setIsListening(false);
-      toast("La dictée vocale n’a pas pu démarrer.");
-    };
-    speechBaseInputRef.current = input;
-    setIsListening(true);
-    recognition.start();
-  }, [isListening, setInput]);
+      toast("Impossible de lancer la dictée vocale.");
+    }
+  }, [isListening, language, input, setInput]);
+
 
   const handleInput = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -631,6 +629,13 @@ function PureMultimodalInput({
           ref={textareaRef}
           value={input}
         />
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
         <PromptInputFooter className="px-3 pb-3">
             <PromptInputTools>
               <PromptInputActionMenu>
@@ -671,6 +676,26 @@ function PureMultimodalInput({
                   </PromptInputActionMenuItem>
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
+
+              {currentWay && (
+                <span
+                  className={cn(
+                    "flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium border transition-colors",
+                    currentWay === "ninja" && "bg-red-500/10 border-red-500/20 text-red-500",
+                    currentWay === "hunter" && "bg-emerald-500/10 border-emerald-500/20 text-emerald-500",
+                    currentWay === "mage" && "bg-blue-500/10 border-blue-500/20 text-blue-500",
+                    currentWay === "professional" && "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                  )}
+                  title={`Voie active : ${currentWay.toUpperCase()}`}
+                >
+                  <span>
+                    {currentWay === "ninja" ? "🥷" : currentWay === "hunter" ? "🏹" : currentWay === "mage" ? "🔮" : "⚡"}
+                  </span>
+                  <span className="hidden sm:inline capitalize">
+                    {currentWay === "professional" ? "Pro" : currentWay}
+                  </span>
+                </span>
+              )}
             </PromptInputTools>
 
           <div className="flex items-center gap-1.5">

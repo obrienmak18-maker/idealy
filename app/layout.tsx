@@ -80,6 +80,8 @@ const THEME_COLOR_SCRIPT = `\
   updateThemeColor();
 })();`;
 
+import { LanguageProvider } from "@/lib/i18n/provider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -109,7 +111,9 @@ export default function RootLayout({
           <SessionProvider
             basePath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}
           >
-            <TooltipProvider>{children}</TooltipProvider>
+            <LanguageProvider>
+              <TooltipProvider>{children}</TooltipProvider>
+            </LanguageProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

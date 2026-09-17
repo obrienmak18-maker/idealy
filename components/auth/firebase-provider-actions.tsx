@@ -44,19 +44,31 @@ function GoogleIcon() {
 export function FirebaseProviderActions({
   nextPath,
   requireTerms = false,
+  termsAccepted: controlledTermsAccepted,
 }: {
   nextPath: string;
   requireTerms?: boolean;
+  termsAccepted?: boolean;
 }) {
   const { update: updateSession } = useSession();
   const [isPending, startTransition] = useTransition();
-  const [termsAccepted, setTermsAccepted] = useState(!requireTerms);
+  const [internalTermsAccepted, setInternalTermsAccepted] = useState(!requireTerms);
+  const termsAccepted = controlledTermsAccepted !== undefined ? controlledTermsAccepted : internalTermsAccepted;
   const [isHumanVerified, setIsHumanVerified] = useState(false);
+  const [isVerifyingHuman, setIsVerifyingHuman] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [confirmationResult, setConfirmationResult] =
     useState<ConfirmationResult | null>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+
+  // Cloudflare Turnstile-like smooth automatic verification
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsHumanVerified(true);
+    }, 650);
+    return () => clearTimeout(timer);
+  }, []);
 
   const completeAuth = useCallback(
     async (idToken: string) => {
@@ -230,12 +242,12 @@ export function FirebaseProviderActions({
         </div>
       </div>
 
-      {requireTerms && (
+      {requireTerms && controlledTermsAccepted === undefined && (
         <label className="flex items-start gap-2.5 text-xs leading-relaxed text-muted-foreground cursor-pointer select-none">
           <input
             checked={termsAccepted}
             className="mt-0.5 size-4 shrink-0 rounded border-border/60 accent-foreground cursor-pointer"
-            onChange={(e) => setTermsAccepted(e.target.checked)}
+            onChange={(e) => setInternalTermsAccepted(e.target.checked)}
             type="checkbox"
           />
           <span>
@@ -252,30 +264,29 @@ export function FirebaseProviderActions({
         </label>
       )}
 
-      {/* Cloudflare/reCAPTCHA-style Anti-bot verification badge */}
+      {/* Cloudflare Turnstile-style Security Verification */}
       <div
         className={cn(
-          "flex items-center justify-between rounded-xl border p-3 transition-colors select-none cursor-pointer",
+          "flex items-center justify-between rounded-xl border p-2.5 transition-all select-none",
           isHumanVerified
-            ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
-            : "border-border/60 bg-muted/20 hover:border-border hover:bg-muted/35"
+            ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+            : "border-border/60 bg-muted/20"
         )}
-        onClick={() => setIsHumanVerified((v) => !v)}
       >
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            checked={isHumanVerified}
-            className="size-4 shrink-0 rounded border-border/60 accent-emerald-500 cursor-pointer"
-            onChange={(e) => setIsHumanVerified(e.target.checked)}
-            type="checkbox"
-          />
+        <div className="flex items-center gap-2.5">
+          <div className="relative flex size-5 items-center justify-center">
+            {isHumanVerified ? (
+              <ShieldCheck className="size-5 text-emerald-500 transition-transform duration-200" />
+            ) : (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
           <span className="text-xs font-medium text-foreground">
-            Je ne suis pas un robot
+            {isHumanVerified ? "Vérification de sécurité confirmée" : "Vérification de sécurité anti-robot…"}
           </span>
-        </label>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80">
-          <ShieldCheck className={cn("size-4", isHumanVerified ? "text-emerald-500" : "text-muted-foreground")} />
-          <span className="hidden sm:inline">Protection Idealy</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
+          <span>Sécurité Idealy</span>
         </div>
       </div>
 

@@ -34,11 +34,12 @@ import {
   type SupportedLanguage,
   welcomeTranslations,
 } from "@/lib/i18n/welcome-translations";
+import { useTranslation } from "@/lib/i18n/provider";
 import { alvinMessenger, voiesCatalog, type WayDetailed } from "@/lib/idealy/voies-catalog";
 import { PRO_PACK_OPTIONS } from "@/lib/idealy/power-policy";
 
 export default function WelcomePage() {
-  const [lang, setLang] = useState<SupportedLanguage>("fr");
+  const { language: lang, setLanguage: handleLangChange } = useTranslation();
   const [step, setStep] = useState(0);
   const [selectedWay, setSelectedWay] = useState<IdealyWay>("ninja");
   const [proTierIndex, setProTierIndex] = useState(0);
@@ -52,18 +53,9 @@ export default function WelcomePage() {
 
   useEffect(() => {
     setMounted(true);
-    const savedLang = localStorage.getItem("idealy_lang") as SupportedLanguage;
-    if (savedLang && ["fr", "en", "es"].includes(savedLang)) {
-      setLang(savedLang);
-    }
   }, []);
 
-  const handleLangChange = (newLang: SupportedLanguage) => {
-    setLang(newLang);
-    localStorage.setItem("idealy_lang", newLang);
-  };
-
-  const t = welcomeTranslations[lang];
+  const t = welcomeTranslations[lang] || welcomeTranslations.fr;
   const activeWayData: WayDetailed = voiesCatalog[selectedWay] || voiesCatalog.ninja;
 
   // Pro tier custom point options — source de vérité = power-policy.ts
@@ -311,7 +303,7 @@ export default function WelcomePage() {
                     />
                     <div className="flex items-center justify-between">
                       <h3 className="text-base font-bold text-white">
-                        {wayItem.label}
+                        {t.waysSection.ways[wayKey]?.name || wayItem.label}
                       </h3>
                       {isSelected ? (
                         <span className="flex size-5 items-center justify-center rounded-full bg-white text-black shadow-md">
@@ -320,13 +312,13 @@ export default function WelcomePage() {
                       ) : null}
                     </div>
                     <p className="mt-1 text-xs font-medium text-white/60">
-                      Ressource :{" "}
+                      {lang === "en" ? "Resource: " : lang === "es" ? "Recurso: " : "Ressource : "}
                       <span className="font-bold text-white">
-                        {wayItem.resourceLabel}
+                        {t.waysSection.ways[wayKey]?.resource || wayItem.resourceLabel}
                       </span>
                     </p>
                     <p className="mt-2 text-xs leading-relaxed text-white/50">
-                      {wayItem.philosophy}
+                      {t.waysSection.ways[wayKey]?.desc || wayItem.philosophy}
                     </p>
                   </div>
 
@@ -369,33 +361,42 @@ export default function WelcomePage() {
               <div>
                 <div className="flex items-center gap-3">
                   <h3 className="text-2xl font-bold text-white">
-                    {activeWayData.label}
+                    {t.waysSection.ways[selectedWay]?.name || activeWayData.label}
                   </h3>
                   <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white">
-                    Énergie : {activeWayData.resourceLabel}
+                    {lang === "en" ? "Energy: " : lang === "es" ? "Energía: " : "Énergie : "}
+                    {t.waysSection.ways[selectedWay]?.resource || activeWayData.resourceLabel}
                   </span>
                 </div>
                 <p className="mt-2 text-sm italic text-sky-300">
-                  "{activeWayData.tagline}"
+                  "{t.waysSection.ways[selectedWay]?.tagline || activeWayData.tagline}"
                 </p>
               </div>
 
               {/* Stats Bar */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center">
-                  <span className="text-[10px] text-white/50 uppercase font-mono">Vitesse</span>
+                  <span className="text-[10px] text-white/50 uppercase font-mono">
+                    {lang === "en" ? "Speed" : lang === "es" ? "Velocidad" : "Vitesse"}
+                  </span>
                   <p className="text-base font-bold text-sky-300">{activeWayData.stats.speed}%</p>
                 </div>
                 <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center">
-                  <span className="text-[10px] text-white/50 uppercase font-mono">Créativité</span>
+                  <span className="text-[10px] text-white/50 uppercase font-mono">
+                    {lang === "en" ? "Creativity" : lang === "es" ? "Creatividad" : "Créativité"}
+                  </span>
                   <p className="text-base font-bold text-amber-300">{activeWayData.stats.creativity}%</p>
                 </div>
                 <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center">
-                  <span className="text-[10px] text-white/50 uppercase font-mono">Stratégie</span>
+                  <span className="text-[10px] text-white/50 uppercase font-mono">
+                    {lang === "en" ? "Strategy" : lang === "es" ? "Estrategia" : "Stratégie"}
+                  </span>
                   <p className="text-base font-bold text-emerald-300">{activeWayData.stats.strategy}%</p>
                 </div>
                 <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center">
-                  <span className="text-[10px] text-white/50 uppercase font-mono">Robustesse</span>
+                  <span className="text-[10px] text-white/50 uppercase font-mono">
+                    {lang === "en" ? "Robustness" : lang === "es" ? "Robustez" : "Robustesse"}
+                  </span>
                   <p className="text-base font-bold text-purple-300">{activeWayData.stats.robustness}%</p>
                 </div>
               </div>
@@ -414,17 +415,21 @@ export default function WelcomePage() {
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-sky-300">
-                    Messager Universel
+                    {lang === "en" ? "Universal Messenger" : lang === "es" ? "Mensajero Universal" : "Messager Universel"}
                   </span>
                   <span className="rounded-full bg-sky-400/20 px-2 py-0.5 text-[10px] font-semibold text-sky-200">
-                    Présent sur toutes les Voies
+                    {lang === "en" ? "Present on all Paths" : lang === "es" ? "Presente en todos los Caminos" : "Présent sur toutes les Voies"}
                   </span>
                 </div>
                 <h4 className="font-bold text-base text-white mt-0.5">
                   {alvinMessenger.name} — {alvinMessenger.role}
                 </h4>
                 <p className="mt-1 text-xs leading-relaxed text-white/70">
-                  {alvinMessenger.description} Transmet directement la mission au Chef{" "}
+                  {lang === "en"
+                    ? "Alvin coordinates your communications and ensures seamless task handoffs. Directly delivers the mission to Chief "
+                    : lang === "es"
+                    ? "Alvin coordina tus comunicaciones y asegura la entrega de tareas sin interrupciones. Transmite directamente la misión al Jefe "
+                    : "Coordonne vos échanges et assure la liaison continue entre vous et l'escouade. Transmet directement la mission au Chef "}
                   <strong className="text-white">
                     {activeWayData.chiefName || activeWayData.agents[0].name}
                   </strong>
@@ -437,10 +442,15 @@ export default function WelcomePage() {
             <div className="mt-6">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-white/50">
-                  Escouade d'agents de la {activeWayData.label} (5 agents) :
+                  {lang === "en"
+                    ? `Agent Squad of the ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} (5 agents):`
+                    : lang === "es"
+                    ? `Escuadrón de agentes del ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} (5 agentes):`
+                    : `Escouade d'agents de la ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} (5 agents) :`}
                 </h4>
                 <span className="text-[11px] text-white/40">
-                  Chef d'escouade : {activeWayData.chiefName || activeWayData.agents[0].name}
+                  {lang === "en" ? "Squad Chief: " : lang === "es" ? "Jefe de escuadrón: " : "Chef d'escouade : "}
+                  {activeWayData.chiefName || activeWayData.agents[0].name}
                 </span>
               </div>
               <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
@@ -489,11 +499,19 @@ export default function WelcomePage() {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm">⚔️</span>
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-rose-400">
-                    Antagonistes de l'univers (Bugs & Erreurs à neutraliser) :
+                    {lang === "en"
+                      ? "Universe Antagonists (Bugs & Errors to neutralize):"
+                      : lang === "es"
+                      ? "Antagonistas del universo (Bugs y Errores a neutralizar):"
+                      : "Antagonistes de l'univers (Bugs & Erreurs à neutraliser) :"}
                   </h4>
                 </div>
                 <p className="text-xs text-white/60 mb-4">
-                  Lorsque des erreurs ou anomalies surviennent, ces adversaires attaquent le code. Votre escouade se mobilise pour les neutraliser.
+                  {lang === "en"
+                    ? "When bugs or anomalies occur, these adversaries attack the code. Your squad mobilizes to neutralize them."
+                    : lang === "es"
+                    ? "Cuando ocurren errores o anomalías, estos adversarios atacan el código. Tu escuadrón se moviliza para neutralizarlos."
+                    : "Lorsque des erreurs ou anomalies surviennent, ces adversaires attaquent le code. Votre escouade se mobilise pour les neutraliser."}
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
                   {activeWayData.antagonists.map((ant) => (
@@ -535,7 +553,11 @@ export default function WelcomePage() {
                 onClick={() => setStep(1)}
                 type="button"
               >
-                Choisir la {activeWayData.label} et commencer
+                {lang === "en"
+                  ? `Choose the ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} and start`
+                  : lang === "es"
+                  ? `Elegir el ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} y comenzar`
+                  : `Choisir la ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} et commencer`}
                 <ArrowRightIcon className="size-4" />
               </button>
             </div>
@@ -660,27 +682,17 @@ export default function WelcomePage() {
                 </span>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-white/60">
-                100 Power Points de bienvenue pour tester immédiatement le studio et faire collaborer vos 3 agents IA.
+                {t.pricingSection.plans.free.desc}
               </p>
 
               <div className="mt-6 border-t border-white/10 pt-6">
                 <ul className="space-y-3 text-xs text-white/80">
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                    <span><strong>100 Power Points</strong> de bienvenue offerts</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                    <span>Accès aux <strong>3 agents de l'escouade</strong></span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                    <span>Workspace interactif avec <strong>Live Preview</strong></span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                    <span>Export direct en archive <strong>ZIP</strong></span>
-                  </li>
+                  {t.pricingSection.plans.free.features.map((feat, idx) => (
+                    <li className="flex items-start gap-2.5" key={idx}>
+                      <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -710,13 +722,15 @@ export default function WelcomePage() {
                 <span className="text-4xl font-extrabold text-white">
                   {selectedProOption.price}
                 </span>
-                <span className="ml-2 text-xs text-white/50">/ mois</span>
+                <span className="ml-2 text-xs text-white/50">
+                  {t.pricingSection.plans.pro.period}
+                </span>
               </div>
 
               {/* Custom Points Selector for Pro */}
               <div className="mt-4 rounded-xl border border-violet-400/30 bg-violet-500/10 p-2.5">
                 <span className="text-[11px] font-semibold text-violet-200 block mb-1.5">
-                  Choisissez votre volume Power :
+                  {lang === "en" ? "Choose your Power volume:" : lang === "es" ? "Elija su volumen Power:" : "Choisissez votre volume Power :"}
                 </span>
                 <div className="grid grid-cols-4 gap-1">
                   {proOptions.map((opt, i) => (
@@ -735,7 +749,13 @@ export default function WelcomePage() {
                   ))}
                 </div>
                 <p className="mt-2 text-[10px] text-white/60 text-center">
-                  Soit <strong>~{selectedProOption.simples}</strong> missions simples ou <strong>~{selectedProOption.squads}</strong> escouades complètes.
+                  {lang === "en" ? (
+                    <>That is <strong>~{selectedProOption.simples}</strong> simple missions or <strong>~{selectedProOption.squads}</strong> full squads.</>
+                  ) : lang === "es" ? (
+                    <>Es decir <strong>~{selectedProOption.simples}</strong> misiones simples o <strong>~{selectedProOption.squads}</strong> escuadrones completos.</>
+                  ) : (
+                    <>Soit <strong>~{selectedProOption.simples}</strong> missions simples ou <strong>~{selectedProOption.squads}</strong> escouades complètes.</>
+                  )}
                 </p>
               </div>
 
@@ -743,24 +763,16 @@ export default function WelcomePage() {
                 <ul className="space-y-3 text-xs text-white/90">
                   <li className="flex items-start gap-2.5">
                     <CheckIcon className="size-4 shrink-0 text-sky-400 mt-0.5" />
-                    <span><strong>{selectedProOption.points} Power Points</strong> / mois</span>
+                    <span>
+                      <strong>{selectedProOption.points} Power Points</strong> {lang === "en" ? "/ month" : lang === "es" ? "/ mes" : "/ mois"}
+                    </span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-sky-400 mt-0.5" />
-                    <span>Escouade multi-agents illimitée & prioritaire</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-sky-400 mt-0.5" />
-                    <span>Modèles IA haute performance & exécution rapide</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-sky-400 mt-0.5" />
-                    <span>Export et synchronisation directe vers <strong>GitHub</strong></span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-sky-400 mt-0.5" />
-                    <span>Support prioritaire par e-mail & Discord</span>
-                  </li>
+                  {t.pricingSection.plans.pro.features.slice(1).map((feat, idx) => (
+                    <li className="flex items-start gap-2.5" key={idx}>
+                      <CheckIcon className="size-4 shrink-0 text-sky-400 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -769,7 +781,11 @@ export default function WelcomePage() {
               className="mt-8 block w-full rounded-2xl bg-gradient-to-r from-sky-400 via-violet-500 to-orange-400 py-3 text-center text-xs font-semibold text-white shadow-lg shadow-violet-500/30 transition hover:opacity-95 active:scale-95"
               href={`/register?plan=pro&points=${selectedProOption.points}`}
             >
-              Choisir le plan Pro ({selectedProOption.points} pts)
+              {lang === "en"
+                ? `Choose Pro plan (${selectedProOption.points} pts)`
+                : lang === "es"
+                ? `Elegir el plan Pro (${selectedProOption.points} pts)`
+                : `Choisir le plan Pro (${selectedProOption.points} pts)`}
             </Link>
           </div>
 
@@ -793,31 +809,17 @@ export default function WelcomePage() {
                 </span>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-white/60">
-                3 000 Power Points / mois, agents d'entreprise personnalisés, travail en équipe et SLA 99.9%.
+                {t.pricingSection.plans.business.desc}
               </p>
 
               <div className="mt-6 border-t border-white/10 pt-6">
                 <ul className="space-y-3 text-xs text-white/80">
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                    <span><strong>3 000 Power Points</strong> / mois</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                    <span>Agents spécialisés sur mesure</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                    <span>Espaces partagés et collaboration multi-utilisateurs</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                    <span>Gestion de clés API & connecteurs d'entreprise</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
-                    <span>SLA 99.9% et support dédié 24/7</span>
-                  </li>
+                  {t.pricingSection.plans.business.features.map((feat, idx) => (
+                    <li className="flex items-start gap-2.5" key={idx}>
+                      <CheckIcon className="size-4 shrink-0 text-emerald-400 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
