@@ -118,6 +118,115 @@ $$;
 REVOKE ALL ON FUNCTION public.consume_ai_credit(UUID, UUID, TEXT, INTEGER, TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.consume_ai_credit(UUID, UUID, TEXT, INTEGER, TEXT) TO service_role;
 
+-- ─── Power Pack purchase ───────────────────────────────────────────────────
+-- Stripe previously credited public.user_credits while missions spend from
+-- public.power_wallets: a paid purchase never produced usable Power. Purchases
+-- now credit the Power wallet, which is the single consumption authority.
+--
+-- The credit is capped by the wallet cap, so buying more raises the balance up
+-- to the ceiling rather than inventing an unbounded amount. The full price and
+-- pack identity stay in the ledger metadata for reconciliation with Stripe.
+
+CREATE OR REPLACE FUNCTION public.grant_power_pack(
+  p_user_id UUID,
+  p_pack_id TEXT,
+  p_amount INTEGER,
+  p_idempotency_key TEXT,
+  p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS TABLE(
+  balance INTEGER,
+  amount_granted INTEGER,
+  already_granted BOOLEAN
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_wallet RECORD;
+  v_headroom INTEGER;
+  v_granted INTEGER;
+BEGIN
+  IF p_user_id IS NULL THEN
+    RAISE EXCEPTION 'Invalid Power purchase user';
+  END IF;
+  IF p_pack_id IS NULL OR length(trim(p_pack_id)) NOT BETWEEN 1 AND 80 THEN
+    RAISE EXCEPTION 'Invalid Power pack identity';
+  END IF;
+  IF p_amount IS NULL OR p_amount <= 0 OR p_amount > 100000 THEN
+    RAISE EXCEPTION 'Invalid Power pack amount';
+  END IF;
+  IF p_idempotency_key IS NULL OR length(trim(p_idempotency_key)) NOT BETWEEN 1 AND 200 THEN
+    RAISE EXCEPTION 'Invalid Power purchase idempotency key';
+  END IF;
+
+  -- An idempotency key may never be replayed against a different account.
+  IF EXISTS (
+    SELECT 1 FROM public.power_transactions
+    WHERE idempotency_key = p_idempotency_key AND user_id <> p_user_id
+  ) THEN
+    RAISE EXCEPTION 'Power idempotency key belongs to another user';
+  END IF;
+
+  SELECT balance, wallet_cap, policy_version
+    INTO v_wallet
+    FROM public.ensure_power_wallet(p_user_id)
+    FOR UPDATE;
+
+  -- Replaying the same Stripe event must never credit twice.
+  IF EXISTS (
+    SELECT 1 FROM public.power_transactions WHERE idempotency_key = p_idempotency_key
+  ) THEN
+    RETURN QUERY SELECT v_wallet.balance, 0, TRUE;
+    RETURN;
+  END IF;
+
+  v_headroom := GREATEST(v_wallet.wallet_cap - v_wallet.balance, 0);
+  v_granted := LEAST(p_amount, v_headroom);
+
+  IF v_granted > 0 THEN
+    UPDATE public.power_wallets
+      SET balance = v_wallet.balance + v_granted,
+          updated_at = now()
+      WHERE user_id = p_user_id;
+
+    INSERT INTO public.power_transactions (
+      user_id, mission_id, idempotency_key, transaction_type, action_type,
+      amount_points, balance_before, balance_after, reason,
+      way_at_operation, policy_version, metadata
+    ) VALUES (
+      p_user_id, NULL, trim(p_idempotency_key), 'power_pack_purchase', NULL,
+      v_granted, v_wallet.balance, v_wallet.balance + v_granted,
+      left('Power Pack: ' || trim(p_pack_id), 200),
+      NULL, v_wallet.policy_version,
+      p_metadata || jsonb_build_object('pack_id', trim(p_pack_id), 'requested_amount', p_amount)
+    );
+  END IF;
+
+  -- The purchase is always journalled, even at the cap, so a refused amount is
+  -- auditable instead of silently vanishing.
+  IF v_granted = 0 THEN
+    INSERT INTO public.power_transactions (
+      user_id, mission_id, idempotency_key, transaction_type, action_type,
+      amount_points, balance_before, balance_after, reason,
+      way_at_operation, policy_version, metadata
+    ) VALUES (
+      p_user_id, NULL, trim(p_idempotency_key), 'power_pack_purchase', NULL,
+      0, v_wallet.balance, v_wallet.balance,
+      left('Power Pack refusé (plafond atteint): ' || trim(p_pack_id), 200),
+      NULL, v_wallet.policy_version,
+      p_metadata || jsonb_build_object('pack_id', trim(p_pack_id), 'refused_reason', 'wallet_cap_reached')
+    );
+  END IF;
+
+  RETURN QUERY SELECT v_wallet.balance + v_granted, v_granted, FALSE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.grant_power_pack(UUID, TEXT, INTEGER, TEXT, JSONB) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.grant_power_pack(UUID, TEXT, INTEGER, TEXT, JSONB) TO service_role;
+
 -- Stripe event idempotency: the event ID itself is stored in the ledger key.
 -- Stripe checkout sessions must include user_id and credit_amount metadata;
 -- subscription sessions without credit_amount do not refill balances.

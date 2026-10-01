@@ -1,6 +1,11 @@
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getCreditRefillFromCheckout, parseCreditPackCatalog } from "./stripe-webhook.ts";
+import {
+  getCreditRefillFromCheckout,
+  getPowerPackFromCheckout,
+  parseCreditPackCatalog,
+  type PowerPack,
+} from "./stripe-webhook.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2025-02-24.acacia",
@@ -51,6 +56,34 @@ Deno.serve(async (req) => {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // Power Pack purchases credit the Power wallet, which is the balance
+      // missions actually spend from. A purchase that never reaches the wallet
+      // would leave the user having paid for nothing.
+      const powerPack = getPowerPackFromCheckout(
+        event,
+        session,
+        parsePowerPackCatalog(Deno.env.get("STRIPE_POWER_PACKS_JSON")),
+      );
+      if (powerPack) {
+        const { error } = await admin.rpc("grant_power_pack", {
+          p_amount: powerPack.powerPoints,
+          p_idempotency_key: `stripe:event:${powerPack.eventId}`,
+          p_metadata: {
+            pack_id: powerPack.packId,
+            payment_intent: typeof session.payment_intent === "string"
+              ? session.payment_intent
+              : null,
+            session_id: session.id,
+            source: "stripe:checkout.session.completed",
+          },
+          p_pack_id: powerPack.packId,
+          p_user_id: powerPack.userId,
+        });
+        if (error) throw error;
+        return response("ok");
+      }
+
       const refill = getCreditRefillFromCheckout(
         event,
         session,
@@ -59,10 +92,10 @@ Deno.serve(async (req) => {
       if (!refill) return response("ignored");
 
       const { error } = await admin.rpc("grant_user_credits", {
-        p_user_id: refill.userId,
-        p_idempotency_key: `stripe:event:${refill.eventId}`,
         p_amount: refill.amount,
+        p_idempotency_key: `stripe:event:${refill.eventId}`,
         p_reason: refill.reason,
+        p_user_id: refill.userId,
       });
       if (error) throw error;
       return response("ok");
