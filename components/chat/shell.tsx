@@ -33,6 +33,7 @@ import { DataStreamHandler } from "./data-stream-handler";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
+import { CommandPalette } from "./command-palette";
 
 class ArtifactErrorBoundary extends Component<
   { children: ReactNode },
@@ -267,7 +268,11 @@ export function ChatShell() {
           />
         </div>
         {isArtifactVisible && <BuildTopBar />}
-        <div className="relative flex min-h-0 flex-1 flex-row overflow-hidden">
+        <main
+          className="relative flex min-h-0 flex-1 flex-row overflow-hidden focus:outline-none"
+          id="main-content"
+          tabIndex={-1}
+        >
           <div
             className={cn(
               "relative z-10 flex min-w-0 flex-col bg-background",
@@ -370,10 +375,11 @@ export function ChatShell() {
               votes={votes}
             />
           </ArtifactErrorBoundary>
-        </div>
+        </main>
       </div>
 
       <DataStreamHandler />
+      <CommandPalette />
 
       <AlertDialog
         onOpenChange={setShowCreditCardAlert}

@@ -10,9 +10,9 @@ export const powerPlanPolicy: Record<
   IdealyPlan,
   { monthlyAllocation: number; walletCap: number }
 > = {
-  business: { monthlyAllocation: 8_000, walletCap: 8_000 },
+  business: { monthlyAllocation: 3_000, walletCap: 3_000 },
   free: { monthlyAllocation: 100, walletCap: 100 },
-  pro: { monthlyAllocation: 2_500, walletCap: 6_000 },
+  pro: { monthlyAllocation: 1_000, walletCap: 1_000 },
 };
 
 // ─── Pro custom packs (choix de volume au checkout) ─────────────────────────

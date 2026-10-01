@@ -28,6 +28,7 @@ import {
   createIdealyMissionPlan,
   updateIdealyMission,
 } from "@/lib/idealy/backend-adapter";
+import { normalizeMissionWay } from "@/lib/idealy/agent-personas";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
 import { getIdealyDirectProviderModel } from "@/lib/idealy/provider-registry";
 import { designSpecificationToPrompt, type DesignSpecification } from "@/lib/idealy/design-engine";
@@ -548,11 +549,13 @@ export async function POST(request: Request) {
             // intention d’exécution ouvre un projet, une mission et le VFS.
             if (intentCategory === "EXECUTION") {
               writeWaitingStatus("thinking", "Création de l'espace de mission...");
+              const activeWay = normalizeMissionWay(userWay);
               const mission = await createIdealyMission({
                 chatId: id,
                 intentCategory,
                 prompt: idealyPrompt,
                 request,
+                way: activeWay,
               });
               missionId = mission.id;
               dataStream.write({ data: mission.id, type: "data-idealy-mission" });
@@ -565,7 +568,7 @@ export async function POST(request: Request) {
                 prompt: idealyPrompt,
                 ...(directModel ? { provider: directModel.edgeProvider } : {}),
                 request,
-                way: "professional",
+                way: activeWay,
               });
               dataStream.write({ data: missionPlan, type: "data-idealy-plan" });
               await updateIdealyMission({

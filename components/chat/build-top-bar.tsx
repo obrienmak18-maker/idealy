@@ -4,9 +4,11 @@ import {
   CheckCircle2,
   ChevronDown,
   Code2,
+  Crosshair,
   Database,
   ExternalLink,
   Globe2,
+  History,
   Laptop,
   Maximize2,
   Minimize2,
@@ -21,6 +23,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PowerStatusBadge } from "@/components/chat/power-status";
+import { CheckpointModal } from "@/components/chat/checkpoint-modal";
 import { useArtifact } from "@/hooks/use-artifact";
 import { downloadZip } from "@/lib/export/zip";
 import { localWorkspaceMetadata } from "@/lib/idealy/local-workspace-demo";
@@ -38,6 +41,47 @@ const previewPages: PreviewPage[] = [
   { label: "Dashboard", path: "/dashboard" },
 ];
 
+/**
+ * Derive a precise, truthful status label from the mission squad lifecycle.
+ * Zero tolerance for fabricated state — every label must correspond to a real signal.
+ */
+function resolveSquadStatusLabel(
+  missionSquadStatus: string | undefined,
+  isSquadRunning: boolean,
+  refreshing: boolean
+): { label: string; tone: "emerald" | "sky" | "amber" | "rose" | "muted" } {
+  if (refreshing) {
+    return { label: "Mise à jour…", tone: "muted" };
+  }
+  if (isSquadRunning) {
+    // Running — check for correction phase signals
+    if (missionSquadStatus === "auto_correction_started") {
+      return { label: "Correction auto…", tone: "amber" };
+    }
+    return { label: "Escouade en cours…", tone: "sky" };
+  }
+  // Stable states
+  switch (missionSquadStatus) {
+    case "ready":
+      return { label: "Prêt", tone: "emerald" };
+    case "building":
+      return { label: "Construction…", tone: "sky" };
+    case "needs-fix":
+      return { label: "Correction requise", tone: "rose" };
+    case "needs-user-input":
+      return { label: "Votre retour requis", tone: "amber" };
+    case "planned":
+      return { label: "Planifié", tone: "muted" };
+    case "draft":
+      return { label: "Brouillon", tone: "muted" };
+    case "running-local-demo":
+      return { label: "Démo locale", tone: "sky" };
+    default:
+      // No mission active — show nothing deceptive
+      return { label: "En attente", tone: "muted" };
+  }
+}
+
 export function BuildTopBar() {
   const { artifact, metadata, setMetadata } = useArtifact();
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
@@ -48,13 +92,81 @@ export function BuildTopBar() {
   const [page, setPage] = useState<PreviewPage>(previewPages[0]);
   const [pageMenuOpen, setPageMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [status, setStatus] = useState("Ready");
+  const [refreshing, setRefreshing] = useState(false);
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const pageMenuRef = useRef<HTMLDivElement>(null);
   const missionId =
     typeof metadata?.missionId === "string" ? metadata.missionId : null;
   const [isSquadRunning, setIsSquadRunning] = useState(false);
+  const [isInspectorActive, setIsInspectorActive] = useState(false);
+  const [isCheckpointModalOpen, setIsCheckpointModalOpen] = useState(false);
+
+  // Derive squad status label from real metadata — no static strings
+  const missionSquadStatus =
+    typeof metadata?.missionSquadStatus === "string"
+      ? (metadata.missionSquadStatus as string)
+      : undefined;
+
+  const { label: squadLabel, tone: squadTone } = resolveSquadStatusLabel(
+    missionSquadStatus,
+    isSquadRunning,
+    refreshing
+  );
+
+  useEffect(() => {
+    const handleInspectorClosed = () => setIsInspectorActive(false);
+    window.addEventListener("idealy:inspector-closed", handleInspectorClosed);
+    return () => {
+      window.removeEventListener("idealy:inspector-closed", handleInspectorClosed);
+    };
+  }, []);
+
+  // Command palette integration: checkpoint modal
+  useEffect(() => {
+    const handleOpenCheckpoint = () => setIsCheckpointModalOpen(true);
+    window.addEventListener("idealy:open-checkpoint-modal", handleOpenCheckpoint);
+    return () =>
+      window.removeEventListener("idealy:open-checkpoint-modal", handleOpenCheckpoint);
+  }, []);
+
+  // Command palette integration: toggle visual inspector
+  useEffect(() => {
+    const handleToggleInspector = () => {
+      setIsInspectorActive((prev) => {
+        const next = !prev;
+        window.dispatchEvent(
+          new CustomEvent("idealy:toggle-inspector", { detail: String(next) })
+        );
+        return next;
+      });
+    };
+    window.addEventListener("idealy:toggle-visual-inspector", handleToggleInspector);
+    return () =>
+      window.removeEventListener("idealy:toggle-visual-inspector", handleToggleInspector);
+  }, []);
+
+  // Command palette integration: switch workspace view
+  useEffect(() => {
+    const handleSwitchView = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (detail === "code" || detail === "database" || detail === "preview") {
+        setView(detail as WorkspaceView);
+        window.dispatchEvent(new CustomEvent("idealy:set-view", { detail }));
+      }
+    };
+    window.addEventListener("idealy:switch-workspace-view", handleSwitchView);
+    return () =>
+      window.removeEventListener("idealy:switch-workspace-view", handleSwitchView);
+  }, []);
+
+  const toggleInspector = () => {
+    setIsInspectorActive((prev) => {
+      const next = !prev;
+      dispatch("idealy:toggle-inspector", String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const closeMenus = (event: Event) => {
@@ -107,9 +219,9 @@ export function BuildTopBar() {
   };
 
   const refresh = () => {
-    setStatus("Refreshing");
+    setRefreshing(true);
     dispatch("idealy:refresh-preview");
-    window.setTimeout(() => setStatus("Ready"), 700);
+    window.setTimeout(() => setRefreshing(false), 700);
   };
 
   const rename = () => {
@@ -124,11 +236,10 @@ export function BuildTopBar() {
       return;
     }
     setIsSquadRunning(true);
-    setStatus("Running squad");
     if (isDemoMode) {
       setMetadata((current: Record<string, unknown> | null) => ({
         ...(current ?? {}),
-        missionSquadStatus: "running-local-demo",
+        missionSquadStatus: "building",
         outputs: [
           ...(Array.isArray(current?.outputs) ? current.outputs : []),
           {
@@ -144,8 +255,8 @@ export function BuildTopBar() {
         setMetadata((current: Record<string, unknown> | null) => ({
           ...(current ?? {}),
           ...localWorkspaceMetadata(),
+          missionSquadStatus: "ready",
         }));
-        setStatus("Squad complete");
         setIsSquadRunning(false);
       }, 950);
       return;
@@ -162,23 +273,41 @@ export function BuildTopBar() {
         status?: string;
       } | null;
       if (!response.ok) {
-        throw new Error(payload?.error ?? "L’escouade n’a pas pu démarrer.");
+        throw new Error(payload?.error ?? "L'escouade n'a pas pu démarrer.");
       }
       setMetadata((current: Record<string, unknown> | null) => ({
         ...(current ?? {}),
         missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
         missionSquadStatus: payload?.status ?? "ready",
       }));
-      setStatus("Squad complete");
     } catch (error) {
       console.error("Mission squad launch failed", error);
       const errorMessage =
-        error instanceof Error ? error.message : "L’escouade n’a pas pu démarrer.";
-      setStatus("Squad error");
+        error instanceof Error ? error.message : "L'escouade n'a pas pu démarrer.";
+      setMetadata((current: Record<string, unknown> | null) => ({
+        ...(current ?? {}),
+        missionSquadStatus: "needs-fix",
+      }));
       toast.error(errorMessage);
     } finally {
       setIsSquadRunning(false);
     }
+  };
+
+  // Map tone to Tailwind classes
+  const toneClasses: Record<typeof squadTone, string> = {
+    emerald: "text-emerald-400",
+    sky: "text-sky-300",
+    amber: "text-amber-300",
+    rose: "text-rose-300",
+    muted: "text-muted-foreground",
+  };
+  const dotClasses: Record<typeof squadTone, string> = {
+    emerald: "bg-emerald-400",
+    sky: "bg-sky-400",
+    amber: "bg-amber-400",
+    rose: "bg-rose-400",
+    muted: "bg-muted-foreground/40",
   };
 
   return (
@@ -304,22 +433,40 @@ export function BuildTopBar() {
           </button>
           <button
             aria-label="Refresh"
-            className={`${controlClass} size-8 ${status === "Refreshing" ? "text-sky-300" : ""}`}
+            className={`${controlClass} size-8 ${refreshing ? "text-sky-300" : ""}`}
             onClick={refresh}
             type="button"
           >
             <RefreshCw
-              className={`size-4 ${status === "Refreshing" ? "animate-spin" : ""}`}
+              className={`size-4 ${refreshing ? "animate-spin" : ""}`}
             />
           </button>
+          {view === "preview" && (
+            <button
+              aria-label="Inspecteur visuel"
+              aria-pressed={isInspectorActive}
+              className={`${controlClass} size-8 ${isInspectorActive ? "bg-sky-400/20 text-sky-300" : ""}`}
+              onClick={toggleInspector}
+              title="Inspecter un élément visuel"
+              type="button"
+            >
+              <Crosshair className="size-4" />
+            </button>
+          )}
         </div>
       </div>
 
       <div className="flex min-w-0 items-center justify-end gap-1">
         <PowerStatusBadge compact />
-        <div className="hidden items-center gap-1.5 rounded-full border border-sidebar-border/70 bg-background/20 px-2.5 py-1 text-[10px] font-medium text-muted-foreground lg:flex">
-          <CheckCircle2 className="size-3 text-emerald-400" />
-          <span>{status === "Refreshing" ? "Updating" : "Running"}</span>
+        {/* Squad status — derived from real missionSquadStatus, never fabricated */}
+        <div
+          aria-live="polite"
+          className="hidden items-center gap-1.5 rounded-full border border-sidebar-border/70 bg-background/20 px-2.5 py-1 text-[10px] font-medium lg:flex"
+        >
+          <span
+            className={`size-1.5 rounded-full shrink-0 ${dotClasses[squadTone]} ${isSquadRunning ? "animate-pulse" : ""}`}
+          />
+          <span className={toneClasses[squadTone]}>{squadLabel}</span>
         </div>
         <div className="relative" ref={moreMenuRef}>
           <button
@@ -417,6 +564,17 @@ export function BuildTopBar() {
               >
                 Rename project
               </button>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sky-300 hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  setMoreOpen(false);
+                  setIsCheckpointModalOpen(true);
+                }}
+                type="button"
+              >
+                <History className="size-3.5" />
+                <span>Checkpoints & GitHub</span>
+              </button>
             </div>
           ) : null}
         </div>
@@ -489,6 +647,19 @@ export function BuildTopBar() {
           Publish
         </button>
       </div>
+
+      <CheckpointModal
+        isOpen={isCheckpointModalOpen}
+        missionId={missionId}
+        onClose={() => setIsCheckpointModalOpen(false)}
+        onRollback={() => {
+          refresh();
+          setMetadata((cur: Record<string, unknown> | null) => ({
+            ...(cur ?? {}),
+            missionReplayNonce: Number(cur?.missionReplayNonce ?? 0) + 1,
+          }));
+        }}
+      />
     </header>
   );
 }

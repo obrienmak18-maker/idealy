@@ -62,6 +62,24 @@ export type IdealyMissionFile = {
   version: number;
 };
 
+export type IdealyMissionCheckpoint = {
+  checksum?: string;
+  createdAt: string;
+  description?: string;
+  fileCount: number;
+  files: Array<{
+    checksum?: string;
+    content: string;
+    language?: string;
+    path: string;
+    status: "pending" | "writing" | "saved" | "validated" | "error";
+    version: number;
+  }>;
+  id: string;
+  missionId: string;
+  name: string;
+};
+
 type IdealyIntentResponse = {
   intent?: unknown;
 };
@@ -370,6 +388,60 @@ export async function listIdealyMissionFiles({
   );
 
   return Array.isArray(files) ? files : [];
+}
+
+export async function listIdealyMissionCheckpoints({
+  missionId,
+  request,
+}: {
+  missionId: string;
+  request: Request;
+}): Promise<IdealyMissionCheckpoint[]> {
+  const missions = await callSupabaseRest<Array<{ snapshots?: unknown }>>(
+    request,
+    `missions?select=snapshots&id=eq.${encodeURIComponent(missionId)}&limit=1`,
+    { cache: "no-store", method: "GET" }
+  );
+  const snapshots = missions[0]?.snapshots;
+  return Array.isArray(snapshots) ? snapshots as IdealyMissionCheckpoint[] : [];
+}
+
+export async function createIdealyMissionCheckpoint({
+  missionId,
+  request,
+  snapshot,
+}: {
+  missionId: string;
+  request: Request;
+  snapshot: IdealyMissionCheckpoint;
+}): Promise<IdealyMissionCheckpoint> {
+  return callSupabaseRest<IdealyMissionCheckpoint>(
+    request,
+    "rpc/create_mission_checkpoint",
+    {
+      body: JSON.stringify({ p_mission_id: missionId, p_snapshot: snapshot }),
+      method: "POST",
+    }
+  );
+}
+
+export async function restoreIdealyMissionCheckpoint({
+  checkpointId,
+  missionId,
+  request,
+}: {
+  checkpointId: string;
+  missionId: string;
+  request: Request;
+}): Promise<{ checkpointId: string; restoredFilesCount: number }> {
+  return callSupabaseRest<{ checkpointId: string; restoredFilesCount: number }>(
+    request,
+    "rpc/restore_mission_checkpoint",
+    {
+      body: JSON.stringify({ p_checkpoint_id: checkpointId, p_mission_id: missionId }),
+      method: "POST",
+    }
+  );
 }
 
 export async function classifyIdealyIntent(

@@ -351,7 +351,7 @@ export function OnboardingFlow() {
               <div className="flex items-center gap-2">
                 <StepIcon className="size-4 text-primary" aria-hidden="true" />
                 <span className="text-xs font-medium text-muted-foreground">
-                  {langKey === "en" ? `Step ${step + 1} of ${steps.length} — ` : langKey === "es" ? `Paso ${step + 1} de ${steps.length} — ` : `Étape ${step + 1} sur ${steps.length} — `}
+                  Étape {step + 1} sur {steps.length} —{" "}
                   <strong className="text-foreground font-semibold">{currentStep.label}</strong>
                 </span>
               </div>

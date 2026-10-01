@@ -29,8 +29,17 @@
     "test:onboarding": "node scripts/test-onboarding-contract.mjs",
     "test:power-orchestrator": "node scripts/test-power-orchestrator.mjs",
     "test:power-v2": "node scripts/test-power-system-v2.mjs",
+    "test:pricing": "node scripts/test-pricing-contract.mjs",
+    "test:reviewer-loop": "node scripts/test-reviewer-closed-loop-contract.mjs",
     "test:firebase-auth": "node scripts/test-firebase-auth.mjs",
-    "test:firebase-runtime": "node scripts/test-firebase-runtime.mjs"
+    "test:firebase-runtime": "node scripts/test-firebase-runtime.mjs",
+    "test:workspace-ia": "node scripts/test-workspace-ia-contract.mjs",
+    "test:canvas-lifecycle": "node scripts/test-canvas-lifecycle-contract.mjs",
+    "test:agent-squad": "node scripts/test-agent-squad-personas-contract.mjs",
+    "test:db-visual-inspector": "node scripts/test-database-and-visual-inspector-contract.mjs",
+    "test:github-checkpoints": "node scripts/test-github-checkpoints-contract.mjs",
+    "test:voice-palette": "node scripts/test-voice-command-palette-contract.mjs",
+    "test:a11y-perf": "node scripts/test-a11y-perf-contract.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.67",

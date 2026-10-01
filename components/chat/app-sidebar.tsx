@@ -1,13 +1,9 @@
 "use client";
 
 import {
-  BookOpenIcon,
-  ChevronDownIcon,
-  HelpCircle,
   PanelLeftIcon,
   PenSquareIcon,
   PlugZapIcon,
-  PlusIcon,
   Settings2Icon,
   TrashIcon,
   ZapIcon,
@@ -60,6 +56,18 @@ import {
 } from "../ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useActiveChat } from "@/hooks/use-active-chat";
+import { usePowerStatus } from "@/hooks/use-power-status";
+
+/** Capitalise first letter of plan name for display. */
+function planDisplayName(plan: string | undefined): string {
+  if (!plan) return "—";
+  const names: Record<string, string> = {
+    free: "Découverte",
+    pro: "Pro",
+    business: "Business",
+  };
+  return names[plan] ?? plan.charAt(0).toUpperCase() + plan.slice(1);
+}
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -69,6 +77,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const { mutate } = useSWRConfig();
   const { resetToNewChat } = useActiveChat();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const { loading: powerLoading, status: powerStatus } = usePowerStatus();
 
   const closeMobile = useCallback(() => {
     setOpenMobile(false);
@@ -168,7 +177,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          {/* 1. Nouvelle discussion */}
+          {/* 1. Nouvelle discussion — primary CTA */}
           <SidebarGroup className="pt-1">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -186,56 +195,31 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* 2. Outils et ressources : Plugins, Bibliothèque, Documentation */}
+          {/* 2. Navigation pillars — flat, no accordions */}
           <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
             <SidebarGroupContent>
-              <div className="flex flex-col gap-1 px-2">
-                <details className="group rounded-lg border border-transparent hover:border-sidebar-border/60">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
-                    <PlugZapIcon className="size-3.5" />
-                    <span className="flex-1">Plugins & connecteurs</span>
-                    <ChevronDownIcon className="size-3 transition-transform group-open:rotate-180" />
-                  </summary>
-                  <div className="flex items-center justify-between px-7 pb-2">
-                    <Link
-                      className="text-[11px] leading-relaxed text-sidebar-foreground/55 hover:text-sidebar-foreground"
-                      href="/plugins"
-                    >
-                      Ouvrir l’espace des connecteurs
-                    </Link>
-                    <Link
-                      aria-label="Ajouter un plugin"
-                      className="rounded-md p-1 text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-                      href="/plugins"
-                    >
-                      <PlusIcon className="size-3.5" />
-                    </Link>
-                  </div>
-                </details>
-                <details className="group rounded-lg border border-transparent hover:border-sidebar-border/60">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
-                    <BookOpenIcon className="size-3.5" />
-                    <span className="flex-1">Bibliothèque</span>
-                    <ChevronDownIcon className="size-3 transition-transform group-open:rotate-180" />
-                  </summary>
-                  <Link
-                    className="block px-7 pb-2 text-[11px] leading-relaxed text-sidebar-foreground/55 hover:text-sidebar-foreground"
-                    href="/library"
-                  >
-                    Ouvrir la bibliothèque
-                  </Link>
-                </details>
+              <nav aria-label="Navigation principale" className="flex flex-col gap-0.5 px-2">
+                {/* CONNECTEURS */}
                 <Link
                   className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                  href="/docs"
+                  href="/plugins"
                 >
-                  <HelpCircle className="size-3.5" /> {t("sidebar.help") || "Aide & Support"}
+                  <PlugZapIcon className="size-3.5 shrink-0" />
+                  <span>Connecteurs</span>
                 </Link>
-              </div>
+                {/* PARAMÈTRES */}
+                <Link
+                  className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  href="/settings"
+                >
+                  <Settings2Icon className="size-3.5 shrink-0" />
+                  <span>{t("sidebar.settings") || "Paramètres"}</span>
+                </Link>
+              </nav>
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* 3. Mission en cours / Workspace burn-down meter */}
+          {/* 3. Mission en cours / Power burn-down */}
           <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
             <SidebarGroupContent>
               <div className="mx-2 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/30 p-3 shadow-[var(--shadow-card)]">
@@ -274,7 +258,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* 4. Historique des discussions */}
+          {/* 4. Historique des discussions (Workspaces) */}
           <SidebarHistory user={user} />
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border pt-2 pb-3">
@@ -294,13 +278,20 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 className="w-64 rounded-xl border border-border/60 bg-card/95 p-1.5 shadow-[var(--shadow-float)] backdrop-blur-xl"
                 side="top"
               >
+                {/* Dynamic plan card — reads real Power status, no hardcoded strings */}
                 <div className="mb-1 rounded-lg bg-gradient-to-br from-violet-500/10 via-card to-orange-400/10 px-3 py-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold">
-                      Plan découverte
+                      {powerLoading
+                        ? "—"
+                        : `Plan ${planDisplayName(powerStatus?.plan)}`}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
-                      82 énergie
+                      {powerLoading
+                        ? "—"
+                        : powerStatus
+                          ? `${powerStatus.balance} énergie`
+                          : "—"}
                     </span>
                   </div>
                   <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
@@ -341,7 +332,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       onClick={handleShowDeleteAllDialog}
                     >
                       <TrashIcon className="mr-2 size-3.5" />
-                      <span>Effacer l’historique</span>
+                      <span>Effacer l'historique</span>
                     </DropdownMenuItem>
                   </>
                 ) : null}

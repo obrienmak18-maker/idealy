@@ -62,6 +62,12 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-[var(--shadow-float)] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        Aller au contenu principal
+      </a>
       <ActiveChatProvider>
         <AppSidebar user={session?.user} />
         <SidebarInset>

@@ -548,18 +548,17 @@ export default function WelcomePage() {
 
             {/* Selection CTA */}
             <div className="mt-8 flex justify-center">
-              <button
+              <Link
                 className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-bold text-black shadow-lg hover:bg-white/90 active:scale-95 transition"
-                onClick={() => setStep(1)}
-                type="button"
+                href={`/register?way=${selectedWay}`}
               >
                 {lang === "en"
-                  ? `Choose the ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} and start`
+                  ? `Choose the ${t.waysSection.ways[selectedWay]?.name || activeWayData.label || wayPresentations.mage.label} and start`
                   : lang === "es"
-                  ? `Elegir el ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} y comenzar`
-                  : `Choisir la ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} et commencer`}
+                  ? `Elegir el ${t.waysSection.ways[selectedWay]?.name || activeWayData.label || wayPresentations.mage.label} y comenzar`
+                  : `Choisir la ${t.waysSection.ways[selectedWay]?.name || activeWayData.label || wayPresentations.mage.label} et commencer`}
                 <ArrowRightIcon className="size-4" />
-              </button>
+              </Link>
             </div>
           </motion.div>
         </AnimatePresence>

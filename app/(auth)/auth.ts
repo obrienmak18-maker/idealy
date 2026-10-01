@@ -310,15 +310,33 @@ export const {
 
         const effectiveEmail = email || `user-${firebaseUid}@idealy.local`;
 
-        // 4. Find or create local user
-        let [localUser] = await getUser(effectiveEmail);
+        // 4. Secure user resolution: verify explicit supabase/firebase UID link first
+        let localUser = firebaseUid ? await getUserBySupabaseUserId(firebaseUid) : null;
         if (!localUser) {
+          const [existingEmailUser] = await getUser(effectiveEmail);
+          if (existingEmailUser) {
+            // An identical email is not proof of ownership. Explicit linking
+            // must happen from an already authenticated account.
+            return null;
+          }
+
           try {
             await createUser(effectiveEmail, `firebase-${generateUUID()}`);
-            const [created] = await getUser(effectiveEmail);
-            localUser = created;
+            const [createdUser] = await getUser(effectiveEmail);
+            if (createdUser && firebaseUid) {
+              await linkUserToSupabaseUser({
+                localUserId: createdUser.id,
+                supabaseUserId: firebaseUid,
+              });
+              localUser = {
+                ...createdUser,
+                supabaseUserId: firebaseUid,
+              };
+            } else {
+              localUser = createdUser ?? null;
+            }
           } catch {
-            // Non-blocking
+            return null;
           }
         }
 

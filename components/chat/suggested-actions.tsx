@@ -210,7 +210,7 @@ function PureSuggestedActions({
             }}
           >
             <button
-              className="relative flex h-full w-full flex-col justify-between rounded-xl border border-slate-200/90 bg-white/90 p-4 text-left shadow-xs transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-sky-400/60 hover:bg-white hover:shadow-[0_8px_25px_-6px_rgba(56,189,248,0.2),0_4px_12px_-4px_rgba(139,92,246,0.12)] active:translate-y-0 dark:border-white/10 dark:bg-slate-900/60 dark:hover:border-violet-400/60 dark:hover:bg-slate-900 dark:hover:shadow-[0_8px_25px_-6px_rgba(139,92,246,0.25)] backdrop-blur-sm cursor-pointer"
+              className="relative flex h-full w-full flex-col justify-between rounded-xl border border-slate-200/90 bg-white/90 p-4 text-left shadow-xs transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-sky-400/60 hover:bg-white hover:shadow-[0_8px_25px_-6px_rgba(56,189,248,0.2),0_4px_12px_-4px_rgba(139,92,246,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-y-0 dark:border-white/10 dark:bg-slate-900/60 dark:hover:border-violet-400/60 dark:hover:bg-slate-900 dark:hover:shadow-[0_8px_25px_-6px_rgba(139,92,246,0.25)] backdrop-blur-sm cursor-pointer"
               onClick={() => handleSuggestionClick(entry)}
               type="button"
             >

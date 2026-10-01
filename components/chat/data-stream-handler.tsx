@@ -210,11 +210,24 @@ export function DataStreamHandler() {
             },
             delta.data
           );
+          // Translate VFS event types into missionSquadStatus for the canvas to read.
+          // This is the bridge between the orchestrator lifecycle and UI truth.
+          const eventType = delta.data.eventType;
+          let nextSquadStatus: string | undefined;
+          if (eventType === "mission_completed") nextSquadStatus = "ready";
+          else if (eventType === "mission_error") nextSquadStatus = "needs-fix";
+          else if (eventType === "auto_correction_started") nextSquadStatus = "auto_correction_started";
+          else if (eventType === "file_started" || eventType === "file_content" || eventType === "file_saved") {
+            // Only advance to "building" if not already in a more specific state
+            const currentSquad = typeof current?.missionSquadStatus === "string" ? current.missionSquadStatus : undefined;
+            if (currentSquad !== "auto_correction_started") nextSquadStatus = "building";
+          }
           return {
             ...(current ?? {}),
             missionFileLastSequence: merged.lastSequence,
-            missionFileStatus: delta.data.eventType,
+            missionFileStatus: eventType,
             missionFiles: merged.files,
+            ...(nextSquadStatus !== undefined ? { missionSquadStatus: nextSquadStatus } : {}),
           };
         });
         continue;

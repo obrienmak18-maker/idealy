@@ -62,6 +62,16 @@ function isMissionPlan(value: unknown): value is MissionPlan & { agents: unknown
   return Array.isArray(candidate.agents) && candidate.agents.length > 0;
 }
 
+type ReviewerDiagnostic = {
+  evidence: string;
+  expectedBehavior: string;
+  file: string;
+  location: string;
+  problem: string;
+  severity: "critical" | "warning" | "info";
+  suggestedCorrection: string;
+};
+
 function validateWorkspaceStructure(files: Array<{ checksum: string | null; path: string; status: string }>) {
   const expectedPaths = ["package.json", "index.html"];
   const savedPaths = new Set(files.map((file) => file.path));
@@ -69,12 +79,43 @@ function validateWorkspaceStructure(files: Array<{ checksum: string | null; path
   const invalid = files
     .filter((file) => !file.checksum || file.status !== "saved" || file.path.startsWith("/") || file.path.includes(".."))
     .map((file) => file.path);
+
+  const errors: ReviewerDiagnostic[] = [];
+
+  for (const m of missing) {
+    errors.push({
+      evidence: `Fichiers enregistrés : ${Array.from(savedPaths).slice(0, 10).join(", ") || "aucun fichier"}`,
+      expectedBehavior: `Le fichier ${m} doit être généré à la racine du workspace.`,
+      file: m,
+      location: "root",
+      problem: `Fichier manifeste ou point d'entrée manquant : ${m}`,
+      severity: "critical",
+      suggestedCorrection: `Générer un fichier ${m} valide et complet pour l'application.`,
+    });
+  }
+
+  for (const inv of invalid) {
+    errors.push({
+      evidence: `Chemin : ${inv}`,
+      expectedBehavior: "Tous les chemins doivent être relatifs, sans '..' ni préfixe '/'.",
+      file: inv,
+      location: inv,
+      problem: `Fichier avec chemin non sécurisé ou intégrité corrompue : ${inv}`,
+      severity: "critical",
+      suggestedCorrection: "Nettoyer le nom du fichier et recalculer le checksum sha256.",
+    });
+  }
+
+  const isPassing = missing.length === 0 && invalid.length === 0 && files.length > 0;
+
   return {
     checks: { expectedPaths, savedFileCount: files.length },
+    errors,
+    files: files.map((file) => ({ path: file.path, status: file.status })),
     invalid,
     missing,
     source: "structural-preflight",
-    status: missing.length === 0 && invalid.length === 0 ? "passed" : "needs-fix",
+    status: isPassing ? ("passed" as const) : ("needs-fix" as const),
   };
 }
 
@@ -253,7 +294,7 @@ Deno.serve(async (request) => {
             missionId,
             mode: "auto",
             planOnly: true,
-            prompt: `Établis le plan strictement borné de cette mission Idealy. Propose uniquement Architecte, Builder et Reviewer, chacun une seule fois. N’ajoute aucun outil externe, aucune publication et aucune action sur un compte tiers. ${missionVoice} Contexte mission : ${missionContext}`,
+            prompt: `Agis comme Sélène Ardent (Architecte Idealy). Cadre le périmètre, les hypothèses et les critères de réussite. Établis le plan strictement borné de cette mission Idealy. Propose uniquement Architecte, Builder et Reviewer, chacun une seule fois. N’ajoute aucun outil externe, aucune publication et aucune action sur un compte tiers. ${missionVoice} Contexte mission : ${missionContext}`,
           },
         });
     const plan = architect.plan as MissionPlan | undefined;
@@ -269,75 +310,173 @@ Deno.serve(async (request) => {
       runKey,
     });
 
-    await delay(3_200);
-    activeAgent = "builder";
-    await updateRun("builder", { started_at: new Date().toISOString(), status: "running" });
-    await appendEvent(admin, "agent_started", missionId, `${runKey}:builder:started`, { agent: "builder", runKey });
-    const builder = await invokeProcess({
-      authorization,
-      anonKey,
-      supabaseUrl,
-      body: {
-        idempotencyKey: `${runKey}:builder`,
-        intentCategory: "EXECUTION",
-        missionId,
-        mode: "auto",
-        prompt: `Construis uniquement la première version conforme au plan suivant. Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 12_000)}. Contexte : ${missionContext}`,
-        stream: true,
-        workspaceStream: true,
-      },
-    });
-    await updateRun("builder", { completed_at: new Date().toISOString(), output_summary: summary({ persistedWorkspace: true, upstream: builder }), status: "succeeded" });
-    await appendEvent(admin, "agent_completed", missionId, `${runKey}:builder:completed`, { agent: "builder", runKey });
+    const MAX_REVIEW_ITERATIONS = 3;
+    let iteration = 1;
+    let currentValidation: ReturnType<typeof validateWorkspaceStructure> | null = null;
+    let lastReviewerReport: Record<string, unknown> | null = null;
 
-    await delay(3_200);
-    activeAgent = "reviewer";
-    await updateRun("reviewer", { started_at: new Date().toISOString(), status: "running" });
-    await appendEvent(admin, "agent_started", missionId, `${runKey}:reviewer:started`, { agent: "reviewer", runKey });
-    const { data: files, error: filesError } = await admin
-      .from("mission_files")
-      .select("path,language,checksum,status,version")
-      .eq("mission_id", missionId)
-      .eq("status", "saved")
-      .order("path")
-      .limit(500);
-    if (filesError) throw new Error(`REVIEWER_FILE_READ_FAILED:${filesError.message}`);
-    const validation = validateWorkspaceStructure(files ?? []);
-    await appendEvent(admin, "validation_result", missionId, `${runKey}:validation:structural`, validation);
-    const { error: validationUpdateError } = await admin
-      .from("missions")
-      .update({ validation })
-      .eq("id", missionId)
-      .eq("user_id", auth.user.id);
-    if (validationUpdateError) throw new Error(`VALIDATION_PERSISTENCE_FAILED:${validationUpdateError.message}`);
-    const reviewer = await invokeProcess({
-      authorization,
-      anonKey,
-      supabaseUrl,
-      body: {
-        idempotencyKey: `${runKey}:reviewer`,
-        intentCategory: "IDEATION",
-        missionId,
-        mode: "auto",
-        prompt: `Agis comme Reviewer. Évalue uniquement les métadonnées de fichiers, le préflight structurel et le plan. Réponds avec un rapport court : état, risques, tests manquants et prochaine action. Ne publie rien et ne modifie aucun fichier. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préflight : ${JSON.stringify(validation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
-      },
-    });
-    await updateRun("reviewer", { completed_at: new Date().toISOString(), output_summary: summary(reviewer), status: "succeeded" });
-    await appendEvent(admin, "agent_completed", missionId, `${runKey}:reviewer:completed`, { agent: "reviewer", runKey });
-    const missionStatus = validation.status === "passed" ? "ready" : "needs-fix";
+    while (iteration <= MAX_REVIEW_ITERATIONS) {
+      await delay(150);
+      activeAgent = "builder";
+      const builderKey = iteration === 1 ? `${runKey}:builder` : `${runKey}:builder:iteration-${iteration}`;
+      await updateRun("builder", { started_at: new Date().toISOString(), status: "running" });
+      await appendEvent(admin, "agent_started", missionId, `${builderKey}:started`, {
+        agent: "builder",
+        iteration,
+        maxIterations: MAX_REVIEW_ITERATIONS,
+        runKey,
+      });
+
+      const diagnosticGuidance =
+        currentValidation && currentValidation.errors.length > 0
+          ? `\nDIAGNOSTIC DU REVIEWER (Itération précédente) :\n${JSON.stringify(currentValidation.errors.slice(0, 5))}\nCorrige impérativement ces erreurs sans introduire de régression.`
+          : "";
+
+      const builder = await invokeProcess({
+        authorization,
+        anonKey,
+        supabaseUrl,
+        body: {
+          idempotencyKey: builderKey,
+          intentCategory: "EXECUTION",
+          iteration,
+          missionId,
+          mode: "auto",
+          prompt: `Agis comme Maël Forge (Builder Idealy). Construis uniquement le livrable borné et rends les fichiers vérifiables. Construis ${iteration > 1 ? `la correction ciblée (itération ${iteration}/${MAX_REVIEW_ITERATIONS})` : "la première version"} conforme au plan suivant. Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 10_000)}. Contexte : ${missionContext}${diagnosticGuidance}`,
+          stream: true,
+          workspaceStream: true,
+        },
+      });
+      await updateRun("builder", {
+        completed_at: new Date().toISOString(),
+        output_summary: summary({ iteration, persistedWorkspace: true, upstream: builder }),
+        status: "succeeded",
+      });
+      await appendEvent(admin, "agent_completed", missionId, `${builderKey}:completed`, {
+        agent: "builder",
+        iteration,
+        runKey,
+      });
+
+      await delay(150);
+      activeAgent = "reviewer";
+      const reviewerKey = iteration === 1 ? `${runKey}:reviewer` : `${runKey}:reviewer:iteration-${iteration}`;
+      await updateRun("reviewer", { started_at: new Date().toISOString(), status: "running" });
+      await appendEvent(admin, "agent_started", missionId, `${reviewerKey}:started`, {
+        agent: "reviewer",
+        iteration,
+        maxIterations: MAX_REVIEW_ITERATIONS,
+        runKey,
+      });
+
+      const { data: files, error: filesError } = await admin
+        .from("mission_files")
+        .select("path,language,checksum,status,version")
+        .eq("mission_id", missionId)
+        .eq("status", "saved")
+        .order("path")
+        .limit(500);
+      if (filesError) throw new Error(`REVIEWER_FILE_READ_FAILED:${filesError.message}`);
+
+      currentValidation = validateWorkspaceStructure(files ?? []);
+      const enrichedValidation = {
+        ...currentValidation,
+        iteration,
+        maxIterations: MAX_REVIEW_ITERATIONS,
+      };
+
+      await appendEvent(admin, "validation_result", missionId, `${reviewerKey}:validation:structural`, enrichedValidation);
+      const { error: validationUpdateError } = await admin
+        .from("missions")
+        .update({ validation: enrichedValidation })
+        .eq("id", missionId)
+        .eq("user_id", auth.user.id);
+      if (validationUpdateError) throw new Error(`VALIDATION_PERSISTENCE_FAILED:${validationUpdateError.message}`);
+
+      const reviewer = await invokeProcess({
+        authorization,
+        anonKey,
+        supabaseUrl,
+        body: {
+          idempotencyKey: reviewerKey,
+          intentCategory: "IDEATION",
+          iteration,
+          missionId,
+          mode: "auto",
+          prompt: `Agis comme Iris Vale (Reviewer Idealy, itération ${iteration}/${MAX_REVIEW_ITERATIONS}). Contrôle les faits, les risques et la conformité structurelle sans inventer de résultat. Évalue les métadonnées de fichiers, le préflight structurel et le plan. Émets un diagnostic précis (PASS/FAIL) avec sévérité, anomalie, localisation et correction conseillée. Ne publie rien et ne modifie aucun fichier. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
+        },
+      });
+      lastReviewerReport = reviewer;
+      await updateRun("reviewer", {
+        completed_at: new Date().toISOString(),
+        output_summary: summary({ iteration, reviewer, validation: enrichedValidation }),
+        status: "succeeded",
+      });
+      await appendEvent(admin, "agent_completed", missionId, `${reviewerKey}:completed`, {
+        agent: "reviewer",
+        iteration,
+        runKey,
+      });
+
+      if (currentValidation.status === "passed") {
+        break; // Succès validé par le Reviewer !
+      }
+
+      iteration++;
+      if (iteration <= MAX_REVIEW_ITERATIONS) {
+        await appendEvent(admin, "auto_correction_started", missionId, `${runKey}:correction:${iteration}`, {
+          attempt: iteration,
+          errors: currentValidation.errors,
+          maxAttempts: MAX_REVIEW_ITERATIONS,
+          runKey,
+        });
+      }
+    }
+
+    const isPassed = currentValidation?.status === "passed";
+    const finalValidationStatus = isPassed ? "passed" : "needs-user-input";
+    const missionStatus = isPassed ? "ready" : "needs-fix";
+
+    const finalValidationPayload = {
+      ...(currentValidation ?? {
+        checks: { expectedPaths: ["package.json", "index.html"], savedFileCount: 0 },
+        errors: [],
+        files: [],
+        invalid: [],
+        missing: ["package.json", "index.html"],
+        source: "structural-preflight" as const,
+      }),
+      diagnosticReport: lastReviewerReport,
+      iteration: Math.min(iteration, MAX_REVIEW_ITERATIONS),
+      maxIterations: MAX_REVIEW_ITERATIONS,
+      status: finalValidationStatus,
+    };
+
+    await admin.from("missions").update({
+      status: missionStatus,
+      validation: finalValidationPayload,
+    }).eq("id", missionId).eq("user_id", auth.user.id);
+
     await appendEvent(admin, "mission_completed", missionId, `${runKey}:mission:completed`, {
+      finalStatus: missionStatus,
+      iterationsExecuted: Math.min(iteration, MAX_REVIEW_ITERATIONS),
       runKey,
       source: "orchestrate-mission",
-      validationStatus: validation.status,
+      validationStatus: finalValidationStatus,
     });
-    await admin.from("missions").update({ status: missionStatus }).eq("id", missionId).eq("user_id", auth.user.id);
 
     const { data: completedRuns } = await admin.from("mission_agent_runs")
       .select("id,agent_key,status,output_summary,error_code,started_at,completed_at")
       .eq("mission_id", missionId)
       .eq("run_key", runKey)
       .order("step_index");
-    return corsResponse({ missionId, runKey, runs: completedRuns ?? [], status: missionStatus, validation }, 200, request);
+    return corsResponse({
+      missionId,
+      runKey,
+      runs: completedRuns ?? [],
+      status: missionStatus,
+      validation: finalValidationPayload,
+    }, 200, request);
   } catch (error) {
     const code = error instanceof Error ? error.message.slice(0, 180) : "MISSION_RUN_FAILED";
     if (activeAgent) {

@@ -46,24 +46,9 @@ export async function GET(request: Request) {
     }
   ).catch(() => null);
   if (!rpcResponse?.ok) {
-    const fallbackWay: "ninja" | "professional" = token?.supabaseUserId ? "ninja" : "professional";
-    const wayPres = getWayPresentation(fallbackWay);
-    const cost = action && isPowerAction(action) ? getPowerActionCost(action) : null;
     return Response.json(
-      {
-        actionType: action && isPowerAction(action) ? action : null,
-        balance: 100,
-        canExecute: true,
-        costPoints: cost,
-        lastMonthlyAllocationAt: new Date().toISOString(),
-        lastWayChangeAt: null,
-        plan: "pro",
-        policyVersion: POWER_POLICY_VERSION,
-        resourceLabel: wayPres.resourceLabel,
-        walletCap: 200,
-        way: fallbackWay,
-      },
-      { headers: noStore() }
+      { error: "Le service Power est momentanément indisponible." },
+      { headers: noStore(), status: 503 }
     );
   }
 

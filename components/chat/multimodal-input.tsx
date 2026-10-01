@@ -11,6 +11,7 @@ import {
   Link2Icon,
   LockIcon,
   MicIcon,
+  MicOffIcon,
   PlusIcon,
   WrenchIcon,
 } from "lucide-react";
@@ -72,6 +73,7 @@ import {
   slashCommands,
 } from "./slash-commands";
 import type { VisibilityType } from "./visibility-selector";
+import { useVoice } from "@/hooks/use-voice";
 
 function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365;
@@ -153,13 +155,10 @@ function PureMultimodalInput({
   const { language } = useTranslation();
   const { currentWay } = useGamificationStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
-  const [isListening, setIsListening] = useState(false);
-  const speechBaseInputRef = useRef("");
   const [promptHintIndex, setPromptHintIndex] = useState(0);
   const promptHints = [
     "Décrivez ce que vous souhaitez créer…",
@@ -168,77 +167,62 @@ function PureMultimodalInput({
     "Lancez une mission pour votre prochain projet…",
   ];
 
+  // Voice lifecycle via dedicated hook
+  const voiceBaseInput = useRef("");
+  const voice = useVoice({
+    language,
+    silenceTimeoutMs: 12_000,
+    onInterim: (text) => {
+      const prefix = voiceBaseInput.current.trim();
+      setInput(prefix ? `${prefix} ${text}` : text);
+    },
+    onFinal: (text) => {
+      const prefix = voiceBaseInput.current.trim();
+      setInput(prefix ? `${prefix} ${text}` : text);
+    },
+    onError: (err) => {
+      toast(err.message);
+    },
+  });
+  const isListening = voice.state === "listening";
+
+  const toggleSpeechRecognition = useCallback(() => {
+    if (voice.state === "idle") {
+      voiceBaseInput.current = input;
+      voice.start();
+    } else {
+      voice.stop();
+    }
+  }, [voice, input]);
+
+  // Listen for command palette voice toggle
+  useEffect(() => {
+    const handleToggleVoice = () => toggleSpeechRecognition();
+    window.addEventListener("idealy:toggle-voice", handleToggleVoice);
+    return () =>
+      window.removeEventListener("idealy:toggle-voice", handleToggleVoice);
+  }, [toggleSpeechRecognition]);
+
+  // Listen for command palette set-chat-input
+  useEffect(() => {
+    const handleSetInput = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (typeof detail === "string") {
+        setInput(detail);
+        textareaRef.current?.focus();
+      }
+    };
+    window.addEventListener("idealy:set-chat-input", handleSetInput);
+    return () =>
+      window.removeEventListener("idealy:set-chat-input", handleSetInput);
+  }, [setInput]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setPromptHintIndex((current) => (current + 1) % promptHints.length);
     }, 4200);
     return () => clearInterval(timer);
   }, [promptHints.length]);
-
-  const toggleSpeechRecognition = useCallback(() => {
-    const speechWindow = window as Window & {
-      SpeechRecognition?: new () => any;
-      webkitSpeechRecognition?: new () => any;
-    };
-    const Recognition =
-      speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
-
-    if (!Recognition) {
-      toast("La dictée vocale n’est pas disponible dans ce navigateur.");
-      return;
-    }
-
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-
-    try {
-      const recognition = new Recognition();
-      const speechLang =
-        language === "en" ? "en-US" : language === "es" ? "es-ES" : "fr-FR";
-      recognition.lang = speechLang;
-      recognition.interimResults = true;
-      recognition.continuous = true;
-
-      recognition.onresult = (event: any) => {
-        let finalTranscript = "";
-        let interimTranscript = "";
-        for (let i = 0; i < event.results.length; ++i) {
-          const res = event.results[i];
-          if (res.isFinal) {
-            finalTranscript += (res[0]?.transcript ?? "") + " ";
-          } else {
-            interimTranscript += res[0]?.transcript ?? "";
-          }
-        }
-        const transcript = `${finalTranscript} ${interimTranscript}`.trim();
-        if (!transcript) {
-          return;
-        }
-        const prefix = speechBaseInputRef.current.trim();
-        setInput(prefix ? `${prefix} ${transcript}` : transcript);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-        toast("La dictée vocale a été interrompue.");
-      };
-
-      speechBaseInputRef.current = input;
-      setIsListening(true);
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch {
-      setIsListening(false);
-      toast("Impossible de lancer la dictée vocale.");
-    }
-  }, [isListening, language, input, setInput]);
 
 
   const handleInput = useCallback(

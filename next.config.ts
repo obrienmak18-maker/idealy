@@ -7,8 +7,6 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     "127.0.0.1",
     "localhost",
-    "*.manus.computer",
-    "3101-i5rbntf9617vdba1sl11z-af667722.us4.manus.computer",
   ],
   ...(basePath
     ? {

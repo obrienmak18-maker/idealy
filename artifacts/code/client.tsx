@@ -1,6 +1,11 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { CodeEditor } from "@/components/chat/code-editor";
+import dynamic from "next/dynamic";
+
+const CodeEditor = dynamic(
+  () => import("@/components/chat/code-editor").then((mod) => mod.CodeEditor),
+  { ssr: false }
+);
 import {
   Console,
   type ConsoleOutput,

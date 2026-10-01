@@ -8,7 +8,12 @@ import {
   SparklesIcon,
   UndoIcon,
 } from "@/components/chat/icons";
-import { SpreadsheetEditor } from "@/components/chat/sheet-editor";
+import dynamic from "next/dynamic";
+
+const SpreadsheetEditor = dynamic(
+  () => import("@/components/chat/sheet-editor").then((mod) => mod.SpreadsheetEditor),
+  { ssr: false }
+);
 
 type Metadata = Record<string, never>;
 

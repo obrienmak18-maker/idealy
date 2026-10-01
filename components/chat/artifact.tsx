@@ -31,6 +31,24 @@ import type { Attachment, ChatMessage } from "@/lib/types";
 import { fetcher } from "@/lib/utils";
 import { VersionFooter } from "./version-footer";
 import type { VisibilityType } from "./visibility-selector";
+import dynamic from "next/dynamic";
+
+const DatabaseInspector = dynamic(
+  () => import("./database-inspector").then((m) => m.DatabaseInspector),
+  {
+    loading: () => (
+      <div className="flex h-full items-center justify-center p-8 text-xs text-muted-foreground">
+        Chargement de la base de données…
+      </div>
+    ),
+    ssr: false,
+  }
+);
+import {
+  type InspectedElement,
+  VISUAL_INSPECTOR_IFRAME_SCRIPT,
+  VisualInspectorBar,
+} from "./visual-inspector";
 
 export const artifactDefinitions = [
   textArtifact,
@@ -60,7 +78,7 @@ function PureArtifact({
   addToolApprovalResponse: _addToolApprovalResponse,
   chatId: _chatId,
   input: _input,
-  setInput: _setInput,
+  setInput,
   status,
   stop,
   attachments: _attachments,
@@ -134,6 +152,10 @@ function PureArtifact({
     ? (metadata.missionFiles as MissionFile[])
     : [];
 
+  const [isInspectorActive, setIsInspectorActive] = useState(false);
+  const [inspectedElement, setInspectedElement] = useState<InspectedElement | null>(null);
+  const previewIframeRef = useRef<HTMLIFrameElement>(null);
+
   useEffect(() => {
     window.document.documentElement.toggleAttribute("data-idealy-canvas-expanded", isExpanded);
     return () => {
@@ -182,6 +204,37 @@ function PureArtifact({
     };
     const handleToggleFullscreen = () => setIsExpanded((value) => !value);
     const handleOpenPreview = () => openPreviewWindowForEvents();
+
+    const handleToggleInspector = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      const nextActive = detail === "true" ? true : detail === "false" ? false : !isInspectorActive;
+      setIsInspectorActive(nextActive);
+      if (!nextActive) setInspectedElement(null);
+      previewIframeRef.current?.contentWindow?.postMessage(
+        { type: "idealy:set-inspector-mode", enabled: nextActive },
+        "*"
+      );
+    };
+
+    const handleIframeMessage = (event: MessageEvent) => {
+      if (event.data?.type === "idealy:element-inspected") {
+        setInspectedElement({
+          classes: event.data.classes,
+          dimensions: event.data.dimensions,
+          selector: event.data.selector,
+          tag: event.data.tag,
+          textExcerpt: event.data.textExcerpt,
+        });
+      }
+    };
+
+    const handleSetChatInput = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (typeof detail === "string") {
+        setInput((prev) => `${detail}${prev ? ` ${prev}` : ""}`);
+      }
+    };
+
     window.addEventListener("idealy:set-view", handleView);
     window.addEventListener("idealy:set-device", handleDevice);
     window.addEventListener("idealy:refresh-preview", handleRefresh);
@@ -189,6 +242,10 @@ function PureArtifact({
     window.addEventListener("idealy:show-console", handleShowConsole);
     window.addEventListener("idealy:toggle-fullscreen", handleToggleFullscreen);
     window.addEventListener("idealy:open-preview", handleOpenPreview);
+    window.addEventListener("idealy:toggle-inspector", handleToggleInspector);
+    window.addEventListener("idealy:set-chat-input", handleSetChatInput);
+    window.addEventListener("message", handleIframeMessage);
+
     return () => {
       window.removeEventListener("idealy:set-view", handleView);
       window.removeEventListener("idealy:set-device", handleDevice);
@@ -197,8 +254,11 @@ function PureArtifact({
       window.removeEventListener("idealy:show-console", handleShowConsole);
       window.removeEventListener("idealy:toggle-fullscreen", handleToggleFullscreen);
       window.removeEventListener("idealy:open-preview", handleOpenPreview);
+      window.removeEventListener("idealy:toggle-inspector", handleToggleInspector);
+      window.removeEventListener("idealy:set-chat-input", handleSetChatInput);
+      window.removeEventListener("message", handleIframeMessage);
     };
-  }, [openPreviewWindowForEvents]);
+  }, [openPreviewWindowForEvents, isInspectorActive, setInput]);
 
   useEffect(() => {
     if (artifact.status !== "streaming") {
@@ -447,8 +507,8 @@ function PureArtifact({
     : `${previewScrollbarStyle}${previewHtml}`;
   const previewPathScript = `<script>try{history.replaceState({},'',${JSON.stringify(previewPath)});document.documentElement.dataset.idealyPath=${JSON.stringify(previewPath)};document.title=${JSON.stringify(`${previewPath === "/" ? "Home" : previewPath.slice(1)} · Idealy workspace`)};}catch{}</script>`;
   const previewHtmlForFrameWithPath = previewHtmlForFrame.includes("</body>")
-    ? previewHtmlForFrame.replace("</body>", `${previewPathScript}</body>`)
-    : `${previewHtmlForFrame}${previewPathScript}`;
+    ? previewHtmlForFrame.replace("</body>", `${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}</body>`)
+    : `${previewHtmlForFrame}${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}`;
   previewHtmlForFrameRef.current = previewHtmlForFrameWithPath;
 
   const openPreviewWindow = useCallback(() => {
@@ -510,10 +570,43 @@ function PureArtifact({
               >
                 <iframe
                   className="block size-full min-h-0 border-0"
+                  ref={previewIframeRef}
                   srcDoc={previewHtmlForFrameWithPath}
                   title="Generated application preview"
                 />
-                {artifact.status === "streaming" ? (
+                {artifact.status === "streaming" ? (() => {
+                  // Derive the precise phase label from real squad lifecycle signals.
+                  // Priority: squad correction events > file events > default building state.
+                  const squadStatus = typeof metadata?.missionSquadStatus === "string"
+                    ? metadata.missionSquadStatus as string
+                    : undefined;
+                  const fileStatus = typeof metadata?.missionFileStatus === "string"
+                    ? metadata.missionFileStatus as string
+                    : undefined;
+
+                  let phaseTitle = "Idealy construit votre application";
+                  let phaseDetail = "L'Architecte analyse la demande et structure le plan.";
+                  let phaseBadge = "Démarrage";
+
+                  if (squadStatus === "auto_correction_started") {
+                    phaseTitle = "Correction automatique en cours";
+                    phaseDetail = "Le Reviewer a détecté des incohérences. Maël Forge applique les corrections.";
+                    phaseBadge = "Correction auto";
+                  } else if (squadStatus === "building" || fileStatus === "file_started" || fileStatus === "file_content") {
+                    phaseTitle = "Builder en cours de génération";
+                    phaseDetail = "Maël Forge écrit les fichiers. Ils apparaîtront dans l'onglet Code dès qu'ils sont sauvegardés.";
+                    phaseBadge = "Génération";
+                  } else if (fileStatus === "file_saved" || fileStatus === "file_validated") {
+                    phaseTitle = "Fichiers enregistrés — Reviewer actif";
+                    phaseDetail = "Iris Vale inspecte la cohérence structurelle des fichiers générés.";
+                    phaseBadge = "Vérification";
+                  } else if (squadStatus === "planned") {
+                    phaseTitle = "Plan établi";
+                    phaseDetail = "Le plan est prêt. L'escouade démarre la génération.";
+                    phaseBadge = "Planifié";
+                  }
+
+                  return (
                   <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden bg-background/92 backdrop-blur-xl">
                     <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-sky-400/15 blur-3xl" />
                     <div className="pointer-events-none absolute -bottom-24 -right-24 size-80 rounded-full bg-violet-500/15 blur-3xl" />
@@ -521,15 +614,29 @@ function PureArtifact({
                       <div className="idealy-build-mark mb-6 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_80px_rgba(56,189,248,0.16)]">
                         <IdealyMark animated className="size-16" size={64} />
                       </div>
-                      <p className="text-sm font-semibold tracking-[-0.01em] text-sidebar-foreground">Idealy prépare votre application</p>
-                      <p className="mt-2 text-xs leading-5 text-muted-foreground">Les agents structurent, construisent et vérifient le premier rendu.</p>
-                      <div className="mt-6 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-300/90">
-                        <span className="size-1.5 animate-pulse rounded-full bg-sky-300" /> Compilation en cours
+                      <p className="text-sm font-semibold tracking-[-0.01em] text-sidebar-foreground">{phaseTitle}</p>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">{phaseDetail}</p>
+                      <div aria-live="polite" className="mt-6 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-300/90">
+                        <span className="size-1.5 animate-pulse rounded-full bg-sky-300" /> {phaseBadge}
                       </div>
                     </div>
                   </div>
-                ) : null}
+                  );
+                })() : null}
               </div>
+              <VisualInspectorBar
+                inspectedElement={inspectedElement}
+                isActive={isInspectorActive && activeView === "preview"}
+                onClose={() => {
+                  setIsInspectorActive(false);
+                  setInspectedElement(null);
+                  previewIframeRef.current?.contentWindow?.postMessage(
+                    { enabled: false, type: "idealy:set-inspector-mode" },
+                    "*"
+                  );
+                  window.dispatchEvent(new CustomEvent("idealy:inspector-closed"));
+                }}
+              />
             </div>
           </div>
         ) : activeView === "console" ? (
@@ -538,7 +645,23 @@ function PureArtifact({
               <div className="flex items-center gap-2 text-sm font-semibold text-sidebar-foreground">
                 <TerminalSquare className="size-4 text-sky-300" /> Developer tools
               </div>
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-[10px] text-emerald-300">{consoleError ? "Error" : "Ready"}</span>
+              {(() => {
+                const squadStatus = typeof metadata?.missionSquadStatus === "string"
+                  ? metadata.missionSquadStatus as string : undefined;
+                const fileStatus = typeof metadata?.missionFileStatus === "string"
+                  ? metadata.missionFileStatus as string : undefined;
+                const hasError = !!consoleError || squadStatus === "needs-fix";
+                const isBuilding = squadStatus === "building" || fileStatus === "file_started" || fileStatus === "file_content";
+                const isReviewing = fileStatus === "file_saved" || fileStatus === "file_validated";
+                const isCorrecting = squadStatus === "auto_correction_started";
+                let badgeText = "Ready";
+                let badgeClass = "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
+                if (hasError) { badgeText = "Error"; badgeClass = "border-rose-400/20 bg-rose-400/10 text-rose-300"; }
+                else if (isCorrecting) { badgeText = "Correcting"; badgeClass = "border-amber-400/20 bg-amber-400/10 text-amber-300"; }
+                else if (isReviewing) { badgeText = "Reviewing"; badgeClass = "border-violet-400/20 bg-violet-400/10 text-violet-300"; }
+                else if (isBuilding) { badgeText = "Building"; badgeClass = "border-sky-400/20 bg-sky-400/10 text-sky-300"; }
+                return <span aria-live="polite" className={`rounded-full border px-2 py-1 text-[10px] ${badgeClass}`}>{badgeText}</span>;
+              })()}
             </div>
             <div className="flex shrink-0 items-center gap-1 border-b border-sidebar-border/50 px-3 py-2">
               {(["console", "network", "build"] as const).map((tab) => (
@@ -562,19 +685,44 @@ function PureArtifact({
             <div className="min-h-0 flex-1 overflow-auto p-4">
               {consoleTab === "network" ? (
                 <div className="space-y-2 text-muted-foreground">
-                  <div className="grid grid-cols-[auto_1fr_auto] gap-3 border-b border-sidebar-border/40 pb-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                    <span>Status</span><span>Request</span><span>Type</span>
-                  </div>
-                  <div className="grid grid-cols-[auto_1fr_auto] gap-3 rounded-md border border-sidebar-border/40 bg-background/20 px-3 py-2 text-[11px]"><span className="text-emerald-300">200</span><span>/api/chat</span><span>SSE</span></div>
-                  <div className="grid grid-cols-[auto_1fr_auto] gap-3 rounded-md border border-sidebar-border/40 bg-background/20 px-3 py-2 text-[11px]"><span className="text-emerald-300">200</span><span>srcdoc://preview</span><span>Document</span></div>
+                  <p className="rounded-md border border-sidebar-border/40 bg-background/20 px-3 py-2 text-[11px] leading-5">
+                    Le preview est isolé dans un document local. Les requêtes réseau du runtime apparaîtront ici lorsqu&apos;elles seront disponibles.
+                  </p>
                 </div>
-              ) : consoleTab === "build" ? (
-                <div className="space-y-2 text-[11px] text-muted-foreground">
-                  <p><span className="text-emerald-300">✓</span> Preview bundle prepared</p>
-                  <p><span className="text-emerald-300">✓</span> Responsive viewport mounted</p>
-                  <p><span className="text-sky-300">›</span> {artifact.status === "streaming" ? "Streaming generated code" : "Build ready"}</p>
-                </div>
-              ) : consoleEntries.length > 0 ? (
+              ) : consoleTab === "build" ? (() => {
+                  // Build a truthful lifecycle log from real metadata signals.
+                  // Each entry appears only after its corresponding event has been received.
+                  const squadStatus = typeof metadata?.missionSquadStatus === "string"
+                    ? metadata.missionSquadStatus as string : undefined;
+                  const fileStatus = typeof metadata?.missionFileStatus === "string"
+                    ? metadata.missionFileStatus as string : undefined;
+                  const fileCount = missionFiles.length;
+                  const hasPlan = !!metadata?.missionPlan || squadStatus === "planned" || squadStatus === "building" || squadStatus === "ready" || squadStatus === "needs-fix";
+                  const hasBuilderStarted = fileCount > 0 || fileStatus === "file_started" || fileStatus === "file_content" || fileStatus === "file_saved";
+                  const hasFileSaved = fileStatus === "file_saved" || fileStatus === "file_validated" || squadStatus === "ready" || squadStatus === "needs-fix" || squadStatus === "auto_correction_started";
+                  const hasReviewerRun = squadStatus === "ready" || squadStatus === "needs-fix" || squadStatus === "auto_correction_started";
+                  const hasCorrectionStarted = squadStatus === "auto_correction_started";
+                  const isComplete = squadStatus === "ready";
+                  const isFailed = squadStatus === "needs-fix";
+                  type Phase = { icon: string; color: string; text: string };
+                  const phases: Phase[] = [
+                    { icon: "✓", color: "text-emerald-300", text: "Preview viewport monté" },
+                    ...(hasPlan ? [{ icon: "✓", color: "text-emerald-300", text: "Plan Architecte établi" }] : [{ icon: "›", color: "text-sky-300", text: "Architecte analyse la demande…" }]),
+                    ...(hasBuilderStarted ? [{ icon: hasFileSaved ? "✓" : "›", color: hasFileSaved ? "text-emerald-300" : "text-sky-300", text: hasFileSaved ? `Builder — ${fileCount} fichier${fileCount !== 1 ? "s" : ""} générés` : "Builder génère les fichiers…" }] : []),
+                    ...(hasFileSaved ? [{ icon: hasReviewerRun ? "✓" : "›", color: hasReviewerRun ? "text-emerald-300" : "text-violet-300", text: hasReviewerRun ? "Reviewer — validation structurelle" : "Reviewer inspecte les fichiers…" }] : []),
+                    ...(hasCorrectionStarted ? [{ icon: isComplete ? "✓" : "›", color: isComplete ? "text-emerald-300" : "text-amber-300", text: "Correction automatique appliquée" }] : []),
+                    ...(isComplete ? [{ icon: "✓", color: "text-emerald-300", text: "Mission terminée — workspace prêt" }] : []),
+                    ...(isFailed && !isComplete ? [{ icon: "✕", color: "text-rose-300", text: "Correction requise — votre retour est nécessaire" }] : []),
+                    ...(!hasPlan && !isComplete && !isFailed ? [{ icon: "›", color: "text-sky-300", text: artifact.status === "streaming" ? "Génération en cours…" : "Build prêt" }] : []),
+                  ];
+                  return (
+                    <div className="space-y-2 text-[11px] text-muted-foreground">
+                      {phases.map((phase, i) => (
+                        <p key={i}><span className={phase.color}>{phase.icon}</span> {phase.text}</p>
+                      ))}
+                    </div>
+                  );
+                })() : consoleEntries.length > 0 ? (
                 <div className="space-y-2">
                   {consoleEntries.map((entry: { id: string; status: string; contents: { type: string; value: string }[] }) => (
                     <div className="rounded-md border border-sidebar-border/50 bg-background/20 px-3 py-2" key={entry.id}>
@@ -593,22 +741,12 @@ function PureArtifact({
             </div>
           </div>
         ) : activeView === "database" ? (
-          <div className="flex h-full min-h-0 flex-col overflow-auto bg-sidebar text-sidebar-foreground">
-            <div className="flex shrink-0 items-center justify-between border-b border-sidebar-border/60 px-5 py-4">
-              <div><div className="flex items-center gap-2 text-sm font-semibold"><DatabaseIcon className="size-4 text-violet-300" /> Database</div><p className="mt-1 text-[11px] text-muted-foreground">Schema workspace</p></div>
-              <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] text-amber-200">Demo mode</span>
-            </div>
-            <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">
-              {[{ name: "missions", rows: "—", note: "Mission state" }, { name: "mission_files", rows: "—", note: "Generated workspace" }, { name: "mission_agent_runs", rows: "—", note: "Persisted execution" }].map((table) => (
-                <div className="rounded-xl border border-sidebar-border/60 bg-background/25 p-4" key={table.name}>
-                  <div className="flex items-center gap-2"><DatabaseIcon className="size-3.5 text-violet-300" /><span className="font-mono text-sm">{table.name}</span></div>
-                  <p className="mt-3 text-[11px] text-muted-foreground">{table.note}</p>
-                  <div className="mt-4 flex items-center justify-between text-[10px] text-muted-foreground"><span>Rows</span><span className="font-mono text-sidebar-foreground">{table.rows}</span></div>
-                </div>
-              ))}
-            </div>
-            <div className="mx-5 rounded-xl border border-dashed border-violet-300/25 bg-violet-300/5 p-4 text-[11px] leading-5 text-muted-foreground">Cette vue reste en lecture seule. Les données affichées proviennent du workspace de mission après une exécution authentifiée.</div>
-          </div>
+          <DatabaseInspector
+            isDemoMode={isDemoMode}
+            metadata={metadata}
+            missionFiles={missionFiles}
+            missionId={missionId}
+          />
         ) : (
           <div className="flex h-full min-h-0 overflow-hidden">
             <aside className="hidden w-56 shrink-0 border-r border-sidebar-border/60 bg-sidebar/70 p-3 sm:block">

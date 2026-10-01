@@ -23,6 +23,7 @@ export type MissionFileEventType =
   | "file_started"
   | "file_content"
   | "file_saved"
+  | "auto_correction_started"
   | "build_log"
   | "validation_result"
   | "mission_completed"
