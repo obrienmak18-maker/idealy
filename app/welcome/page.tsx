@@ -503,7 +503,7 @@ export default function WelcomePage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
               <span className="text-xs text-white/60">{t.estimator.estimatedNeed}</span>
               <p className="mt-1 text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-violet-400 to-orange-400">
-                {calculatedPoints.toLocaleString()} {t.estimator.perMonth}
+                {calculatedPoints.toLocaleString("en-US")} {t.estimator.perMonth}
               </p>
               <div className="mt-4 rounded-xl bg-white/10 border border-white/10 p-3 text-xs">
                 <span className="text-white/60">{t.estimator.recommendedFormula}</span>
@@ -610,7 +610,7 @@ export default function WelcomePage() {
                   <li className="flex items-start gap-2.5">
                     <CheckIcon className="size-4 shrink-0 text-sky-400 mt-0.5" />
                     <span>
-                      <strong>{powerPlanPolicy.pro.monthlyAllocation.toLocaleString()} Power Points</strong> {lang === "en" ? "/ month" : lang === "es" ? "/ mes" : "/ mois"}
+                      <strong>{powerPlanPolicy.pro.monthlyAllocation.toLocaleString("en-US")} Power Points</strong> {lang === "en" ? "/ month" : lang === "es" ? "/ mes" : "/ mois"}
                     </span>
                   </li>
                   {t.pricingSection.plans.pro.features.slice(1).map((feat, idx) => (
