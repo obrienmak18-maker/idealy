@@ -221,18 +221,6 @@ export function OnboardingFlow() {
     setIsSubmitting(true);
     setError(null);
 
-    // Persist user way, tone, name, and language in client cookies immediately
-    try {
-      document.cookie = "idealy_onboarding_completed=true; path=/; max-age=31536000; SameSite=Lax";
-      document.cookie = `idealy_user_way=${parsed.data.way}; path=/; max-age=31536000; SameSite=Lax`;
-      document.cookie = `idealy_user_tone=${draft.tone || "concise"}; path=/; max-age=31536000; SameSite=Lax`;
-      document.cookie = `idealy_user_name=${encodeURIComponent(parsed.data.firstName)}; path=/; max-age=31536000; SameSite=Lax`;
-      document.cookie = `idealy_lang=${parsed.data.preferredLanguage}; path=/; max-age=31536000; SameSite=Lax`;
-      document.cookie = `NEXT_LOCALE=${parsed.data.preferredLanguage}; path=/; max-age=31536000; SameSite=Lax`;
-    } catch {
-      // Non-blocking
-    }
-
     try {
       const result = await fetch("/api/idealy/profile/onboarding", {
         body: JSON.stringify(parsed.data),
@@ -242,12 +230,21 @@ export function OnboardingFlow() {
 
       if (!result.ok) {
         const body = (await result.json().catch(() => null)) as { error?: unknown } | null;
-        console.warn("Onboarding API returned non-200, proceeding with client confirmation:", body?.error);
+        throw new Error(typeof body?.error === "string" ? body.error : "onboarding-failed");
       }
 
       window.location.assign(nextPath);
-    } catch {
-      window.location.assign(nextPath);
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error && submissionError.message !== "onboarding-failed"
+          ? submissionError.message
+          : langKey === "en"
+            ? "Your onboarding could not be saved. Please try again."
+            : langKey === "es"
+              ? "No se pudo guardar la configuración. Inténtalo de nuevo."
+              : "Votre configuration n’a pas pu être enregistrée. Réessayez."
+      );
+      setIsSubmitting(false);
     }
   };
 

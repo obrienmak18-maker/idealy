@@ -23,12 +23,24 @@ function getFirebaseConfig() {
   const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim();
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim();
+  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim();
+  const messagingSenderId =
+    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID?.trim();
+  const measurementId = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID?.trim();
 
   if (!(apiKey && authDomain && projectId && appId)) {
     return null;
   }
 
-  return { apiKey, appId, authDomain, projectId };
+  return {
+    apiKey,
+    appId,
+    authDomain,
+    measurementId,
+    messagingSenderId,
+    projectId,
+    storageBucket,
+  };
 }
 
 export function isFirebaseConfigured(): boolean {

@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 export type SupportedLanguage = "fr" | "en" | "es";
 
@@ -14,22 +13,10 @@ function syncLocaleCookie(lang: SupportedLanguage) {
   }
 }
 
-export const useLanguageStore = create<LanguageState>()(
-  persist(
-    (set) => ({
-      language: "fr",
-      setLanguage: (lang) => {
-        syncLocaleCookie(lang);
-        set({ language: lang });
-      },
-    }),
-    {
-      name: "idealy-language-storage",
-      onRehydrateStorage: () => (state) => {
-        if (state?.language) {
-          syncLocaleCookie(state.language);
-        }
-      },
-    }
-  )
-);
+export const useLanguageStore = create<LanguageState>((set) => ({
+  language: "fr",
+  setLanguage: (lang) => {
+    syncLocaleCookie(lang);
+    set({ language: lang });
+  },
+}));

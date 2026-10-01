@@ -33,8 +33,13 @@ export async function POST(request: Request) {
   }
 
   try {
+    const body = await request.json().catch(() => ({}));
+    const isCheckout = body?.planId === "pro" || body?.planId === "business";
+    const functionName = isCheckout
+      ? "create-checkout-session"
+      : "create-billing-portal";
     const response = await fetch(
-      getIdealySupabaseFunctionUrl("create-billing-portal"),
+      getIdealySupabaseFunctionUrl(functionName),
       {
         headers: {
           Authorization: authorization,
@@ -46,11 +51,18 @@ export async function POST(request: Request) {
           ...(session?.user?.id ? { "x-user-id": session.user.id } : {}),
           ...(session?.user?.email ? { "x-user-email": session.user.email } : {}),
         },
-        body: JSON.stringify({
-          userId: session?.user?.id,
-          userEmail: session?.user?.email,
-          returnUrl: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/`,
-        }),
+        body: JSON.stringify(
+          isCheckout
+            ? {
+                planId: body.planId,
+                billingCycle: body.billingCycle,
+              }
+            : {
+                userId: session?.user?.id,
+                userEmail: session?.user?.email,
+                returnUrl: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/`,
+              }
+        ),
         method: "POST",
       }
     );

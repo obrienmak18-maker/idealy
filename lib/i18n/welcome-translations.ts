@@ -9,8 +9,8 @@ export const welcomeTranslations = {
       pricing: "Tarifs",
       about: "À propos",
       docs: "Documentation",
-      signIn: "Se connecter",
-      getStarted: "Commencer",
+  signIn: "Se connecter",
+  getStarted: "Créer un compte",
     },
     hero: {
       badge: "Votre studio IA multi-agents pour transformer une idée en application",
@@ -206,8 +206,8 @@ export const welcomeTranslations = {
       pricing: "Pricing",
       about: "About",
       docs: "Documentation",
-      signIn: "Sign In",
-      getStarted: "Get Started",
+  signIn: "Sign In",
+  getStarted: "Create an account",
     },
     hero: {
       badge: "Your multi-agent AI studio to turn any idea into working software",
@@ -402,8 +402,8 @@ export const welcomeTranslations = {
       pricing: "Precios",
       about: "Acerca de",
       docs: "Documentación",
-      signIn: "Iniciar sesión",
-      getStarted: "Empezar",
+  signIn: "Iniciar sesión",
+  getStarted: "Crear una cuenta",
     },
     hero: {
       badge: "Tu estudio de IA multiagente para convertir cualquier idea en aplicación",

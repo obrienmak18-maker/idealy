@@ -215,22 +215,9 @@ export const {
             };
           }
 
-          // ── Case 3: Provision new local user during signup/login ───────────
-          try {
-            await createUser(email, password);
-            const [created] = await getUser(email);
-            if (created) {
-              return {
-                ...created,
-                email: created.email,
-                id: created.id,
-                type: "regular",
-              };
-            }
-          } catch {
-            // Pass through to invalid credentials check
-          }
-
+          // Login must never provision a new identity. Account creation belongs
+          // exclusively to the register action, otherwise a typo can create a
+          // second local identity and mask an authentication failure.
           await compare(password, DUMMY_PASSWORD);
           throw new IdealyCredentialsSignin("invalid_credentials");
         } catch (error) {

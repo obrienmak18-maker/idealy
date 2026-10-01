@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/provider";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { getPricingTier } from "@/config/pricing";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -25,12 +26,16 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
   const [annual, setAnnual] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const handleSelectPlan = async (planKey: string) => {
+  const handleSelectPlan = async (planKey: "pro" | "business") => {
     setLoadingPlan(planKey);
     try {
       const res = await fetch("/api/idealy/billing/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: planKey,
+          billingCycle: annual ? "yearly" : "monthly",
+        }),
       });
 
       const data = await res.json().catch(() => null);
@@ -47,8 +52,14 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
     }
   };
 
-  const proPrice = annual ? "23" : "29";
-  const studioPrice = annual ? "79" : "99";
+  const proTier = getPricingTier("pro");
+  const businessTier = getPricingTier("business");
+  const proPrice = annual
+    ? (proTier.annualPriceEur ?? proTier.priceMonthlyEur * 12 * 0.8).toFixed(0)
+    : proTier.priceMonthlyEur.toFixed(0);
+  const businessPrice = annual
+    ? (businessTier.annualPriceEur ?? businessTier.priceMonthlyEur * 12 * 0.8).toFixed(0)
+    : businessTier.priceMonthlyEur.toFixed(0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,7 +191,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
 
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="text-3xl font-extrabold tracking-tight text-foreground">
-                  {studioPrice}€
+                  {businessPrice}€
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {t("pricing.perMonth", "/mois")}
@@ -206,10 +217,10 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
             <Button
               variant="outline"
               className="mt-6 w-full gap-2 cursor-pointer"
-              onClick={() => handleSelectPlan("studio")}
+              onClick={() => handleSelectPlan("business")}
               disabled={loadingPlan !== null}
             >
-              {loadingPlan === "studio" ? (
+              {loadingPlan === "business" ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <>
