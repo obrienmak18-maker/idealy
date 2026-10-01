@@ -2,9 +2,11 @@ import { ArrowLeftIcon, PlugZapIcon } from "lucide-react";
 import Link from "next/link";
 import { ConnectorCatalog } from "@/components/connectors/connector-catalog";
 import { listConnectorDefinitions } from "@/lib/idealy/connectors";
+import { getPluginStatusLabel, listIdealyPlugins } from "@/lib/idealy/plugin-engine";
 
 export default function PluginsPage() {
   const connectors = listConnectorDefinitions();
+  const plugins = listIdealyPlugins();
 
   return (
     <main className="idealy-public-shell min-h-dvh px-6 py-10 text-foreground sm:px-10">
@@ -37,6 +39,44 @@ export default function PluginsPage() {
             <PlugZapIcon className="size-4" /> Parcourir
           </Link>
         </div>
+        <section className="mb-8 rounded-2xl border border-border/70 bg-card/60 p-5" aria-labelledby="plugin-registry-title">
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h2 id="plugin-registry-title" className="text-lg font-semibold">Plugin registry</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Un plugin n’est disponible que lorsque sa configuration et son autorisation sont terminées.
+              </p>
+            </div>
+            <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+              {plugins.length} plugins internes
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {plugins.map((plugin) => (
+              <article key={plugin.id} className="rounded-xl border border-border/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-medium">{plugin.name}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">{plugin.description}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[11px]">
+                    {getPluginStatusLabel(plugin)}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {plugin.capabilities.map((capability) => (
+                    <span key={capability} className="rounded-md bg-muted/70 px-2 py-1 text-[11px] text-muted-foreground">
+                      {capability}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-3 text-[11px] text-muted-foreground">
+                  Permissions : {plugin.permissions.join(", ")}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
         <ConnectorCatalog connectors={connectors} />
       </div>
     </main>
