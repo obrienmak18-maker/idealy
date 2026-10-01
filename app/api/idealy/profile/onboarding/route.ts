@@ -152,19 +152,8 @@ export async function POST(request: Request) {
     }
   }
 
-  // 2. Resilient completion response: always ensure the user can enter their workspace
-  const displayName =
-    `${parsed.data.firstName} ${parsed.data.lastName}`.trim() ||
-    parsed.data.firstName ||
-    (typeof token.name === "string" ? token.name : null);
-
   return response(
-    {
-      displayName,
-      onboardingCompleted: true,
-      way: parsed.data.way,
-    },
-    200,
-    successCookieHeaders
+    { error: "Le profil Idealy n’a pas pu être enregistré. Réessayez dans un instant." },
+    503
   );
 }

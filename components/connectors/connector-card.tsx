@@ -1,11 +1,10 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   CheckCircle2Icon,
   ExternalLinkIcon,
   LockKeyholeIcon,
-  Radio,
   Settings2,
   Sparkles,
 } from "lucide-react";
@@ -27,29 +26,7 @@ export function ConnectorCard({
   managed,
   displayName,
 }: ConnectorCardProps) {
-  const [latency, setLatency] = useState<number | null>(null);
   const [mcpOpen, setMcpOpen] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    async function ping() {
-      try {
-        const res = await fetch(`/api/connectors/ping?provider=${connector.provider}`, {
-          cache: "no-store",
-        });
-        if (res.ok && active) {
-          const data = await res.json();
-          setLatency(data.latencyMs ?? 18);
-        }
-      } catch {
-        // Ignore ping error
-      }
-    }
-    void ping();
-    return () => {
-      active = false;
-    };
-  }, [connector.provider]);
 
   return (
     <>
@@ -77,10 +54,9 @@ export function ConnectorCard({
                 </span>
               )}
 
-              {latency !== null && (
-                <span className="inline-flex items-center gap-1 text-[10.5px] font-mono text-muted-foreground/70">
-                  <Radio className="size-2.5 text-emerald-500" />
-                  {latency}ms
+              {connected && (
+                <span className="text-[10.5px] text-emerald-600/80 dark:text-emerald-400/80">
+                  Vérifié par le service connecteur
                 </span>
               )}
             </div>
