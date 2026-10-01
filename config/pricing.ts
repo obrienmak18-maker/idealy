@@ -27,8 +27,12 @@ export type PricingTier = {
   badge?: string;
   priceMonthlyEur: number;
   priceMonthlyUsd: number;
+  annualPriceEur?: number;
+  annualPriceUsd?: number;
   stripePriceIdEur?: string;
   stripePriceIdUsd?: string;
+  stripeAnnualPriceIdEur?: string;
+  stripeAnnualPriceIdUsd?: string;
   power: {
     monthlyAllocation: number;
     walletCap: number;
@@ -85,8 +89,10 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     badge: "Le plus choisi",
     priceMonthlyEur: 29,
     priceMonthlyUsd: 32,
-    stripePriceIdEur: process.env.STRIPE_PRO_PRICE_ID_EUR || "price_pro_monthly_eur",
-    stripePriceIdUsd: process.env.STRIPE_PRO_PRICE_ID_USD || "price_pro_monthly_usd",
+    stripePriceIdEur: process.env.STRIPE_PRO_PRICE_ID_EUR,
+    stripePriceIdUsd: process.env.STRIPE_PRO_PRICE_ID_USD,
+    stripeAnnualPriceIdEur: process.env.STRIPE_PRO_PRICE_ID_YEARLY_EUR,
+    stripeAnnualPriceIdUsd: process.env.STRIPE_PRO_PRICE_ID_YEARLY_USD,
     popular: true,
     power: {
       monthlyAllocation: powerPlanPolicy.pro.monthlyAllocation, // 1 000 pts
@@ -119,8 +125,10 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     badge: "Haute Capacité",
     priceMonthlyEur: 79,
     priceMonthlyUsd: 89,
-    stripePriceIdEur: process.env.STRIPE_BUSINESS_PRICE_ID_EUR || "price_biz_monthly_eur",
-    stripePriceIdUsd: process.env.STRIPE_BUSINESS_PRICE_ID_USD || "price_biz_monthly_usd",
+    stripePriceIdEur: process.env.STRIPE_BUSINESS_PRICE_ID_EUR,
+    stripePriceIdUsd: process.env.STRIPE_BUSINESS_PRICE_ID_USD,
+    stripeAnnualPriceIdEur: process.env.STRIPE_BUSINESS_PRICE_ID_YEARLY_EUR,
+    stripeAnnualPriceIdUsd: process.env.STRIPE_BUSINESS_PRICE_ID_YEARLY_USD,
     power: {
       monthlyAllocation: powerPlanPolicy.business.monthlyAllocation, // 3 000 pts
       walletCap: powerPlanPolicy.business.walletCap,                 // 3 000 pts
