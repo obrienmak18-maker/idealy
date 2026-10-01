@@ -35,7 +35,7 @@ import {
 } from "@/lib/i18n/welcome-translations";
 import { useTranslation } from "@/lib/i18n/provider";
 import { voiesCatalog, type WayDetailed } from "@/lib/idealy/voies-catalog";
-import { PRO_PACK_OPTIONS } from "@/lib/idealy/power-policy";
+import { powerPlanPolicy } from "@/lib/idealy/power-policy";
 
 const wayWorkspaceCopy = {
   fr: {
@@ -80,7 +80,6 @@ export default function WelcomePage() {
   const { language: lang, setLanguage: handleLangChange } = useTranslation();
   const [step, setStep] = useState(0);
   const [selectedWay, setSelectedWay] = useState<IdealyWay>("ninja");
-  const [proTierIndex, setProTierIndex] = useState(0);
   
   // Power estimator states (intuitive dual dials)
   const [simpleCount, setSimpleCount] = useState(20);
@@ -96,16 +95,6 @@ export default function WelcomePage() {
   const t = welcomeTranslations[lang] || welcomeTranslations.fr;
   const activeWayData: WayDetailed = voiesCatalog[selectedWay] || voiesCatalog.ninja;
   const wayCopy = wayWorkspaceCopy[lang];
-
-  // Pro tier custom point options — source de vérité = power-policy.ts
-  const proOptions = PRO_PACK_OPTIONS.map((o) => ({
-    points: o.points,
-    price: `${o.priceEur} €`,
-    label: o.label,
-    simples: Math.floor(o.points / 10),
-    squads: Math.floor(o.points / 50),
-  }));
-  const selectedProOption = proOptions[proTierIndex];
 
   // Calculated points from estimator
   const calculatedPoints = simpleCount * 10 + squadCount * 50;
@@ -533,7 +522,7 @@ export default function WelcomePage() {
         </div>
       </section>
 
-      {/* Pricing / Plans Section with Custom Pro Points Selector */}
+      {/* Pricing presentation: product policy is the source of truth; checkout remains server-side. */}
       <section
         className="relative z-10 mx-auto max-w-6xl px-6 py-20 sm:px-10"
         id="plans"
@@ -595,7 +584,7 @@ export default function WelcomePage() {
             </Link>
           </div>
 
-          {/* Plan Pro (Featured with Customizable Points Selector) */}
+          {/* Plan Pro */}
           <div className="relative flex flex-col justify-between rounded-3xl border-2 border-violet-400/60 bg-gradient-to-b from-violet-500/15 via-white/[0.06] to-white/[0.02] p-7 shadow-2xl shadow-violet-500/20 backdrop-blur-2xl">
             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-sky-400 to-violet-500 px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
               {t.pricingSection.plans.pro.badge}
@@ -607,46 +596,13 @@ export default function WelcomePage() {
                 </h3>
               </div>
 
-              {/* Dynamic Price */}
               <div className="mt-5">
                 <span className="text-4xl font-extrabold text-white">
-                  {selectedProOption.price}
+                  {t.pricingSection.plans.pro.price}
                 </span>
                 <span className="ml-2 text-xs text-white/50">
                   {t.pricingSection.plans.pro.period}
                 </span>
-              </div>
-
-              {/* Custom Points Selector for Pro */}
-              <div className="mt-4 rounded-xl border border-violet-400/30 bg-violet-500/10 p-2.5">
-                <span className="text-[11px] font-semibold text-violet-200 block mb-1.5">
-                  {lang === "en" ? "Choose your Power volume:" : lang === "es" ? "Elija su volumen Power:" : "Choisissez votre volume Power :"}
-                </span>
-                <div className="grid grid-cols-4 gap-1">
-                  {proOptions.map((opt, i) => (
-                    <button
-                      className={`rounded-lg py-1 text-[11px] font-bold transition ${
-                        proTierIndex === i
-                          ? "bg-white text-black shadow-sm"
-                          : "bg-white/10 text-white/70 hover:bg-white/20"
-                      }`}
-                      key={opt.points}
-                      onClick={() => setProTierIndex(i)}
-                      type="button"
-                    >
-                      {opt.points}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-[10px] text-white/60 text-center">
-                  {lang === "en" ? (
-                    <>That is <strong>~{selectedProOption.simples}</strong> simple missions or <strong>~{selectedProOption.squads}</strong> full squads.</>
-                  ) : lang === "es" ? (
-                    <>Es decir <strong>~{selectedProOption.simples}</strong> misiones simples o <strong>~{selectedProOption.squads}</strong> escuadrones completos.</>
-                  ) : (
-                    <>Soit <strong>~{selectedProOption.simples}</strong> missions simples ou <strong>~{selectedProOption.squads}</strong> escouades complètes.</>
-                  )}
-                </p>
               </div>
 
               <div className="mt-6 border-t border-white/10 pt-6">
@@ -654,7 +610,7 @@ export default function WelcomePage() {
                   <li className="flex items-start gap-2.5">
                     <CheckIcon className="size-4 shrink-0 text-sky-400 mt-0.5" />
                     <span>
-                      <strong>{selectedProOption.points} Power Points</strong> {lang === "en" ? "/ month" : lang === "es" ? "/ mes" : "/ mois"}
+                      <strong>{powerPlanPolicy.pro.monthlyAllocation.toLocaleString()} Power Points</strong> {lang === "en" ? "/ month" : lang === "es" ? "/ mes" : "/ mois"}
                     </span>
                   </li>
                   {t.pricingSection.plans.pro.features.slice(1).map((feat, idx) => (
@@ -669,13 +625,9 @@ export default function WelcomePage() {
 
             <Link
               className="mt-8 block w-full rounded-2xl bg-gradient-to-r from-sky-400 via-violet-500 to-orange-400 py-3 text-center text-xs font-semibold text-white shadow-lg shadow-violet-500/30 transition hover:opacity-95 active:scale-95"
-              href={`/register?plan=pro&points=${selectedProOption.points}`}
+              href="/register?plan=pro"
             >
-              {lang === "en"
-                ? `Choose Pro plan (${selectedProOption.points} pts)`
-                : lang === "es"
-                ? `Elegir el plan Pro (${selectedProOption.points} pts)`
-                : `Choisir le plan Pro (${selectedProOption.points} pts)`}
+              {t.pricingSection.plans.pro.cta}
             </Link>
           </div>
 
