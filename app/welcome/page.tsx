@@ -529,6 +529,7 @@ export default function WelcomePage() {
       <section
         className="relative z-10 mx-auto max-w-6xl px-6 py-20 sm:px-10"
         id="plans"
+        suppressHydrationWarning
       >
         <div className="mb-14 text-center">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
