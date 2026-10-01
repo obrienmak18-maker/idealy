@@ -118,7 +118,7 @@ export function FirebaseProviderActions({
           message.includes("popup-closed-by-user") ||
           message.includes("cancelled")
         ) {
-          toast.info("Connexion Google annulée. Vous pouvez réessayer.");
+          toast.info(t("auth.googleCancelled", "Google sign-in was cancelled. You can try again."));
           return;
         }
 
@@ -129,9 +129,9 @@ export function FirebaseProviderActions({
           return;
         }
 
-        toast.error(
-          "La connexion avec Google a échoué. Réessayez ou utilisez votre adresse e-mail."
-        );
+          toast.error(
+            t("auth.googleFailed", "Google sign-in failed. Try again or use your email address.")
+          );
       }
     });
   }, [completeAuth, firebaseConfigured, nextPath, requireTerms, t, termsAccepted]);
