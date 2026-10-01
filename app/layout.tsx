@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -9,13 +10,14 @@ export const metadata: Metadata = {
   applicationName: "Idealy",
   description:
     "Idealy aide à transformer une idée en mission, plan de projet et application assistée par IA.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://idealy-ai.netlify.app",
-  ),
-  title: {
-    default: "Idealy — Transformez une idée en projet",
-    template: "%s | Idealy",
+  icons: {
+    apple: [{ type: "image/svg+xml", url: "/idealy-mark.svg" }],
+    icon: [{ type: "image/svg+xml", url: "/idealy-mark.svg" }],
+    shortcut: ["/idealy-mark.svg"],
   },
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://idealy-ai.netlify.app"
+  ),
   openGraph: {
     description:
       "Clarifiez une idée, planifiez votre projet et construisez avec un workspace assisté par IA.",
@@ -28,15 +30,12 @@ export const metadata: Metadata = {
     googleBot: { follow: true, index: true },
     index: true,
   },
+  title: {
+    default: "Idealy — Transformez une idée en projet",
+    template: "%s | Idealy",
+  },
   twitter: {
     card: "summary_large_image",
-  },
-  icons: {
-    icon: [{ url: "/idealy-mark.svg", type: "image/svg+xml" }],
-    apple: [
-      { url: "/idealy-mark.svg", type: "image/svg+xml" },
-    ],
-    shortcut: ["/idealy-mark.svg"],
   },
 };
 
@@ -72,10 +71,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="fr"
-      suppressHydrationWarning
-    >
+    <html lang="fr" suppressHydrationWarning>
       <head>
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: "Required"
@@ -95,7 +91,9 @@ export default function RootLayout({
             basePath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}
           >
             <LanguageProvider>
-              <TooltipProvider>{children}</TooltipProvider>
+              <TooltipProvider>
+                <Suspense>{children}</Suspense>
+              </TooltipProvider>
             </LanguageProvider>
           </SessionProvider>
         </ThemeProvider>
