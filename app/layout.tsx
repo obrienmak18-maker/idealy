@@ -32,10 +32,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
   },
   icons: {
-    icon: [
-      { url: "/idealy-mark.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "any" },
-    ],
+    icon: [{ url: "/idealy-mark.svg", type: "image/svg+xml" }],
     apple: [
       { url: "/idealy-mark.svg", type: "image/svg+xml" },
     ],

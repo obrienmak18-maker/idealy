@@ -2,6 +2,7 @@ import Form from "next/form";
 
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { useTranslation } from "@/lib/i18n/provider";
 
 export function AuthForm({
   action,
@@ -14,11 +15,13 @@ export function AuthForm({
   children: React.ReactNode;
   defaultEmail?: string;
 }) {
+  const { t } = useTranslation();
+
   return (
     <Form action={action} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label className="font-normal text-muted-foreground" htmlFor="email">
-          Adresse e-mail
+          {t("auth.emailLabel", "Adresse e-mail")}
         </Label>
         <Input
           autoComplete="email"
@@ -27,7 +30,7 @@ export function AuthForm({
           defaultValue={defaultEmail}
           id="email"
           name="email"
-          placeholder="vous@exemple.com"
+          placeholder={t("auth.emailPlaceholder", "vous@exemple.com")}
           required
           type="email"
         />
@@ -35,7 +38,7 @@ export function AuthForm({
 
       <div className="flex flex-col gap-2">
         <Label className="font-normal text-muted-foreground" htmlFor="password">
-          Mot de passe
+          {t("auth.passwordLabel", "Mot de passe")}
         </Label>
         <Input
           className="h-10 rounded-lg border-border/50 bg-muted/50 text-sm transition-colors focus:border-foreground/20 focus:bg-muted"

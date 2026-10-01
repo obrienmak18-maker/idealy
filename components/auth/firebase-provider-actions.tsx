@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/provider";
 
 function GoogleIcon() {
   return (
@@ -50,6 +51,7 @@ export function FirebaseProviderActions({
   requireTerms?: boolean;
   termsAccepted?: boolean;
 }) {
+  const { t } = useTranslation();
   const { update: updateSession } = useSession();
   const [isPending, startTransition] = useTransition();
   const [internalTermsAccepted, setInternalTermsAccepted] = useState(!requireTerms);
@@ -282,11 +284,13 @@ export function FirebaseProviderActions({
             )}
           </div>
           <span className="text-xs font-medium text-foreground">
-            {isHumanVerified ? "Vérification de sécurité confirmée" : "Vérification de sécurité anti-robot…"}
+            {isHumanVerified
+              ? t("auth.turnstileVerified", "Protection humaine validée")
+              : `${t("auth.turnstileLabel", "Vérification de sécurité anti-robot")}…`}
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
-          <span>Sécurité Idealy</span>
+          <span>{t("auth.securityBrand", "Sécurité Idealy")}</span>
         </div>
       </div>
 
@@ -301,13 +305,13 @@ export function FirebaseProviderActions({
         ) : (
           <GoogleIcon />
         )}
-        Continuer avec Google
+        {t("auth.googleButton", "Continuer avec Google")}
       </button>
 
       <div className="rounded-xl border border-border/45 bg-muted/20 p-3">
         <div className="mb-2 flex items-center gap-2 text-sm font-medium">
           <Phone className="size-4 text-muted-foreground" />
-          Continuer avec un numéro de téléphone
+          {t("auth.phoneButton", "Continuer avec un numéro de téléphone")}
         </div>
         {confirmationResult ? (
           <div className="flex gap-2">

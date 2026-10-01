@@ -222,13 +222,13 @@ export default function Page() {
             type="checkbox"
           />
           <span>
-            J’accepte les{" "}
+            {t("auth.termsPrefix", "J’accepte les")} {" "}
             <Link className="text-foreground underline" href="/terms" prefetch={true}>
-              conditions d’utilisation
+              {t("auth.termsLink", "conditions d’utilisation")}
             </Link>{" "}
-            et la{" "}
+            {t("auth.termsConnector", "et la")} {" "}
             <Link className="text-foreground underline" href="/privacy" prefetch={true}>
-              politique de confidentialité
+              {t("auth.privacyLink", "politique de confidentialité")}
             </Link>
             .
           </span>

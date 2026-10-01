@@ -28,15 +28,53 @@ import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { TypewriterHero } from "@/components/branding/typewriter-hero";
 import {
   type IdealyWay,
-  wayPresentations,
 } from "@/lib/idealy/product-contract";
 import {
   type SupportedLanguage,
   welcomeTranslations,
 } from "@/lib/i18n/welcome-translations";
 import { useTranslation } from "@/lib/i18n/provider";
-import { alvinMessenger, voiesCatalog, type WayDetailed } from "@/lib/idealy/voies-catalog";
+import { voiesCatalog, type WayDetailed } from "@/lib/idealy/voies-catalog";
 import { PRO_PACK_OPTIONS } from "@/lib/idealy/power-policy";
+
+const wayWorkspaceCopy = {
+  fr: {
+    active: "Voie active",
+    resource: "Ressource",
+    specialists: "spécialistes",
+    focus: "Ce que cette Voie privilégie",
+    roles: [
+      ["Architecte", "Structure l’intention en Blueprint clair."],
+      ["Builder", "Transforme le Blueprint en produit."],
+      ["Reviewer", "Vérifie la qualité avant la suite."],
+    ],
+    continue: "Choisir cette Voie",
+  },
+  en: {
+    active: "Active Way",
+    resource: "Resource",
+    specialists: "specialists",
+    focus: "What this Way prioritizes",
+    roles: [
+      ["Architect", "Turns intent into a clear Blueprint."],
+      ["Builder", "Turns the Blueprint into a product."],
+      ["Reviewer", "Checks quality before the next step."],
+    ],
+    continue: "Choose this Way",
+  },
+  es: {
+    active: "Vía activa",
+    resource: "Recurso",
+    specialists: "especialistas",
+    focus: "Lo que prioriza esta Vía",
+    roles: [
+      ["Arquitecto", "Convierte la intención en un Blueprint claro."],
+      ["Builder", "Convierte el Blueprint en un producto."],
+      ["Reviewer", "Verifica la calidad antes del siguiente paso."],
+    ],
+    continue: "Elegir esta Vía",
+  },
+} as const;
 
 export default function WelcomePage() {
   const { language: lang, setLanguage: handleLangChange } = useTranslation();
@@ -57,6 +95,7 @@ export default function WelcomePage() {
 
   const t = welcomeTranslations[lang] || welcomeTranslations.fr;
   const activeWayData: WayDetailed = voiesCatalog[selectedWay] || voiesCatalog.ninja;
+  const wayCopy = wayWorkspaceCopy[lang];
 
   // Pro tier custom point options — source de vérité = power-policy.ts
   const proOptions = PRO_PACK_OPTIONS.map((o) => ({
@@ -312,7 +351,7 @@ export default function WelcomePage() {
                       ) : null}
                     </div>
                     <p className="mt-1 text-xs font-medium text-white/60">
-                      {lang === "en" ? "Resource: " : lang === "es" ? "Recurso: " : "Ressource : "}
+                      {wayCopy.resource}: {" "}
                       <span className="font-bold text-white">
                         {t.waysSection.ways[wayKey]?.resource || wayItem.resourceLabel}
                       </span>
@@ -338,7 +377,7 @@ export default function WelcomePage() {
                       </div>
                     ))}
                     <span className="pl-3 text-[11px] font-mono text-white/40">
-                      5 agents
+                      5 {wayCopy.specialists}
                     </span>
                   </div>
                 </button>
@@ -347,216 +386,68 @@ export default function WelcomePage() {
           )}
         </div>
 
-        {/* Detailed Showcase of Selected Way */}
+        {/* The Way expresses a working style; product capabilities remain the same. */}
         <AnimatePresence mode="wait">
           <motion.div
             animate={{ opacity: 1, y: 0 }}
-            className="mt-8 rounded-3xl border border-white/15 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-6 sm:p-8 backdrop-blur-2xl shadow-2xl"
-            exit={{ opacity: 0, y: -10 }}
-            initial={{ opacity: 0, y: 10 }}
+            className="mt-8 border-y border-white/10 py-8 sm:px-2"
+            exit={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: 8 }}
             key={selectedWay}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.22 }}
           >
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between border-b border-white/10 pb-6">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-2xl font-bold text-white">
-                    {t.waysSection.ways[selectedWay]?.name || activeWayData.label}
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-sky-300">{wayCopy.active}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <h3 className="text-3xl font-semibold tracking-tight text-white">
+                    {t.waysSection.ways[selectedWay].name}
                   </h3>
-                  <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white">
-                    {lang === "en" ? "Energy: " : lang === "es" ? "Energía: " : "Énergie : "}
-                    {t.waysSection.ways[selectedWay]?.resource || activeWayData.resourceLabel}
+                  <span className="border-l border-white/20 pl-4 text-sm text-white/60">
+                    {wayCopy.resource} · <strong className="font-medium text-white">{t.waysSection.ways[selectedWay].resource}</strong>
                   </span>
                 </div>
-                <p className="mt-2 text-sm italic text-sky-300">
-                  "{t.waysSection.ways[selectedWay]?.tagline || activeWayData.tagline}"
+                <p className="mt-3 max-w-2xl text-base leading-relaxed text-white/65">
+                  {t.waysSection.ways[selectedWay].desc}
+                </p>
+                <p className="mt-4 text-sm italic text-sky-300">
+                  {t.waysSection.ways[selectedWay].tagline}
                 </p>
               </div>
-
-              {/* Stats Bar */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center">
-                  <span className="text-[10px] text-white/50 uppercase font-mono">
-                    {lang === "en" ? "Speed" : lang === "es" ? "Velocidad" : "Vitesse"}
-                  </span>
-                  <p className="text-base font-bold text-sky-300">{activeWayData.stats.speed}%</p>
-                </div>
-                <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center">
-                  <span className="text-[10px] text-white/50 uppercase font-mono">
-                    {lang === "en" ? "Creativity" : lang === "es" ? "Creatividad" : "Créativité"}
-                  </span>
-                  <p className="text-base font-bold text-amber-300">{activeWayData.stats.creativity}%</p>
-                </div>
-                <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center">
-                  <span className="text-[10px] text-white/50 uppercase font-mono">
-                    {lang === "en" ? "Strategy" : lang === "es" ? "Estrategia" : "Stratégie"}
-                  </span>
-                  <p className="text-base font-bold text-emerald-300">{activeWayData.stats.strategy}%</p>
-                </div>
-                <div className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-center">
-                  <span className="text-[10px] text-white/50 uppercase font-mono">
-                    {lang === "en" ? "Robustness" : lang === "es" ? "Robustez" : "Robustesse"}
-                  </span>
-                  <p className="text-base font-bold text-purple-300">{activeWayData.stats.robustness}%</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Team Members */}
-            {/* Universal Messenger Alvin Banner */}
-            <div className="mt-6 mb-6 flex flex-col sm:flex-row items-center gap-4 rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 backdrop-blur-md">
-              <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border-2 border-sky-400/50 shadow-lg">
-                <img
-                  alt={alvinMessenger.name}
-                  className="size-full object-cover"
-                  src={alvinMessenger.avatarUrl}
-                />
-              </div>
-              <div className="flex-1 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-sky-300">
-                    {lang === "en" ? "Universal Messenger" : lang === "es" ? "Mensajero Universal" : "Messager Universel"}
-                  </span>
-                  <span className="rounded-full bg-sky-400/20 px-2 py-0.5 text-[10px] font-semibold text-sky-200">
-                    {lang === "en" ? "Present on all Paths" : lang === "es" ? "Presente en todos los Caminos" : "Présent sur toutes les Voies"}
-                  </span>
-                </div>
-                <h4 className="font-bold text-base text-white mt-0.5">
-                  {alvinMessenger.name} — {alvinMessenger.role}
-                </h4>
-                <p className="mt-1 text-xs leading-relaxed text-white/70">
-                  {lang === "en"
-                    ? "Alvin coordinates your communications and ensures seamless task handoffs. Directly delivers the mission to Chief "
-                    : lang === "es"
-                    ? "Alvin coordina tus comunicaciones y asegura la entrega de tareas sin interrupciones. Transmite directamente la misión al Jefe "
-                    : "Coordonne vos échanges et assure la liaison continue entre vous et l'escouade. Transmet directement la mission au Chef "}
-                  <strong className="text-white">
-                    {activeWayData.chiefName || activeWayData.agents[0].name}
-                  </strong>
-                  .
-                </p>
-              </div>
-            </div>
-
-            {/* Team Members */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-white/50">
-                  {lang === "en"
-                    ? `Agent Squad of the ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} (5 agents):`
-                    : lang === "es"
-                    ? `Escuadrón de agentes del ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} (5 agentes):`
-                    : `Escouade d'agents de la ${t.waysSection.ways[selectedWay]?.name || activeWayData.label} (5 agents) :`}
-                </h4>
-                <span className="text-[11px] text-white/40">
-                  {lang === "en" ? "Squad Chief: " : lang === "es" ? "Jefe de escuadrón: " : "Chef d'escouade : "}
-                  {activeWayData.chiefName || activeWayData.agents[0].name}
-                </span>
-              </div>
-              <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
-                {activeWayData.agents.map((ag) => (
-                  <div
-                    className={`flex flex-col justify-between rounded-2xl border p-3.5 backdrop-blur-sm transition ${
-                      ag.isChief
-                        ? "border-amber-400/40 bg-amber-400/10 shadow-lg shadow-amber-500/5"
-                        : "border-white/10 bg-white/5"
-                    }`}
-                    key={ag.name}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border border-white/20 shadow-md">
-                          <img
-                            alt={ag.name}
-                            className="size-full object-cover"
-                            src={ag.avatarUrl}
-                          />
-                        </div>
-                        {ag.isChief ? (
-                          <span className="rounded-full bg-amber-400/20 border border-amber-400/40 px-2 py-0.5 text-[9px] font-bold text-amber-300">
-                            👑 Chef
-                          </span>
-                        ) : (
-                          <span className="text-sm">{ag.emoji}</span>
-                        )}
-                      </div>
-                      <h5 className="font-bold text-sm text-white">{ag.name}</h5>
-                      <span className="text-[11px] font-medium text-sky-300 line-clamp-1">
-                        {ag.role}
-                      </span>
-                      <p className="mt-1.5 text-[11px] leading-relaxed text-white/60">
-                        {ag.specialty}
-                      </p>
-                    </div>
+              <div className="grid grid-cols-2 gap-x-7 gap-y-4 text-sm sm:grid-cols-4">
+                {[
+                  ["Speed", "Vitesse", "Velocidad", activeWayData.stats.speed],
+                  ["Creativity", "Créativité", "Creatividad", activeWayData.stats.creativity],
+                  ["Strategy", "Stratégie", "Estrategia", activeWayData.stats.strategy],
+                  ["Robustness", "Robustesse", "Robustez", activeWayData.stats.robustness],
+                ].map(([en, fr, es, value]) => (
+                  <div key={String(en)}>
+                    <p className="text-[11px] uppercase tracking-[0.12em] text-white/40">{lang === "en" ? en : lang === "es" ? es : fr}</p>
+                    <p className="mt-1 text-xl font-semibold text-white">{value}%</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Antagonists / Bugs Section (si présents pour cet univers) */}
-            {activeWayData.antagonists && activeWayData.antagonists.length > 0 ? (
-              <div className="mt-8 pt-6 border-t border-white/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm">⚔️</span>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-rose-400">
-                    {lang === "en"
-                      ? "Universe Antagonists (Bugs & Errors to neutralize):"
-                      : lang === "es"
-                      ? "Antagonistas del universo (Bugs y Errores a neutralizar):"
-                      : "Antagonistes de l'univers (Bugs & Erreurs à neutraliser) :"}
-                  </h4>
-                </div>
-                <p className="text-xs text-white/60 mb-4">
-                  {lang === "en"
-                    ? "When bugs or anomalies occur, these adversaries attack the code. Your squad mobilizes to neutralize them."
-                    : lang === "es"
-                    ? "Cuando ocurren errores o anomalías, estos adversarios atacan el código. Tu escuadrón se moviliza para neutralizarlos."
-                    : "Lorsque des erreurs ou anomalies surviennent, ces adversaires attaquent le code. Votre escouade se mobilise pour les neutraliser."}
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                  {activeWayData.antagonists.map((ant) => (
-                    <div
-                      className="flex items-start gap-2.5 rounded-xl border border-rose-500/20 bg-rose-500/5 p-2.5"
-                      key={ant.name}
-                    >
-                      <div className="relative size-10 shrink-0 overflow-hidden rounded-lg border border-rose-400/30">
-                        <img
-                          alt={ant.name}
-                          className="size-full object-cover"
-                          src={ant.avatarUrl}
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <h6 className="font-bold text-xs text-rose-200 truncate">
-                            {ant.name}
-                          </h6>
-                          <span className="text-[10px]">{ant.emoji}</span>
-                        </div>
-                        <p
-                          className="text-[10px] font-medium text-rose-300/80 leading-tight mt-0.5 truncate"
-                          title={ant.bugType}
-                        >
-                          {ant.bugType}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="mt-9">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/45">{wayCopy.focus}</p>
+              <div className="mt-4 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 md:grid-cols-3">
+                {wayCopy.roles.map(([role, description], index) => (
+                  <div className="bg-[#0b0b12] p-5" key={role}>
+                    <span className="text-xs text-sky-300">0{index + 1}</span>
+                    <h4 className="mt-4 text-base font-semibold text-white">{role}</h4>
+                    <p className="mt-2 text-sm leading-relaxed text-white/60">{description}</p>
+                  </div>
+                ))}
               </div>
-            ) : null}
+            </div>
 
-            {/* Selection CTA */}
-            <div className="mt-8 flex justify-center">
+            <div className="mt-8">
               <Link
-                className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-bold text-black shadow-lg hover:bg-white/90 active:scale-95 transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 active:scale-[0.98]"
                 href={`/register?way=${selectedWay}`}
               >
-                {lang === "en"
-                  ? `Choose the ${t.waysSection.ways[selectedWay]?.name || activeWayData.label || wayPresentations.mage.label} and start`
-                  : lang === "es"
-                  ? `Elegir el ${t.waysSection.ways[selectedWay]?.name || activeWayData.label || wayPresentations.mage.label} y comenzar`
-                  : `Choisir la ${t.waysSection.ways[selectedWay]?.name || activeWayData.label || wayPresentations.mage.label} et commencer`}
+                {wayCopy.continue}
                 <ArrowRightIcon className="size-4" />
               </Link>
             </div>

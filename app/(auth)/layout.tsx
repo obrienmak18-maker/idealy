@@ -1,13 +1,38 @@
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { Preview } from "@/components/chat/preview";
 
-export default function AuthLayout({
+const authShellCopy = {
+  fr: {
+    back: "Retour à Idealy",
+    title: "Transformez une intention en expérience concrète.",
+    subtitle: "Imaginez, structurez et pilotez votre projet depuis un espace de création unifié.",
+    notice: "L’IA peut se tromper. Vérifiez les informations importantes avant d’agir.",
+  },
+  en: {
+    back: "Back to Idealy",
+    title: "Turn an intention into a concrete experience.",
+    subtitle: "Imagine, structure and steer your project from one creation workspace.",
+    notice: "AI can make mistakes. Verify important information before acting.",
+  },
+  es: {
+    back: "Volver a Idealy",
+    title: "Transforma una intención en una experiencia concreta.",
+    subtitle: "Imagina, estructura y dirige tu proyecto desde un espacio de creación unificado.",
+    notice: "La IA puede cometer errores. Verifica la información importante antes de actuar.",
+  },
+} as const;
+
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = (await cookies()).get("NEXT_LOCALE")?.value;
+  const copy = authShellCopy[locale === "en" || locale === "es" ? locale : "fr"];
+
   return (
     <div className="idealy-app-background relative flex min-h-dvh w-full overflow-hidden">
       <div aria-hidden="true" className="welcome-orb welcome-orb-sky" />
@@ -21,7 +46,7 @@ export default function AuthLayout({
           href="/welcome"
         >
           <ArrowLeftIcon className="size-3.5" />
-          Retour à Idealy
+          {copy.back}
         </Link>
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-5 py-4">
           <IdealyLogo
@@ -38,8 +63,7 @@ export default function AuthLayout({
               {children}
             </div>
             <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground/75">
-              L’IA peut se tromper. Vérifiez les informations importantes avant
-              d’agir.
+              {copy.notice}
             </p>
           </div>
         </div>
@@ -51,12 +75,10 @@ export default function AuthLayout({
             IDEALY WORKSPACE
           </p>
           <h2 className="text-balance text-3xl font-semibold tracking-tight">
-            Transformez une intention en expérience{" "}
-            <span className="auth-shimmer-word">concrète.</span>
+            {copy.title}
           </h2>
           <p className="mt-3 max-w-lg text-sm text-muted-foreground">
-            Imaginez, structurez et pilotez votre projet depuis un espace de
-            création unifié.
+            {copy.subtitle}
           </p>
         </div>
         <div className="min-h-0 flex-1">

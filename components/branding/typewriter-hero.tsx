@@ -32,6 +32,12 @@ const PHRASES = {
   ],
 };
 
+const LEAD_IN = {
+  fr: "Générez",
+  en: "Build",
+  es: "Crea",
+} as const;
+
 export function TypewriterHero({ lang = "fr" }: TypewriterHeroProps) {
   const currentPhrases = PHRASES[lang] || PHRASES.fr;
   const [phraseIndex, setPhraseIndex] = useState(0);
@@ -86,7 +92,7 @@ export function TypewriterHero({ lang = "fr" }: TypewriterHeroProps) {
 
       {/* Dynamic Typewriter text */}
       <div className="flex items-center gap-1.5 text-sm sm:text-base font-medium">
-        <span className="text-white/60">Générez</span>
+        <span className="text-white/60">{LEAD_IN[lang] ?? LEAD_IN.fr}</span>
         <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-violet-300 to-orange-300 underline decoration-violet-400/40 decoration-2 underline-offset-4">
           {displayText}
         </span>
