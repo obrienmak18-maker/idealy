@@ -1,27 +1,33 @@
 import { ArrowLeftIcon } from "lucide-react";
-import Link from "next/link";
 import { cookies } from "next/headers";
+import Link from "next/link";
+import { connection } from "next/server";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { Preview } from "@/components/chat/preview";
 
 const authShellCopy = {
-  fr: {
-    back: "Retour à Idealy",
-    title: "Transformez une intention en expérience concrète.",
-    subtitle: "Imaginez, structurez et pilotez votre projet depuis un espace de création unifié.",
-    notice: "L’IA peut se tromper. Vérifiez les informations importantes avant d’agir.",
-  },
   en: {
     back: "Back to Idealy",
-    title: "Turn an intention into a concrete experience.",
-    subtitle: "Imagine, structure and steer your project from one creation workspace.",
     notice: "AI can make mistakes. Verify important information before acting.",
+    subtitle:
+      "Imagine, structure and steer your project from one creation workspace.",
+    title: "Turn an intention into a concrete experience.",
   },
   es: {
     back: "Volver a Idealy",
+    notice:
+      "La IA puede cometer errores. Verifica la información importante antes de actuar.",
+    subtitle:
+      "Imagina, estructura y dirige tu proyecto desde un espacio de creación unificado.",
     title: "Transforma una intención en una experiencia concreta.",
-    subtitle: "Imagina, estructura y dirige tu proyecto desde un espacio de creación unificado.",
-    notice: "La IA puede cometer errores. Verifica la información importante antes de actuar.",
+  },
+  fr: {
+    back: "Retour à Idealy",
+    notice:
+      "L’IA peut se tromper. Vérifiez les informations importantes avant d’agir.",
+    subtitle:
+      "Imaginez, structurez et pilotez votre projet depuis un espace de création unifié.",
+    title: "Transformez une intention en expérience concrète.",
   },
 } as const;
 
@@ -30,8 +36,13 @@ export default async function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // The selected locale comes from the request cookie. Mark this shell as
+  // request-rendered before accessing it so Cache Components does not attempt
+  // to prerender an authentication page with an unknown locale.
+  await connection();
   const locale = (await cookies()).get("NEXT_LOCALE")?.value;
-  const copy = authShellCopy[locale === "en" || locale === "es" ? locale : "fr"];
+  const copy =
+    authShellCopy[locale === "en" || locale === "es" ? locale : "fr"];
 
   return (
     <div className="idealy-app-background relative flex min-h-dvh w-full overflow-hidden">
