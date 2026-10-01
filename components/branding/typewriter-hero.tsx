@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { IdealyPresence } from "@/components/branding/idealy-presence";
 
 type TypewriterHeroProps = {
   lang?: "fr" | "en" | "es";
@@ -77,18 +77,7 @@ export function TypewriterHero({ lang = "fr" }: TypewriterHeroProps) {
 
   return (
     <div className="relative mx-auto mt-4 inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] px-5 py-2.5 backdrop-blur-2xl shadow-xl shadow-violet-500/10">
-      {/* Cute Chibi Companion Mascot */}
-      <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 via-violet-500 to-orange-400 p-0.5 shadow-md shadow-violet-500/30 animate-pen-bob">
-        <div className="flex size-full items-center justify-center rounded-[10px] bg-[#0c0b14]">
-          <span className="text-base select-none" role="img" aria-label="Compagnon Chibi IA">
-            🧙‍♂️
-          </span>
-        </div>
-        <span className="absolute -top-1 -right-1 flex size-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
-          <span className="relative inline-flex rounded-full size-3 bg-sky-500" />
-        </span>
-      </div>
+      <IdealyPresence />
 
       {/* Dynamic Typewriter text */}
       <div className="flex items-center gap-1.5 text-sm sm:text-base font-medium">
