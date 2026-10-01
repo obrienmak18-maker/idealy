@@ -15,8 +15,6 @@ import {
   signInWithGoogleFirebase,
 } from "@/lib/firebase/client";
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/provider";
 
 function GoogleIcon() {
@@ -56,21 +54,12 @@ export function FirebaseProviderActions({
   const [isPending, startTransition] = useTransition();
   const [internalTermsAccepted, setInternalTermsAccepted] = useState(!requireTerms);
   const termsAccepted = controlledTermsAccepted !== undefined ? controlledTermsAccepted : internalTermsAccepted;
-  const [isHumanVerified, setIsHumanVerified] = useState(false);
-  const [isVerifyingHuman, setIsVerifyingHuman] = useState(false);
+  const firebaseConfigured = isFirebaseConfigured();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [confirmationResult, setConfirmationResult] =
     useState<ConfirmationResult | null>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-
-  // Cloudflare Turnstile-like smooth automatic verification
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsHumanVerified(true);
-    }, 650);
-    return () => clearTimeout(timer);
-  }, []);
 
   const completeAuth = useCallback(
     async (idToken: string) => {
@@ -108,31 +97,9 @@ export function FirebaseProviderActions({
       return;
     }
 
-    if (!isHumanVerified) {
-      toast.error(
-        "Veuillez cocher la case « Je ne suis pas un robot » pour continuer."
-      );
-      return;
-    }
-
     startTransition(async () => {
-      if (!isFirebaseConfigured()) {
-        try {
-          const result = await signInWithAuthJs("credentials", {
-            email: "google-user@idealy.io",
-            password: "GoogleAuthUser2026!",
-            redirect: false,
-          });
-
-          if (result?.error) {
-            throw new Error("credentials_failed");
-          }
-
-          await updateSession();
-          window.location.assign(nextPath);
-        } catch {
-          toast.error("La connexion avec Google est indisponible.");
-        }
+      if (!firebaseConfigured) {
+        toast.error(t("auth.firebaseUnavailable", "Google n’est pas encore configuré pour cet environnement."));
         return;
       }
 
@@ -167,12 +134,12 @@ export function FirebaseProviderActions({
         );
       }
     });
-  }, [completeAuth, isHumanVerified, nextPath, requireTerms, termsAccepted, updateSession]);
+  }, [completeAuth, firebaseConfigured, nextPath, requireTerms, t, termsAccepted]);
 
   const handleSendPhoneCode = useCallback(() => {
-    if (!isFirebaseConfigured()) {
+    if (!firebaseConfigured) {
       toast.info(
-        "La validation par SMS est en cours de configuration. Utilisez votre adresse e-mail pour vous inscrire."
+        t("auth.phoneUnavailable", "La connexion par SMS n’est pas encore configurée. Utilisez votre adresse e-mail.")
       );
       return;
     }
@@ -199,7 +166,7 @@ export function FirebaseProviderActions({
         );
       }
     });
-  }, [phoneNumber]);
+  }, [firebaseConfigured, phoneNumber, t]);
 
   const handleConfirmPhoneCode = useCallback(() => {
     if (!confirmationResult || verificationCode.trim().length < 6) {
@@ -266,37 +233,9 @@ export function FirebaseProviderActions({
         </label>
       )}
 
-      {/* Cloudflare Turnstile-style Security Verification */}
-      <div
-        className={cn(
-          "flex items-center justify-between rounded-xl border p-2.5 transition-all select-none",
-          isHumanVerified
-            ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
-            : "border-border/60 bg-muted/20"
-        )}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="relative flex size-5 items-center justify-center">
-            {isHumanVerified ? (
-              <ShieldCheck className="size-5 text-emerald-500 transition-transform duration-200" />
-            ) : (
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-            )}
-          </div>
-          <span className="text-xs font-medium text-foreground">
-            {isHumanVerified
-              ? t("auth.turnstileVerified", "Protection humaine validée")
-              : `${t("auth.turnstileLabel", "Vérification de sécurité anti-robot")}…`}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
-          <span>{t("auth.securityBrand", "Sécurité Idealy")}</span>
-        </div>
-      </div>
-
       <button
         className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border/50 bg-muted/30 text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={isPending || !isHumanVerified || (requireTerms && !termsAccepted)}
+        disabled={isPending || !firebaseConfigured || (requireTerms && !termsAccepted)}
         onClick={handleGoogleSignIn}
         type="button"
       >
@@ -307,6 +246,12 @@ export function FirebaseProviderActions({
         )}
         {t("auth.googleButton", "Continuer avec Google")}
       </button>
+
+      {!firebaseConfigured ? (
+        <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+          {t("auth.firebaseUnavailable", "Google n’est pas encore configuré pour cet environnement.")}
+        </p>
+      ) : null}
 
       <div className="rounded-xl border border-border/45 bg-muted/20 p-3">
         <div className="mb-2 flex items-center gap-2 text-sm font-medium">
@@ -319,7 +264,7 @@ export function FirebaseProviderActions({
               aria-label="Code reçu par SMS"
               autoComplete="one-time-code"
               className="h-9 min-w-0 flex-1 rounded-lg border border-border/50 bg-background/70 px-3 text-sm tracking-[0.25em] outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/30 focus:ring-2 focus:ring-ring/30"
-              disabled={isPending}
+              disabled={isPending || !firebaseConfigured}
               inputMode="numeric"
               maxLength={6}
               onChange={handleVerificationCodeChange}
@@ -350,7 +295,7 @@ export function FirebaseProviderActions({
             />
             <button
               className="h-9 shrink-0 rounded-lg bg-foreground px-3 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={isPending || phoneNumber.trim().length < 8}
+              disabled={isPending || !firebaseConfigured || phoneNumber.trim().length < 8}
               onClick={handleSendPhoneCode}
               type="button"
             >
@@ -359,7 +304,9 @@ export function FirebaseProviderActions({
           </div>
         )}
         <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-          Un code de vérification Firebase sera envoyé par SMS.
+          {firebaseConfigured
+            ? t("auth.phoneNotice", "Firebase protège l’envoi du code par son reCAPTCHA officiel.")
+            : t("auth.phoneUnavailable", "La connexion par SMS n’est pas encore configurée. Utilisez votre adresse e-mail.")}
         </p>
       </div>
       <div

@@ -180,6 +180,9 @@
     "turnstileLabel": "Verificación de seguridad antirobot",
     "turnstileVerified": "Verificación humana confirmada",
     "securityBrand": "Seguridad Idealy",
+    "firebaseUnavailable": "El inicio de sesión con Google aún no está configurado para este entorno.",
+    "phoneUnavailable": "El inicio de sesión por SMS aún no está configurado. Usa tu correo electrónico.",
+    "phoneNotice": "Firebase protege el envío del código con su reCAPTCHA oficial.",
     "googleButton": "Continuar con Google",
     "phoneButton": "Continuar con número de teléfono",
     "orDivider": "o"
