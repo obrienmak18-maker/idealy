@@ -41,7 +41,8 @@
     "test:voice-palette": "node scripts/test-voice-command-palette-contract.mjs",
     "test:a11y-perf": "node scripts/test-a11y-perf-contract.mjs",
     "test:plugins": "tsx scripts/test-plugins.ts",
-    "test:power-pack": "tsx scripts/test-power-pack.ts"
+    "test:power-pack": "tsx scripts/test-power-pack.ts",
+    "test:orchestrator": "tsx scripts/test-orchestrator.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.67",
