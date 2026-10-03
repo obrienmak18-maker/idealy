@@ -26,6 +26,8 @@ const SUBSCRIPTION_EVENTS = new Set([
   "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
+  "invoice.paid",
+  "invoice.payment_failed",
 ]);
 
 function response(body: string, status = 200) {
@@ -101,7 +103,20 @@ Deno.serve(async (req) => {
       return response("ok");
     }
 
-    const subscription = event.data.object as Stripe.Subscription;
+    const isInvoiceEvent = event.type === "invoice.paid" || event.type === "invoice.payment_failed";
+    const invoiceSubscription = isInvoiceEvent
+      ? (event.data.object as Stripe.Invoice).subscription
+      : null;
+    const subscriptionId = typeof invoiceSubscription === "string"
+      ? invoiceSubscription
+      : invoiceSubscription?.id;
+    if (isInvoiceEvent && !subscriptionId) return response("ignored");
+
+    const subscription = isInvoiceEvent
+      ? await stripe.subscriptions.retrieve(subscriptionId!)
+      : event.data.object as Stripe.Subscription;
+    if (!subscription?.id) return response("ignored");
+
     const customerId =
       typeof subscription.customer === "string"
         ? subscription.customer
@@ -109,6 +124,9 @@ Deno.serve(async (req) => {
     const priceId = subscription.items.data[0]?.price.id;
     const isDeleted = event.type === "customer.subscription.deleted";
     const plan = isDeleted ? "free" : (PRICE_TO_PLAN[priceId] ?? "free");
+    const status = isInvoiceEvent
+      ? event.type === "invoice.paid" ? "active" : "past_due"
+      : subscription.status;
 
     const { data: profile, error: profileError } = await admin
       .from("profiles")
@@ -124,7 +142,7 @@ Deno.serve(async (req) => {
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
         stripe_price_id: priceId ?? null,
-        status: subscription.status,
+        status,
         plan,
         current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
         cancel_at_period_end: subscription.cancel_at_period_end,

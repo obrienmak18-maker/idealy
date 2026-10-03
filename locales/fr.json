@@ -184,8 +184,16 @@
     "phoneUnavailable": "La connexion par SMS n’est pas encore configurée. Utilisez votre adresse e-mail.",
     "phoneNotice": "Firebase protège l’envoi du code par son reCAPTCHA officiel.",
     "googleButton": "Continuer avec Google",
-    "phoneButton": "Continuer avec un numéro de téléphone",
-    "orDivider": "ou"
+  "phoneButton": "Continuer avec un numéro de téléphone",
+  "orDivider": "ou",
+  "accountExists": "Cette adresse e-mail est déjà associée à un compte.",
+  "accountExistsAction": "Connectez-vous pour continuer.",
+  "invalidCredentials": "L’adresse e-mail ou le mot de passe est incorrect.",
+  "invalidData": "Saisissez une adresse e-mail valide et un mot de passe de 6 caractères minimum.",
+  "serviceUnavailable": "Le service est momentanément indisponible. Réessayez dans un instant.",
+  "googleCancelled": "Connexion Google annulée. Vous pouvez réessayer.",
+  "googleFailed": "La connexion avec Google a échoué. Réessayez ou utilisez votre adresse e-mail."
+
   },
   "onboarding": {
     "badge": "Espace de création",

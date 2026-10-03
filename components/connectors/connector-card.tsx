@@ -60,6 +60,12 @@ export function ConnectorCard({
                   À configurer
                 </span>
               )}
+
+              {!!connected && (
+                <span className="text-[10.5px] text-emerald-600/80 dark:text-emerald-400/80">
+                  Vérifié par le service connecteur
+                </span>
+              )}
             </div>
 
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

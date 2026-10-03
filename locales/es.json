@@ -184,8 +184,16 @@
     "phoneUnavailable": "El inicio de sesión por SMS aún no está configurado. Usa tu correo electrónico.",
     "phoneNotice": "Firebase protege el envío del código con su reCAPTCHA oficial.",
     "googleButton": "Continuar con Google",
-    "phoneButton": "Continuar con número de teléfono",
-    "orDivider": "o"
+  "phoneButton": "Continuar con número de teléfono",
+  "orDivider": "o",
+  "accountExists": "Esta dirección de correo ya está asociada a una cuenta.",
+  "accountExistsAction": "Inicia sesión para continuar.",
+  "invalidCredentials": "El correo electrónico o la contraseña no son correctos.",
+  "invalidData": "Introduce un correo válido y una contraseña de al menos 6 caracteres.",
+  "serviceUnavailable": "El servicio no está disponible temporalmente. Inténtalo de nuevo en unos instantes.",
+  "googleCancelled": "Se canceló el inicio de sesión con Google. Puedes intentarlo de nuevo.",
+  "googleFailed": "No se pudo iniciar sesión con Google. Inténtalo de nuevo o usa tu correo."
+
   },
   "onboarding": {
     "badge": "Espacio de creación",

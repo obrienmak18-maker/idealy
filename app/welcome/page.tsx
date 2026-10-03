@@ -37,6 +37,9 @@ import { useTranslation } from "@/lib/i18n/provider";
 import { voiesCatalog, type WayDetailed } from "@/lib/idealy/voies-catalog";
 import { powerPlanPolicy } from "@/lib/idealy/power-policy";
 
+const formatPoints = (value: number) =>
+  String(value).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f");
+
 const wayWorkspaceCopy = {
   fr: {
     active: "Voie active",
@@ -110,7 +113,7 @@ export default function WelcomePage() {
       </div>
 
       {/* Navigation Bar */}
-      <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-5 sm:px-10">
+      <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-4 sm:px-10 sm:py-5">
         <Link
           className="flex items-center gap-3 font-semibold tracking-tight transition-transform hover:scale-105"
           href="/welcome"
@@ -155,11 +158,11 @@ export default function WelcomePage() {
         {/* Right tools (Language, Theme, Auth) */}
         <div className="flex items-center gap-2.5">
           {/* Language Switcher */}
-          <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-1 backdrop-blur">
+          <div className="flex shrink-0 items-center rounded-xl border border-white/10 bg-white/5 p-1 backdrop-blur">
             <Globe className="ml-1.5 mr-1 size-3.5 text-white/50" />
             {(["fr", "en", "es"] as const).map((l) => (
               <button
-                className={`rounded-lg px-2 py-0.5 text-xs font-medium uppercase transition ${
+                className={`rounded-lg px-1.5 py-0.5 text-[10px] font-medium uppercase transition sm:px-2 sm:text-xs ${
                   lang === l
                     ? "bg-white/20 text-white shadow-sm"
                     : "text-white/50 hover:text-white"
@@ -199,7 +202,7 @@ export default function WelcomePage() {
             {t.nav.signIn}
           </Link>
           <Link
-            className="rounded-xl bg-gradient-to-r from-sky-400 via-violet-500 to-orange-400 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:opacity-90 active:scale-95"
+            className="shrink-0 rounded-xl bg-gradient-to-r from-sky-400 via-violet-500 to-orange-400 px-3 py-2 text-[11px] font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:opacity-90 active:scale-95 sm:px-4 sm:text-xs"
             href="/register"
           >
             {t.nav.getStarted}
@@ -224,7 +227,7 @@ export default function WelcomePage() {
 
         <motion.h1
           animate={{ opacity: 1, y: 0 }}
-          className="mx-auto max-w-4xl text-balance text-4xl font-bold tracking-[-0.04em] sm:text-6xl lg:text-7xl"
+          className="mx-auto max-w-4xl text-balance text-3xl font-bold tracking-[-0.04em] sm:text-6xl lg:text-7xl"
           initial={{ opacity: 0, y: 15 }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
@@ -247,19 +250,19 @@ export default function WelcomePage() {
 
         <motion.div
           animate={{ opacity: 1, y: 0 }}
-          className="mt-8 flex flex-wrap items-center justify-center gap-4"
+          className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4"
           initial={{ opacity: 0, y: 15 }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
           <Link
-            className="group inline-flex items-center gap-2.5 rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-black shadow-xl shadow-white/10 transition hover:bg-white/90 active:scale-95"
+            className="group inline-flex items-center justify-center gap-2.5 rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-black shadow-xl shadow-white/10 transition hover:bg-white/90 active:scale-95"
             href="/register"
           >
             {t.hero.ctaPrimary}
             <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-1" />
           </Link>
           <a
-            className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-medium text-white/85 backdrop-blur-md transition hover:bg-white/10"
+            className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3.5 text-center text-sm font-medium text-white/85 backdrop-blur-md transition hover:bg-white/10"
             href="#plans"
           >
             {t.hero.ctaSecondary}
@@ -446,7 +449,7 @@ export default function WelcomePage() {
 
       {/* Estimator Section (Limpide & Intuitif) */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-16 sm:px-10">
-        <div className="overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-violet-500/10 via-white/[0.04] to-sky-500/10 p-8 backdrop-blur-2xl">
+        <div className="overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-violet-500/10 via-white/[0.04] to-sky-500/10 p-5 backdrop-blur-2xl sm:p-8">
           <div className="text-center">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-300">
               <Sliders className="size-3.5" />
@@ -503,7 +506,7 @@ export default function WelcomePage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
               <span className="text-xs text-white/60">{t.estimator.estimatedNeed}</span>
               <p className="mt-1 text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-violet-400 to-orange-400">
-                {calculatedPoints.toLocaleString()} {t.estimator.perMonth}
+                {formatPoints(calculatedPoints)} {t.estimator.perMonth}
               </p>
               <div className="mt-4 rounded-xl bg-white/10 border border-white/10 p-3 text-xs">
                 <span className="text-white/60">{t.estimator.recommendedFormula}</span>
@@ -526,6 +529,7 @@ export default function WelcomePage() {
       <section
         className="relative z-10 mx-auto max-w-6xl px-6 py-20 sm:px-10"
         id="plans"
+        suppressHydrationWarning
       >
         <div className="mb-14 text-center">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
@@ -610,7 +614,7 @@ export default function WelcomePage() {
                   <li className="flex items-start gap-2.5">
                     <CheckIcon className="size-4 shrink-0 text-sky-400 mt-0.5" />
                     <span>
-                      <strong>{powerPlanPolicy.pro.monthlyAllocation.toLocaleString()} Power Points</strong> {lang === "en" ? "/ month" : lang === "es" ? "/ mes" : "/ mois"}
+                      <strong>{formatPoints(powerPlanPolicy.pro.monthlyAllocation)} Power Points</strong> {lang === "en" ? "/ month" : lang === "es" ? "/ mes" : "/ mois"}
                     </span>
                   </li>
                   {t.pricingSection.plans.pro.features.slice(1).map((feat, idx) => (

@@ -36,8 +36,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    const cookieLanguage = document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith("NEXT_LOCALE="))
+      ?.split("=")[1];
+
+    if (cookieLanguage === "fr" || cookieLanguage === "en" || cookieLanguage === "es") {
+      setLanguage(cookieLanguage);
+    }
+
     setMounted(true);
-  }, []);
+  }, [setLanguage]);
 
   const currentLang = mounted ? language : "fr";
   const dict = translations[currentLang] || fr;

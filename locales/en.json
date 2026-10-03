@@ -184,8 +184,16 @@
     "phoneUnavailable": "SMS sign-in is not configured yet. Please use your email address.",
     "phoneNotice": "Firebase protects code delivery with its official reCAPTCHA.",
     "googleButton": "Continue with Google",
-    "phoneButton": "Continue with Phone Number",
-    "orDivider": "or"
+  "phoneButton": "Continue with Phone Number",
+  "orDivider": "or",
+  "accountExists": "This email address is already associated with an account.",
+  "accountExistsAction": "Sign in to continue.",
+  "invalidCredentials": "The email address or password is incorrect.",
+  "invalidData": "Enter a valid email address and a password with at least 6 characters.",
+  "serviceUnavailable": "The service is temporarily unavailable. Please try again shortly.",
+  "googleCancelled": "Google sign-in was cancelled. You can try again.",
+  "googleFailed": "Google sign-in failed. Try again or use your email address."
+
   },
   "onboarding": {
     "badge": "Creation Space",
