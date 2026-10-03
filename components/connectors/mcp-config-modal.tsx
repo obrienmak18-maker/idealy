@@ -1,8 +1,16 @@
 ﻿"use client";
 
-import { useState } from "react";
-import { CheckCircle2, AlertCircle, RefreshCw, Server, Copy, Check } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  Copy,
+  RefreshCw,
+  Server,
+} from "lucide-react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,23 +19,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/lib/i18n/provider";
 
 interface McpConfigModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   connectorName?: string;
   defaultEndpoint?: string;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
 }
 
 const DEFAULT_MCP_CONFIG = {
   mcpServers: {
     "idealy-tools": {
-      command: "npx",
       args: ["-y", "@modelcontextprotocol/server-filesystem", "./project"],
+      command: "npx",
       env: {},
     },
   },
@@ -49,7 +56,7 @@ export function McpConfigModal({
   const [pingLatency, setPingLatency] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const handleJsonChange = (val: string) => {
+  const handleJsonChange = useCallback((val: string) => {
     setJsonConfig(val);
     try {
       JSON.parse(val);
@@ -57,31 +64,75 @@ export function McpConfigModal({
     } catch (err: any) {
       setJsonError(err.message || "JSON invalide");
     }
-  };
+  }, []);
 
-  const handleTestConnection = async () => {
+  /**
+   * Tests the configuration the user actually wrote.
+   *
+   * This no longer reports a fabricated success: it parses the local config and
+   * reports only what can genuinely be verified without a live MCP server. A
+   * reachable-server check stays explicit rather than simulated.
+   */
+  const handleTestConnection = useCallback(async () => {
     setIsTesting(true);
     setPingLatency(null);
     try {
-      const res = await fetch("/api/connectors/ping?provider=mcp");
-      const data = await res.json();
-      setPingLatency(data.latencyMs ?? 24);
-      toast.success(t("connectors.testSuccess", "Connexion établie avec succès !"));
-    } catch {
-      toast.error(t("connectors.testError", "Échec de connexion au serveur MCP"));
+      const parsed: unknown = JSON.parse(jsonConfig);
+      if (!parsed || typeof parsed !== "object") {
+        throw new Error("La configuration doit être un objet JSON.");
+      }
+
+      const config = parsed as { servers?: unknown; url?: unknown };
+      const servers =
+        config.servers && typeof config.servers === "object"
+          ? (config.servers as Record<string, unknown>)
+          : null;
+      const hasEndpoint =
+        Boolean(config.url) ||
+        Boolean(servers && Object.keys(servers).length > 0);
+
+      if (!hasEndpoint) {
+        throw new Error(
+          "Aucune URL de serveur n'est déclarée dans cette configuration."
+        );
+      }
+
+      const startedAt = performance.now();
+      if (typeof config.url === "string" && /^https?:\/\//i.test(config.url)) {
+        // A real reachability probe against the endpoint the user configured.
+        await fetch(config.url, {
+          cache: "no-store",
+          method: "HEAD",
+          mode: "cors",
+        });
+      }
+      setPingLatency(Math.round(performance.now() - startedAt));
+
+      toast.success(
+        t(
+          "connectors.configValid",
+          "Configuration valide. La connexion au serveur MCP n'est pas encore vérifiée."
+        )
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("connectors.testError", "Échec de connexion au serveur MCP")
+      );
     } finally {
       setIsTesting(false);
     }
-  };
+  }, [jsonConfig, t]);
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(jsonConfig);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success("Configuration copiée");
-  };
+  }, [jsonConfig]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (jsonError) {
       toast.error("Veuillez corriger les erreurs de syntaxe JSON.");
       return;
@@ -94,10 +145,26 @@ export function McpConfigModal({
     } catch {
       toast.error("JSON invalide");
     }
-  };
+  }, [jsonConfig, jsonError, onOpenChange]);
+
+  const handleServerUrlChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setServerUrl(event.target.value);
+    },
+    []
+  );
+
+  const handleJsonFieldChange = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      handleJsonChange(event.target.value);
+    },
+    [handleJsonChange]
+  );
+
+  const closeDialog = useCallback(() => onOpenChange(false), [onOpenChange]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
@@ -121,18 +188,18 @@ export function McpConfigModal({
             <Label htmlFor="mcp-url">URL du serveur / Endpoint SSE</Label>
             <div className="flex gap-2">
               <Input
-                id="mcp-url"
-                value={serverUrl}
-                onChange={(e) => setServerUrl(e.target.value)}
-                placeholder="http://localhost:3001/sse"
                 className="font-mono text-xs"
+                id="mcp-url"
+                onChange={handleServerUrlChange}
+                placeholder="http://localhost:3001/sse"
+                value={serverUrl}
               />
               <Button
-                variant="outline"
-                size="sm"
-                onClick={handleTestConnection}
-                disabled={isTesting}
                 className="shrink-0"
+                disabled={isTesting}
+                onClick={handleTestConnection}
+                size="sm"
+                variant="outline"
               >
                 {isTesting ? (
                   <RefreshCw className="mr-1.5 size-3.5 animate-spin" />
@@ -151,12 +218,14 @@ export function McpConfigModal({
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="mcp-json">Configuration JSON (claude_desktop_config.json)</Label>
+              <Label htmlFor="mcp-json">
+                Configuration JSON (claude_desktop_config.json)
+              </Label>
               <Button
-                variant="ghost"
-                size="sm"
                 className="h-6 px-2 text-xs text-muted-foreground"
                 onClick={handleCopy}
+                size="sm"
+                variant="ghost"
               >
                 {copied ? (
                   <Check className="mr-1 size-3 text-emerald-500" />
@@ -168,11 +237,11 @@ export function McpConfigModal({
             </div>
             <div className="relative">
               <textarea
-                id="mcp-json"
-                value={jsonConfig}
-                onChange={(e) => handleJsonChange(e.target.value)}
-                rows={8}
                 className="w-full rounded-xl border border-border/80 bg-muted/40 p-3 font-mono text-xs leading-relaxed focus:border-primary/50 focus:outline-none scrollbar-thin"
+                id="mcp-json"
+                onChange={handleJsonFieldChange}
+                rows={8}
+                value={jsonConfig}
               />
             </div>
             {jsonError ? (
@@ -190,10 +259,10 @@ export function McpConfigModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+          <Button onClick={closeDialog} size="sm" variant="outline">
             {t("common.cancel", "Annuler")}
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={Boolean(jsonError)}>
+          <Button disabled={Boolean(jsonError)} onClick={handleSave} size="sm">
             {t("common.save", "Enregistrer la configuration")}
           </Button>
         </DialogFooter>
