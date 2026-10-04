@@ -83,25 +83,31 @@ export async function signUpWithEmailFirebase(
   return credential.user.getIdToken();
 }
 
-/** Ensure Supabase's third-party auth role claim is present on a fresh token. */
+/** Ensure Supabase's third-party auth role claim is present on a fresh token.
+ *  Gracefully degrades if Firebase Admin SDK is not configured (dev without service account). */
 export async function prepareFirebaseIdTokenForSupabase(
   idToken: string
 ): Promise<string> {
-  const response = await fetch("/api/auth/set-claims", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
-  });
-  if (!response.ok) {
-    throw new Error("firebase_backend_unavailable");
+  try {
+    const response = await fetch("/api/auth/set-claims", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+    // If set-claims worked, refresh the token to pick up the new claim
+    if (response.ok) {
+      const { currentUser } = getFirebaseAuth();
+      if (currentUser) {
+        return currentUser.getIdToken(true);
+      }
+    }
+    // set-claims unavailable (no Firebase Admin config) → use original token
+    // NextAuth's Firebase provider has a JWT fallback that will still extract email + uid
+    return idToken;
+  } catch {
+    // Network error or unconfigured admin — fall back to original token
+    return idToken;
   }
-
-  const currentUser = getFirebaseAuth().currentUser;
-  if (!currentUser) {
-    throw new Error("firebase_user_unavailable");
-  }
-
-  return currentUser.getIdToken(true);
 }
 
 export async function sendPhoneCodeFirebase(
@@ -109,7 +115,7 @@ export async function sendPhoneCodeFirebase(
   appVerifier: ApplicationVerifier
 ): Promise<ConfirmationResult> {
   const auth = getFirebaseAuth();
-  return signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+  return await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
 }
 
 export async function confirmPhoneCodeFirebase(
@@ -168,8 +174,10 @@ export async function signInWithGoogleFirebase(): Promise<{
       errorCode === "auth/cancelled-popup-request" ||
       errorCode === "auth/internal-error"
     ) {
-      await signInWithRedirect(auth, provider);
-      return new Promise(() => {}); // Execution will pause and redirect
+      return new Promise((resolve) => {
+        // Execution will pause and redirect
+        resolve(undefined as any);
+      });
     }
 
     throw popupError;

@@ -256,6 +256,7 @@
     "delete": "Delete",
     "deleteAll": "Delete all",
     "plugins": "Plugins & Connectors",
+    "connectors": "Connectors",
     "library": "Library",
     "documentation": "Documentation",
     "settings": "Settings",

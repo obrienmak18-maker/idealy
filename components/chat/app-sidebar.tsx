@@ -18,6 +18,8 @@ import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { PowerStatusBadge } from "@/components/chat/power-status";
+import { voiesCatalog } from "@/lib/idealy/voies-catalog";
+import { cn } from "@/lib/utils";
 import {
   getChatHistoryPaginationKey,
   SidebarHistory,
@@ -75,7 +77,7 @@ function planDisplayName(plan: string | undefined): string {
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { t } = useTranslation();
-  const { burnDownPercentage } = useGamificationStore();
+  const { burnDownPercentage, currentWay } = useGamificationStore();
   const { setOpenMobile, toggleSidebar, state } = useSidebar();
   const { mutate } = useSWRConfig();
   const { resetToNewChat } = useActiveChat();
@@ -180,82 +182,83 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   <SidebarMenuButton
                     className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                     onClick={handleNewChat}
-                    tooltip="Nouvelle discussion"
+                    tooltip={t("sidebar.newChat") || "Nouvelle discussion"}
                   >
                     <PenSquareIcon className="size-4" />
-                    <span className="font-medium">Nouvelle discussion</span>
+                    <span className="font-medium">{t("sidebar.newChat") || "Nouvelle discussion"}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* 2. Navigation pillars — flat, no accordions */}
+          {/* 2. Navigation pillars — clean and focused */}
           <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
             <SidebarGroupContent>
               <nav
                 aria-label="Navigation principale"
                 className="flex flex-col gap-0.5 px-2"
               >
-                <Link
-                  className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                  href="/brand-studio"
-                >
-                  <SparklesIcon className="size-3.5 shrink-0" />
-                  <span>Studio de marque</span>
-                </Link>
                 {/* CONNECTEURS */}
                 <Link
                   className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                   href="/plugins"
                 >
-                  <PlugZapIcon className="size-3.5 shrink-0" />
-                  <span>Connecteurs</span>
-                </Link>
-                {/* PARAMÈTRES */}
-                <Link
-                  className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                  href="/settings"
-                >
-                  <Settings2Icon className="size-3.5 shrink-0" />
-                  <span>{t("sidebar.settings") || "Paramètres"}</span>
+                  <PlugZapIcon className="size-3.5 shrink-0 text-violet-400" />
+                  <span>{t("sidebar.connectors") || "Connecteurs"}</span>
                 </Link>
               </nav>
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* 3. Mission en cours / Power burn-down */}
+          {/* 3. Mission en cours / Way & Power burn-down (Compact & customized) */}
           <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
             <SidebarGroupContent>
-              <div className="mx-2 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/30 p-3 shadow-[var(--shadow-card)]">
-                <div className="mb-2 flex items-center justify-between">
+              <div className="mx-2 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/20 p-2.5 shadow-xs">
+                <div className="mb-1.5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/20 to-orange-400/20 text-violet-400">
-                      <ZapIcon className="size-3.5" />
+                    <div className="relative flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md border border-sidebar-border/80 bg-sidebar-accent text-xs">
+                      {voiesCatalog[currentWay]?.agents?.[0]?.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          alt={voiesCatalog[currentWay]?.chiefName || "Chef"}
+                          className="size-full object-cover"
+                          src={voiesCatalog[currentWay]?.agents?.[0]?.avatarUrl}
+                        />
+                      ) : (
+                        <span>{voiesCatalog[currentWay]?.agents?.[0]?.emoji || "🥷"}</span>
+                      )}
                     </div>
-                    <div>
-                      <div className="text-[11px] font-semibold text-sidebar-foreground">
-                        {t("sidebar.activeMission") || "Mission en cours"}
+                    <div className="leading-tight">
+                      <div className="text-[11px] font-semibold text-sidebar-foreground flex items-center gap-1">
+                        <span>{t("sidebar.activeMission") || "Mission"}</span>
+                        <span className="text-[10px] font-normal text-muted-foreground">
+                          • {voiesCatalog[currentWay]?.label || "Voie"}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-sidebar-foreground/55">
-                        {t("sidebar.powerAvailable") || "Énergie restante"}
+                      <div className="text-[9.5px] text-sidebar-foreground/50">
+                        {voiesCatalog[currentWay]?.resourceLabel || "Énergie"} restante
                       </div>
                     </div>
                   </div>
-                  <span className="text-[11px] font-semibold text-sidebar-foreground/75">
+                  <span className="text-[11px] font-semibold text-sidebar-foreground/80">
                     {burnDownPercentage}%
                   </span>
                 </div>
-                {/* Burn-down bar: starts at 100% and decreases as power is consumed */}
-                <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-sidebar-border/70">
+                {/* Burn-down bar compact */}
+                <div className="mb-1.5 h-1 overflow-hidden rounded-full bg-sidebar-border/60">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-orange-400 transition-all duration-500 ease-out"
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r",
+                      voiesCatalog[currentWay]?.accentClassName || "from-violet-500 to-orange-400"
+                    )}
                     style={{ width: `${burnDownPercentage}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-[10px] text-sidebar-foreground/60">
-                  <span className="flex items-center gap-1">
-                    <ZapIcon className="size-3 text-amber-400" /> Power
+                <div className="flex items-center justify-between text-[9.5px] text-sidebar-foreground/60">
+                  <span className="flex items-center gap-1 font-medium">
+                    <span className="text-[10px]">{voiesCatalog[currentWay]?.agents?.[0]?.emoji || "⚡"}</span>
+                    {voiesCatalog[currentWay]?.resourceLabel || "Power"}
                   </span>
                   <PowerStatusBadge />
                 </div>
@@ -266,16 +269,29 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           {/* 4. Historique des discussions (Workspaces) */}
           <SidebarHistory user={user} />
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border pt-2 pb-3">
-          <div className="group-data-[collapsible=icon]:hidden mb-2 flex items-center justify-end px-2">
+        <SidebarFooter className="border-t border-sidebar-border pt-1.5 pb-2">
+          {/* Settings button — placed at bottom where it belongs */}
+          <div className="px-2 mb-1 flex items-center justify-between gap-1">
+            <Link
+              className="flex flex-1 items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
+              href="/settings"
+            >
+              <Settings2Icon className="size-4 shrink-0" />
+              <span className="font-medium">{t("sidebar.settings") || "Paramètres"}</span>
+            </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  aria-label="Ouvrir les options du workspace"
-                  className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  aria-label="Options du workspace"
+                  className="rounded-lg p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
                   type="button"
                 >
-                  <Settings2Icon className="size-4" />
+                  <span className="sr-only">Options</span>
+                  <div className="flex flex-col gap-0.5 items-center justify-center size-4">
+                    <span className="size-0.5 rounded-full bg-current" />
+                    <span className="size-0.5 rounded-full bg-current" />
+                    <span className="size-0.5 rounded-full bg-current" />
+                  </div>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent

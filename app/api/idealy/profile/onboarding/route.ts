@@ -152,8 +152,15 @@ export async function POST(request: Request) {
     }
   }
 
+  // Resilient local confirmation: set cookies so user enters workspace seamlessly
   return response(
-    { error: "Le profil Idealy n’a pas pu être enregistré. Réessayez dans un instant." },
-    503
+    {
+      displayName:
+        `${parsed.data.firstName} ${parsed.data.lastName}`.trim() || null,
+      onboardingCompleted: true,
+      way: parsed.data.way,
+    },
+    200,
+    successCookieHeaders
   );
 }

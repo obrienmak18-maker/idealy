@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     icon: [{ type: "image/svg+xml", url: "/idealy-mark.svg" }],
     shortcut: ["/idealy-mark.svg"],
   },
+  manifest: "/manifest.webmanifest",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://idealy-ai.netlify.app"
   ),

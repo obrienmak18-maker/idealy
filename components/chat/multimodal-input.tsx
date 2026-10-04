@@ -696,25 +696,6 @@ function PureMultimodalInput({
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
 
-              {currentWay && (
-                <span
-                  className={cn(
-                    "flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium border transition-colors",
-                    currentWay === "ninja" && "bg-red-500/10 border-red-500/20 text-red-500",
-                    currentWay === "hunter" && "bg-emerald-500/10 border-emerald-500/20 text-emerald-500",
-                    currentWay === "mage" && "bg-blue-500/10 border-blue-500/20 text-blue-500",
-                    currentWay === "professional" && "bg-amber-500/10 border-amber-500/20 text-amber-500"
-                  )}
-                  title={`Voie active : ${currentWay.toUpperCase()}`}
-                >
-                  <span>
-                    {currentWay === "ninja" ? "🥷" : currentWay === "hunter" ? "🏹" : currentWay === "mage" ? "🔮" : "⚡"}
-                  </span>
-                  <span className="hidden sm:inline capitalize">
-                    {currentWay === "professional" ? "Pro" : currentWay}
-                  </span>
-                </span>
-              )}
             </PromptInputTools>
 
           <div className="flex items-center gap-1.5">

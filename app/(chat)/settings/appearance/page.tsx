@@ -11,18 +11,27 @@ const languageCopy = {
     language: "Langue de l’espace",
     languageDescription: "Cette préférence s’applique à votre parcours Idealy et est conservée pour vos prochaines visites.",
     theme: "Thème de l’interface",
+    light: "Clair",
+    dark: "Sombre",
+    system: "Système",
   },
   en: {
     description: "Personalize the tones and brightness of Idealy Studio.",
     language: "Workspace language",
     languageDescription: "This preference applies across your Idealy journey and is kept for future visits.",
     theme: "Interface theme",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
   },
   es: {
     description: "Personaliza los tonos y la luminosidad de Idealy Studio.",
     language: "Idioma del espacio",
     languageDescription: "Esta preferencia se aplica a tu experiencia Idealy y se conserva para tus próximas visitas.",
     theme: "Tema de la interfaz",
+    light: "Claro",
+    dark: "Oscuro",
+    system: "Sistema",
   },
 } as const;
 
@@ -30,7 +39,7 @@ export default function AppearancePage() {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const { language, setLanguage } = useTranslation();
-  const copy = languageCopy[language];
+  const copy = languageCopy[language] || languageCopy.fr;
 
   const changeLanguage = (nextLanguage: SupportedLanguage) => {
     setLanguage(nextLanguage);
@@ -47,9 +56,9 @@ export default function AppearancePage() {
       </div>
       <div className="grid grid-cols-3 gap-3">
         {[
-          { value: "light", label: "Clair",   Icon: SunIcon },
-          { value: "dark",  label: "Sombre",  Icon: MoonIcon },
-          { value: "system",label: "Système", Icon: PaletteIcon },
+          { value: "light", label: copy.light, Icon: SunIcon },
+          { value: "dark", label: copy.dark, Icon: MoonIcon },
+          { value: "system", label: copy.system, Icon: PaletteIcon },
         ].map(({ value, label, Icon }) => (
           <button
             key={value}

@@ -166,22 +166,18 @@ export default function Page() {
           code = (error as { message: string }).message;
         }
       }
-      if (code === "firebase_not_configured") {
+      if (
+        code === "firebase_not_configured" ||
+        code === "firebase_backend_unavailable" ||
+        code === "auth/user-not-found" ||
+        code === "auth/invalid-credential"
+      ) {
+        // Fall back to NextAuth credentials provider for local/development accounts
         formAction(formData);
         return;
       }
-      if (code === "firebase_backend_unavailable") {
-        setFirebaseError(
-          "La connexion sécurisée au workspace n’est pas disponible. Réessayez dans un instant."
-        );
-        return;
-      }
-      if (
-        code === "auth/invalid-credential" ||
-        code === "auth/user-not-found" ||
-        code === "auth/wrong-password"
-      ) {
-        setFirebaseError("L’adresse e-mail ou le mot de passe est incorrect.");
+      if (code === "auth/wrong-password") {
+        setFirebaseError("Le mot de passe saisi est incorrect.");
         return;
       }
       if (code === "auth/invalid-email") {
@@ -189,7 +185,7 @@ export default function Page() {
         return;
       }
       setFirebaseError(
-        "La connexion est indisponible. Vérifiez la configuration Firebase puis réessayez."
+        "La connexion est indisponible. Vérifiez vos identifiants ou utilisez Google."
       );
     }
   };

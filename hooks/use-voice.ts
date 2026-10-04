@@ -116,8 +116,10 @@ function getRecognitionConstructor():
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 }
 
-function mapErrorKind(event: IdealySpeechRecognitionErrorEvent): VoiceErrorKind {
+function mapErrorKind(event: IdealySpeechRecognitionErrorEvent): VoiceErrorKind | "NO_SPEECH" {
   switch (event.error) {
+    case "no-speech":
+      return "NO_SPEECH";
     case "not-allowed":
       return "PERMISSION_DENIED";
     case "aborted":
@@ -126,6 +128,19 @@ function mapErrorKind(event: IdealySpeechRecognitionErrorEvent): VoiceErrorKind 
       return "NETWORK";
     default:
       return "UNKNOWN";
+  }
+}
+
+function getFriendlyErrorMessage(kind: VoiceErrorKind): string {
+  switch (kind) {
+    case "PERMISSION_DENIED":
+      return "Accès micro refusé. Veuillez autoriser le microphone dans la barre d'adresse de votre navigateur.";
+    case "NETWORK":
+      return "Connexion réseau insuffisante pour la reconnaissance vocale.";
+    case "NOT_SUPPORTED":
+      return "La reconnaissance vocale n'est pas prise en charge sur ce navigateur. Utilisez Chrome, Edge ou Safari.";
+    default:
+      return "La dictée vocale s'est interrompue. Cliquez à nouveau pour reprendre.";
   }
 }
 
@@ -177,26 +192,50 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
   const stop = useCallback(() => {
     clearSilenceTimer();
     if (recognitionRef.current) {
-      recognitionRef.current.abort();
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        recognitionRef.current.abort();
+      }
       recognitionRef.current = null;
     }
     setState("idle");
     setInterim("");
   }, [clearSilenceTimer]);
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     if (state !== "idle") return;
 
     const Ctor = getRecognitionConstructor();
     if (!Ctor) {
       onErrorRef.current?.({
         kind: "NOT_SUPPORTED",
-        message: "Web Speech API non disponible dans ce navigateur.",
+        message: getFriendlyErrorMessage("NOT_SUPPORTED"),
       });
       return;
     }
 
     setState("requesting");
+
+    // Proactively request mic permission to trigger browser prompt if needed
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Close tracks immediately after permission check
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
+      } catch (mediaErr: any) {
+        if (mediaErr?.name === "NotAllowedError" || mediaErr?.name === "PermissionDeniedError") {
+          setState("idle");
+          onErrorRef.current?.({
+            kind: "PERMISSION_DENIED",
+            message: getFriendlyErrorMessage("PERMISSION_DENIED"),
+          });
+          return;
+        }
+      }
+    }
 
     try {
       const recognition = new Ctor();
@@ -214,11 +253,10 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
         resetSilenceTimer();
         let finalPart = "";
         let interimPart = "";
-        for (let i = 0; i < event.results.length; i++) {
-          const res = event.results[i];
+        for (const res of Array.from(event.results)) {
           const text = res[0]?.transcript ?? "";
           if (res.isFinal) {
-            finalPart += text + " ";
+            finalPart += `${text} `;
           } else {
             interimPart += text;
           }
@@ -240,11 +278,11 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
       recognition.onerror = (event: IdealySpeechRecognitionErrorEvent) => {
         clearSilenceTimer();
         const kind = mapErrorKind(event);
-        // "aborted" errors from calling stop() are expected — don't surface them.
-        if (kind !== "ABORTED") {
+        // "aborted" and "no-speech" are expected quiet events — don't show alarm toast
+        if (kind !== "ABORTED" && kind !== "NO_SPEECH") {
           onErrorRef.current?.({
             kind,
-            message: event.error ?? "Erreur de reconnaissance vocale.",
+            message: getFriendlyErrorMessage(kind),
           });
         }
         recognitionRef.current = null;
