@@ -1,0 +1,5 @@
+import { IdealyLoading } from "@/components/branding/idealy-loading";
+
+export default function Loading() {
+  return <IdealyLoading label="Chargement d’Idealy…" />;
+}

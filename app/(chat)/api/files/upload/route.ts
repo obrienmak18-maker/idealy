@@ -1,7 +1,6 @@
-import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
+import { createClient } from "@supabase/supabase-js";
 import { auth } from "@/app/(auth)/auth";
 import {
   CHAT_ATTACHMENT_MAX_BYTES,
@@ -19,6 +18,38 @@ const FileSchema = z.object({
       message: "Le type de fichier est invalide.",
     }),
 });
+
+/** Upload via Supabase Storage if configured, otherwise use a base64 data-URL fallback. */
+async function storeFile(
+  fileBuffer: ArrayBuffer,
+  pathname: string,
+  contentType: string
+): Promise<{ url: string; pathname: string }> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (supabaseUrl && supabaseServiceKey) {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "idealy-attachments";
+
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(pathname, fileBuffer, {
+        contentType,
+        upsert: false,
+      });
+
+    if (error) throw new Error(error.message);
+
+    const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    return { url: publicData.publicUrl, pathname: data.path };
+  }
+
+  // Fallback: encode as data URL (fine for dev / free tier)
+  const base64 = Buffer.from(fileBuffer).toString("base64");
+  const dataUrl = `data:${contentType};base64,${base64}`;
+  return { url: dataUrl, pathname };
+}
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -46,7 +77,6 @@ export async function POST(request: Request) {
       const errorMessage = validatedFile.error.issues
         .map((error) => error.message)
         .join(", ");
-
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
@@ -61,12 +91,8 @@ export async function POST(request: Request) {
     const pathname = `uploads/${ownerSegment}/${crypto.randomUUID()}.${extension}`;
 
     try {
-      const data = await put(pathname, fileBuffer, {
-        access: "public",
-        contentType,
-      });
-
-      return NextResponse.json({ ...data, contentType });
+      const { url, pathname: storedPath } = await storeFile(fileBuffer, pathname, contentType);
+      return NextResponse.json({ url, pathname: storedPath, contentType });
     } catch {
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }

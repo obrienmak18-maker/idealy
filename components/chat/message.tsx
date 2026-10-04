@@ -16,7 +16,7 @@ import {
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
-import { SparklesIcon } from "./icons";
+import { IdealyMark } from "@/components/branding/idealy-logo";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
@@ -181,7 +181,7 @@ const PurePreviewMessage = ({
       return (
         <MessageContent
           className={cn("text-[13px] leading-[1.65]", {
-            "w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-lg border border-border/30 bg-gradient-to-br from-secondary to-muted px-3.5 py-2 shadow-[var(--shadow-card)]":
+            "idealy-bubble-user w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm":
               message.role === "user",
           })}
           data-testid="message-content"
@@ -382,8 +382,8 @@ const PurePreviewMessage = ({
       >
         {isAssistant && (
           <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
-              <SparklesIcon size={13} />
+            <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30">
+              <IdealyMark className="size-4" size={16} />
             </div>
           </div>
         )}
@@ -407,8 +407,8 @@ export const ThinkingMessage = () => (
   >
     <div className="flex items-start gap-3">
       <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
-          <SparklesIcon size={13} />
+        <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30 animate-pulse">
+          <IdealyMark className="size-4" size={16} />
         </div>
       </div>
 

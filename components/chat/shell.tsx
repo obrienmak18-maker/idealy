@@ -229,11 +229,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
   }, [isResizing]);
 
   const handleActivateGateway = useCallback(() => {
-    window.open(
-      "https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card",
-      "_blank"
-    );
-    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/`;
+    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/settings/billing`;
   }, []);
 
   return (

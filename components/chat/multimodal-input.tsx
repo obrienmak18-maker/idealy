@@ -718,12 +718,20 @@ function PureMultimodalInput({
             </PromptInputTools>
 
           <div className="flex items-center gap-1.5">
-            {isListening ? (
+            {voice.state === "requesting" ? (
+              <span aria-live="polite" className="flex items-center gap-1.5 px-1 text-[10px] font-medium text-sky-400">
+                <span className="size-1.5 animate-spin rounded-full border border-sky-400 border-t-transparent" />
+                <span>Permission…</span>
+              </span>
+            ) : isListening ? (
               <span
                 aria-live="polite"
-                className="flex items-center gap-1.5 px-1 text-[10px] font-medium text-red-500"
+                className="flex items-center gap-1.5 px-1 text-[10px] font-medium text-red-400"
               >
-                <span className="size-1.5 rounded-full bg-current" />
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-400 opacity-50" />
+                  <span className="relative size-2 rounded-full bg-red-500" />
+                </span>
                 <span>Écoute en cours</span>
               </span>
             ) : null}
@@ -732,15 +740,17 @@ function PureMultimodalInput({
               aria-pressed={isListening}
               aria-busy={voice.state === "requesting"}
               className={cn(
-                "h-8 w-8 rounded-lg border border-border/50 p-1 transition-colors",
+                "relative h-8 w-8 rounded-lg border p-1 transition-all duration-200",
                 isListening
-                  ? "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/15 dark:text-red-400"
-                  : "text-muted-foreground hover:border-border hover:bg-muted/70 hover:text-foreground"
+                  ? "border-red-500/40 bg-gradient-to-br from-red-500/15 to-rose-500/10 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.2)] hover:from-red-500/20"
+                  : voice.state === "requesting"
+                  ? "border-sky-400/30 bg-sky-400/10 text-sky-400"
+                  : "border-border/50 text-muted-foreground hover:border-border hover:bg-muted/70 hover:text-foreground"
               )}
               disabled={!voice.supported}
               onClick={toggleSpeechRecognition}
               size="icon"
-              title={voice.supported ? (isListening ? "Arrêter la dictée" : "Dicter au micro") : "La dictée n’est pas disponible dans ce navigateur."}
+              title={voice.supported ? (isListening ? "Arrêter la dictée" : "Dicter au micro") : "La dictée n'est pas disponible dans ce navigateur."}
               type="button"
               variant="ghost"
             >

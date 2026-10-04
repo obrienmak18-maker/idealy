@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   CheckCircle2Icon,
@@ -16,6 +16,10 @@ import { McpConfigModal } from "./mcp-config-modal";
 interface ConnectorCardProps {
   connected: boolean;
   connector: ConnectorDefinition;
+  /** "ready" | "checking" | "unavailable" — overall service reachability state */
+  connectServiceState?: "ready" | "checking" | "unavailable";
+  /** Human-readable reason the connect service is unavailable (if any) */
+  connectUnavailableReason?: string | null;
   displayName?: string | null;
   managed: boolean;
 }

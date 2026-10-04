@@ -1,4 +1,19 @@
-import { geolocation, ipAddress } from "@vercel/functions";
+/** Local geo/IP helpers — no dependency on @vercel/functions */
+function ipAddress(req: Request): string | undefined {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    undefined
+  );
+}
+function geolocation(req: Request) {
+  return {
+    city: req.headers.get("x-vercel-ip-city") ?? req.headers.get("cf-ipcity") ?? null,
+    country: req.headers.get("x-vercel-ip-country") ?? req.headers.get("cf-ipcountry") ?? null,
+    latitude: req.headers.get("x-vercel-ip-latitude") ?? null,
+    longitude: req.headers.get("x-vercel-ip-longitude") ?? null,
+  };
+}
 import {
   convertToModelMessages,
   createUIMessageStream,
