@@ -1,42 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import useSWR from "swr";
 import {
-  parsePowerStatus,
+  type PowerAction,
   type PowerStatus,
+  parsePowerStatus,
 } from "@/lib/idealy/power-status";
 
+const POWER_STATUS_REFRESH_MS = 60_000;
+
+async function fetchPowerStatus(key: string): Promise<PowerStatus | null> {
+  const response = await fetch(key, { cache: "no-store" });
+  if (!response.ok) {
+    return null;
+  }
+  return parsePowerStatus(await response.json().catch(() => null));
+}
+
 /**
- * Lightweight hook that fetches the current Power status once on mount.
- * Consumers can use `status.plan` and `status.balance` for display.
- * Does NOT poll — callers that need live updates should use PowerStatusBadge directly.
+ * Shared Power status with focus, periodic and mission-completion refreshes.
  */
-export function usePowerStatus(): {
+export function usePowerStatus(action: PowerAction | null = null): {
   loading: boolean;
   status: PowerStatus | null;
 } {
-  const [status, setStatus] = useState<PowerStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const key = action
+    ? `/api/idealy/power?action=${encodeURIComponent(action)}`
+    : "/api/idealy/power";
+  const { data, isLoading, mutate } = useSWR(key, fetchPowerStatus, {
+    refreshInterval: POWER_STATUS_REFRESH_MS,
+    revalidateOnFocus: true,
+    shouldRetryOnError: false,
+  });
 
   useEffect(() => {
-    let cancelled = false;
-    fetch("/api/idealy/power", { cache: "no-store" })
-      .then(async (res) => (res.ok ? res.json() : null))
-      .then((payload) => {
-        if (!cancelled) {
-          setStatus(parsePowerStatus(payload));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setStatus(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
+    const refresh = () => {
+      mutate();
     };
-  }, []);
+    window.addEventListener("idealy:power-updated", refresh);
+    return () => window.removeEventListener("idealy:power-updated", refresh);
+  }, [mutate]);
 
-  return { loading, status };
+  return { loading: isLoading, status: data ?? null };
 }

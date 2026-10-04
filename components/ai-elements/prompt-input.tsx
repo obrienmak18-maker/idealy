@@ -382,6 +382,8 @@ export type PromptInputProps = Omit<
     code: "max_files" | "max_file_size" | "accept";
     message: string;
   }) => void;
+  /** Route dropped browser files through the caller's real upload pipeline. */
+  onFilesDropped?: (files: File[]) => void;
   onSubmit: (
     message: PromptInputMessage,
     event: FormEvent<HTMLFormElement>
@@ -397,6 +399,7 @@ export const PromptInput = ({
   maxFiles,
   maxFileSize,
   onError,
+  onFilesDropped,
   onSubmit,
   children,
   ...props
@@ -627,7 +630,8 @@ export const PromptInput = ({
         e.preventDefault();
       }
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-        add(e.dataTransfer.files);
+        if (onFilesDropped) onFilesDropped(Array.from(e.dataTransfer.files));
+        else add(e.dataTransfer.files);
       }
     };
     form.addEventListener("dragover", onDragOver);
@@ -636,7 +640,7 @@ export const PromptInput = ({
       form.removeEventListener("dragover", onDragOver);
       form.removeEventListener("drop", onDrop);
     };
-  }, [add, globalDrop]);
+  }, [add, globalDrop, onFilesDropped]);
 
   useEffect(() => {
     if (!globalDrop) {
@@ -653,7 +657,8 @@ export const PromptInput = ({
         e.preventDefault();
       }
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-        add(e.dataTransfer.files);
+        if (onFilesDropped) onFilesDropped(Array.from(e.dataTransfer.files));
+        else add(e.dataTransfer.files);
       }
     };
     document.addEventListener("dragover", onDragOver);
@@ -662,7 +667,7 @@ export const PromptInput = ({
       document.removeEventListener("dragover", onDragOver);
       document.removeEventListener("drop", onDrop);
     };
-  }, [add, globalDrop]);
+  }, [add, globalDrop, onFilesDropped]);
 
   useEffect(
     () => () => {

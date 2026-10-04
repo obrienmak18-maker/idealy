@@ -175,7 +175,27 @@ function PureSuggestedActions({
   }, [sendMessage]);
 
   return (
-    <div className="flex w-full flex-col gap-3">
+    <section aria-labelledby="mission-start-title" className="flex w-full flex-col gap-3">
+      <div className="flex items-end justify-between gap-3 px-1">
+        <div>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground" id="mission-start-title">
+            Pour commencer
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Choisissez un point de départ ou écrivez votre idée.
+          </p>
+        </div>
+        <Button
+          className="shrink-0 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+          onClick={() => setGeneration((value) => value + 1)}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
+          <RefreshCwIcon className="mr-1.5 size-3.5" />
+          Autres idées
+        </Button>
+      </div>
       {isDemoMode ? (
         <Button
           className="w-full rounded-xl border border-sky-400/30 bg-sky-400/10 px-4 py-5 text-sm font-semibold text-sky-900 shadow-[var(--shadow-card)] hover:bg-sky-400/20 dark:text-sky-100"
@@ -188,7 +208,7 @@ function PureSuggestedActions({
         </Button>
       ) : null}
       <div
-        className="flex w-full gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible"
+        className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2"
         data-testid="suggested-actions"
         style={{
           msOverflowStyle: "none",
@@ -199,7 +219,7 @@ function PureSuggestedActions({
         {suggestedActions.map((entry, index) => (
           <motion.div
             animate={{ opacity: 1, y: 0 }}
-            className="group relative min-w-[240px] shrink-0 sm:min-w-0 sm:shrink"
+            className="group relative min-w-0"
             exit={{ opacity: 0, y: 12 }}
             initial={{ opacity: 0, y: 12 }}
             key={entry.label}
@@ -210,42 +230,27 @@ function PureSuggestedActions({
             }}
           >
             <button
-              className="relative flex h-full w-full flex-col justify-between rounded-xl border border-slate-200/90 bg-white/90 p-4 text-left shadow-xs transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-sky-400/60 hover:bg-white hover:shadow-[0_8px_25px_-6px_rgba(56,189,248,0.2),0_4px_12px_-4px_rgba(139,92,246,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-y-0 dark:border-white/10 dark:bg-slate-900/60 dark:hover:border-violet-400/60 dark:hover:bg-slate-900 dark:hover:shadow-[0_8px_25px_-6px_rgba(139,92,246,0.25)] backdrop-blur-sm cursor-pointer"
+              className="relative flex min-h-[96px] w-full flex-col justify-between rounded-xl border border-border/70 bg-card/75 p-3.5 text-left transition-colors duration-150 hover:border-foreground/20 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer sm:min-h-[108px] sm:p-4"
               onClick={() => handleSuggestionClick(entry)}
               type="button"
             >
               <div className="flex items-start justify-between gap-2.5">
-                <span className="font-semibold text-[13.5px] text-foreground tracking-tight transition-colors group-hover:text-sky-600 dark:group-hover:text-sky-300">
+                <span className="font-semibold text-sm tracking-tight text-foreground transition-colors group-hover:text-primary">
                   {entry.label}
                 </span>
-                <span className="shrink-0 rounded-full border border-sky-400/25 bg-gradient-to-r from-sky-500/10 via-teal-500/10 to-violet-500/10 px-2.5 py-0.5 text-[10.5px] font-semibold text-sky-700 dark:border-sky-400/30 dark:text-sky-300">
+                <span className="shrink-0 rounded-full border border-border/70 bg-muted/70 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                   Mission
                 </span>
               </div>
 
-              <p className="mt-2.5 text-[12px] leading-relaxed text-slate-600 dark:text-slate-300">
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
                 {entry.description}
               </p>
             </button>
           </motion.div>
         ))}
       </div>
-      <div className="flex items-center justify-between pt-1">
-        <span className="text-[12px] font-medium text-[#475569] dark:text-slate-300">
-          Sélectionnez une mission ou formulez votre idée
-        </span>
-        <Button
-          className="rounded-lg text-[12px] font-medium text-[#475569] hover:text-foreground dark:text-slate-300 cursor-pointer"
-          onClick={() => setGeneration((value) => value + 1)}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <RefreshCwIcon className="mr-1.5 size-3.5" />
-          Nouvelles idées
-        </Button>
-      </div>
-    </div>
+    </section>
   );
 }
 

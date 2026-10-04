@@ -49,11 +49,13 @@ function signInErrorState(error: unknown): LoginActionState {
 
 async function establishCredentialsSession(
   email: string,
-  password: string
+  password: string,
+  intent: "login" | "register"
 ): Promise<LoginActionState> {
   try {
     const result = await signIn("credentials", {
       email,
+      intent,
       password,
       redirect: false,
     });
@@ -84,7 +86,8 @@ export const login = async (
 
     return await establishCredentialsSession(
       validatedData.email,
-      validatedData.password
+      validatedData.password,
+      "login"
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -163,7 +166,8 @@ export const register = async (
 
     return await establishCredentialsSession(
       validatedData.email,
-      validatedData.password
+      validatedData.password,
+      "register"
     );
   } catch (error) {
     if (error instanceof z.ZodError) {

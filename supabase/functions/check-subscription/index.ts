@@ -29,15 +29,9 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const [
-      { data: profile, error: profileError },
       { data: subscription, error: subscriptionError },
       { data: credits, error: creditsError },
     ] = await Promise.all([
-      admin
-        .from("profiles")
-        .select("plan")
-        .eq("id", user.id)
-        .maybeSingle(),
       admin
         .from("subscriptions")
         .select("status, plan, current_period_end, cancel_at_period_end")
@@ -53,7 +47,6 @@ Deno.serve(async (req) => {
         .maybeSingle(),
     ]);
 
-    if (profileError) throw profileError;
     if (subscriptionError) throw subscriptionError;
     if (creditsError) throw creditsError;
 
@@ -66,7 +59,10 @@ Deno.serve(async (req) => {
 
     return json({
       active,
-      planId: subscription?.plan ?? profile?.plan ?? "free",
+      // Entitlements are granted only while Stripe reports an active or
+      // trialing subscription. A stale profile.plan must never keep paid
+      // features enabled after cancellation or a payment failure.
+      planId: active ? subscription?.plan ?? "free" : "free",
       currentPeriodEnd: periodEnd,
       cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
       creditsBalance: credits?.balance ?? null,

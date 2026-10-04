@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
+import {
+  readIdealyNotificationPreferences,
+  sendIdealyDesktopNotification,
+} from "@/lib/client-notifications";
+import type { MissionFile, MissionFileEvent } from "@/lib/idealy/mission-files";
+import { mergeMissionFileEvent } from "@/lib/idealy/mission-files";
 import { artifactDefinitions } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
-import type { MissionFile, MissionFileEvent } from "@/lib/idealy/mission-files";
-import { mergeMissionFileEvent } from "@/lib/idealy/mission-files";
 
 type MissionReplayResponse = {
   events: Array<{
@@ -39,7 +44,10 @@ function mergeWorkspaceSnapshot(
   incomingFiles: MissionReplayResponse["files"]
 ) {
   const files = new Map(
-    currentFiles.map((file) => [`${file.missionId}:${file.path}:${file.version}`, file])
+    currentFiles.map((file) => [
+      `${file.missionId}:${file.path}:${file.version}`,
+      file,
+    ])
   );
 
   for (const file of incomingFiles) {
@@ -78,14 +86,18 @@ export function DataStreamHandler() {
     : [];
 
   useEffect(() => {
-    if (!missionFiles.length) return;
+    if (!missionFiles.length) {
+      return;
+    }
     const firstSavedFile = missionFiles.find(
       (file) =>
         typeof file.content === "string" &&
         file.content.length > 0 &&
         (file.status === "saved" || file.status === "validated")
     );
-    if (!firstSavedFile) return;
+    if (!firstSavedFile) {
+      return;
+    }
 
     setArtifact((current) => ({
       ...current,
@@ -98,7 +110,12 @@ export function DataStreamHandler() {
   }, [missionFiles, setArtifact]);
 
   useEffect(() => {
-    if (isDemoMode || !missionId || !Number.isSafeInteger(lastSequence) || lastSequence < 0) {
+    if (
+      isDemoMode ||
+      !missionId ||
+      !Number.isSafeInteger(lastSequence) ||
+      lastSequence < 0
+    ) {
       return;
     }
 
@@ -109,14 +126,22 @@ export function DataStreamHandler() {
           `/api/idealy/missions/${missionId}/events?afterSequence=${lastSequence}`,
           { cache: "no-store", signal: controller.signal }
         );
-        if (!response.ok) return;
+        if (!response.ok) {
+          return;
+        }
         const replay = (await response.json()) as MissionReplayResponse;
-        if (controller.signal.aborted || !Array.isArray(replay.events) || !Array.isArray(replay.files)) {
+        if (
+          controller.signal.aborted ||
+          !Array.isArray(replay.events) ||
+          !Array.isArray(replay.files)
+        ) {
           return;
         }
 
         setMetadata((current: Record<string, unknown> | null) => {
-          const currentLastSequence = Number(current?.missionFileLastSequence ?? 0);
+          const currentLastSequence = Number(
+            current?.missionFileLastSequence ?? 0
+          );
           const currentFiles = Array.isArray(current?.missionFiles)
             ? (current.missionFiles as MissionFile[])
             : [];
@@ -131,7 +156,10 @@ export function DataStreamHandler() {
               }),
             { files: currentFiles, lastSequence: currentLastSequence }
           );
-          const missionFiles = mergeWorkspaceSnapshot(mergedEvents.files, replay.files);
+          const missionFiles = mergeWorkspaceSnapshot(
+            mergedEvents.files,
+            replay.files
+          );
           const nextLastSequence = Math.max(
             mergedEvents.lastSequence,
             Number.isSafeInteger(replay.lastSequence) ? replay.lastSequence : 0
@@ -188,6 +216,28 @@ export function DataStreamHandler() {
         const isTerminalEvent =
           delta.data.eventType === "mission_completed" ||
           delta.data.eventType === "mission_error";
+        if (isTerminalEvent) {
+          window.dispatchEvent(new Event("idealy:power-updated"));
+        }
+        if (isTerminalEvent && readIdealyNotificationPreferences().squad) {
+          if (delta.data.eventType === "mission_completed") {
+            toast.success("Mission terminée", {
+              description: "Votre espace de travail est prêt à être consulté.",
+            });
+            sendIdealyDesktopNotification(
+              "Mission terminée",
+              "Votre espace de travail est prêt à être consulté."
+            );
+          } else {
+            toast.error("La mission a rencontré un problème", {
+              description: "Ouvrez le chat pour consulter l’état et réessayer.",
+            });
+            sendIdealyDesktopNotification(
+              "La mission a rencontré un problème",
+              "Ouvrez le chat Idealy pour consulter l’état et réessayer."
+            );
+          }
+        }
         setArtifact((current) => ({
           ...current,
           content: eventContent || current.content,
@@ -205,7 +255,9 @@ export function DataStreamHandler() {
         setMetadata((current: Record<string, unknown> | null) => {
           const merged = mergeMissionFileEvent(
             {
-              files: Array.isArray(current?.missionFiles) ? current.missionFiles : [],
+              files: Array.isArray(current?.missionFiles)
+                ? current.missionFiles
+                : [],
               lastSequence: Number(current?.missionFileLastSequence ?? 0),
             },
             delta.data
@@ -214,20 +266,34 @@ export function DataStreamHandler() {
           // This is the bridge between the orchestrator lifecycle and UI truth.
           const eventType = delta.data.eventType;
           let nextSquadStatus: string | undefined;
-          if (eventType === "mission_completed") nextSquadStatus = "ready";
-          else if (eventType === "mission_error") nextSquadStatus = "needs-fix";
-          else if (eventType === "auto_correction_started") nextSquadStatus = "auto_correction_started";
-          else if (eventType === "file_started" || eventType === "file_content" || eventType === "file_saved") {
+          if (eventType === "mission_completed") {
+            nextSquadStatus = "ready";
+          } else if (eventType === "mission_error") {
+            nextSquadStatus = "needs-fix";
+          } else if (eventType === "auto_correction_started") {
+            nextSquadStatus = "auto_correction_started";
+          } else if (
+            eventType === "file_started" ||
+            eventType === "file_content" ||
+            eventType === "file_saved"
+          ) {
             // Only advance to "building" if not already in a more specific state
-            const currentSquad = typeof current?.missionSquadStatus === "string" ? current.missionSquadStatus : undefined;
-            if (currentSquad !== "auto_correction_started") nextSquadStatus = "building";
+            const currentSquad =
+              typeof current?.missionSquadStatus === "string"
+                ? current.missionSquadStatus
+                : undefined;
+            if (currentSquad !== "auto_correction_started") {
+              nextSquadStatus = "building";
+            }
           }
           return {
             ...(current ?? {}),
             missionFileLastSequence: merged.lastSequence,
             missionFileStatus: eventType,
             missionFiles: merged.files,
-            ...(nextSquadStatus !== undefined ? { missionSquadStatus: nextSquadStatus } : {}),
+            ...(nextSquadStatus === undefined
+              ? {}
+              : { missionSquadStatus: nextSquadStatus }),
           };
         });
         continue;
@@ -247,6 +313,9 @@ export function DataStreamHandler() {
               : { missionPlan: delta.data }),
         }));
         continue;
+      }
+      if (delta.type === "data-finish") {
+        window.dispatchEvent(new Event("idealy:power-updated"));
       }
       const streamKind =
         delta.type === "data-kind" && typeof delta.data === "string"

@@ -4,10 +4,9 @@ import { toast } from "sonner";
 
 export default function PrivacyPage() {
   function clearLocalCache() {
-    if (window.confirm("Effacer les caches et sessions locales ?")) {
-      localStorage.clear();
-      sessionStorage.clear();
-      toast.success("Mémoire locale nettoyée.");
+    if (window.confirm("Effacer le brouillon de message enregistré sur cet appareil ?")) {
+      localStorage.removeItem("input");
+      toast.success("Brouillon local effacé. Vos réglages et connecteurs sont conservés.");
     }
   }
   return (
@@ -38,7 +37,7 @@ export default function PrivacyPage() {
           type="button"
         >
           <Trash2Icon className="size-3.5" />
-          Effacer le cache local
+          Effacer le brouillon local
         </button>
       </div>
     </div>

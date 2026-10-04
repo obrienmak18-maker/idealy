@@ -82,7 +82,7 @@ export function missingRequirements({
   if (manifest.requirements.requiredScopes.length > 0) {
     if (facts.connectorActive) {
       const lacking = manifest.requirements.requiredScopes.filter(
-        (scope) => !facts.grantedScopes.has(scope)
+        (scope) => !hasGrantedScope(facts.grantedScopes, scope)
       );
       if (lacking.length > 0) {
         missing.push(`scope:${lacking.join(",")}`);
@@ -98,6 +98,14 @@ export function missingRequirements({
   }
 
   return missing;
+}
+
+/** GitHub's broader `user` OAuth scope also satisfies its `read:user` scope. */
+function hasGrantedScope(grantedScopes: ReadonlySet<string>, requiredScope: string) {
+  return (
+    grantedScopes.has(requiredScope) ||
+    (requiredScope === "read:user" && grantedScopes.has("user"))
+  );
 }
 
 /**
@@ -243,7 +251,7 @@ export function toPublicPlugin({
   return {
     available: installed && state === "available" && planOk,
     category: manifest.category,
-    configurationRequired: !installed || (missing.length > 0 && !planOk),
+    configurationRequired: !installed || missing.length > 0 || !planOk,
     description: manifest.description,
     grantedPermissions: installation?.grantedPermissions ?? [],
     id: manifest.id,

@@ -1,4 +1,5 @@
 import { ArrowLeftIcon } from "lucide-react";
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -36,6 +37,14 @@ export default async function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <Suspense fallback={<AuthShellFallback />}>
+      <AuthShell>{children}</AuthShell>
+    </Suspense>
+  );
+}
+
+async function AuthShell({ children }: { children: React.ReactNode }) {
   // The selected locale comes from the request cookie. Mark this shell as
   // request-rendered before accessing it so Cache Components does not attempt
   // to prerender an authentication page with an unknown locale.
@@ -95,6 +104,21 @@ export default async function AuthLayout({
         <div className="min-h-0 flex-1">
           <Preview />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthShellFallback() {
+  return (
+    <div
+      aria-busy="true"
+      aria-label="Chargement de la page de connexion"
+      className="idealy-app-background min-h-dvh w-full"
+      role="status"
+    >
+      <div className="mx-auto flex min-h-dvh w-full max-w-2xl items-center justify-center px-6">
+        <div className="h-2 w-28 animate-pulse rounded-full bg-muted" />
       </div>
     </div>
   );

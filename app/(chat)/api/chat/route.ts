@@ -9,6 +9,7 @@ import {
   toUIMessageStream,
 } from "ai";
 import { checkBotId } from "botid/server";
+import type { UIMessage } from "ai";
 import { getToken } from "next-auth/jwt";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
@@ -82,10 +83,21 @@ async function getSupabaseAccessToken(request: Request) {
 function getTextFromMessageParts(message: ChatMessage | undefined) {
   return (
     message?.parts
-      ?.filter((part): part is { text: string; type: "text" } =>
-        part.type === "text"
-      )
-      .map((part) => part.text)
+      ?.map((part) => {
+        if (part.type === "text") return part.text;
+        if (part.type !== "file") return null;
+
+        const filename =
+          "filename" in part && typeof part.filename === "string"
+            ? part.filename
+            : "Fichier sans nom";
+        const mediaType =
+          "mediaType" in part && typeof part.mediaType === "string"
+            ? part.mediaType
+            : "type inconnu";
+        return `[Fichier joint : ${JSON.stringify(filename)} (${JSON.stringify(mediaType)}). Le contenu binaire de cette pièce jointe n’est pas transmis au moteur Idealy dans ce parcours.]`;
+      })
+      .filter((part): part is string => typeof part === "string")
       .join("\n")
       .trim() ?? ""
   );
@@ -372,14 +384,6 @@ export async function POST(request: Request) {
         return new ChatbotError("forbidden:chat").toResponse();
       }
       messagesFromDb = await getMessagesByChatId({ id });
-    } else if (message?.role === "user") {
-      await saveChat({
-        id,
-        title: "Nouvelle discussion",
-        userId: session.user.id,
-        visibility: selectedVisibilityType,
-      });
-      titlePromise = generateTitleFromUserMessage({ message });
     }
 
     let uiMessages: ChatMessage[];
@@ -420,6 +424,16 @@ export async function POST(request: Request) {
       ];
     }
 
+    if (!chat && message?.role === "user") {
+      await saveChat({
+        id,
+        title: "Nouvelle discussion",
+        userId: session.user.id,
+        visibility: selectedVisibilityType,
+      });
+      titlePromise = generateTitleFromUserMessage({ message });
+    }
+
     const { longitude, latitude, city, country } = geolocation(request);
 
     const requestHints: RequestHints = {
@@ -451,7 +465,32 @@ export async function POST(request: Request) {
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools === true;
 
-    const modelMessages = await convertToModelMessages(uiMessages);
+    const modelInputMessages = uiMessages.map((uiMessage) => {
+      const parts = (
+        uiMessage.parts as unknown as Array<Record<string, unknown>>
+      ).flatMap((part) => {
+        if (part.type !== "file") return [part];
+
+        const mediaType = typeof part.mediaType === "string" ? part.mediaType : "";
+        const supportsFileContents =
+          capabilities?.vision === true &&
+          (mediaType.startsWith("image/") || mediaType === "application/pdf");
+        if (supportsFileContents) return [part];
+
+        const filename =
+          typeof part.filename === "string"
+            ? part.filename
+            : typeof part.name === "string"
+              ? part.name
+              : "Fichier sans nom";
+        return [{
+          text: `[Pièce jointe conservée dans la conversation : ${JSON.stringify(filename)} (${JSON.stringify(mediaType)}). Le modèle choisi ne peut pas lire le contenu de ce format dans cette conversation. L’original reste joint et téléchargeable.]`,
+          type: "text",
+        }];
+      });
+      return { ...uiMessage, parts };
+    }) as unknown as UIMessage[];
+    const modelMessages = await convertToModelMessages(modelInputMessages);
 
     const stream = createUIMessageStream({
       execute: async ({ writer: dataStream }) => {

@@ -1,7 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { describePlugins } from "@/lib/idealy/plugins/service";
-import { type IdealyPlan, idealyPlans } from "@/lib/idealy/product-contract";
+import { getVerifiedUserPlan } from "@/lib/idealy/plugins/service";
 
 /**
  * Returns the caller's plugin states.
@@ -27,10 +27,13 @@ export async function GET(request: Request) {
     );
   }
 
-  const planParam = new URL(request.url).searchParams.get("plan");
-  const plan: IdealyPlan = idealyPlans.includes(planParam as IdealyPlan)
-    ? (planParam as IdealyPlan)
-    : "free";
+  const { error: planError, plan } = await getVerifiedUserPlan({ accessToken });
+  if (planError || !plan) {
+    return Response.json(
+      { error: planError ?? "Le plan n’a pas pu être vérifié." },
+      { headers: { "Cache-Control": "no-store" }, status: 503 }
+    );
+  }
 
   const { error, plugins } = await describePlugins({ accessToken, plan });
 

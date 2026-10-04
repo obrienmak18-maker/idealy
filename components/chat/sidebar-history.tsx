@@ -30,6 +30,9 @@ import { LoaderIcon } from "./icons";
 import { ChatItem } from "./sidebar-history-item";
 import { useTranslation } from "@/lib/i18n/provider";
 import { useChatCustomizationStore } from "@/lib/stores/use-chat-customization-store";
+import { getChatHistoryPaginationKey } from "@/lib/chat-history-key";
+
+export { getChatHistoryPaginationKey } from "@/lib/chat-history-key";
 
 type GroupedChats = {
   today: Chat[];
@@ -43,8 +46,6 @@ export type ChatHistory = {
   chats: Chat[];
   hasMore: boolean;
 };
-
-const PAGE_SIZE = 20;
 
 const groupChatsByDate = (chats: Chat[]): GroupedChats => {
   const now = new Date();
@@ -78,27 +79,6 @@ const groupChatsByDate = (chats: Chat[]): GroupedChats => {
     } as GroupedChats
   );
 };
-
-export function getChatHistoryPaginationKey(
-  pageIndex: number,
-  previousPageData: ChatHistory
-) {
-  if (previousPageData && previousPageData.hasMore === false) {
-    return null;
-  }
-
-  if (pageIndex === 0) {
-    return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=${PAGE_SIZE}`;
-  }
-
-  const firstChatFromPage = previousPageData.chats.at(-1);
-
-  if (!firstChatFromPage) {
-    return null;
-  }
-
-  return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
-}
 
 export function SidebarHistory({ user }: { user: User | undefined }) {
   const { t } = useTranslation();

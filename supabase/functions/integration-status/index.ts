@@ -31,7 +31,8 @@ Deno.serve(async (request) => {
     }) => ({
       provider: integration.provider,
       displayName: integration.display_name ?? integration.provider,
-      status: integration.status ?? 'active',
+      // A missing database status is not proof of a live authorization.
+      status: integration.status ?? 'unknown',
       connectedAt: integration.last_verified_at ?? integration.updated_at ?? null,
       expiresAt: integration.expires_at ?? null,
       metadata: integration.metadata ?? {},

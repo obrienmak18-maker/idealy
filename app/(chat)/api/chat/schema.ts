@@ -1,19 +1,17 @@
 import { z } from "zod";
 
 const textPartSchema = z.object({
-  text: z.string().min(1).max(2000),
+  text: z.string().min(1).max(20_000),
   type: z.enum(["text"]),
 });
 
 const filePartSchema = z.object({
-  mediaType: z.enum(["image/jpeg", "image/png"]),
-  name: z.string().min(1).max(100),
+  filename: z.string().min(1).max(255).optional(),
+  mediaType: z.string().min(1).max(160),
   type: z.enum(["file"]),
-  url: z
-    .url()
-    .refine((value) => new URL(value).protocol === "https:", {
-      message: "File URLs must use HTTPS.",
-    }),
+  url: z.url().refine((value) => new URL(value).protocol === "https:", {
+    message: "File URLs must use HTTPS.",
+  }),
 });
 
 const partSchema = z.union([textPartSchema, filePartSchema]);

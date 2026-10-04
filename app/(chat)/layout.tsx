@@ -36,11 +36,11 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
   const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
   let onboardingRequired = false;
+  let onboardingStatusUnavailable = false;
 
   if (
     process.env.DEMO_MODE !== "true" &&
-    session?.user.type === "regular" &&
-    cookieStore.get("idealy_onboarding_completed")?.value !== "true"
+    session?.user.type === "regular"
   ) {
     try {
       const requestHeaders = await headers();
@@ -51,11 +51,23 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
           headers: requestHeaders,
         }),
       });
-      onboardingRequired = onboarding.profileExists && !onboarding.onboardingCompleted;
+      onboardingRequired = !onboarding.onboardingCompleted;
     } catch (error) {
-      // An unavailable profile service must not lock an existing workspace.
-      console.warn("Unable to evaluate Idealy onboarding gate:", (error as Error)?.message || error);
+      onboardingStatusUnavailable = true;
+      console.error("Unable to verify Idealy onboarding status:", (error as Error)?.message || "unknown error");
     }
+  }
+
+  if (onboardingStatusUnavailable) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-background px-5 text-foreground">
+        <section aria-labelledby="profile-status-title" className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm" role="alert">
+          <h1 className="text-lg font-semibold" id="profile-status-title">Vérification du profil indisponible</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Idealy n’a pas pu vérifier l’enregistrement de votre profil. Réessayez lorsque la connexion au service sera rétablie.</p>
+          <a className="mt-5 inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:opacity-90" href="/?retry-profile=1">Réessayer</a>
+        </section>
+      </main>
+    );
   }
 
   if (onboardingRequired) redirect("/onboarding");

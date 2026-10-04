@@ -29,7 +29,7 @@ export const slashCommands: SlashCommand[] = [
   },
   {
     action: "clear",
-    description: "Clear current chat",
+    description: "Clear the current draft",
     icon: <Trash2Icon className="size-3.5" />,
     name: "clear",
   },

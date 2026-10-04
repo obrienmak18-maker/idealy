@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 import type {
   ErrorInfo,
   KeyboardEvent as ReactKeyboardEvent,
-  PointerEvent as ReactPointerEvent,
   ReactNode,
+  PointerEvent as ReactPointerEvent,
 } from "react";
 import { Component, useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -29,11 +29,11 @@ import { cn } from "@/lib/utils";
 import { Artifact } from "./artifact";
 import { BuildTopBar } from "./build-top-bar";
 import { ChatHeader } from "./chat-header";
+import { CommandPalette } from "./command-palette";
 import { DataStreamHandler } from "./data-stream-handler";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
-import { CommandPalette } from "./command-palette";
 
 class ArtifactErrorBoundary extends Component<
   { children: ReactNode },
@@ -58,16 +58,27 @@ class ArtifactErrorBoundary extends Component<
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
               Preview
             </p>
-            <h2 className="mt-3 text-xl font-semibold">Preview ready</h2>
+            <h2 className="mt-3 text-xl font-semibold">
+              Aperçu temporairement indisponible
+            </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              The generated application will appear here when the build
-              finishes.
+              Le panneau d’aperçu a rencontré une erreur. Vous pouvez réessayer
+              ou poursuivre la mission dans le chat.
             </p>
             {this.state.errorMessage ? (
               <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-left text-xs text-destructive">
                 {this.state.errorMessage}
               </p>
             ) : null}
+            <button
+              className="mt-5 min-h-10 rounded-xl bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() =>
+                this.setState({ errorMessage: undefined, hasError: false })
+              }
+              type="button"
+            >
+              Réessayer l’aperçu
+            </button>
           </div>
         </div>
       );
@@ -77,7 +88,7 @@ class ArtifactErrorBoundary extends Component<
   }
 }
 
-export function ChatShell() {
+export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
   const {
     chatId,
     messages,
@@ -113,6 +124,15 @@ export function ChatShell() {
   stopRef.current = stop;
 
   const prevChatIdRef = useRef(chatId);
+  const initialPromptAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!initialPrompt || initialPromptAppliedRef.current) {
+      return;
+    }
+    setInput(initialPrompt);
+    initialPromptAppliedRef.current = true;
+  }, [initialPrompt, setInput]);
+
   useEffect(() => {
     if (prevChatIdRef.current !== chatId) {
       prevChatIdRef.current = chatId;
@@ -173,12 +193,15 @@ export function ChatShell() {
       if (!isArtifactVisible) {
         return;
       }
-      const delta = event.key === "ArrowLeft" ? -4 : event.key === "ArrowRight" ? 4 : 0;
+      const delta =
+        event.key === "ArrowLeft" ? -4 : event.key === "ArrowRight" ? 4 : 0;
       if (!delta) {
         return;
       }
       event.preventDefault();
-      setChatPaneWidth((current) => Math.min(65, Math.max(25, current + delta)));
+      setChatPaneWidth((current) =>
+        Math.min(65, Math.max(25, current + delta))
+      );
     },
     [isArtifactVisible]
   );
@@ -189,7 +212,8 @@ export function ChatShell() {
     }
 
     const handlePointerMove = (event: PointerEvent) => {
-      const delta = ((event.clientX - resizeStartRef.current.x) / window.innerWidth) * 100;
+      const delta =
+        ((event.clientX - resizeStartRef.current.x) / window.innerWidth) * 100;
       setChatPaneWidth(
         Math.min(65, Math.max(25, resizeStartRef.current.startWidth + delta))
       );
@@ -276,7 +300,8 @@ export function ChatShell() {
           <div
             className={cn(
               "relative z-10 flex min-w-0 flex-col bg-background",
-              !isResizing && "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              !isResizing &&
+                "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
             )}
             data-idealy-chat-pane="true"
             style={{ width: isArtifactVisible ? `${chatPaneWidth}%` : "100%" }}
@@ -355,7 +380,7 @@ export function ChatShell() {
             </div>
           ) : null}
 
-          <ArtifactErrorBoundary>
+          <ArtifactErrorBoundary key={chatId}>
             <Artifact
               addToolApprovalResponse={addToolApprovalResponse}
               attachments={attachments}
@@ -389,7 +414,8 @@ export function ChatShell() {
           <AlertDialogHeader>
             <AlertDialogTitle>Activer le moteur Idealy</AlertDialogTitle>
             <AlertDialogDescription>
-              La configuration de l’espace doit être finalisée avant de pouvoir lancer des missions IA.
+              La configuration de l’espace doit être finalisée avant de pouvoir
+              lancer des missions IA.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -379,6 +379,71 @@ async function main() {
     assert.equal(view.configurationRequired, false);
   });
 
+  await check(
+    "managed Supabase and Stripe plugins do not request user OAuth grants",
+    () => {
+      for (const pluginId of ["supabase", "stripe"]) {
+        const managed = PLUGIN_MANIFESTS.find((item) => item.id === pluginId);
+        assert.ok(managed, `${pluginId} manifest must exist`);
+        assert.equal(managed.requirements.connectorProvider, undefined);
+        assert.deepEqual(managed.requirements.requiredScopes, []);
+        assert.deepEqual(
+          missingRequirements({
+            facts: {
+              connectorActive: false,
+              grantedScopes: new Set(),
+              hasConfiguration: true,
+              presentSecretEnvNames: new Set(),
+            },
+            manifest: managed,
+          }),
+          []
+        );
+      }
+    }
+  );
+
+  await check(
+    "marks an insufficient plan as requiring action",
+    () => {
+      const proManifest = parsePluginManifest({
+        ...baseManifestInput,
+        minimumPlan: "pro",
+      });
+      assert.equal(proManifest.ok, true);
+      if (!proManifest.ok) {
+        return;
+      }
+      const view = toPublicPlugin({
+        facts: readyFacts,
+        installation: makeInstallation(),
+        manifest: proManifest.manifest,
+        userPlan: "free",
+      });
+      assert.equal(view.available, false);
+      assert.equal(view.configurationRequired, true);
+      assert.ok(view.missingRequirements.includes("plan"));
+    }
+  );
+
+  await check(
+    "accepts GitHub's existing broader user scope for read:user",
+    () => {
+      const githubManifest = PLUGIN_MANIFESTS.find((item) => item.id === "github");
+      assert.ok(githubManifest, "GitHub manifest must exist");
+      const lacking = missingRequirements({
+        facts: {
+          connectorActive: true,
+          grantedScopes: new Set(["repo", "user"]),
+          hasConfiguration: true,
+          presentSecretEnvNames: new Set(["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"]),
+        },
+        manifest: githubManifest,
+      });
+      assert.deepEqual(lacking, []);
+    }
+  );
+
   // ─── Registry ─────────────────────────────────────────────────────────
   await check("registry builds from every connector in the catalog", () => {
     assert.equal(pluginRegistry.list().length, PLUGIN_MANIFESTS.length);

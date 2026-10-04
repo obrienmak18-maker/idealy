@@ -1,6 +1,6 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { ArrowDownIcon } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+import { ArrowDownIcon, ChevronDownIcon } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
@@ -49,6 +49,7 @@ function PureMessages({
   onSuggestionSelect,
 }: MessagesProps) {
   const { t } = useTranslation();
+  const [showTemplates, setShowTemplates] = useState(false);
   const {
     containerRef: messagesContainerRef,
     endRef: messagesEndRef,
@@ -77,27 +78,45 @@ function PureMessages({
   return (
     <div className="relative flex-1 bg-background overflow-hidden">
       {messages.length === 0 && !isLoading && (
-        <div className="absolute inset-0 z-10 overflow-y-auto">
-          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center justify-center gap-7 px-4 py-8 pb-32">
+        <div className="absolute inset-0 z-10 overflow-y-auto overscroll-contain">
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center justify-center gap-6 px-4 py-7 pb-36 sm:gap-7 sm:py-8 sm:pb-36">
             <Greeting />
-            <WorkspaceTemplates
-              onSelectTemplate={(prompt) => {
-                if (onSuggestionSelect) {
-                  onSuggestionSelect(prompt);
-                } else {
-                  sendMessage({
-                    parts: [{ text: prompt, type: "text" }],
-                    role: "user",
-                  });
-                }
-              }}
-            />
             <SuggestedActions
               chatId={chatId}
               onSuggestionSelect={onSuggestionSelect}
               selectedVisibilityType={selectedVisibilityType}
               sendMessage={sendMessage}
             />
+            <div className="w-full border-t border-border/50 pt-2">
+              <button
+                aria-expanded={showTemplates}
+                className="group flex min-h-10 w-full items-center justify-between rounded-xl px-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => setShowTemplates((current) => !current)}
+                type="button"
+              >
+                <span>{showTemplates ? "Masquer les modèles" : "Partir d’un modèle"}</span>
+                <ChevronDownIcon
+                  aria-hidden="true"
+                  className={`size-4 transition-transform duration-200 ${showTemplates ? "rotate-180" : ""}`}
+                />
+              </button>
+              {showTemplates ? (
+                <div className="pt-3">
+                  <WorkspaceTemplates
+                    onSelectTemplate={(prompt) => {
+                      if (onSuggestionSelect) {
+                        onSuggestionSelect(prompt);
+                      } else {
+                        sendMessage({
+                          parts: [{ text: prompt, type: "text" }],
+                          role: "user",
+                        });
+                      }
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       )}

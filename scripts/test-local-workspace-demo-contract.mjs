@@ -12,7 +12,7 @@ const suggestedActions = await readFile("components/chat/suggested-actions.tsx",
 
 assert.match(hook, /if \(!isDemoMode\) \{\s*return sendRemoteMessage/);
 assert.match(hook, /setDataStream\(localWorkspaceDataStream\(\)\)/);
-assert.match(streamHandler, /if \(isDemoMode \|\| !missionId/);
+assert.match(streamHandler, /if\s*\(\s*isDemoMode\s*\|\|\s*!missionId/);
 assert.match(artifact, /artifact\.documentId !== "init" && artifact\.status !== "streaming" && !isDemoMode/);
 assert.match(artifact, /missionId && !isDemoMode/);
 assert.match(topBar, /if \(isDemoMode\) \{/);

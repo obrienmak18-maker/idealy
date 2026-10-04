@@ -69,7 +69,7 @@ Deno.serve(async (request) => {
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
-      scope: "repo user",
+      scope: "repo read:user",
       state,
     });
 

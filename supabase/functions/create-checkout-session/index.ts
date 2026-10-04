@@ -8,11 +8,13 @@ const appOrigin = Deno.env.get("APP_ORIGIN") ?? "";
 const PRICE_IDS = {
   pro: {
     monthly: Deno.env.get("STRIPE_PRICE_ID_PRO_MONTHLY") ?? Deno.env.get("STRIPE_PRICE_ID_PRO") ?? "",
-    yearly: Deno.env.get("STRIPE_PRICE_ID_PRO_YEARLY") ?? Deno.env.get("STRIPE_PRICE_ID_PRO") ?? "",
+    // Never fall back to the monthly price for an annual checkout.
+    yearly: Deno.env.get("STRIPE_PRICE_ID_PRO_YEARLY") ?? "",
   },
   business: {
     monthly: Deno.env.get("STRIPE_PRICE_ID_BUSINESS_MONTHLY") ?? Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ?? "",
-    yearly: Deno.env.get("STRIPE_PRICE_ID_BUSINESS_YEARLY") ?? Deno.env.get("STRIPE_PRICE_ID_BUSINESS") ?? "",
+    // Never fall back to the monthly price for an annual checkout.
+    yearly: Deno.env.get("STRIPE_PRICE_ID_BUSINESS_YEARLY") ?? "",
   },
 } as const;
 

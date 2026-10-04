@@ -83,6 +83,27 @@ export async function signUpWithEmailFirebase(
   return credential.user.getIdToken();
 }
 
+/** Ensure Supabase's third-party auth role claim is present on a fresh token. */
+export async function prepareFirebaseIdTokenForSupabase(
+  idToken: string
+): Promise<string> {
+  const response = await fetch("/api/auth/set-claims", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  if (!response.ok) {
+    throw new Error("firebase_backend_unavailable");
+  }
+
+  const currentUser = getFirebaseAuth().currentUser;
+  if (!currentUser) {
+    throw new Error("firebase_user_unavailable");
+  }
+
+  return currentUser.getIdToken(true);
+}
+
 export async function sendPhoneCodeFirebase(
   phoneNumber: string,
   appVerifier: ApplicationVerifier

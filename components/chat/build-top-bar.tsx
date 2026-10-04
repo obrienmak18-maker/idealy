@@ -22,11 +22,18 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import useSWR, { unstable_serialize, useSWRConfig } from "swr";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { PowerStatusBadge } from "@/components/chat/power-status";
 import { CheckpointModal } from "@/components/chat/checkpoint-modal";
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { useArtifact } from "@/hooks/use-artifact";
+import { fetcher } from "@/lib/utils";
 import { downloadZip } from "@/lib/export/zip";
 import { localWorkspaceMetadata } from "@/lib/idealy/local-workspace-demo";
+import { getChatHistoryPaginationKey } from "@/lib/chat-history-key";
 
 type WorkspaceView = "preview" | "code" | "database";
 type Device = "desktop" | "tablet" | "mobile";
@@ -84,8 +91,19 @@ function resolveSquadStatusLabel(
 
 export function BuildTopBar() {
   const { artifact, metadata, setMetadata } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { mutate } = useSWRConfig();
+  const historyKey = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=50`;
+  const { data: recentHistory } = useSWR<{
+    chats: Array<{ id: string; title: string }>;
+  }>(process.env.NEXT_PUBLIC_DEMO_MODE === "true" ? null : historyKey, fetcher, {
+    revalidateOnFocus: false,
+  });
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-  const [title, setTitle] = useState("UI/UX analysis");
+  const [title, setTitle] = useState("Projet Idealy");
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [favorite, setFavorite] = useState(false);
   const [view, setView] = useState<WorkspaceView>("preview");
   const [device, setDevice] = useState<Device>("desktop");
@@ -101,6 +119,27 @@ export function BuildTopBar() {
   const [isSquadRunning, setIsSquadRunning] = useState(false);
   const [isInspectorActive, setIsInspectorActive] = useState(false);
   const [isCheckpointModalOpen, setIsCheckpointModalOpen] = useState(false);
+
+  useEffect(() => {
+    setTitle("Projet Idealy");
+    setFavorite(false);
+    setRenameDraft("");
+    setRenameOpen(false);
+  }, [chatId]);
+
+  useEffect(() => {
+    const currentChat = recentHistory?.chats.find((chat) => chat.id === chatId);
+    if (currentChat?.title) setTitle(currentChat.title);
+  }, [chatId, recentHistory]);
+
+  useEffect(() => {
+    if (!chatId) return;
+    try {
+      setFavorite(window.localStorage.getItem(`idealy:favorite:${chatId}`) === "true");
+    } catch {
+      setFavorite(false);
+    }
+  }, [chatId]);
 
   // Derive squad status label from real metadata — no static strings
   const missionSquadStatus =
@@ -225,9 +264,51 @@ export function BuildTopBar() {
   };
 
   const rename = () => {
-    const nextTitle = window.prompt("Renommer le projet", title);
-    if (nextTitle?.trim()) {
-      setTitle(nextTitle.trim());
+    setRenameDraft(title);
+    setRenameOpen(true);
+  };
+
+  const saveTitle = async () => {
+    const nextTitle = renameDraft.trim();
+    if (!nextTitle || nextTitle === title) {
+      setRenameOpen(false);
+      return;
+    }
+    if (isDemoMode || !chatId) {
+      setTitle(nextTitle);
+      setRenameOpen(false);
+      toast.success("Titre mis à jour pour cette démo.");
+      return;
+    }
+    setIsSavingTitle(true);
+    try {
+      const response = await fetch(`/api/chat?id=${encodeURIComponent(chatId)}`, {
+        body: JSON.stringify({ title: nextTitle }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      });
+      if (!response.ok) throw new Error("Le titre n’a pas pu être enregistré.");
+      setTitle(nextTitle);
+      setRenameOpen(false);
+      await mutate(
+        historyKey,
+        (current: { chats: Array<{ id: string; title: string }> } | undefined) =>
+          current
+            ? {
+                ...current,
+                chats: current.chats.map((chat) =>
+                  chat.id === chatId ? { ...chat, title: nextTitle } : chat
+                ),
+              }
+            : current,
+        { revalidate: false }
+      );
+      await mutate(unstable_serialize(getChatHistoryPaginationKey));
+      toast.success("Titre du projet mis à jour.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erreur de connexion.");
+    } finally {
+      setIsSavingTitle(false);
     }
   };
 
@@ -314,10 +395,16 @@ export function BuildTopBar() {
     <header className="relative z-30 grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-sidebar-border/70 bg-sidebar/95 px-2.5 text-sidebar-foreground shadow-[0_1px_0_oklch(1_0_0_/_0.03)] backdrop-blur-xl md:px-3">
       <div className="flex min-w-0 items-center gap-1.5">
         <button
-          aria-label="Favorite project"
+          aria-label={favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
           aria-pressed={favorite}
           className={`${controlClass} size-8 shrink-0 ${favorite ? "text-amber-400" : ""}`}
-          onClick={() => setFavorite((value) => !value)}
+          onClick={() => setFavorite((value) => {
+            const next = !value;
+            if (chatId) {
+              try { window.localStorage.setItem(`idealy:favorite:${chatId}`, String(next)); } catch { /* Storage can be unavailable in private contexts. */ }
+            }
+            return next;
+          })}
           type="button"
         >
           <Star className="size-4" fill={favorite ? "currentColor" : "none"} />
@@ -471,7 +558,7 @@ export function BuildTopBar() {
         <div className="relative" ref={moreMenuRef}>
           <button
             aria-expanded={moreOpen}
-            aria-label="More actions"
+            aria-label="Ouvrir les outils du workspace"
             className={`${controlClass} size-8`}
             onClick={() => setMoreOpen((value) => !value)}
             type="button"
@@ -479,7 +566,81 @@ export function BuildTopBar() {
             <MoreHorizontal className="size-[17px]" />
           </button>
           {moreOpen ? (
-            <div className="absolute right-0 top-10 z-50 w-48 rounded-xl border border-border/70 bg-popover/95 p-1.5 text-xs text-popover-foreground shadow-2xl backdrop-blur-xl">
+            <div className="absolute right-0 top-10 z-50 max-h-[calc(100dvh-5rem)] w-60 overflow-y-auto overscroll-contain rounded-2xl border border-border/70 bg-popover/95 p-2 text-xs text-popover-foreground shadow-2xl backdrop-blur-xl">
+              <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Vue du workspace</p>
+              {([
+                ["preview", "Aperçu"],
+                ["code", "Code"],
+                ["database", "Données"],
+              ] as const).map(([nextView, frenchLabel]) => (
+                <button
+                  aria-pressed={view === nextView}
+                  className={`flex min-h-9 w-full items-center justify-between rounded-lg px-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground ${view === nextView ? "bg-accent/70 font-medium" : ""}`}
+                  key={nextView}
+                  onClick={() => {
+                    setMoreOpen(false);
+                    selectView(nextView);
+                  }}
+                  type="button"
+                >
+                  <span>{frenchLabel}</span>
+                  {view === nextView ? <span className="text-[10px] text-muted-foreground">Actif</span> : null}
+                </button>
+              ))}
+              <div className="my-2 border-t border-border/60" />
+              <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Taille de l’aperçu</p>
+              <div className="grid grid-cols-3 gap-1">
+                {([
+                  ["desktop", "Ordinateur", Laptop],
+                  ["tablet", "Tablette", Tablet],
+                  ["mobile", "Téléphone", Smartphone],
+                ] as const).map(([nextDevice, label, Icon]) => (
+                  <button
+                    aria-label={label}
+                    aria-pressed={device === nextDevice}
+                    className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[10px] transition-colors hover:bg-accent ${device === nextDevice ? "bg-accent/70 text-foreground" : "text-muted-foreground"}`}
+                    key={nextDevice}
+                    onClick={() => {
+                      setMoreOpen(false);
+                      selectDevice(nextDevice);
+                    }}
+                    type="button"
+                  >
+                    <Icon aria-hidden="true" className="size-4" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {view === "preview" ? (
+                <button
+                  aria-pressed={isInspectorActive}
+                  className={`mt-1 flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left transition-colors hover:bg-accent ${isInspectorActive ? "text-sky-300" : "text-muted-foreground"}`}
+                  onClick={() => {
+                    setMoreOpen(false);
+                    toggleInspector();
+                  }}
+                  type="button"
+                >
+                  <Crosshair aria-hidden="true" className="size-3.5" />
+                  Inspecter l’aperçu
+                </button>
+              ) : null}
+              {missionId ? (
+                <button
+                  aria-busy={isSquadRunning}
+                  className="mt-1 flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sky-300 transition-colors hover:bg-accent disabled:opacity-50"
+                  disabled={isSquadRunning}
+                  onClick={() => {
+                    setMoreOpen(false);
+                    void runSquad();
+                  }}
+                  type="button"
+                >
+                  <Sparkles aria-hidden="true" className="size-3.5" />
+                  {isSquadRunning ? "Escouade en cours…" : "Lancer l’escouade"}
+                </button>
+              ) : null}
+              <div className="my-2 border-t border-border/60" />
               <button
                 className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground"
                 onClick={() => {
@@ -542,7 +703,7 @@ export function BuildTopBar() {
                 }}
                 type="button"
               >
-                Download ZIP
+                Télécharger le ZIP
               </button>
               <button
                 className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground"
@@ -552,7 +713,7 @@ export function BuildTopBar() {
                 }}
                 type="button"
               >
-                Show Console
+                Ouvrir la console
               </button>
               <button
                 className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground"
@@ -562,7 +723,7 @@ export function BuildTopBar() {
                 }}
                 type="button"
               >
-                Rename project
+                Renommer le projet
               </button>
               <button
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sky-300 hover:bg-accent hover:text-accent-foreground"
@@ -600,14 +761,14 @@ export function BuildTopBar() {
           )}
         </button>
         <button
-          aria-label="Collaboration"
+          aria-label="Copier le lien de cette discussion"
           className={`${controlClass} hidden size-8 md:inline-flex`}
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(window.location.href);
-              toast.success("Lien de partage copié dans le presse-papier !");
+              toast.success("Lien de cette discussion copié.");
             } catch {
-              toast.info(`Lien : ${window.location.href}`);
+              toast.info("Le navigateur n’autorise pas la copie du lien.");
             }
           }}
           type="button"
@@ -630,7 +791,7 @@ export function BuildTopBar() {
           </button>
         ) : null}
         <button
-          aria-label="Publish"
+          aria-label="Configurer le déploiement"
           className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
           onClick={() => {
             if (isDemoMode) {
@@ -639,12 +800,11 @@ export function BuildTopBar() {
               );
               return;
             }
-            dispatch("idealy:publish");
-            toast.success("Options de publication ouvertes.");
+            window.location.assign("/plugins");
           }}
           type="button"
         >
-          Publish
+          Déployer
         </button>
       </div>
 
@@ -660,6 +820,19 @@ export function BuildTopBar() {
           }));
         }}
       />
+      <Dialog onOpenChange={setRenameOpen} open={renameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renommer le projet</DialogTitle>
+            <DialogDescription>Choisissez un nom facile à retrouver dans votre historique.</DialogDescription>
+          </DialogHeader>
+          <Input autoFocus maxLength={120} onChange={(event) => setRenameDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveTitle(); }} value={renameDraft} />
+          <DialogFooter>
+            <Button disabled={isSavingTitle} onClick={() => setRenameOpen(false)} variant="outline">Annuler</Button>
+            <Button disabled={isSavingTitle || !renameDraft.trim()} onClick={() => void saveTitle()}>{isSavingTitle ? "Enregistrement…" : "Enregistrer"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

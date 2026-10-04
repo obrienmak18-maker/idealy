@@ -1,4 +1,6 @@
 import "server-only";
+import { getIdealySupabaseFunctionUrl } from "@/lib/idealy/config";
+import { type IdealyPlan, idealyPlans } from "@/lib/idealy/product-contract";
 import { PLUGIN_MANIFESTS } from "./catalog";
 import { sanitizeGrantedPermissions } from "./permissions";
 import {
@@ -27,6 +29,40 @@ export const PLUGIN_TABLES = {
   executions: "plugin_executions",
   installations: "plugin_installations",
 } as const;
+
+/** Resolve entitlements from the authenticated billing backend, never from a URL/body field. */
+export async function getVerifiedUserPlan({
+  accessToken,
+}: {
+  accessToken: string;
+}): Promise<{ error: string | null; plan: IdealyPlan | null }> {
+  const anonKey = process.env.SUPABASE_ANON_KEY?.trim();
+  if (!process.env.SUPABASE_URL?.trim() || !anonKey) {
+    return { error: "Billing service is not configured.", plan: null };
+  }
+
+  try {
+    const response = await fetch(getIdealySupabaseFunctionUrl("check-subscription"), {
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: anonKey,
+        "x-client-info": "idealy-plugin-entitlements",
+      },
+    });
+    if (!response.ok) {
+      return { error: `Billing status could not be verified (HTTP ${response.status}).`, plan: null };
+    }
+
+    const payload = (await response.json().catch(() => null)) as { planId?: unknown } | null;
+    if (!payload || !idealyPlans.includes(payload.planId as IdealyPlan)) {
+      return { error: "Billing returned an unknown plan; plugin access is blocked.", plan: null };
+    }
+    return { error: null, plan: payload.planId as IdealyPlan };
+  } catch {
+    return { error: "Billing status is unavailable; plugin access is blocked.", plan: null };
+  }
+}
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -146,74 +182,141 @@ export async function listPluginExecutions({
  * connector counts as active only when a verified row exists. This is what
  * keeps the UI from claiming `CONNECTED` without a real credential.
  */
-export async function buildEnvironmentFacts({
-  accessToken,
+export function buildEnvironmentFacts({
+  connectorFacts,
   manifest,
 }: {
-  accessToken: string;
+  connectorFacts: ReadonlyMap<
+    string,
+    { scopes: ReadonlySet<string>; status: string }
+  >;
   manifest: ValidPluginManifest;
-}): Promise<EnvironmentFacts> {
+}): { error: null; facts: EnvironmentFacts } {
   const presentSecretEnvNames = new Set(
     manifest.requirements.requiredSecretEnvNames.filter((name) =>
       Boolean(process.env[name]?.trim())
     )
   );
 
-  let grantedScopes = new Set<string>();
-  let connectorActive = false;
-  const base = getSupabaseConfig();
   const provider = manifest.requirements.connectorProvider;
-
-  if (base && provider) {
-    const { data } = await restGet<Record<string, unknown>[]>(
-      { ...base, accessToken },
-      `user_integrations?select=scopes,status&provider=eq.${encodeURIComponent(provider)}&limit=1`
-    );
-    const row = data?.[0];
-    if (row) {
-      connectorActive = row.status === "active";
-      grantedScopes = new Set((row.scopes as string[]) ?? []);
-    }
-  }
+  const authorization = provider ? connectorFacts.get(provider) : undefined;
+  const grantedScopes = authorization?.scopes ?? new Set<string>();
+  const connectorActive = authorization?.status === "active";
 
   return {
-    connectorActive,
-    grantedScopes,
-    hasConfiguration: true,
-    presentSecretEnvNames,
+    error: null,
+    facts: {
+      connectorActive,
+      grantedScopes,
+      hasConfiguration: true,
+      presentSecretEnvNames,
+    },
   };
+}
+
+async function listConnectorAuthorizationFacts({
+  accessToken,
+}: {
+  accessToken: string;
+}): Promise<{
+  error: string | null;
+  facts: Map<string, { scopes: Set<string>; status: string }>;
+}> {
+  const providers = [
+    ...new Set(
+      PLUGIN_MANIFESTS.flatMap((manifest) =>
+        manifest.requirements.connectorProvider
+          ? [manifest.requirements.connectorProvider]
+          : []
+      )
+    ),
+  ];
+  if (providers.length === 0) {
+    return { error: null, facts: new Map() };
+  }
+
+  const base = getSupabaseConfig();
+  if (!base) {
+    return {
+      error: "Supabase is not configured; connector authorization cannot be verified.",
+      facts: new Map(),
+    };
+  }
+
+  const providerFilter = providers.map((provider) => encodeURIComponent(provider)).join(",");
+  const { data, error } = await restGet<Record<string, unknown>[]>(
+    { ...base, accessToken },
+    `user_integrations?select=provider,scopes,status&provider=in.(${providerFilter})`
+  );
+  if (error || !data) {
+    return {
+      error: `Connector authorization could not be verified (${error ?? "empty response"}).`,
+      facts: new Map(),
+    };
+  }
+
+  const facts = new Map<string, { scopes: Set<string>; status: string }>();
+  for (const row of data) {
+    if (typeof row.provider !== "string") {
+      continue;
+    }
+    facts.set(row.provider, {
+      scopes: new Set(
+        Array.isArray(row.scopes)
+          ? row.scopes.filter((scope): scope is string => typeof scope === "string")
+          : []
+      ),
+      status: typeof row.status === "string" ? row.status : "unknown",
+    });
+  }
+  return { error: null, facts };
 }
 
 /** Projects every catalogued plugin into its honest, browser-safe state. */
 export async function describePlugins({
   accessToken,
+  installations: suppliedInstallations,
   plan,
 }: {
   accessToken: string;
+  installations?: readonly PluginInstallation[];
   plan: "free" | "pro" | "business";
 }): Promise<{ error: string | null; plugins: PublicPlugin[] }> {
-  const { error, installations } = await listPluginInstallations({
-    accessToken,
-  });
-  if (error && installations.length === 0) {
-    return { error, plugins: [] };
+  const [installationResult, connectorResult] = await Promise.all([
+    suppliedInstallations
+      ? Promise.resolve({ error: null, installations: [...suppliedInstallations] })
+      : listPluginInstallations({ accessToken }),
+    listConnectorAuthorizationFacts({ accessToken }),
+  ]);
+  if (installationResult.error && installationResult.installations.length === 0) {
+    return { error: installationResult.error, plugins: [] };
+  }
+  if (connectorResult.error) {
+    return { error: connectorResult.error, plugins: [] };
   }
 
   const byPluginId = new Map(
-    installations.map((installation) => [installation.pluginId, installation])
+    installationResult.installations.map((installation) => [
+      installation.pluginId,
+      installation,
+    ])
   );
 
-  const plugins = await Promise.all(
-    PLUGIN_MANIFESTS.map(async (manifest) => {
+  const results = PLUGIN_MANIFESTS.map((manifest) => {
       const installation = byPluginId.get(manifest.id) ?? null;
-      const facts = await buildEnvironmentFacts({ accessToken, manifest });
+      const { facts } = buildEnvironmentFacts({
+        connectorFacts: connectorResult.facts,
+        manifest,
+      });
       // A plugin counts as configured once the user stored its configuration.
       facts.hasConfiguration = installation !== null;
       return toPublicPlugin({ facts, installation, manifest, userPlan: plan });
-    })
-  );
+    });
 
-  return { error: null, plugins };
+  return {
+    error: null,
+    plugins: results,
+  };
 }
 
 /** Diagnostics used by the health endpoint to explain configuration gaps. */

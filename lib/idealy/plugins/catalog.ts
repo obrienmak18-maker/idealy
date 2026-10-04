@@ -92,7 +92,11 @@ function buildManifest(connector: (typeof connectorCatalog)[number]) {
       ...(connector.auth === "oauth2"
         ? { connectorProvider: connector.provider }
         : {}),
-      requiredScopes: connector.scopes,
+      // Only OAuth scopes are user-granted provider scopes. "managed" scopes
+      // describe Idealy's own permission boundary and are enforced by each
+      // server-side tool using the caller's session/RLS.
+      requiredScopes:
+        connector.auth === "oauth2" ? connector.scopes : [],
       requiredSecretEnvNames: connector.secretEnvNames,
     },
     skills: [],

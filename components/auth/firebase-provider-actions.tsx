@@ -11,6 +11,7 @@ import {
   confirmPhoneCodeFirebase,
   getFirebaseAuth,
   isFirebaseConfigured,
+  prepareFirebaseIdTokenForSupabase,
   sendPhoneCodeFirebase,
   signInWithGoogleFirebase,
 } from "@/lib/firebase/client";
@@ -63,8 +64,9 @@ export function FirebaseProviderActions({
 
   const completeAuth = useCallback(
     async (idToken: string) => {
+      const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
       const result = await signInWithAuthJs("firebase", {
-        idToken,
+        idToken: supabaseIdToken,
         redirect: false,
       });
 

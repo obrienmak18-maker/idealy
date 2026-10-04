@@ -52,6 +52,12 @@ import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/provider";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { CHAT_ATTACHMENT_MAX_BYTES } from "@/lib/chat-attachments";
+import {
+  containsLikelySecret,
+  maskLikelySecrets,
+  redactLikelySecrets,
+} from "@/lib/sensitive-text";
 import {
   PromptInput,
   PromptInputActionMenu,
@@ -122,6 +128,13 @@ function PureMultimodalInput({
 }) {
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
+  const hasLikelySecret = containsLikelySecret(input);
+  const inputWordCount = input.trim() ? input.trim().split(/\s+/).length : 0;
+  const hasMetadataOnlyAttachments = attachments.some(
+    (attachment) =>
+      !attachment.contentType.startsWith("image/") &&
+      attachment.contentType !== "application/pdf"
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
   const hasAutoFocused = useRef(false);
@@ -149,23 +162,17 @@ function PureMultimodalInput({
   }, [localStorageInput, setInput]);
 
   useEffect(() => {
-    setLocalStorageInput(input);
+    setLocalStorageInput(redactLikelySecrets(input));
   }, [input, setLocalStorageInput]);
 
   const { language } = useTranslation();
   const { currentWay } = useGamificationStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
+  const [showSensitiveDraft, setShowSensitiveDraft] = useState(false);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
-  const [promptHintIndex, setPromptHintIndex] = useState(0);
-  const promptHints = [
-    "Décrivez ce que vous souhaitez créer…",
-    "Parlez-nous de votre prochaine application…",
-    "Expliquez votre idée, Idealy vous aide à la structurer…",
-    "Lancez une mission pour votre prochain projet…",
-  ];
 
   // Voice lifecycle via dedicated hook
   const voiceBaseInput = useRef("");
@@ -173,10 +180,12 @@ function PureMultimodalInput({
     language,
     silenceTimeoutMs: 12_000,
     onInterim: (text) => {
+      setShowSensitiveDraft(false);
       const prefix = voiceBaseInput.current.trim();
       setInput(prefix ? `${prefix} ${text}` : text);
     },
     onFinal: (text) => {
+      setShowSensitiveDraft(false);
       const prefix = voiceBaseInput.current.trim();
       setInput(prefix ? `${prefix} ${text}` : text);
     },
@@ -208,6 +217,7 @@ function PureMultimodalInput({
     const handleSetInput = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail;
       if (typeof detail === "string") {
+        setShowSensitiveDraft(false);
         setInput(detail);
         textareaRef.current?.focus();
       }
@@ -217,18 +227,11 @@ function PureMultimodalInput({
       window.removeEventListener("idealy:set-chat-input", handleSetInput);
   }, [setInput]);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPromptHintIndex((current) => (current + 1) % promptHints.length);
-    }, 4200);
-    return () => clearInterval(timer);
-  }, [promptHints.length]);
-
-
   const handleInput = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       const val = event.target.value;
       setInput(val);
+      setShowSensitiveDraft(false);
 
       if (val.startsWith("/") && !val.includes(" ")) {
         setSlashOpen(true);
@@ -250,7 +253,7 @@ function PureMultimodalInput({
           router.push("/");
           break;
         case "clear":
-          setMessages(() => []);
+          toast("Le brouillon a été effacé. L’historique enregistré est conservé.");
           break;
         case "rename":
           toast("Rename is available from the sidebar chat menu.");
@@ -269,13 +272,19 @@ function PureMultimodalInput({
           toast("Delete this chat?", {
             action: {
               label: "Delete",
-              onClick: () => {
-                fetch(
+              onClick: async () => {
+                try {
+                  const response = await fetch(
                   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatId}`,
                   { method: "DELETE" }
-                );
+                  );
+                  if (!response.ok) throw new Error("delete_failed");
+                } catch {
+                  toast.error("Impossible de supprimer cette discussion. Réessayez.");
+                  return;
+                }
                 router.push("/");
-                toast.success("Chat deleted");
+                toast.success("Discussion supprimée.");
               },
             },
           });
@@ -284,15 +293,21 @@ function PureMultimodalInput({
           toast("Delete all chats?", {
             action: {
               label: "Delete all",
-              onClick: () => {
-                fetch(
+              onClick: async () => {
+                try {
+                  const response = await fetch(
                   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`,
                   {
                     method: "DELETE",
                   }
-                );
+                  );
+                  if (!response.ok) throw new Error("delete_failed");
+                } catch {
+                  toast.error("Impossible de supprimer l’historique. Réessayez.");
+                  return;
+                }
                 router.push("/");
-                toast.success("All chats deleted");
+                toast.success("Historique supprimé.");
               },
             },
           });
@@ -301,10 +316,14 @@ function PureMultimodalInput({
           break;
       }
     },
-    [chatId, resolvedTheme, router, setInput, setMessages, setTheme]
+    [chatId, resolvedTheme, router, setInput, setTheme]
   );
 
   const submitForm = useCallback(() => {
+    const messageText = redactLikelySecrets(input);
+    if (messageText !== input) {
+      toast.warning("Une clé sensible a été masquée avant l’envoi.");
+    }
     if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") {
       window.history.pushState(
         {},
@@ -316,15 +335,14 @@ function PureMultimodalInput({
     sendMessage({
       parts: [
         ...attachments.map((attachment) => ({
+          filename: attachment.name.slice(0, 255),
           mediaType: attachment.contentType,
-          name: attachment.name,
           type: "file" as const,
           url: attachment.url,
         })),
-        {
-          text: input,
-          type: "text",
-        },
+        ...(messageText.trim()
+          ? [{ text: messageText, type: "text" as const }]
+          : []),
       ],
       role: "user",
     });
@@ -348,6 +366,11 @@ function PureMultimodalInput({
   ]);
 
   const uploadFile = useCallback(async (file: File) => {
+    if (file.size > CHAT_ATTACHMENT_MAX_BYTES) {
+      toast.error("Ce fichier dépasse la limite de 20 Mo.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -362,29 +385,34 @@ function PureMultimodalInput({
 
       if (response.ok) {
         const data = await response.json();
-        const { url, pathname, contentType } = data;
+        const { url, contentType } = data;
 
         return {
           contentType,
-          name: pathname,
+          name: file.name,
           url,
         };
       }
-      const { error } = await response.json();
-      toast.error(error);
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      toast.error(body?.error ?? "L’importation a échoué. Réessayez.");
     } catch {
-      toast.error("Failed to upload file, please try again!");
+      toast.error("Impossible d’importer ce fichier. Vérifiez votre connexion puis réessayez.");
     }
   }, []);
 
-  const handleFileChange = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(event.target.files || []);
-
-      setUploadQueue(files.map((file) => file.name));
+  const handleFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
+      const remainingSlots = Math.max(0, 7 - attachments.length - uploadQueue.length);
+      const filesToUpload = files.slice(0, remainingSlots);
+      if (filesToUpload.length < files.length) {
+        toast.error("Un message peut contenir jusqu’à 7 fichiers joints.");
+      }
+      if (filesToUpload.length === 0) return;
+      setUploadQueue(filesToUpload.map((file) => file.name));
 
       try {
-        const uploadPromises = files.map((file) => uploadFile(file));
+        const uploadPromises = filesToUpload.map((file) => uploadFile(file));
         const uploadedAttachments = await Promise.all(uploadPromises);
         const successfullyUploadedAttachments = uploadedAttachments.filter(
           (attachment) => attachment !== undefined
@@ -400,7 +428,15 @@ function PureMultimodalInput({
         setUploadQueue([]);
       }
     },
-    [setAttachments, uploadFile]
+    [attachments.length, uploadQueue.length, setAttachments, uploadFile]
+  );
+
+  const handleFileChange = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      await handleFiles(Array.from(event.target.files || []));
+      event.target.value = "";
+    },
+    [handleFiles]
   );
 
   const handlePaste = useCallback(
@@ -420,33 +456,12 @@ function PureMultimodalInput({
 
       event.preventDefault();
 
-      setUploadQueue((prev) => [...prev, "Pasted image"]);
-
-      try {
-        const uploadPromises = imageItems
-          .map((item) => item.getAsFile())
-          .filter((file): file is File => file !== null)
-          .map((file) => uploadFile(file));
-
-        const uploadedAttachments = await Promise.all(uploadPromises);
-        const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) =>
-            attachment !== undefined &&
-            attachment.url !== undefined &&
-            attachment.contentType !== undefined
-        );
-
-        setAttachments((curr) => [
-          ...curr,
-          ...(successfullyUploadedAttachments as Attachment[]),
-        ]);
-      } catch {
-        toast.error("Failed to upload pasted image(s)");
-      } finally {
-        setUploadQueue([]);
-      }
+      const files = imageItems
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => file !== null);
+      await handleFiles(files);
     },
-    [setAttachments, uploadFile]
+    [handleFiles]
   );
 
   useEffect(() => {
@@ -549,15 +564,6 @@ function PureMultimodalInput({
         </div>
       ) : null}
 
-      <input
-        className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
-        multiple
-        onChange={handleFileChange}
-        ref={fileInputRef}
-        tabIndex={-1}
-        type="file"
-      />
-
       <div className="relative">
         {slashOpen ? (
           <SlashCommandMenu
@@ -571,6 +577,7 @@ function PureMultimodalInput({
 
       <PromptInput
         className="idealy-prompt-shell relative [&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
+        onFilesDropped={handleFiles}
         onSubmit={handlePromptSubmit}
       >
         {(attachments.length > 0 || uploadQueue.length > 0) && (
@@ -587,7 +594,7 @@ function PureMultimodalInput({
               />
             ))}
 
-            {uploadQueue.map((filename) => (
+            {uploadQueue.map((filename, index) => (
               <PreviewAttachment
                 attachment={{
                   contentType: "",
@@ -595,11 +602,39 @@ function PureMultimodalInput({
                   url: "",
                 }}
                 isUploading={true}
-                key={filename}
+                key={`${filename}-${index}`}
               />
             ))}
           </div>
         )}
+        {hasMetadataOnlyAttachments ? (
+          <p className="px-4 pt-2 text-[11px] leading-relaxed text-muted-foreground" role="status">
+            Les fichiers audio, vidéo, archives et formats non reconnus restent joints. Le modèle reçoit leur nom et leur format, mais leur contenu n’est pas encore analysé.
+          </p>
+        ) : null}
+        {hasLikelySecret ? (
+          <div className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-800 dark:text-amber-200" role="status">
+            <span>Clé sensible détectée : elle est masquée à l’écran et le sera aussi avant l’envoi.</span>
+            <button
+              className="shrink-0 rounded-md px-2 py-1 font-medium underline underline-offset-2"
+              onClick={() => setShowSensitiveDraft((visible) => !visible)}
+              type="button"
+            >
+              {showSensitiveDraft ? "Masquer" : "Modifier"}
+            </button>
+          </div>
+        ) : null}
+        {input.length > 1200 ? (
+          <details className="mx-3 mt-3 overflow-hidden rounded-xl border border-border/60 bg-muted/25 text-xs">
+            <summary className="cursor-pointer px-3 py-2.5 font-medium text-foreground/80">
+              Aperçu du brief · {inputWordCount} mots · {input.length} caractères
+            </summary>
+            <div className="border-t border-border/50 px-3 py-3">
+              <p className="mb-2 text-muted-foreground">Ce texte sera envoyé comme consigne à l’IA. Les fichiers joints sont transmis séparément ; leur contenu dépend des capacités du modèle sélectionné.</p>
+              <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words font-sans leading-relaxed text-foreground/75">{redactLikelySecrets(input)}</pre>
+            </div>
+          </details>
+        ) : null}
         <PromptInputTextarea
           className="min-h-16 max-h-32 text-[13px] leading-relaxed px-4 pt-3 pb-1.5 placeholder:text-muted-foreground/35"
           data-testid="multimodal-input"
@@ -607,13 +642,16 @@ function PureMultimodalInput({
           onKeyDown={handleTextareaKeyDown}
           placeholder={
             editingMessage
-              ? "Edit your message..."
-              : promptHints[promptHintIndex]
+              ? "Modifiez votre message…"
+              : "Racontez l’idée que vous voulez transformer…"
           }
+          readOnly={hasLikelySecret && !showSensitiveDraft}
           ref={textareaRef}
-          value={input}
+          value={hasLikelySecret && !showSensitiveDraft ? maskLikelySecrets(input) : input}
         />
         <input
+          accept="*/*"
+          aria-label="Importer un fichier de 20 Mo maximum"
           ref={fileInputRef}
           type="file"
           multiple
@@ -632,28 +670,25 @@ function PureMultimodalInput({
                 <PromptInputActionMenuContent className="w-64 rounded-xl border-border/60 bg-popover/95 p-1.5 shadow-xl backdrop-blur-xl">
                   <PromptInputActionMenuItem
                     className="gap-2 rounded-lg py-2 text-[12px]"
+                    title="Tous formats · 20 Mo maximum"
                     onSelect={(event) => {
                       event.preventDefault();
                       fileInputRef.current?.click();
                     }}
                   >
                     <PaperclipIcon size={15} />
-                    <span className="flex-1">Importer des fichiers</span>
+                    <span className="flex-1">Joindre des fichiers</span>
                   </PromptInputActionMenuItem>
                   <PromptInputActionMenuItem
                     className="gap-2 rounded-lg py-2 text-[12px]"
-                    onSelect={() =>
-                      toast("Les connecteurs seront disponibles dans le workspace.")
-                    }
+                    onSelect={() => router.push("/plugins")}
                   >
                     <Link2Icon className="size-3.5" />
-                    <span className="flex-1">Connecter une source</span>
+                    <span className="flex-1">Parcourir les connecteurs</span>
                   </PromptInputActionMenuItem>
                   <PromptInputActionMenuItem
                     className="gap-2 rounded-lg py-2 text-[12px]"
-                    onSelect={() =>
-                      toast("La bibliothèque Idealy sera bientôt disponible ici.")
-                    }
+                    onSelect={() => router.push("/library")}
                   >
                     <LibraryIcon className="size-3.5" />
                     <span className="flex-1">Ouvrir la bibliothèque</span>
@@ -686,28 +721,30 @@ function PureMultimodalInput({
             {isListening ? (
               <span
                 aria-live="polite"
-                className="flex items-end gap-0.5 px-1 text-[10px] text-red-500"
+                className="flex items-center gap-1.5 px-1 text-[10px] font-medium text-red-500"
               >
-                <span className="h-2 w-0.5 animate-pulse rounded-full bg-current" />
-                <span className="h-3.5 w-0.5 animate-pulse rounded-full bg-current [animation-delay:120ms]" />
-                <span className="h-2.5 w-0.5 animate-pulse rounded-full bg-current [animation-delay:240ms]" />
-                <span className="sr-only">Transcription en cours</span>
+                <span className="size-1.5 rounded-full bg-current" />
+                <span>Écoute en cours</span>
               </span>
             ) : null}
             <Button
-              aria-label="Dicter au micro"
+              aria-label={isListening ? "Arrêter la dictée" : "Dicter au micro"}
+              aria-pressed={isListening}
+              aria-busy={voice.state === "requesting"}
               className={cn(
-                "h-7 w-7 rounded-lg border border-border/40 p-1 transition-colors",
+                "h-8 w-8 rounded-lg border border-border/50 p-1 transition-colors",
                 isListening
-                  ? "bg-red-500/15 text-red-500 hover:bg-red-500/20"
-                  : "text-muted-foreground hover:border-border hover:text-foreground"
+                  ? "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/15 dark:text-red-400"
+                  : "text-muted-foreground hover:border-border hover:bg-muted/70 hover:text-foreground"
               )}
+              disabled={!voice.supported}
               onClick={toggleSpeechRecognition}
               size="icon"
+              title={voice.supported ? (isListening ? "Arrêter la dictée" : "Dicter au micro") : "La dictée n’est pas disponible dans ce navigateur."}
               type="button"
               variant="ghost"
             >
-              <MicIcon className="size-3.5" />
+              {voice.supported ? <MicIcon className="size-3.5" /> : <MicOffIcon className="size-3.5" />}
             </Button>
             {status === "submitted" ? (
               <StopButton setMessages={setMessages} stop={stop} />

@@ -5,6 +5,7 @@ import {
   PenSquareIcon,
   PlugZapIcon,
   Settings2Icon,
+  SparklesIcon,
   TrashIcon,
   ZapIcon,
 } from "lucide-react";
@@ -17,8 +18,6 @@ import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { PowerStatusBadge } from "@/components/chat/power-status";
-import { useGamificationStore } from "@/lib/stores/use-gamification-store";
-import { useTranslation } from "@/lib/i18n/provider";
 import {
   getChatHistoryPaginationKey,
   SidebarHistory,
@@ -44,6 +43,10 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useActiveChat } from "@/hooks/use-active-chat";
+import { usePowerStatus } from "@/hooks/use-power-status";
+import { useTranslation } from "@/lib/i18n/provider";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,16 +58,16 @@ import {
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { useActiveChat } from "@/hooks/use-active-chat";
-import { usePowerStatus } from "@/hooks/use-power-status";
 
 /** Capitalise first letter of plan name for display. */
 function planDisplayName(plan: string | undefined): string {
-  if (!plan) return "—";
+  if (!plan) {
+    return "—";
+  }
   const names: Record<string, string> = {
+    business: "Business",
     free: "Découverte",
     pro: "Pro",
-    business: "Business",
   };
   return names[plan] ?? plan.charAt(0).toUpperCase() + plan.slice(1);
 }
@@ -78,10 +81,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const { resetToNewChat } = useActiveChat();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
   const { loading: powerLoading, status: powerStatus } = usePowerStatus();
-
-  const closeMobile = useCallback(() => {
-    setOpenMobile(false);
-  }, [setOpenMobile]);
 
   const handleToggleSidebar = useCallback(() => {
     toggleSidebar();
@@ -120,18 +119,14 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      type="button"
-                      onClick={handleToggleSidebar}
-                      className="group/logo relative flex size-9 items-center justify-center rounded-xl p-1 text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent/60 cursor-pointer"
                       aria-label="Ouvrir la barre latérale"
+                      className="group/logo relative flex size-9 items-center justify-center rounded-xl p-1 text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent/60 cursor-pointer"
+                      onClick={handleToggleSidebar}
+                      type="button"
                     >
                       {/* Logo visible par défaut, disparaît au hover */}
                       <div className="flex items-center justify-center transition-all duration-200 ease-out group-hover/logo:scale-75 group-hover/logo:opacity-0">
-                        <IdealyLogo
-                          animated
-                          compact
-                          size={32}
-                        />
+                        <IdealyLogo animated compact size={32} />
                       </div>
                       {/* Icône panneau latéral qui apparaît au survol */}
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-200 ease-out group-hover/logo:scale-100 group-hover/logo:opacity-100 text-sidebar-foreground">
@@ -147,8 +142,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             ) : (
               <SidebarMenuItem className="flex flex-row items-center justify-between w-full px-1">
                 <Link
-                  href="/"
                   className="flex items-center gap-2 rounded-xl transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer"
+                  href="/"
                 >
                   <IdealyLogo
                     animated
@@ -160,10 +155,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      type="button"
-                      onClick={handleToggleSidebar}
-                      className="rounded-lg p-1.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer"
                       aria-label="Fermer la barre latérale"
+                      className="rounded-lg p-1.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer"
+                      onClick={handleToggleSidebar}
+                      type="button"
                     >
                       <PanelLeftIcon className="size-4" />
                     </button>
@@ -198,7 +193,17 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           {/* 2. Navigation pillars — flat, no accordions */}
           <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
             <SidebarGroupContent>
-              <nav aria-label="Navigation principale" className="flex flex-col gap-0.5 px-2">
+              <nav
+                aria-label="Navigation principale"
+                className="flex flex-col gap-0.5 px-2"
+              >
+                <Link
+                  className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  href="/brand-studio"
+                >
+                  <SparklesIcon className="size-3.5 shrink-0" />
+                  <span>Studio de marque</span>
+                </Link>
                 {/* CONNECTEURS */}
                 <Link
                   className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
@@ -350,9 +355,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer toutes les discussions ?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Supprimer toutes les discussions ?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Toutes vos discussions enregistrées seront définitivement effacées.
+              Cette action est irréversible. Toutes vos discussions enregistrées
+              seront définitivement effacées.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

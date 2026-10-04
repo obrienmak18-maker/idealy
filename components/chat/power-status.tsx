@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { toast } from "sonner";
+import { usePowerStatus } from "@/hooks/use-power-status";
+import {
+  readIdealyNotificationPreferences,
+  sendIdealyDesktopNotification,
+} from "@/lib/client-notifications";
 import {
   formatPowerBalance,
   type PowerAction,
-  type PowerStatus,
-  parsePowerStatus,
   powerUiState,
 } from "@/lib/idealy/power-status";
 
@@ -16,33 +20,34 @@ export function PowerStatusBadge({
   action?: PowerAction | null;
   compact?: boolean;
 }) {
-  const [status, setStatus] = useState<PowerStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { loading, status } = usePowerStatus(action);
 
   useEffect(() => {
-    let cancelled = false;
-    const query = action ? `?action=${encodeURIComponent(action)}` : "";
-    fetch(`/api/idealy/power${query}`, { cache: "no-store" })
-      .then(async (response) => (response.ok ? response.json() : null))
-      .then((payload) => {
-        if (!cancelled) {
-          setStatus(parsePowerStatus(payload));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setStatus(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [action]);
+    if (!status || !readIdealyNotificationPreferences().credit) {
+      return;
+    }
+
+    const lowBalanceThreshold = Math.max(1, Math.floor(status.walletCap * 0.1));
+    if (status.balance > lowBalanceThreshold) {
+      return;
+    }
+
+    const day = new Date().toISOString().slice(0, 10);
+    const notificationKey = `idealy-low-power-alert:${status.way}:${day}`;
+    try {
+      if (window.localStorage.getItem(notificationKey) === "shown") {
+        return;
+      }
+      window.localStorage.setItem(notificationKey, "shown");
+    } catch {
+      // Keep the in-app status visible even when browser storage is unavailable.
+    }
+
+    const title = `Votre ${status.resourceLabel} est presque épuisé`;
+    const description = `Il vous reste ${status.balance} points. Adaptez votre prochaine mission ou consultez les niveaux.`;
+    toast.warning(title, { description });
+    sendIdealyDesktopNotification(title, description);
+  }, [status]);
 
   if (loading) {
     return (

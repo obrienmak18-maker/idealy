@@ -1,8 +1,9 @@
 import { Suspense } from "react";
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
+import { IdealyLoading } from "@/components/branding/idealy-loading";
 
 function OnboardingFallback() {
-  return <main className="min-h-dvh bg-background" aria-busy="true" />;
+  return <IdealyLoading label="Préparation de votre profil…" />;
 }
 
 export default function OnboardingPage() {

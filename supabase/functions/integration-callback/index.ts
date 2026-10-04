@@ -117,6 +117,10 @@ Deno.serve(async (request) => {
       login?: string;
       name?: string;
     } | null;
+    if (!userResponse.ok || typeof githubUser?.id !== "number" || !githubUser.login) {
+      console.error("GitHub identity verification failed", userResponse.status);
+      return redirect("error=identity_verification_failed");
+    }
     const encrypted = await encryptIntegrationToken(tokenData.access_token);
     const now = new Date().toISOString();
 
@@ -166,6 +170,14 @@ Deno.serve(async (request) => {
       );
     if (credentialError) {
       console.error("GitHub credential storage failed", credentialError);
+      const { error: statusError } = await admin
+        .from("user_integrations")
+        .update({ last_verified_at: null, status: "error", updated_at: now })
+        .eq("id", integration.id)
+        .eq("user_id", oauthState.user_id);
+      if (statusError) {
+        console.error("GitHub integration status could not be marked as error", statusError);
+      }
       return redirect("error=credential_storage_failed");
     }
 

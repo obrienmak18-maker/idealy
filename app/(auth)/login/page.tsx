@@ -11,6 +11,8 @@ import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
 import {
   isFirebaseConfigured,
+  prepareFirebaseIdTokenForSupabase,
+  requestPasswordResetFirebase,
   signInWithEmailFirebase,
 } from "@/lib/firebase/client";
 import { type LoginActionState, login } from "../actions";
@@ -32,6 +34,7 @@ export default function Page() {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
 
   const [state, formAction] = useActionState<LoginActionState, FormData>(
@@ -55,13 +58,42 @@ export default function Page() {
       "callbackUrl"
     );
 
-    return callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//")
-      ? callbackUrl
-      : "/";
+    if (!callbackUrl?.startsWith("/")) return "/";
+    try {
+      const destination = new URL(callbackUrl, window.location.origin);
+      if (destination.origin !== window.location.origin) return "/";
+      return `${destination.pathname}${destination.search}${destination.hash}`;
+    } catch {
+      return "/";
+    }
   };
 
-  const getOnboardingUrl = () =>
-    `/onboarding?next=${encodeURIComponent(getSafeCallbackUrl())}`;
+  const getOnboardingUrl = () => {
+    const callbackUrl = getSafeCallbackUrl();
+    if (callbackUrl.startsWith("/onboarding?")) return callbackUrl;
+    return `/onboarding?next=${encodeURIComponent(callbackUrl)}`;
+  };
+
+  const handlePasswordReset = async () => {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      toast({ description: "Saisissez votre adresse e-mail pour recevoir le lien de réinitialisation.", type: "error" });
+      return;
+    }
+    if (!isFirebaseConfigured()) {
+      toast({ description: "La réinitialisation du mot de passe n’est pas configurée pour cette connexion.", type: "error" });
+      return;
+    }
+    setIsResettingPassword(true);
+    try {
+      await requestPasswordResetFirebase(normalizedEmail);
+      toast({ description: "Si un compte correspond à cette adresse, un lien de réinitialisation vient d’être envoyé.", type: "success" });
+    } catch {
+      toast({ description: "L’envoi du lien a échoué. Vérifiez l’adresse puis réessayez.", type: "error" });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
@@ -111,21 +143,10 @@ export default function Page() {
         String(formData.get("password") ?? "")
       );
 
-      // ── Ensure role:"authenticated" claim exists ────────────────────────
-      // Idempotent: safe to call on every login. Upgrades pre-existing users
-      // who registered before Custom Claims were deployed.
-      try {
-        await fetch("/api/auth/set-claims", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-      } catch {
-        // Admin SDK not configured yet — continue with login regardless
-      }
+      const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
 
       const result = await signInWithAuthJs("firebase", {
-        idToken,
+        idToken: supabaseIdToken,
         redirect: false,
       });
 
@@ -147,6 +168,12 @@ export default function Page() {
       }
       if (code === "firebase_not_configured") {
         formAction(formData);
+        return;
+      }
+      if (code === "firebase_backend_unavailable") {
+        setFirebaseError(
+          "La connexion sécurisée au workspace n’est pas disponible. Réessayez dans un instant."
+        );
         return;
       }
       if (
@@ -184,7 +211,17 @@ export default function Page() {
           {feedback}
         </p>
       ) : null}
-      <AuthForm action={handleSubmit} defaultEmail={email}>
+      <AuthForm action={handleSubmit} defaultEmail={email} onEmailChange={setEmail}>
+        <div className="-mt-2 flex justify-end">
+          <button
+            className="min-h-9 rounded-lg px-2 text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            disabled={isResettingPassword}
+            onClick={handlePasswordReset}
+            type="button"
+          >
+            {isResettingPassword ? "Envoi du lien…" : "Mot de passe oublié ?"}
+          </button>
+        </div>
         <SubmitButton isSuccessful={isSuccessful}>
           {t("auth.submitLogin") || "Se connecter"}
         </SubmitButton>

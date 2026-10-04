@@ -11,6 +11,7 @@ import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
 import {
   isFirebaseConfigured,
+  prepareFirebaseIdTokenForSupabase,
   signUpWithEmailFirebase,
 } from "@/lib/firebase/client";
 import { isIdealyWay } from "@/lib/idealy/product-contract";
@@ -71,10 +72,16 @@ export default function Page() {
       return "/onboarding";
     }
 
-    const selectedWay = new URLSearchParams(window.location.search).get("way");
-    return isIdealyWay(selectedWay)
-      ? `/onboarding?way=${encodeURIComponent(selectedWay)}`
-      : "/onboarding";
+    const params = new URLSearchParams(window.location.search);
+    const selectedWay = params.get("way");
+    const onboarding = new URLSearchParams();
+    if (isIdealyWay(selectedWay)) onboarding.set("way", selectedWay);
+    for (const key of ["plan", "level", "cycle", "power"]) {
+      const value = params.get(key);
+      if (value && value.length <= 32) onboarding.set(key, value);
+    }
+    const query = onboarding.toString();
+    return query ? `/onboarding?${query}` : "/onboarding";
   };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
@@ -142,22 +149,10 @@ export default function Page() {
         passwordValue
       );
 
-      // ── Set role:"authenticated" custom claim server-side ────────────────
-      // Required for Supabase Third-Party Auth to grant the Postgres
-      // "authenticated" role. Non-blocking: if Admin SDK is not yet configured
-      // the endpoint returns 503 and we continue anyway.
-      try {
-        await fetch("/api/auth/set-claims", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-      } catch {
-        // Admin SDK not configured yet — will still work with Supabase anon role
-      }
+      const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
 
       const result = await signInWithAuthJs("firebase", {
-        idToken,
+        idToken: supabaseIdToken,
         redirect: false,
       });
 
@@ -172,6 +167,12 @@ export default function Page() {
       const code = firebaseErrorCode(error);
       if (code === "firebase_not_configured") {
         formAction(formData);
+        return;
+      }
+      if (code === "firebase_backend_unavailable") {
+        setFirebaseError(
+          "La connexion sécurisée au workspace n’est pas disponible. Réessayez dans un instant."
+        );
         return;
       }
       if (code === "auth/email-already-in-use") {
@@ -211,7 +212,7 @@ export default function Page() {
           {feedback}
         </p>
       ) : null}
-      <AuthForm action={handleSubmit} defaultEmail={email}>
+      <AuthForm action={handleSubmit} defaultEmail={email} passwordAutoComplete="new-password">
         <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground cursor-pointer select-none">
           <input
             checked={termsAccepted}

@@ -126,16 +126,6 @@ async function resolveUserMode(
   userId: string,
   supabaseAdmin: SupabaseClient,
 ): Promise<UserMode> {
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from("profiles")
-    .select("plan")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (profileError)
-    throw new Error(`Unable to read billing profile: ${profileError.message}`);
-  if (profile?.plan && profile.plan !== "free") return "trial";
-
   const { data: subscription, error: subscriptionError } = await supabaseAdmin
     .from("subscriptions")
     .select("status, plan, current_period_end")
@@ -151,8 +141,8 @@ async function resolveUserMode(
     );
   if (
     subscription?.status === "trialing" ||
-    subscription?.plan === "pro" ||
-    subscription?.plan === "business"
+    (subscription?.status === "active" &&
+      (subscription.plan === "pro" || subscription.plan === "business"))
   )
     return "trial";
   return "free";

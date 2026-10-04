@@ -1,104 +1,45 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Sparkles, Zap, Flame, Shield, Brain, Terminal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { IdealyMark } from "@/components/branding/idealy-logo";
 
-function TypewriterText({ text }: { text: string }) {
-  const [visibleText, setVisibleText] = useState("");
-
-  useEffect(() => {
-    let index = 0;
-    setVisibleText("");
-    const interval = setInterval(() => {
-      index += 1;
-      setVisibleText(text.slice(0, index));
-      if (index >= text.length) {
-        clearInterval(interval);
-      }
-    }, 38);
-    return () => clearInterval(interval);
-  }, [text]);
+export function Greeting() {
+  const prefersReducedMotion = useReducedMotion();
 
   return (
-    <span aria-label={text} className="text-foreground">
-      {visibleText}
-      <span className="ml-1 inline-block h-[1em] w-[2px] animate-pulse bg-primary align-[-0.1em]" />
-    </span>
-  );
-}
-
-const greetings = [
-  {
-    tag: "Studio IA Pro & Escouade Multi-Agents",
-    icon: Sparkles,
-    title: "Quelle application forgeons-nous aujourd'hui ?",
-    subtitle: "Décrivez votre idée de SaaS, marketplace ou dashboard. Votre escouade d'agents est prête à construire.",
-  },
-  {
-    tag: "Architecture & Génération Instantanée",
-    icon: Zap,
-    title: "Transformez votre intention en réalité concrète.",
-    subtitle: "Du découpage stratégique au code Next.js avec Live Preview, pilotez chaque étape sans friction.",
-  },
-  {
-    tag: "Puissance & Haute Vitesse",
-    icon: Flame,
-    title: "Prêt à dépasser les limites du prototypage ?",
-    subtitle: "L'Architecte cadre, le Builder code, le Designer sublime, et le QA valide la robustesse.",
-  },
-  {
-    tag: "Workspace Collaboratif & VFS",
-    icon: Brain,
-    title: "Par où commençons-nous la mission ?",
-    subtitle: "Exposez votre besoin, discutez avec l'IA et exportez votre projet complet en ZIP à tout moment.",
-  },
-];
-
-export const Greeting = () => {
-  const [index, setIndex] = useState(0);
-  const greeting = greetings[index];
-  const IconComponent = greeting.icon;
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setIndex((current) => (current + 1) % greetings.length);
-    }, 7800);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="relative flex flex-col items-center px-4 pt-6 pb-2 text-center" key={index}>
-      {/* Subtle clean badge */}
+    <section
+      aria-labelledby="idealy-welcome-title"
+      className="flex w-full flex-col items-center px-4 pb-1 pt-5 text-center sm:pt-8"
+    >
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="mb-4 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3.5 py-1 text-xs font-medium text-foreground/80 shadow-xs"
-        initial={{ opacity: 0, y: -6 }}
-        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="mb-5 inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/75 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-[var(--shadow-card)]"
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
-        <IconComponent className="size-3.5 text-primary" />
-        <span>{greeting.tag}</span>
+        <IdealyMark animated={false} size={18} />
+        <span>L’IA Idealy · votre partenaire de création</span>
       </motion.div>
 
-      {/* Clean elegant title */}
       <motion.h1
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-2xl font-semibold text-2xl tracking-tight text-foreground md:text-3xl"
-        initial={{ opacity: 0, y: 6 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="max-w-2xl text-balance text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl md:text-[2.75rem]"
+        id="idealy-welcome-title"
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+        transition={{ delay: 0.04, duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
       >
-        <TypewriterText key={`title-${index}`} text={greeting.title} />
+        Une idée en tête ?<br className="hidden sm:block" /> On lui donne forme.
       </motion.h1>
 
-      {/* Balanced subtitle */}
       <motion.p
         animate={{ opacity: 1, y: 0 }}
-        className="mt-2.5 max-w-lg text-xs leading-relaxed text-muted-foreground md:text-sm"
-        initial={{ opacity: 0, y: 6 }}
-        transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="mt-3 max-w-xl text-pretty text-sm leading-6 text-muted-foreground sm:text-[15px]"
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+        transition={{ delay: 0.1, duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
       >
-        {greeting.subtitle}
+        Décrivez ce que vous voulez créer. L’IA vous aide à clarifier l’idée,
+        puis Idealy la transforme en mission, en code et en aperçu.
       </motion.p>
-    </div>
+    </section>
   );
-};
+}

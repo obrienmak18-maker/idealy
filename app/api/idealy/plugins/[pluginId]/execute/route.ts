@@ -3,10 +3,11 @@ import { isDevelopmentEnvironment } from "@/lib/constants";
 import { pluginRegistry } from "@/lib/idealy/plugins";
 import { authorizeToolExecution } from "@/lib/idealy/plugins/permissions";
 import {
+  describePlugins,
+  getVerifiedUserPlan,
   listPluginExecutions,
   listPluginInstallations,
 } from "@/lib/idealy/plugins/service";
-import { type IdealyPlan, idealyPlans } from "@/lib/idealy/product-contract";
 
 const MAX_INPUT_BYTES = 64 * 1024;
 
@@ -80,10 +81,37 @@ export async function POST(
     installations.map((entry) => entry.pluginId)
   );
 
-  const planParam = new URL(request.url).searchParams.get("plan");
-  const plan: IdealyPlan = idealyPlans.includes(planParam as IdealyPlan)
-    ? (planParam as IdealyPlan)
-    : "free";
+  const { error: planError, plan } = await getVerifiedUserPlan({ accessToken });
+  if (planError || !plan) {
+    return json(
+      { error: planError ?? "Le plan n’a pas pu être vérifié.", status: "unavailable" },
+      503
+    );
+  }
+
+  // Re-evaluate connector authorization, scopes, server configuration and
+  // installation state for this request. A stored permission grant alone is
+  // never proof that the provider is currently available.
+  const { error: readinessError, plugins } = await describePlugins({
+    accessToken,
+    installations,
+    plan,
+  });
+  if (readinessError) {
+    return json({ error: readinessError, status: "unavailable" }, 503);
+  }
+  const readiness = plugins.find((plugin) => plugin.id === pluginId);
+  if (!readiness?.available) {
+    return json(
+      {
+        code: "PLUGIN_NOT_AVAILABLE",
+        error: "Le connecteur n’est pas prêt pour cette exécution.",
+        missingRequirements: readiness?.missingRequirements ?? [],
+        status: "denied",
+      },
+      409
+    );
+  }
 
   const decision = authorizeToolExecution({
     confirmed: body.confirmed === true,
