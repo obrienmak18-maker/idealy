@@ -6,7 +6,6 @@ import {
   PlugZapIcon,
   Settings2Icon,
   TrashIcon,
-  ZapIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,7 +16,6 @@ import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { PowerStatusBadge } from "@/components/chat/power-status";
-import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import { useTranslation } from "@/lib/i18n/provider";
 import {
   getChatHistoryPaginationKey,
@@ -72,7 +70,6 @@ function planDisplayName(plan: string | undefined): string {
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { t } = useTranslation();
-  const { burnDownPercentage } = useGamificationStore();
   const { setOpenMobile, toggleSidebar, state } = useSidebar();
   const { mutate } = useSWRConfig();
   const { resetToNewChat } = useActiveChat();
@@ -219,46 +216,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* 3. Mission en cours / Power burn-down */}
-          <SidebarGroup className="group-data-[collapsible=icon]:hidden pt-0">
-            <SidebarGroupContent>
-              <div className="mx-2 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/30 p-3 shadow-[var(--shadow-card)]">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/20 to-orange-400/20 text-violet-400">
-                      <ZapIcon className="size-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-[11px] font-semibold text-sidebar-foreground">
-                        {t("sidebar.activeMission") || "Mission en cours"}
-                      </div>
-                      <div className="text-[10px] text-sidebar-foreground/55">
-                        {t("sidebar.powerAvailable") || "Énergie restante"}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-semibold text-sidebar-foreground/75">
-                    {burnDownPercentage}%
-                  </span>
-                </div>
-                {/* Burn-down bar: starts at 100% and decreases as power is consumed */}
-                <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-sidebar-border/70">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-orange-400 transition-all duration-500 ease-out"
-                    style={{ width: `${burnDownPercentage}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-sidebar-foreground/60">
-                  <span className="flex items-center gap-1">
-                    <ZapIcon className="size-3 text-amber-400" /> Power
-                  </span>
-                  <PowerStatusBadge />
-                </div>
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-          {/* 4. Historique des discussions (Workspaces) */}
+          {/* 3. Historique des discussions (Workspaces) */}
           <SidebarHistory user={user} />
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border pt-2 pb-3">

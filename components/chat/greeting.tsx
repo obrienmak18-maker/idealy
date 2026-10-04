@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, Zap, Flame, Shield, Brain, Terminal } from "lucide-react";
+import { Brain, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
+import { IdealyMark } from "@/components/branding/idealy-logo";
 
 function TypewriterText({ text }: { text: string }) {
   const [visibleText, setVisibleText] = useState("");
@@ -13,9 +14,7 @@ function TypewriterText({ text }: { text: string }) {
     const interval = setInterval(() => {
       index += 1;
       setVisibleText(text.slice(0, index));
-      if (index >= text.length) {
-        clearInterval(interval);
-      }
+      if (index >= text.length) clearInterval(interval);
     }, 38);
     return () => clearInterval(interval);
   }, [text]);
@@ -30,28 +29,16 @@ function TypewriterText({ text }: { text: string }) {
 
 const greetings = [
   {
-    tag: "Studio IA Pro & Escouade Multi-Agents",
+    tag: "Atelier de création logicielle",
     icon: Sparkles,
-    title: "Quelle application forgeons-nous aujourd'hui ?",
-    subtitle: "Décrivez votre idée de SaaS, marketplace ou dashboard. Votre escouade d'agents est prête à construire.",
+    title: "Une idée en tête ?",
+    subtitle: "Décrivez ce que vous imaginez. Idealy clarifie, structure et construit votre logiciel.",
   },
   {
-    tag: "Architecture & Génération Instantanée",
-    icon: Zap,
-    title: "Transformez votre intention en réalité concrète.",
-    subtitle: "Du découpage stratégique au code Next.js avec Live Preview, pilotez chaque étape sans friction.",
-  },
-  {
-    tag: "Puissance & Haute Vitesse",
-    icon: Flame,
-    title: "Prêt à dépasser les limites du prototypage ?",
-    subtitle: "L'Architecte cadre, le Builder code, le Designer sublime, et le QA valide la robustesse.",
-  },
-  {
-    tag: "Workspace Collaboratif & VFS",
+    tag: "De l'intention au logiciel",
     icon: Brain,
-    title: "Par où commençons-nous la mission ?",
-    subtitle: "Exposez votre besoin, discutez avec l'IA et exportez votre projet complet en ZIP à tout moment.",
+    title: "On lui donne forme.",
+    subtitle: "Une intention claire, une architecture solide, un résultat que vous pouvez explorer.",
   },
 ];
 
@@ -68,19 +55,20 @@ export const Greeting = () => {
   }, []);
 
   return (
-    <div className="relative flex flex-col items-center px-4 pt-6 pb-2 text-center" key={index}>
-      {/* Subtle clean badge */}
+    <div className="relative flex flex-col items-center px-4 pt-10 pb-4 text-center" key={index}>
+      <div className="idealy-hero-orbit mb-8" aria-hidden="true">
+        <IdealyMark size={82} />
+      </div>
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="mb-4 inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3.5 py-1 text-xs font-medium text-foreground/80 shadow-xs"
+        className="mb-3 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500"
         initial={{ opacity: 0, y: -6 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       >
-        <IconComponent className="size-3.5 text-primary" />
+        <IconComponent className="size-3.5 text-sky-300" />
         <span>{greeting.tag}</span>
       </motion.div>
 
-      {/* Clean elegant title */}
       <motion.h1
         animate={{ opacity: 1, y: 0 }}
         className="max-w-2xl font-semibold text-2xl tracking-tight text-foreground md:text-3xl"
