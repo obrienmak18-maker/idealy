@@ -6,6 +6,7 @@ import equal from "fast-deep-equal";
 import {
   ArrowUpIcon,
   BrainIcon,
+  CheckIcon,
   EyeIcon,
   LibraryIcon,
   Link2Icon,
@@ -14,7 +15,9 @@ import {
   MicOffIcon,
   PlusIcon,
   WrenchIcon,
+  XIcon,
 } from "lucide-react";
+import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -173,6 +176,13 @@ function PureMultimodalInput({
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
+  const [selectedConnectors, setSelectedConnectors] = useState<string[]>([]);
+
+  const toggleConnector = useCallback((id: string) => {
+    setSelectedConnectors((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  }, []);
 
   // Voice lifecycle via dedicated hook
   const voiceBaseInput = useRef("");
@@ -332,6 +342,12 @@ function PureMultimodalInput({
       );
     }
 
+    const connectorPrefix =
+      selectedConnectors.length > 0
+        ? `[Connecteurs liés : ${selectedConnectors.map((c) => c.toUpperCase()).join(", ")}]\n`
+        : "";
+    const finalMessageText = `${connectorPrefix}${messageText}`;
+
     sendMessage({
       parts: [
         ...attachments.map((attachment) => ({
@@ -340,8 +356,8 @@ function PureMultimodalInput({
           type: "file" as const,
           url: attachment.url,
         })),
-        ...(messageText.trim()
-          ? [{ text: messageText, type: "text" as const }]
+        ...(finalMessageText.trim()
+          ? [{ text: finalMessageText, type: "text" as const }]
           : []),
       ],
       role: "user",
@@ -363,6 +379,7 @@ function PureMultimodalInput({
     setLocalStorageInput,
     width,
     chatId,
+    selectedConnectors,
   ]);
 
   const uploadFile = useCallback(async (file: File) => {
@@ -635,8 +652,32 @@ function PureMultimodalInput({
             </div>
           </details>
         ) : null}
+        {selectedConnectors.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 px-4 pt-2.5">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/70">
+              Connecteurs liés :
+            </span>
+            {selectedConnectors.map((id) => (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-foreground transition-all"
+              >
+                {getConnectorBrandLogo(id, "size-3.5 shrink-0")}
+                <span className="capitalize">{id}</span>
+                <button
+                  type="button"
+                  onClick={() => toggleConnector(id)}
+                  className="text-muted-foreground hover:text-foreground cursor-pointer"
+                  title={`Retirer ${id}`}
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
         <PromptInputTextarea
-          className="min-h-16 max-h-32 text-[13px] leading-relaxed px-4 pt-3 pb-1.5 placeholder:text-muted-foreground/35"
+          className="min-h-16 max-h-48 overflow-y-auto text-[13px] leading-relaxed px-4 pt-3 pb-1.5 placeholder:text-muted-foreground/35"
           data-testid="multimodal-input"
           onChange={handleInput}
           onKeyDown={handleTextareaKeyDown}
@@ -667,9 +708,9 @@ function PureMultimodalInput({
                 >
                   <PlusIcon className="size-4" />
                 </PromptInputActionMenuTrigger>
-                <PromptInputActionMenuContent className="w-64 rounded-xl border-border/60 bg-popover/95 p-1.5 shadow-xl backdrop-blur-xl">
+                <PromptInputActionMenuContent className="w-64 max-h-80 overflow-y-auto rounded-xl border-border/60 bg-popover/95 p-1.5 shadow-xl backdrop-blur-xl">
                   <PromptInputActionMenuItem
-                    className="gap-2 rounded-lg py-2 text-[12px]"
+                    className="gap-2 rounded-lg py-2 text-[12px] cursor-pointer"
                     title="Tous formats · 20 Mo maximum"
                     onSelect={(event) => {
                       event.preventDefault();
@@ -680,19 +721,51 @@ function PureMultimodalInput({
                     <span className="flex-1">Joindre des fichiers</span>
                   </PromptInputActionMenuItem>
                   <PromptInputActionMenuItem
-                    className="gap-2 rounded-lg py-2 text-[12px]"
-                    onSelect={() => router.push("/plugins")}
-                  >
-                    <Link2Icon className="size-3.5" />
-                    <span className="flex-1">Parcourir les connecteurs</span>
-                  </PromptInputActionMenuItem>
-                  <PromptInputActionMenuItem
-                    className="gap-2 rounded-lg py-2 text-[12px]"
+                    className="gap-2 rounded-lg py-2 text-[12px] cursor-pointer"
                     onSelect={() => router.push("/library")}
                   >
                     <LibraryIcon className="size-3.5" />
                     <span className="flex-1">Ouvrir la bibliothèque</span>
                   </PromptInputActionMenuItem>
+
+                  <div className="my-1 border-t border-border/50" />
+                  <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    <span>Connecteurs rapides</span>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/plugins")}
+                      className="text-[10px] text-sky-400 hover:underline cursor-pointer"
+                    >
+                      Gérer
+                    </button>
+                  </div>
+                  {[
+                    { id: "github", label: "GitHub" },
+                    { id: "supabase", label: "Supabase" },
+                    { id: "stripe", label: "Stripe" },
+                    { id: "vercel", label: "Vercel" },
+                    { id: "slack", label: "Slack" },
+                    { id: "canva", label: "Canva" },
+                    { id: "postgres", label: "PostgreSQL" },
+                  ].map((conn) => {
+                    const isSelected = selectedConnectors.includes(conn.id);
+                    return (
+                      <PromptInputActionMenuItem
+                        key={conn.id}
+                        className={`gap-2 rounded-lg py-1.5 text-[11.5px] cursor-pointer ${isSelected ? "bg-primary/10 text-primary font-medium" : ""}`}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          toggleConnector(conn.id);
+                        }}
+                      >
+                        <div className="flex size-4 items-center justify-center">
+                          {getConnectorBrandLogo(conn.id, "size-3.5")}
+                        </div>
+                        <span className="flex-1">{conn.label}</span>
+                        {isSelected && <CheckIcon className="size-3 text-primary" />}
+                      </PromptInputActionMenuItem>
+                    );
+                  })}
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
 

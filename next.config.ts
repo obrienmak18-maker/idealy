@@ -6,7 +6,16 @@ const basePath = process.env.IS_DEMO === "1" ? "/demo" : "";
 const nextConfig: NextConfig = {
   allowedDevOrigins: [
     "127.0.0.1",
+    "127.0.0.1:3000",
+    "127.0.0.1:3001",
+    "127.0.0.1:3100",
+    "127.0.0.1:3101",
     "localhost",
+    "localhost:3000",
+    "localhost:3001",
+    "localhost:3100",
+    "localhost:3101",
+    "*.localhost",
   ],
   ...(basePath
     ? {

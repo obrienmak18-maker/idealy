@@ -226,7 +226,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                           src={voiesCatalog[currentWay]?.agents?.[0]?.avatarUrl}
                         />
                       ) : (
-                        <span>{voiesCatalog[currentWay]?.agents?.[0]?.emoji || "🥷"}</span>
+                        <SparklesIcon className="size-3.5 text-primary" />
                       )}
                     </div>
                     <div className="leading-tight">
@@ -257,7 +257,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 </div>
                 <div className="flex items-center justify-between text-[9.5px] text-sidebar-foreground/60">
                   <span className="flex items-center gap-1 font-medium">
-                    <span className="text-[10px]">{voiesCatalog[currentWay]?.agents?.[0]?.emoji || "⚡"}</span>
+                    <ZapIcon className="size-3 text-amber-400" />
                     {voiesCatalog[currentWay]?.resourceLabel || "Power"}
                   </span>
                   <PowerStatusBadge />

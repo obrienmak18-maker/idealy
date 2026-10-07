@@ -4,17 +4,16 @@ import { useState, useMemo } from "react";
 import {
   ArrowLeftIcon,
   SearchIcon,
-  PlugZapIcon,
   CheckCircle2Icon,
   PlusIcon,
   ExternalLinkIcon,
-  LayersIcon,
   SparklesIcon,
   ShieldCheckIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { IdealyOrbitalDisc } from "@/components/connectors/idealy-orbital-disc";
+import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import { listConnectorDefinitions } from "@/lib/idealy/connectors";
 import { useTranslation } from "@/lib/i18n/provider";
 
@@ -60,23 +59,8 @@ export default function PluginsPage() {
     }
   };
 
-  const getConnectorEmoji = (id: string) => {
-    switch (id) {
-      case "github": return "🐙";
-      case "supabase": return "⚡";
-      case "stripe": return "💳";
-      case "vercel": return "▲";
-      case "canva": return "🎨";
-      case "figma": return "❖";
-      case "notion": return "📝";
-      case "google-drive": return "📁";
-      case "slack": return "💬";
-      default: return "🔌";
-    }
-  };
-
   return (
-    <main className="min-h-dvh bg-background text-foreground pb-20">
+    <main className="min-h-dvh bg-background text-foreground pb-20 select-none">
       <div className="mx-auto max-w-6xl px-6 py-8 sm:px-10">
         {/* Navigation retour */}
         <Link
@@ -89,7 +73,7 @@ export default function PluginsPage() {
         {/* Section Orbe & Disque Cosmique d'Idealy */}
         <section className="mb-10 rounded-3xl border border-border/70 bg-gradient-to-b from-card/90 via-card/40 to-background p-6 sm:p-10 shadow-2xl overflow-hidden relative">
           <div className="max-w-2xl mx-auto text-center mb-4">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-400 mb-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary mb-3">
               <SparklesIcon className="size-3.5" /> Écosystème Connecteurs Idealy
             </span>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
@@ -109,13 +93,13 @@ export default function PluginsPage() {
           />
         </section>
 
-        {/* Section Actifs & Raccourcis style ChatGPT */}
+        {/* Section Actifs & Raccourcis style Raycast */}
         <section className="mb-8 rounded-2xl border border-border/60 bg-muted/20 p-5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 font-mono">
               <CheckCircle2Icon className="size-3.5 text-emerald-500" /> Connecteurs Actifs ({connectedList.length})
             </h2>
-            <span className="text-xs text-muted-foreground">Prêts pour l'orchestration</span>
+            <span className="text-xs text-muted-foreground font-mono">Prêts pour l'orchestration</span>
           </div>
           <div className="flex flex-wrap gap-2.5">
             {connectedList.map((id) => {
@@ -125,7 +109,9 @@ export default function PluginsPage() {
                   key={id}
                   className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-foreground backdrop-blur-sm"
                 >
-                  <span className="text-sm">{getConnectorEmoji(id)}</span>
+                  <div className="flex items-center justify-center">
+                    {getConnectorBrandLogo(id, "size-4 text-foreground")}
+                  </div>
                   <span>{conn?.label || id}</span>
                   <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
@@ -134,7 +120,7 @@ export default function PluginsPage() {
           </div>
         </section>
 
-        {/* Layout façon Lovable : Barre de recherche + Filtres + Grille */}
+        {/* Layout : Barre de recherche + Filtres + Grille */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
           {/* Panneau de filtres latéral */}
           <aside className="space-y-4">
@@ -145,7 +131,7 @@ export default function PluginsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Rechercher..."
-                className="w-full rounded-xl border border-border/70 bg-card/60 pl-9 pr-3 py-2 text-xs outline-none focus:border-primary"
+                className="w-full rounded-xl border border-border/70 bg-card/60 pl-9 pr-3 py-2 text-xs outline-none focus:border-primary transition-colors"
               />
             </div>
 
@@ -163,7 +149,7 @@ export default function PluginsPage() {
                 >
                   <span>{cat.label}</span>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] ${
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-mono ${
                       selectedCategory === cat.id
                         ? "bg-primary-foreground/20 text-primary-foreground"
                         : "bg-muted text-muted-foreground"
@@ -201,8 +187,8 @@ export default function PluginsPage() {
                   <div>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex size-11 items-center justify-center rounded-2xl border border-border/80 bg-background text-lg shadow-xs">
-                          {getConnectorEmoji(connector.id)}
+                        <div className="flex size-11 items-center justify-center rounded-2xl border border-border/80 bg-background shadow-xs text-foreground">
+                          {getConnectorBrandLogo(connector.id, "size-5 text-foreground")}
                         </div>
                         <div>
                           <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
@@ -211,16 +197,16 @@ export default function PluginsPage() {
                               <span className="size-2 rounded-full bg-emerald-500" />
                             )}
                           </h3>
-                          <span className="text-[10.5px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          <span className="text-[10.5px] uppercase tracking-wider text-muted-foreground font-semibold font-mono">
                             {connector.category}
                           </span>
                         </div>
                       </div>
 
                       <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold ${
+                        className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold font-mono ${
                           isConnected
-                            ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                             : "bg-muted text-muted-foreground"
                         }`}
                       >
@@ -236,7 +222,7 @@ export default function PluginsPage() {
                       {connector.operations.slice(0, 3).map((op) => (
                         <span
                           key={op.id}
-                          className="rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[10px] text-muted-foreground"
+                          className="rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-[10px] text-muted-foreground font-mono"
                         >
                           {op.label}
                         </span>
@@ -250,13 +236,13 @@ export default function PluginsPage() {
                         href={connector.docsUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <span>Documentation</span>
                         <ExternalLinkIcon className="size-3" />
                       </a>
                     ) : (
-                      <span />
+                      <span className="text-xs text-muted-foreground font-mono">Intégré</span>
                     )}
 
                     <button
@@ -264,12 +250,15 @@ export default function PluginsPage() {
                       onClick={() => toggleConnect(connector.id)}
                       className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                         isConnected
-                          ? "border border-border/80 bg-background text-foreground hover:bg-muted"
-                          : "bg-foreground text-background hover:opacity-90 shadow-xs"
+                          ? "bg-muted/80 text-foreground hover:bg-destructive/15 hover:text-destructive border border-border"
+                          : "bg-primary text-primary-foreground hover:opacity-90 shadow-xs"
                       }`}
                     >
                       {isConnected ? (
-                        <span>Déconnecter</span>
+                        <>
+                          <CheckCircle2Icon className="size-3.5 text-emerald-500" />
+                          <span>Connecté</span>
+                        </>
                       ) : (
                         <>
                           <PlusIcon className="size-3.5" />

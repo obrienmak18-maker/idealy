@@ -5,6 +5,7 @@ import {
   BookOpenCheckIcon,
   BriefcaseBusinessIcon,
   CheckCircle2Icon,
+  CheckIcon,
   ChevronRightIcon,
   CircleAlertIcon,
   Code2Icon,
@@ -819,7 +820,7 @@ function DemoPreview({
                   return (
                     <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/90 p-3" key={step.id}>
                       <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold", done ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-500")}>
-                        {done ? "✓" : index + 1}
+                        {done ? <CheckIcon className="size-3.5" strokeWidth={2} /> : index + 1}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium">{step.label}</span>
@@ -1018,7 +1019,7 @@ function DemoConsole({
         {logs.map((log) => (
           <p className="flex gap-2" key={log.message}>
             <span className={log.label === "ok" ? "text-emerald-300" : "text-amber-300"}>
-              [{log.label === "ok" ? "✓" : "…"}]
+              [{log.label === "ok" ? "OK" : "…"}]
             </span>
             <span className="text-white/75">{log.message}</span>
           </p>

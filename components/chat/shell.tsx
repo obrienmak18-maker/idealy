@@ -116,9 +116,9 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   const { setArtifact } = useArtifact();
-  const [chatPaneWidth, setChatPaneWidth] = useState(40);
+  const [chatPaneWidth, setChatPaneWidth] = useState(33);
   const [isResizing, setIsResizing] = useState(false);
-  const resizeStartRef = useRef({ startWidth: 40, x: 0 });
+  const resizeStartRef = useRef({ startWidth: 33, x: 0 });
 
   const stopRef = useRef(stop);
   stopRef.current = stop;

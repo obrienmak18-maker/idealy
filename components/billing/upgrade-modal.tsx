@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Sparkles, Zap, Shield, ArrowRight, Loader2 } from "lucide-react";
+import { Check, Zap, Shield, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { IdealyMark } from "@/components/branding/idealy-logo";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,45 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
   const { currentWay, powerBalance } = useGamificationStore();
   const [annual, setAnnual] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const getTierNames = (way: string) => {
+    switch (way) {
+      case "ninja":
+        return {
+          free: "Genin",
+          pro: "Chunin",
+          business: "Jonin",
+          enterprise: "Kage / Sannin",
+          resource: "Chakra",
+        };
+      case "mage":
+        return {
+          free: "Apprenti",
+          pro: "Mage",
+          business: "Archimage",
+          enterprise: "Grand Primordial",
+          resource: "Mana",
+        };
+      case "hunter":
+        return {
+          free: "Candidat",
+          pro: "Hunter Licencié",
+          business: "Double Star Hunter",
+          enterprise: "Triple Star Hunter",
+          resource: "Nen",
+        };
+      default:
+        return {
+          free: "Starter",
+          pro: "Pro",
+          business: "Team",
+          enterprise: "Enterprise",
+          resource: "Power",
+        };
+    }
+  };
+
+  const wayTiers = getTierNames(currentWay);
 
   const isEn = language === "en";
   const isEs = language === "es";
@@ -65,12 +105,12 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl overflow-hidden p-0 sm:max-h-[92vh] border-border/80 bg-background/95 backdrop-blur-2xl">
+      <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh] p-0 border-border/80 bg-background/95 backdrop-blur-2xl">
         {/* Header with glow */}
         <div className="relative bg-gradient-to-b from-violet-500/15 via-background to-background p-6 pb-4">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-sky-400 text-white shadow-md shadow-violet-500/20">
-              <Sparkles className="size-5" />
+              <IdealyMark className="size-6 text-white" size={24} />
             </div>
             <div>
               <DialogTitle className="text-xl font-bold tracking-tight">
@@ -136,7 +176,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
                   <Zap className="size-4" />
                 </div>
                 <h3 className="font-bold text-lg text-foreground">
-                  {isEn ? "Plan Pro" : isEs ? "Plan Pro" : "Plan Pro"}
+                  {`Plan ${wayTiers.pro}`}
                 </h3>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -158,11 +198,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
 
               <ul className="mt-5 space-y-2.5 text-xs text-foreground/90">
                 {[
-                  isEn
-                    ? "1,000 Power Points / month (100 simple or 20 squad missions)"
-                    : isEs
-                    ? "1.000 Power Points / mes (100 simples o 20 misiones completas)"
-                    : "1 000 Power Points / mois (100 simples ou 20 escouades)",
+                  `1 000 ${wayTiers.resource} Points / mois (100 simples ou 20 escouades)`,
                   isEn
                     ? "Complete multi-agent squad (Architect, Builder, Reviewer)"
                     : isEs
@@ -202,7 +238,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <>
-                  <span>{isEn ? "Choose Pro Plan" : isEs ? "Elegir Plan Pro" : "Choisir le plan Pro"}</span>
+                  <span>{isEn ? `Choose ${wayTiers.pro}` : isEs ? `Elegir ${wayTiers.pro}` : `Choisir ${wayTiers.pro}`}</span>
                   <ArrowRight className="size-4" />
                 </>
               )}
@@ -217,7 +253,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
                   <Shield className="size-4" />
                 </div>
                 <h3 className="font-bold text-lg text-foreground">
-                  {isEn ? "Plan Business" : isEs ? "Plan Business" : "Plan Business"}
+                  {`Plan ${wayTiers.business}`}
                 </h3>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -239,11 +275,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
 
               <ul className="mt-5 space-y-2.5 text-xs text-foreground/90">
                 {[
-                  isEn
-                    ? "3,000 Power Points / month (300 simple or 60 squad missions)"
-                    : isEs
-                    ? "3.000 Power Points / mes (300 simples o 60 misiones)"
-                    : "3 000 Power Points / mois (300 simples ou 60 escouades)",
+                  `3 000 ${wayTiers.resource} Points / mois (300 simples ou 60 escouades)`,
                   isEn
                     ? "Customizable specialized agents and roles"
                     : isEs
@@ -289,7 +321,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
               ) : (
                 <>
                   <span>
-                    {isEn ? "Choose Business Plan" : isEs ? "Elegir Plan Business" : "Choisir le plan Business"}
+                    {isEn ? `Choose ${wayTiers.business}` : isEs ? `Elegir ${wayTiers.business}` : `Choisir ${wayTiers.business}`}
                   </span>
                   <ArrowRight className="size-4" />
                 </>

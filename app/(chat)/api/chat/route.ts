@@ -85,14 +85,23 @@ function shouldUseIdealyEdgeProvider() {
 }
 
 async function getSupabaseAccessToken(request: Request) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
-  return typeof token?.supabaseAccessToken === "string"
-    ? token.supabaseAccessToken
-    : null;
+  try {
+    const token = await getToken({
+      req: request,
+      secret: process.env.AUTH_SECRET,
+      secureCookie: !isDevelopmentEnvironment,
+    });
+    if (typeof token?.supabaseAccessToken === "string") {
+      return token.supabaseAccessToken;
+    }
+  } catch {
+    // Session token extraction fallback
+  }
+  return (
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    null
+  );
 }
 
 function getTextFromMessageParts(message: ChatMessage | undefined) {

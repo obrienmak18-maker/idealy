@@ -380,15 +380,23 @@ const PurePreviewMessage = ({
           isUser ? "flex flex-col items-end gap-2" : "flex items-start gap-3"
         )}
       >
-        {isAssistant && (
-          <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30">
-              <IdealyMark className="size-4" size={16} />
-            </div>
-          </div>
-        )}
         {isAssistant ? (
-          <div className="flex min-w-0 flex-1 flex-col gap-2">{content}</div>
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            {/* Affichage agent : avatar et nom au-dessus de sa réponse */}
+            <div className="flex items-center gap-2 pt-0.5">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30">
+                <IdealyMark className="size-3.5" size={14} />
+              </div>
+              <span className="text-[12.5px] font-semibold tracking-tight text-foreground/90">
+                Ly
+              </span>
+              <span className="text-[10px] text-muted-foreground font-mono">
+                • Architecte IA
+              </span>
+            </div>
+            {/* Le texte coule directement sur le fond de l'interface, sans bulle fermée ni bordure artificielle */}
+            <div className="min-w-0 flex-1 text-foreground/95">{content}</div>
+          </div>
         ) : (
           content
         )}

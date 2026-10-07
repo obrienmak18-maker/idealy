@@ -2,11 +2,14 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import equal from "fast-deep-equal";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Check,
+  ChevronRight,
   Database as DatabaseIcon,
   FileCode2,
   FileJson,
   Folder,
   TerminalSquare,
+  X,
 } from "lucide-react";
 import {
   type Dispatch,
@@ -704,21 +707,30 @@ function PureArtifact({
                   const hasCorrectionStarted = squadStatus === "auto_correction_started";
                   const isComplete = squadStatus === "ready";
                   const isFailed = squadStatus === "needs-fix";
-                  type Phase = { icon: string; color: string; text: string };
+                  type Phase = { iconType: "check" | "chevron" | "cross"; text: string };
                   const phases: Phase[] = [
-                    { icon: "✓", color: "text-emerald-300", text: "Preview viewport monté" },
-                    ...(hasPlan ? [{ icon: "✓", color: "text-emerald-300", text: "Plan Architecte établi" }] : [{ icon: "›", color: "text-sky-300", text: "Architecte analyse la demande…" }]),
-                    ...(hasBuilderStarted ? [{ icon: hasFileSaved ? "✓" : "›", color: hasFileSaved ? "text-emerald-300" : "text-sky-300", text: hasFileSaved ? `Builder — ${fileCount} fichier${fileCount !== 1 ? "s" : ""} générés` : "Builder génère les fichiers…" }] : []),
-                    ...(hasFileSaved ? [{ icon: hasReviewerRun ? "✓" : "›", color: hasReviewerRun ? "text-emerald-300" : "text-violet-300", text: hasReviewerRun ? "Reviewer — validation structurelle" : "Reviewer inspecte les fichiers…" }] : []),
-                    ...(hasCorrectionStarted ? [{ icon: isComplete ? "✓" : "›", color: isComplete ? "text-emerald-300" : "text-amber-300", text: "Correction automatique appliquée" }] : []),
-                    ...(isComplete ? [{ icon: "✓", color: "text-emerald-300", text: "Mission terminée — workspace prêt" }] : []),
-                    ...(isFailed && !isComplete ? [{ icon: "✕", color: "text-rose-300", text: "Correction requise — votre retour est nécessaire" }] : []),
-                    ...(!hasPlan && !isComplete && !isFailed ? [{ icon: "›", color: "text-sky-300", text: artifact.status === "streaming" ? "Génération en cours…" : "Build prêt" }] : []),
+                    { iconType: "check", text: "Preview viewport monté" },
+                    ...(hasPlan ? [{ iconType: "check" as const, text: "Plan Architecte établi" }] : [{ iconType: "chevron" as const, text: "Architecte analyse la demande…" }]),
+                    ...(hasBuilderStarted ? [{ iconType: hasFileSaved ? ("check" as const) : ("chevron" as const), text: hasFileSaved ? `Builder — ${fileCount} fichier${fileCount !== 1 ? "s" : ""} générés` : "Builder génère les fichiers…" }] : []),
+                    ...(hasFileSaved ? [{ iconType: hasReviewerRun ? ("check" as const) : ("chevron" as const), text: hasReviewerRun ? "Reviewer — validation structurelle" : "Reviewer inspecte les fichiers…" }] : []),
+                    ...(hasCorrectionStarted ? [{ iconType: isComplete ? ("check" as const) : ("chevron" as const), text: "Correction automatique appliquée" }] : []),
+                    ...(isComplete ? [{ iconType: "check" as const, text: "Mission terminée — workspace prêt" }] : []),
+                    ...(isFailed && !isComplete ? [{ iconType: "cross" as const, text: "Correction requise — votre retour est nécessaire" }] : []),
+                    ...(!hasPlan && !isComplete && !isFailed ? [{ iconType: "chevron" as const, text: artifact.status === "streaming" ? "Génération en cours…" : "Build prêt" }] : []),
                   ];
                   return (
                     <div className="space-y-2 text-[11px] text-muted-foreground">
                       {phases.map((phase, i) => (
-                        <p key={i}><span className={phase.color}>{phase.icon}</span> {phase.text}</p>
+                        <p key={i} className="flex items-center gap-1.5">
+                          {phase.iconType === "check" ? (
+                            <Check className="size-3.5 shrink-0 text-emerald-400" strokeWidth={1.5} />
+                          ) : phase.iconType === "cross" ? (
+                            <X className="size-3.5 shrink-0 text-rose-400" strokeWidth={1.5} />
+                          ) : (
+                            <ChevronRight className="size-3.5 shrink-0 text-sky-400" strokeWidth={1.5} />
+                          )}
+                          <span>{phase.text}</span>
+                        </p>
                       ))}
                     </div>
                   );

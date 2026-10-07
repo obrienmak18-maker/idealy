@@ -19,6 +19,7 @@ import {
   Sparkles,
   Star,
   Tablet,
+  TerminalSquare,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -114,6 +115,8 @@ export function BuildTopBar() {
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const pageMenuRef = useRef<HTMLDivElement>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsMenuRef = useRef<HTMLDivElement>(null);
   const missionId =
     typeof metadata?.missionId === "string" ? metadata.missionId : null;
   const [isSquadRunning, setIsSquadRunning] = useState(false);
@@ -121,16 +124,25 @@ export function BuildTopBar() {
   const [isCheckpointModalOpen, setIsCheckpointModalOpen] = useState(false);
 
   useEffect(() => {
-    setTitle("Projet Idealy");
     setFavorite(false);
     setRenameDraft("");
     setRenameOpen(false);
   }, [chatId]);
 
   useEffect(() => {
-    const currentChat = recentHistory?.chats.find((chat) => chat.id === chatId);
-    if (currentChat?.title) setTitle(currentChat.title);
-  }, [chatId, recentHistory]);
+    if (artifact?.title && artifact.title !== "init") {
+      setTitle(artifact.title);
+    } else {
+      const currentChat = recentHistory?.chats?.find((chat) => chat.id === chatId);
+      if (currentChat?.title) {
+        setTitle(currentChat.title);
+      } else if (typeof metadata?.title === "string" && metadata.title) {
+        setTitle(metadata.title);
+      } else if (chatId) {
+        setTitle("Studio Session");
+      }
+    }
+  }, [chatId, artifact?.title, recentHistory, metadata]);
 
   useEffect(() => {
     if (!chatId) return;
@@ -216,11 +228,15 @@ export function BuildTopBar() {
       if (!pageMenuRef.current?.contains(target)) {
         setPageMenuOpen(false);
       }
+      if (!toolsMenuRef.current?.contains(target)) {
+        setToolsOpen(false);
+      }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setMoreOpen(false);
         setPageMenuOpen(false);
+        setToolsOpen(false);
       }
     };
 
@@ -238,6 +254,7 @@ export function BuildTopBar() {
 
   const selectView = (nextView: WorkspaceView) => {
     setView(nextView);
+    setToolsOpen(false);
     dispatch("idealy:set-view", nextView);
   };
 
@@ -419,6 +436,23 @@ export function BuildTopBar() {
           <span className="truncate">{title}</span>
           <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
         </button>
+
+        {/* Présence multijoueur discrète */}
+        <div
+          className="hidden items-center -space-x-1.5 sm:flex ml-1"
+          title="3 collaborateurs actifs sur cette session"
+        >
+          <div className="relative flex size-6 items-center justify-center rounded-full border border-background bg-gradient-to-tr from-sky-500 to-indigo-600 text-[9.5px] font-bold text-white shadow-xs">
+            <span>A</span>
+            <span className="absolute -bottom-0.5 -right-0.5 size-1.5 rounded-full bg-emerald-500 ring-1 ring-background" />
+          </div>
+          <div className="relative flex size-6 items-center justify-center rounded-full border border-background bg-gradient-to-tr from-violet-500 to-purple-600 text-[9.5px] font-bold text-white shadow-xs">
+            <span>L</span>
+          </div>
+          <div className="relative flex size-6 items-center justify-center rounded-full border border-background bg-gradient-to-tr from-emerald-500 to-teal-600 text-[9.5px] font-bold text-white shadow-xs">
+            <span>M</span>
+          </div>
+        </div>
       </div>
 
       <div className="hidden items-center gap-1.5 md:flex">
@@ -433,23 +467,79 @@ export function BuildTopBar() {
             Preview
           </button>
           <button
-            aria-label="Code"
-            aria-pressed={view === "code"}
-            className={`${controlClass} size-8 ${view === "code" ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : ""}`}
-            onClick={() => selectView("code")}
-            type="button"
-          >
-            <Code2 className="size-4" />
-          </button>
-          <button
             aria-label="Database"
             aria-pressed={view === "database"}
-            className={`${controlClass} size-8 ${view === "database" ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : ""}`}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${view === "database" ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : "text-muted-foreground hover:text-sidebar-foreground"}`}
             onClick={() => selectView("database")}
             type="button"
           >
-            <Database className="size-4" />
+            <Database className="size-3.5" />
+            <span>Database</span>
           </button>
+
+          {/* Menu dropdown regroupant Console, Logs, Code et slots futurs */}
+          <div className="relative" ref={toolsMenuRef}>
+            <button
+              aria-expanded={toolsOpen}
+              aria-label="Outils supplémentaires du canvas"
+              className={`flex items-center justify-center rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors ${toolsOpen ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : "text-muted-foreground hover:text-sidebar-foreground"}`}
+              onClick={() => setToolsOpen((prev) => !prev)}
+              type="button"
+              title="Outils supplémentaires (Console, Logs, Code, Slots futurs...)"
+            >
+              <MoreHorizontal className="size-3.5" />
+            </button>
+            {toolsOpen ? (
+              <div className="absolute left-0 top-11 z-50 w-52 rounded-2xl border border-border/80 bg-popover/95 p-1.5 text-xs text-popover-foreground shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                  Outils du Canvas
+                </div>
+                <button
+                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground ${view === "code" ? "bg-accent/70 font-semibold" : ""}`}
+                  onClick={() => selectView("code")}
+                  type="button"
+                >
+                  <div className="flex items-center gap-2">
+                    <Code2 className="size-3.5 text-primary" />
+                    <span>Code source</span>
+                  </div>
+                  {view === "code" && <span className="text-[10px] text-muted-foreground font-mono">Actif</span>}
+                </button>
+                <button
+                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => {
+                    selectView("preview");
+                    dispatch("idealy:set-view", "console");
+                    setToolsOpen(false);
+                  }}
+                  type="button"
+                >
+                  <div className="flex items-center gap-2">
+                    <TerminalSquare className="size-3.5 text-sky-400" />
+                    <span>Console</span>
+                  </div>
+                </button>
+                <button
+                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => {
+                    selectView("preview");
+                    dispatch("idealy:set-view", "console");
+                    setToolsOpen(false);
+                  }}
+                  type="button"
+                >
+                  <div className="flex items-center gap-2">
+                    <History className="size-3.5 text-violet-400" />
+                    <span>Logs & Pipeline</span>
+                  </div>
+                </button>
+                <div className="my-1 border-t border-border/50" />
+                <div className="px-2.5 py-1 text-[10px] font-mono text-muted-foreground/60">
+                  Slots outils futurs (SQL, API)
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="relative" ref={pageMenuRef}>

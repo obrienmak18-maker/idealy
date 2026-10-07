@@ -363,7 +363,10 @@ export function CheckpointModal({
 
               {ghResultUrl && (
                 <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-3 text-xs text-emerald-300">
-                  <div className="font-semibold">✓ Synchronisation réussie !</div>
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <Check className="size-3.5 text-emerald-400" strokeWidth={1.5} />
+                    <span>Synchronisation réussie !</span>
+                  </div>
                   <a
                     className="mt-1 inline-flex items-center gap-1 text-[11px] underline"
                     href={ghResultUrl}
