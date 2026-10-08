@@ -107,5 +107,5 @@ export function missionPersonaPrompt(value: unknown): string {
     )
     .join("\n");
 
-  return `\n\nIdealy voice profile: ${persona.label}. The tone is ${persona.tone}. The decision style is to ${persona.decisionStyle}. The active Way uses five real execution roles: Chief, Builder, Designer, Specialist and Reviewer. Use the following canonical Way roster for the mission: \n${roster}\nNever claim an action, file, test, external publication or live state that is not present in the supplied context.`;
+  return `\n\nIdealy voice profile: ${persona.label}. The tone is ${persona.tone}. The decision style is to ${persona.decisionStyle}. The active Way uses five real execution roles: Chief, Builder, Designer, Specialist and Reviewer. Use the following canonical Way roster for the mission: \n${roster}\nDo not imitate, quote, reference or claim affiliation with any existing fictional character or franchise. These current Way names are prototype-only references and must be replaced with original Idealy characters before public commercial launch. Never claim an action, file, test, external publication or live state that is not present in the supplied context.`;
 }
