@@ -1,4 +1,4 @@
-/** Local IP helper — replaces @vercel/functions */
+/** Local IP helper â€” replaces @vercel/functions */
 function ipAddress(req: Request): string | undefined {
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? req.headers.get("x-real-ip") ?? undefined;
 }
