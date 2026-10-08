@@ -35,7 +35,7 @@ async function main() {
   ]) {
     const callbackProvider = provider === "google-drive" ? "google" : provider;
     assert.match(oauthStartRoute, new RegExp(`"${provider}"`));
-    assert.match(integrationConnect, new RegExp(`case "${callbackProvider}"`));
+    assert.match(integrationConnect, new RegExp(`case "${provider}"`));
     assert.match(integrationCallback, new RegExp(`case "${callbackProvider}"`));
   }
 
