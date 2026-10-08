@@ -185,7 +185,7 @@ export default function ConnectorsPage() {
                   {orbitIds.map((id, index) => {
                     const position = orbitPositions[index];
                     const connector = connectorCatalog.find((item) => item.id === id);
-                    const available = connector?.availability === "configured";
+                    const available = connectedProviders.includes(id);
                     return (
                       <button key={id} type="button" onClick={() => setSelected(id)} aria-label={`Détails : ${connector?.label ?? id}`} className={`absolute z-10 flex size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl border bg-background shadow-lg transition hover:scale-110 hover:border-primary/60 sm:size-12 ${available ? "border-emerald-500/40 shadow-emerald-500/10" : "border-border/90"}`} style={{ left: `${position.x}%`, top: `${position.y}%` }}>
                         <BrandMark id={id} size={21} />
@@ -219,7 +219,7 @@ export default function ConnectorsPage() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {visibleConnectors.map((connector) => {
-                  const configured = connector.availability === "configured";
+                  const configured = connectedProviders.includes(connector.id);
                   return (
                     <article key={connector.id} className="group rounded-xl border border-border/70 bg-card/40 p-4 transition hover:border-primary/35 hover:bg-card/80">
                       <div className="flex items-start gap-3">
@@ -248,7 +248,29 @@ export default function ConnectorsPage() {
             <p className="text-sm leading-6 text-muted-foreground">{selectedConnector.description}</p>
             <div className="mt-5 rounded-xl border border-border/70 bg-muted/30 p-3.5"><div className="mb-2 flex items-center gap-2 text-xs font-medium"><ShieldCheck size={14} className="text-emerald-500" /> Périmètre d'accès</div><p className="text-xs leading-5 text-muted-foreground">{selectedConnector.dataBoundary === "user-selected-assets" ? "Accès limité aux ressources que vous sélectionnez et autorisez." : selectedConnector.dataBoundary === "server-managed" ? "Les autorisations sont gérées côté serveur, sans exposer les secrets au navigateur." : "Accès aux métadonnées uniquement."}</p></div>
             <div className="mt-4"><p className="mb-2 text-xs font-medium">Capacités prévues</p><ul className="space-y-2">{selectedConnector.operations.slice(0, 4).map((operation) => <li key={operation.id} className="flex items-center gap-2 text-xs text-muted-foreground"><span className="size-1 rounded-full bg-primary" />{operation.label}</li>)}</ul></div>
-            <div className="mt-6 flex gap-2"><a href={selectedConnector.docsUrl} target="_blank" rel="noreferrer" className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2.5 text-xs font-medium transition hover:bg-muted">Documentation <ExternalLink size={13} /></a><button type="button" onClick={() => setSelected(null)} className="rounded-lg bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground">Terminé</button></div>
+            <div className="mt-6 flex gap-2">
+  <a href={selectedConnector.docsUrl} target="_blank" rel="noreferrer" className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2.5 text-xs font-medium transition hover:bg-muted">Documentation <ExternalLink size={13} /></a>
+  {(selectedConnector.id === "github" || selectedConnector.id === "vercel") && !connectedProviders.includes(selectedConnector.id) && (
+    <button
+      type="button"
+      onClick={async () => {
+        const route = selectedConnector.id === "github"
+          ? "/api/idealy/connectors/github/start"
+          : "/api/idealy/connectors/vercel/start";
+        const response = await fetch(route, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.url) {
+          throw new Error(payload?.error ?? "Connexion indisponible.");
+        }
+        window.location.assign(payload.url);
+      }}
+      className="rounded-lg bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground"
+    >
+      Connecter
+    </button>
+  )}
+  <button type="button" onClick={() => setSelected(null)} className="rounded-lg bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground">Terminé</button>
+</div>
           </section>
         </div>
       )}
