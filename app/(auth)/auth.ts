@@ -18,6 +18,7 @@ import {
   type SupabasePasswordAuthResult,
 } from "@/lib/idealy/supabase-auth";
 import { generateUUID } from "@/lib/utils";
+import { isDevelopmentEnvironment } from "@/lib/constants";
 import { verifyFirebaseToken } from "@/lib/firebase/admin";
 import { authConfig } from "./auth.config";
 
@@ -353,7 +354,7 @@ export const {
     }),
     Credentials({
       async authorize() {
-        if (process.env.DEMO_MODE === "true") {
+        if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
           return {
             email: "guest@idealy.local",
             id: "demo-guest",
@@ -362,8 +363,7 @@ export const {
           };
         }
 
-        const [guestUser] = await createGuestUser();
-        return { ...guestUser, type: "guest" };
+        throw new IdealyCredentialsSignin("invalid_credentials");
       },
       credentials: {},
       id: "guest",
