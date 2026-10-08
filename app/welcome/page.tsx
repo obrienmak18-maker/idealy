@@ -492,7 +492,7 @@ export default function WelcomePage() {
                 <input
                   aria-label={t.estimator.simpleLabel}
                   className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/20 accent-sky-400"
-                  max={100}
+                  max={200}
                   min={0}
                   onChange={(e) => setSimpleCount(Number(e.target.value))}
                   step={5}
@@ -510,7 +510,7 @@ export default function WelcomePage() {
                 <input
                   aria-label={t.estimator.squadLabel}
                   className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/20 accent-violet-400"
-                  max={50}
+                  max={100}
                   min={0}
                   onChange={(e) => setSquadCount(Number(e.target.value))}
                   step={1}
@@ -529,12 +529,10 @@ export default function WelcomePage() {
               <div className="mt-4 rounded-xl bg-white/10 border border-white/10 p-3 text-xs">
                 <span className="text-white/60">{t.estimator.recommendedFormula}</span>
                 <span className="font-bold text-white">
-                  {calculatedPoints <= 100
+                  {calculatedPoints <= powerPlanPolicy.free.monthlyAllocation
                     ? t.estimator.freePlan
-                    : calculatedPoints <= 1000
+                    : calculatedPoints <= powerPlanPolicy.pro.monthlyAllocation
                     ? t.estimator.proStandardPlan
-                    : calculatedPoints <= 2000
-                    ? t.estimator.proBoostPlan
                     : t.estimator.businessPlan}
                 </span>
               </div>
