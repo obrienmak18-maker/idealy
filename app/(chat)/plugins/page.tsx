@@ -120,7 +120,7 @@ export default function PluginsPage() {
               Construisez avec vos outils préférés
             </h1>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-              L'escouade d'agents se connecte à vos dépôts, bases de données et services de déploiement pour exécuter vos ordres en direct.
+              Connectez vos outils de travail à Idealy. Chaque accès reste lié à votre compte et aux autorisations que vous accordez.
             </p>
           </div>
 
