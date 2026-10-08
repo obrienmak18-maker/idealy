@@ -124,7 +124,7 @@ Deno.serve(async (request) => {
 
   const supabaseUrl = env("SUPABASE_URL");
   const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRoleKey || !config.clientId || !config.clientSecret && requestedProvider !== "google-drive") {
+  if (!supabaseUrl || !serviceRoleKey || !config.clientId || !config.clientSecret) {
     return corsResponse(
       { error: `${requestedProvider} OAuth is not configured on the server.` },
       503,
