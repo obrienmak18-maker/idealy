@@ -1,81 +1,224 @@
 import "server-only";
 
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gt,
-  gte,
-  inArray,
-  lt,
-  type SQL,
-} from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { ChatbotError } from "../errors";
 import { generateUUID } from "../utils";
-import {
-  type Chat,
-  chat,
-  type DBMessage,
-  document,
-  message,
-  type Suggestion,
-  stream,
-  suggestion,
-  type User,
-  user,
-  vote,
+import type {
+  Chat,
+  DBMessage,
+  Document,
+  Suggestion,
+  Stream,
+  User,
+  Vote,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
-const client = postgres(process.env.POSTGRES_URL ?? "");
-const db = drizzle(client);
+type JsonObject = Record<string, unknown>;
 
-function ensureDatabaseConfigured() {
-  if (!process.env.POSTGRES_URL?.trim()) {
-    throw new ChatbotError("bad_request:database", "Postgres is not configured.");
+type SupabaseConfig = {
+  url: string;
+  serviceRoleKey: string;
+};
+
+function ensureDatabaseConfigured(): SupabaseConfig {
+  const url =
+    process.env.SUPABASE_URL?.trim().replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/$/, "");
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  if (!url || !serviceRoleKey) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Supabase server persistence is not configured."
+    );
   }
+
+  return { serviceRoleKey, url };
+}
+
+async function requestSupabase<T>(
+  table: string,
+  options: {
+    method?: "GET" | "POST" | "PATCH" | "DELETE";
+    query?: Record<string, string>;
+    body?: unknown;
+  } = {}
+): Promise<T> {
+  const config = ensureDatabaseConfigured();
+  const url = new URL(`${config.url}/rest/v1/${encodeURIComponent(table)}`);
+
+  for (const [key, value] of Object.entries(options.query ?? {})) {
+    url.searchParams.set(key, value);
+  }
+
+  const response = await fetch(url, {
+    method: options.method ?? "GET",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+      "Content-Type": "application/json",
+      apikey: config.serviceRoleKey,
+      Prefer: "return=representation",
+    },
+    body:
+      options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new ChatbotError(
+      "bad_request:database",
+      `Supabase persistence request failed (${response.status}): ${detail.slice(0, 400)}`
+    );
+  }
+
+  if (response.status === 204) {
+    return [] as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+function mapUser(row: JsonObject): User {
+  return {
+    createdAt: new Date(String(row.createdAt)),
+    email: String(row.email),
+    emailVerified: Boolean(row.emailVerified),
+    id: String(row.id),
+    image: typeof row.image === "string" ? row.image : null,
+    isAnonymous: Boolean(row.isAnonymous),
+    name: typeof row.name === "string" ? row.name : null,
+    password: typeof row.password === "string" ? row.password : null,
+    supabaseUserId:
+      typeof row.supabaseUserId === "string" ? row.supabaseUserId : null,
+    updatedAt: new Date(String(row.updatedAt)),
+  };
+}
+
+function mapChat(row: JsonObject): Chat {
+  return {
+    createdAt: new Date(String(row.createdAt)),
+    id: String(row.id),
+    title: String(row.title),
+    userId: String(row.userId),
+    visibility:
+      row.visibility === "public" ? "public" : "private",
+  };
+}
+
+function mapMessage(row: JsonObject): DBMessage {
+  return {
+    attachments: (row.attachments ?? []) as DBMessage["attachments"],
+    chatId: String(row.chatId),
+    createdAt: new Date(String(row.createdAt)),
+    id: String(row.id),
+    parts: (row.parts ?? []) as DBMessage["parts"],
+    role: String(row.role),
+  };
+}
+
+function mapVote(row: JsonObject): Vote {
+  return {
+    chatId: String(row.chatId),
+    isUpvoted: Boolean(row.isUpvoted),
+    messageId: String(row.messageId),
+  };
+}
+
+function mapDocument(row: JsonObject): Document {
+  return {
+    content: typeof row.content === "string" ? row.content : null,
+    createdAt: new Date(String(row.createdAt)),
+    id: String(row.id),
+    kind:
+      row.text === "code" ||
+      row.text === "image" ||
+      row.text === "sheet"
+        ? row.text
+        : "text",
+    title: String(row.title),
+    userId: String(row.userId),
+  };
+}
+
+function mapSuggestion(row: JsonObject): Suggestion {
+  return {
+    createdAt: new Date(String(row.createdAt)),
+    description:
+      typeof row.description === "string" ? row.description : null,
+    documentCreatedAt: new Date(String(row.documentCreatedAt)),
+    documentId: String(row.documentId),
+    id: String(row.id),
+    isResolved: Boolean(row.isResolved),
+    originalText: String(row.originalText),
+    suggestedText: String(row.suggestedText),
+    userId: String(row.userId),
+  };
+}
+
+function mapStream(row: JsonObject): Stream {
+  return {
+    chatId: String(row.chatId),
+    createdAt: new Date(String(row.createdAt)),
+    id: String(row.id),
+  };
+}
+
+function csvList(values: readonly string[]) {
+  return `(${values.join(",")})`;
 }
 
 export async function getUser(email: string): Promise<User[]> {
-  ensureDatabaseConfigured();
-  try {
-    return await db.select().from(user).where(eq(user.email, email));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("User", {
+    query: {
+      select: "*",
+      email: `eq.${email.toLowerCase()}`,
+      order: "createdAt.asc",
+    },
+  });
+  return rows.map(mapUser);
 }
+
 export async function getUserBySupabaseUserId(
   supabaseUserId: string
 ): Promise<User | null> {
-  ensureDatabaseConfigured();
-  try {
-    const [selectedUser] = await db.select().from(user).where(eq(user.supabaseUserId, supabaseUserId)).limit(1);
-    return selectedUser ?? null;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("User", {
+    query: {
+      select: "*",
+      supabaseUserId: `eq.${supabaseUserId}`,
+      limit: "1",
+    },
+  });
+  return rows[0] ? mapUser(rows[0]) : null;
 }
-export async function createUser(email: string, password: string): Promise<User[]> {
-  ensureDatabaseConfigured();
+
+export async function createUser(
+  email: string,
+  password: string
+): Promise<User[]> {
   const hashedPassword = generateHashedPassword(password);
-  try {
-    const created = await db.insert(user).values({
+  const rows = await requestSupabase<JsonObject[]>("User", {
+    method: "POST",
+    body: {
       email: email.toLowerCase(),
       password: hashedPassword,
-    }).returning();
-    if (!created.length) throw new ChatbotError("bad_request:database", "User creation returned no row");
-    return created;
-  } catch (error) {
-    if (error instanceof ChatbotError) throw error;
-    throw new ChatbotError("bad_request:database", { cause: error });
+      emailVerified: false,
+      isAnonymous: false,
+    },
+  });
+
+  if (!rows[0]) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "User creation returned no row."
+    );
   }
+  return rows.map(mapUser);
 }
+
 export async function linkUserToSupabaseUser({
   localUserId,
   supabaseUserId,
@@ -83,32 +226,53 @@ export async function linkUserToSupabaseUser({
   localUserId: string;
   supabaseUserId: string;
 }) {
-  ensureDatabaseConfigured();
-  try {
-    const [linkedUser] = await db.update(user)
-      .set({ supabaseUserId, updatedAt: new Date() })
-      .where(eq(user.id, localUserId))
-      .returning({ id: user.id, supabaseUserId: user.supabaseUserId });
-    if (!linkedUser) throw new ChatbotError("not_found:database", "User not found");
-    return linkedUser;
-  } catch (error) {
-    if (error instanceof ChatbotError) throw error;
-    throw new ChatbotError("bad_request:database", { cause: error });
+  const rows = await requestSupabase<JsonObject[]>("User", {
+    method: "PATCH",
+    query: {
+      id: `eq.${localUserId}`,
+    },
+    body: {
+      supabaseUserId,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  if (!rows[0]) {
+    throw new ChatbotError("not_found:database", "User not found.");
   }
+
+  return {
+    id: String(rows[0].id),
+    supabaseUserId:
+      typeof rows[0].supabaseUserId === "string"
+        ? rows[0].supabaseUserId
+        : null,
+  };
 }
+
 export async function createGuestUser(): Promise<User[]> {
-  ensureDatabaseConfigured();
-  const email = `guest-${Date.now()}@idealy.local`;
+  const email = `guest-${Date.now()}@${"idealy.local"}`;
   const password = generateHashedPassword(generateUUID());
-  try {
-    const [created] = await db.insert(user).values({ email, password }).returning();
-    if (!created) throw new ChatbotError("bad_request:database", "Guest user creation returned no row");
-    return [created];
-  } catch (error) {
-    if (error instanceof ChatbotError) throw error;
-    throw new ChatbotError("bad_request:database", { cause: error });
+  const rows = await requestSupabase<JsonObject[]>("User", {
+    method: "POST",
+    body: {
+      email,
+      password,
+      emailVerified: false,
+      isAnonymous: true,
+    },
+  });
+
+  if (!rows[0]) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Guest user creation returned no row."
+    );
   }
+
+  return rows.map(mapUser);
 }
+
 export async function saveChat({
   id,
   userId,
@@ -120,43 +284,81 @@ export async function saveChat({
   title: string;
   visibility: VisibilityType;
 }) {
-  ensureDatabaseConfigured();
-  try {
-    const [created] = await db.insert(chat).values({ createdAt: new Date(), id, title, userId, visibility }).returning();
-    if (!created) throw new ChatbotError("bad_request:database", "Chat creation returned no row");
-    return created;
-  } catch (error) {
-    if (error instanceof ChatbotError) throw error;
-    throw new ChatbotError("bad_request:database", { cause: error });
+  const rows = await requestSupabase<JsonObject[]>("Chat", {
+    method: "POST",
+    body: {
+      createdAt: new Date().toISOString(),
+      id,
+      title,
+      userId,
+      visibility,
+    },
+  });
+  if (!rows[0]) {
+    throw new ChatbotError("bad_request:database", "Chat creation returned no row.");
   }
+  return mapChat(rows[0]);
 }
+
 export async function deleteChatById({ id }: { id: string }) {
-  ensureDatabaseConfigured();
-  try {
-    await db.delete(vote).where(eq(vote.chatId, id));
-    await db.delete(message).where(eq(message.chatId, id));
-    await db.delete(stream).where(eq(stream.chatId, id));
-    const [deleted] = await db.delete(chat).where(eq(chat.id, id)).returning();
-    return deleted;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  await requestSupabase("Vote_v2", {
+    method: "DELETE",
+    query: { chatId: `eq.${id}` },
+  });
+  await requestSupabase("Message_v2", {
+    method: "DELETE",
+    query: { chatId: `eq.${id}` },
+  });
+  await requestSupabase("Stream", {
+    method: "DELETE",
+    query: { chatId: `eq.${id}` },
+  });
+
+  const rows = await requestSupabase<JsonObject[]>("Chat", {
+    method: "DELETE",
+    query: { id: `eq.${id}` },
+  });
+  return rows[0] ? mapChat(rows[0]) : null;
 }
+
 export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
-  ensureDatabaseConfigured();
-  try {
-    const userChats = await db.select({ id: chat.id }).from(chat).where(eq(chat.userId, userId));
-    if (userChats.length === 0) return { deletedCount: 0 };
-    const chatIds = userChats.map((c) => c.id);
-    await db.delete(vote).where(inArray(vote.chatId, chatIds));
-    await db.delete(message).where(inArray(message.chatId, chatIds));
-    await db.delete(stream).where(inArray(stream.chatId, chatIds));
-    const deletedChats = await db.delete(chat).where(eq(chat.userId, userId)).returning();
-    return { deletedCount: deletedChats.length };
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+  const chats = await requestSupabase<JsonObject[]>("Chat", {
+    query: {
+      select: "id",
+      userId: `eq.${userId}`,
+    },
+  });
+
+  const chatIds = chats
+    .map((row) => String(row.id))
+    .filter(Boolean);
+
+  if (chatIds.length === 0) {
+    return { deletedCount: 0 };
   }
+
+  const inFilter = csvList(chatIds);
+  await requestSupabase("Vote_v2", {
+    method: "DELETE",
+    query: { chatId: `in.${inFilter}` },
+  });
+  await requestSupabase("Message_v2", {
+    method: "DELETE",
+    query: { chatId: `in.${inFilter}` },
+  });
+  await requestSupabase("Stream", {
+    method: "DELETE",
+    query: { chatId: `in.${inFilter}` },
+  });
+
+  const deleted = await requestSupabase<JsonObject[]>("Chat", {
+    method: "DELETE",
+    query: { userId: `eq.${userId}` },
+  });
+
+  return { deletedCount: deleted.length };
 }
+
 export async function getChatsByUserId({
   id,
   limit,
@@ -168,52 +370,109 @@ export async function getChatsByUserId({
   startingAfter: string | null;
   endingBefore: string | null;
 }) {
-  ensureDatabaseConfigured();
-  try {
-    const extendedLimit = limit + 1;
-    const query = (whereCondition?: SQL<unknown>) =>
-      db.select().from(chat).where(
-        whereCondition ? and(whereCondition, eq(chat.userId, id)) : eq(chat.userId, id),
-      ).orderBy(desc(chat.createdAt)).limit(extendedLimit);
+  const extendedLimit = limit + 1;
 
-    let filteredChats: Chat[] = [];
-    if (startingAfter) {
-      const [selectedChat] = await db.select().from(chat)
-        .where(and(eq(chat.id, startingAfter), eq(chat.userId, id))).limit(1);
-      if (!selectedChat) return { chats: [], hasMore: false };
-      filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
-    } else if (endingBefore) {
-      const [selectedChat] = await db.select().from(chat)
-        .where(and(eq(chat.id, endingBefore), eq(chat.userId, id))).limit(1);
-      if (!selectedChat) return { chats: [], hasMore: false };
-      filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
-    } else {
-      filteredChats = await query();
-    }
+  if (startingAfter) {
+    const selectedRows = await requestSupabase<JsonObject[]>("Chat", {
+      query: {
+        select: "*",
+        id: `eq.${startingAfter}`,
+        userId: `eq.${id}`,
+        limit: "1",
+      },
+    });
+    const selected = selectedRows[0] ? mapChat(selectedRows[0]) : null;
+    if (!selected) return { chats: [], hasMore: false };
 
-    const hasMore = filteredChats.length > limit;
-    return { chats: hasMore ? filteredChats.slice(0, limit) : filteredChats, hasMore };
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
+    const rows = await requestSupabase<JsonObject[]>("Chat", {
+      query: {
+        select: "*",
+        userId: `eq.${id}`,
+        createdAt: `gt.${selected.createdAt.toISOString()}`,
+        order: "createdAt.desc",
+        limit: String(extendedLimit),
+      },
+    });
+    const chats = rows.map(mapChat);
+    const hasMore = chats.length > limit;
+    return {
+      chats: hasMore ? chats.slice(0, limit) : chats,
+      hasMore,
+    };
   }
+
+  if (endingBefore) {
+    const selectedRows = await requestSupabase<JsonObject[]>("Chat", {
+      query: {
+        select: "*",
+        id: `eq.${endingBefore}`,
+        userId: `eq.${id}`,
+        limit: "1",
+      },
+    });
+    const selected = selectedRows[0] ? mapChat(selectedRows[0]) : null;
+    if (!selected) return { chats: [], hasMore: false };
+
+    const rows = await requestSupabase<JsonObject[]>("Chat", {
+      query: {
+        select: "*",
+        userId: `eq.${id}`,
+        createdAt: `lt.${selected.createdAt.toISOString()}`,
+        order: "createdAt.desc",
+        limit: String(extendedLimit),
+      },
+    });
+    const chats = rows.map(mapChat);
+    const hasMore = chats.length > limit;
+    return {
+      chats: hasMore ? chats.slice(0, limit) : chats,
+      hasMore,
+    };
+  }
+
+  const rows = await requestSupabase<JsonObject[]>("Chat", {
+    query: {
+      select: "*",
+      userId: `eq.${id}`,
+      order: "createdAt.desc",
+      limit: String(extendedLimit),
+    },
+  });
+  const chats = rows.map(mapChat);
+  const hasMore = chats.length > limit;
+  return {
+    chats: hasMore ? chats.slice(0, limit) : chats,
+    hasMore,
+  };
 }
+
 export async function getChatById({ id }: { id: string }) {
-  ensureDatabaseConfigured();
-  try {
-    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
-    return selectedChat ?? null;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Chat", {
+    query: {
+      select: "*",
+      id: `eq.${id}`,
+      limit: "1",
+    },
+  });
+  return rows[0] ? mapChat(rows[0]) : null;
 }
+
 export async function saveMessages({ messages }: { messages: DBMessage[] }) {
-  ensureDatabaseConfigured();
-  try {
-    return await db.insert(message).values(messages);
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  if (!messages.length) return [];
+  const rows = await requestSupabase<JsonObject[]>("Message_v2", {
+    method: "POST",
+    body: messages.map((message) => ({
+      attachments: message.attachments,
+      chatId: message.chatId,
+      createdAt: message.createdAt.toISOString(),
+      id: message.id,
+      parts: message.parts,
+      role: message.role,
+    })),
+  });
+  return rows.map(mapMessage);
 }
+
 export async function updateMessage({
   id,
   parts,
@@ -221,21 +480,25 @@ export async function updateMessage({
   id: string;
   parts: DBMessage["parts"];
 }) {
-  ensureDatabaseConfigured();
-  try {
-    return await db.update(message).set({ parts }).where(eq(message.id, id));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Message_v2", {
+    method: "PATCH",
+    query: { id: `eq.${id}` },
+    body: { parts },
+  });
+  return rows.map(mapMessage);
 }
+
 export async function getMessagesByChatId({ id }: { id: string }) {
-  ensureDatabaseConfigured();
-  try {
-    return await db.select().from(message).where(eq(message.chatId, id)).orderBy(asc(message.createdAt));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Message_v2", {
+    query: {
+      select: "*",
+      chatId: `eq.${id}`,
+      order: "createdAt.asc",
+    },
+  });
+  return rows.map(mapMessage);
 }
+
 export async function voteMessage({
   chatId,
   messageId,
@@ -245,38 +508,50 @@ export async function voteMessage({
   messageId: string;
   type: "up" | "down";
 }) {
-  try {
-    const [existingVote] = await db
-      .select()
-      .from(vote)
-      .where(and(eq(vote.messageId, messageId)));
+  const existingRows = await requestSupabase<JsonObject[]>("Vote_v2", {
+    query: {
+      select: "*",
+      chatId: `eq.${chatId}`,
+      messageId: `eq.${messageId}`,
+      limit: "1",
+    },
+  });
 
-    if (existingVote) {
-      return await db
-        .update(vote)
-        .set({ isUpvoted: type === "up" })
-        .where(and(eq(vote.messageId, messageId), eq(vote.chatId, chatId)));
-    }
-    return await db.insert(vote).values({
-      chatId,
-      isUpvoted: type === "up",
-      messageId,
+  const values = {
+    chatId,
+    isUpvoted: type === "up",
+    messageId,
+  };
+
+  if (existingRows[0]) {
+    const rows = await requestSupabase<JsonObject[]>("Vote_v2", {
+      method: "PATCH",
+      query: {
+        chatId: `eq.${chatId}`,
+        messageId: `eq.${messageId}`,
+      },
+      body: { isUpvoted: values.isUpvoted },
     });
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
-    });
+    return rows.map(mapVote);
   }
+
+  const rows = await requestSupabase<JsonObject[]>("Vote_v2", {
+    method: "POST",
+    body: values,
+  });
+  return rows.map(mapVote);
 }
 
 export async function getVotesByChatId({ id }: { id: string }) {
-  ensureDatabaseConfigured();
-  try {
-    return await db.select().from(vote).where(eq(vote.chatId, id));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Vote_v2", {
+    query: {
+      select: "*",
+      chatId: `eq.${id}`,
+    },
+  });
+  return rows.map(mapVote);
 }
+
 export async function saveDocument({
   id,
   title,
@@ -290,23 +565,18 @@ export async function saveDocument({
   content: string;
   userId: string;
 }) {
-  try {
-    return await db
-      .insert(document)
-      .values({
-        content,
-        createdAt: new Date(),
-        id,
-        kind,
-        title,
-        userId,
-      })
-      .returning();
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
-    });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Document", {
+    method: "POST",
+    body: {
+      content,
+      createdAt: new Date().toISOString(),
+      id,
+      text: kind,
+      title,
+      userId,
+    },
+  });
+  return rows.map(mapDocument);
 }
 
 export async function updateDocumentContent({
@@ -316,60 +586,52 @@ export async function updateDocumentContent({
   id: string;
   content: string;
 }) {
-  try {
-    const docs = await db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(desc(document.createdAt))
-      .limit(1);
+  const latestRows = await requestSupabase<JsonObject[]>("Document", {
+    query: {
+      select: "*",
+      id: `eq.${id}`,
+      order: "createdAt.desc",
+      limit: "1",
+    },
+  });
 
-    const [latest] = docs;
-    if (!latest) {
-      throw new ChatbotError("not_found:database", "Document not found");
-    }
-
-    return await db
-      .update(document)
-      .set({ content })
-      .where(and(eq(document.id, id), eq(document.createdAt, latest.createdAt)))
-      .returning();
-  } catch (error) {
-    if (error instanceof ChatbotError) {
-      throw error;
-    }
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
-    });
+  const latest = latestRows[0] ? mapDocument(latestRows[0]) : null;
+  if (!latest) {
+    throw new ChatbotError("not_found:database", "Document not found.");
   }
+
+  const rows = await requestSupabase<JsonObject[]>("Document", {
+    method: "PATCH",
+    query: {
+      id: `eq.${id}`,
+      createdAt: `eq.${latest.createdAt.toISOString()}`,
+    },
+    body: { content },
+  });
+  return rows.map(mapDocument);
 }
 
 export async function getDocumentsById({ id }: { id: string }) {
-  try {
-    const documents = await db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(asc(document.createdAt));
-
-    return documents;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Document", {
+    query: {
+      select: "*",
+      id: `eq.${id}`,
+      order: "createdAt.asc",
+    },
+  });
+  return rows.map(mapDocument);
 }
 
 export async function getDocumentById({ id }: { id: string }) {
-  try {
-    const [selectedDocument] = await db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(desc(document.createdAt));
-
-    return selectedDocument;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Document", {
+    query: {
+      select: "*",
+      id: `eq.${id}`,
+      order: "createdAt.desc",
+      limit: "1",
+    },
+  });
+  return rows[0] ? mapDocument(rows[0]) : undefined;
 }
 
 export async function deleteDocumentsByIdAfterTimestamp({
@@ -379,23 +641,22 @@ export async function deleteDocumentsByIdAfterTimestamp({
   id: string;
   timestamp: Date;
 }) {
-  try {
-    await db
-      .delete(suggestion)
-      .where(
-        and(
-          eq(suggestion.documentId, id),
-          gt(suggestion.documentCreatedAt, timestamp)
-        )
-      );
+  await requestSupabase("Suggestion", {
+    method: "DELETE",
+    query: {
+      documentId: `eq.${id}`,
+      documentCreatedAt: `gt.${timestamp.toISOString()}`,
+    },
+  });
 
-    return await db
-      .delete(document)
-      .where(and(eq(document.id, id), gt(document.createdAt, timestamp)))
-      .returning();
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Document", {
+    method: "DELETE",
+    query: {
+      id: `eq.${id}`,
+      createdAt: `gt.${timestamp.toISOString()}`,
+    },
+  });
+  return rows.map(mapDocument);
 }
 
 export async function saveSuggestions({
@@ -403,11 +664,22 @@ export async function saveSuggestions({
 }: {
   suggestions: Suggestion[];
 }) {
-  try {
-    return await db.insert(suggestion).values(suggestions);
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  if (!suggestions.length) return [];
+  const rows = await requestSupabase<JsonObject[]>("Suggestion", {
+    method: "POST",
+    body: suggestions.map((item) => ({
+      createdAt: item.createdAt.toISOString(),
+      description: item.description,
+      documentCreatedAt: item.documentCreatedAt.toISOString(),
+      documentId: item.documentId,
+      id: item.id,
+      isResolved: item.isResolved,
+      originalText: item.originalText,
+      suggestedText: item.suggestedText,
+      userId: item.userId,
+    })),
+  });
+  return rows.map(mapSuggestion);
 }
 
 export async function getSuggestionsByDocumentId({
@@ -415,24 +687,25 @@ export async function getSuggestionsByDocumentId({
 }: {
   documentId: string;
 }) {
-  try {
-    return await db
-      .select()
-      .from(suggestion)
-      .where(eq(suggestion.documentId, documentId));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Suggestion", {
+    query: {
+      select: "*",
+      documentId: `eq.${documentId}`,
+    },
+  });
+  return rows.map(mapSuggestion);
 }
 
 export async function getMessageById({ id }: { id: string }) {
-  ensureDatabaseConfigured();
-  try {
-    return await db.select().from(message).where(eq(message.id, id));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Message_v2", {
+    query: {
+      select: "*",
+      id: `eq.${id}`,
+    },
+  });
+  return rows.map(mapMessage);
 }
+
 export async function deleteMessagesByChatIdAfterTimestamp({
   chatId,
   timestamp,
@@ -440,19 +713,31 @@ export async function deleteMessagesByChatIdAfterTimestamp({
   chatId: string;
   timestamp: Date;
 }) {
-  ensureDatabaseConfigured();
-  try {
-    const messagesToDelete = await db.select({ id: message.id }).from(message)
-      .where(and(eq(message.chatId, chatId), gte(message.createdAt, timestamp)));
-    const messageIds = messagesToDelete.map((m) => m.id);
-    if (messageIds.length === 0) return [];
-    await db.delete(vote).where(inArray(vote.messageId, messageIds));
-    return await db.delete(message)
-      .where(and(eq(message.chatId, chatId), gte(message.createdAt, timestamp))).returning();
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const messageRows = await requestSupabase<JsonObject[]>("Message_v2", {
+    query: {
+      select: "id",
+      chatId: `eq.${chatId}`,
+      createdAt: `gte.${timestamp.toISOString()}`,
+    },
+  });
+  const messageIds = messageRows.map((row) => String(row.id));
+  if (messageIds.length === 0) return [];
+
+  await requestSupabase("Vote_v2", {
+    method: "DELETE",
+    query: { messageId: `in.${csvList(messageIds)}` },
+  });
+
+  const rows = await requestSupabase<JsonObject[]>("Message_v2", {
+    method: "DELETE",
+    query: {
+      chatId: `eq.${chatId}`,
+      createdAt: `gte.${timestamp.toISOString()}`,
+    },
+  });
+  return rows.map(mapMessage);
 }
+
 export async function updateChatVisibilityById({
   chatId,
   visibility,
@@ -460,11 +745,12 @@ export async function updateChatVisibilityById({
   chatId: string;
   visibility: "private" | "public";
 }) {
-  try {
-    return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Chat", {
+    method: "PATCH",
+    query: { id: `eq.${chatId}` },
+    body: { visibility },
+  });
+  return rows.map(mapChat);
 }
 
 export async function updateChatTitleById({
@@ -475,9 +761,15 @@ export async function updateChatTitleById({
   title: string;
 }) {
   try {
-    return await db.update(chat).set({ title }).where(eq(chat.id, chatId));
+    const rows = await requestSupabase<JsonObject[]>("Chat", {
+      method: "PATCH",
+      query: { id: `eq.${chatId}` },
+      body: { title },
+    });
+    return rows.map(mapChat);
   } catch {
     // Best effort title update.
+    return [];
   }
 }
 
@@ -488,18 +780,31 @@ export async function getMessageCountByUserId({
   id: string;
   differenceInHours: number;
 }) {
-  ensureDatabaseConfigured();
-  try {
-    const cutoffTime = new Date(Date.now() - differenceInHours * 60 * 60 * 1000);
-    const [stats] = await db.select({ count: count(message.id) }).from(message)
-      .innerJoin(chat, eq(message.chatId, chat.id))
-      .where(and(eq(chat.userId, id), gte(message.createdAt, cutoffTime), eq(message.role, "user")))
-      .execute();
-    return stats?.count ?? 0;
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const cutoff = new Date(
+    Date.now() - differenceInHours * 60 * 60 * 1000
+  ).toISOString();
+
+  const chats = await requestSupabase<JsonObject[]>("Chat", {
+    query: {
+      select: "id",
+      userId: `eq.${id}`,
+    },
+  });
+  const chatIds = chats.map((row) => String(row.id));
+  if (chatIds.length === 0) return 0;
+
+  const messages = await requestSupabase<JsonObject[]>("Message_v2", {
+    query: {
+      select: "id",
+      chatId: `in.${csvList(chatIds)}`,
+      role: "eq.user",
+      createdAt: `gte.${cutoff}`,
+      limit: "20000",
+    },
+  });
+  return messages.length;
 }
+
 export async function createStreamId({
   streamId,
   chatId,
@@ -507,20 +812,23 @@ export async function createStreamId({
   streamId: string;
   chatId: string;
 }) {
-  ensureDatabaseConfigured();
-  try {
-    await db.insert(stream).values({ chatId, createdAt: new Date(), id: streamId });
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  await requestSupabase("Stream", {
+    method: "POST",
+    body: {
+      chatId,
+      createdAt: new Date().toISOString(),
+      id: streamId,
+    },
+  });
 }
+
 export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
-  ensureDatabaseConfigured();
-  try {
-    const streamIds = await db.select({ id: stream.id }).from(stream)
-      .where(eq(stream.chatId, chatId)).orderBy(asc(stream.createdAt)).execute();
-    return streamIds.map(({ id }) => id);
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
-  }
+  const rows = await requestSupabase<JsonObject[]>("Stream", {
+    query: {
+      select: "*",
+      chatId: `eq.${chatId}`,
+      order: "createdAt.asc",
+    },
+  });
+  return rows.map(mapStream).map(({ id }) => id);
 }
