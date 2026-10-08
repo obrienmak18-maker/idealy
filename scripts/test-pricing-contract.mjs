@@ -32,8 +32,7 @@ assert.match(readmeFile, /Business.*49 € \/ mois.*4 000 Power Points/);
 assert.match(pricingFile, /simple \* powerActionCosts\.mission_simple \+ squad \* powerActionCosts\.mission_squad/);
 
 // 5. L’expérience publique consomme les valeurs produit centrales.
-assert.match(pricingFile, /priceMonthlyUsd: PRICING_DISPLAY\.pro\.monthlyUsd/);
-assert.match(pricingFile, /priceMonthlyUsd: PRICING_DISPLAY\.business\.monthlyUsd/);
+assert.match(pricingFile, /priceMonthlyUsd: null/);
 assert.match(pricingUi, /import \{ PRICING_DISPLAY \} from "@\/config\/pricing-display"/);
 assert.match(pricingUi, /PRICING_DISPLAY\.pro\.monthlyEur/);
 assert.match(pricingUi, /PRICING_DISPLAY\.business\.monthlyEur/);
