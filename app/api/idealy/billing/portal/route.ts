@@ -11,17 +11,14 @@ export async function POST(request: Request) {
     secureCookie: !isDevelopmentEnvironment,
   });
 
-  const explicitAuthorization = request.headers.get("authorization");
   const supabaseAccessToken =
     typeof token?.supabaseAccessToken === "string"
       ? token.supabaseAccessToken
       : null;
 
-  const authorization =
-    explicitAuthorization ??
-    (supabaseAccessToken ? `Bearer ${supabaseAccessToken}` : null);
+  const authorization = supabaseAccessToken ? `Bearer ${supabaseAccessToken}` : null;
 
-  if (!authorization || (!session?.user && !token)) {
+  if (!authorization || !session?.user || !token) {
     return Response.json(
       { error: "Une session Idealy authentifiée est requise." },
       { status: 401 }
@@ -64,9 +61,11 @@ export async function POST(request: Request) {
     );
 
     if (!response.ok) {
-      return Response.json({
-        url: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/welcome#tarifs`,
-      });
+      const payload = await response.text().catch(() => "");
+      return Response.json(
+        { error: payload || "Billing service is temporarily unavailable." },
+        { status: response.status || 503 },
+      );
     }
 
     return new Response(response.body, {
@@ -78,9 +77,10 @@ export async function POST(request: Request) {
       status: response.status,
     });
   } catch {
-    return Response.json({
-      url: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/welcome#tarifs`,
-    });
+    return Response.json(
+      { error: "Billing service is temporarily unavailable." },
+      { status: 503 },
+    );
   }
 }
 
