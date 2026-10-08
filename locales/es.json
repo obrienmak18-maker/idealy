@@ -32,12 +32,12 @@
     "badge": "Tu estudio de IA multiagente para convertir ideas en aplicaciones listas para producción",
     "title1": "Da vida a tus ideas.",
     "title2": "Una misión a la vez.",
-    "subtitle": "Idealy orquesta un escuadrón de agentes expertos (Arquitecto, Constructor, Revisor) para convertir tu visión en código de producción limpio y funcional.",
+    "subtitle": "Idealy orquesta un verdadero escuadrón de cinco agentes IA para transformar tu visión en software verificable.",
     "ctaPrimary": "Iniciar mi primera misión",
     "ctaSecondary": "Explorar planes",
     "features": [
       "Describe tu proyecto en lenguaje natural",
-      "El escuadrón de agentes planifica, programa y valida",
+      "El escuadrón de cinco agentes planifica, construye, audita y valida",
       "Vista previa en vivo al instante, itera y descarga en ZIP"
     ]
   },
@@ -93,7 +93,7 @@
     "subtitle": "Ajusta tu volumen de desarrollo para encontrar el plan ideal.",
     "simpleLabel": "Misiones simples (1 agente)",
     "simpleUnit": "mes",
-    "squadLabel": "Misiones completas (3 agentes)",
+    "squadLabel": "Misiones completas (5 agentes)",
     "squadUnit": "mes",
     "estimatedNeed": "Necesidad estimada:",
     "perMonth": "Power Points / mes",
@@ -116,7 +116,7 @@
         "price": "0 €",
         "period": "Gratis para siempre",
         "badge": "Para probar",
-        "desc": "100 créditos de ejecución gratuitos para probar tus primeras aplicaciones y explorar el estudio.",
+        "desc": "200 Power al mes para probar tus primeras aplicaciones y explorar el estudio.",
         "features": [
           "100 créditos de ejecución de bienvenida",
           "Acceso a Workspace interactivo y Live Preview",
@@ -128,13 +128,13 @@
       },
       "pro": {
         "name": "Pro",
-        "price": "29 €",
+        "price": "19 €",
         "period": "por mes",
         "badge": "Más Popular",
         "desc": "Mayor capacidad de cálculo, asistentes IA paralelos, modelos de alta velocidad e integraciones completas.",
         "features": [
-          "Volumen Power personalizable (1 000 a 6 000 créditos)",
-          "Asistentes IA paralelos (Arquitecto, Constructor, Revisor)",
+          "2 500 Power / mes, hasta 3 500 almacenados",
+          "Escuadrón IA especializado de cinco agentes",
           "Modelos de alta velocidad y prioridad de red",
           "Exportación y sincronización directa con GitHub",
           "Historial completo y memoria continua",
@@ -144,12 +144,12 @@
       },
       "business": {
         "name": "Business Studio",
-        "price": "89 €",
+        "price": "49 €",
         "period": "por mes",
         "badge": "Equipos y Escala",
         "desc": "Para estudios, agencias y equipos que exigen máxima potencia y colaboración fluida.",
         "features": [
-          "5 000+ créditos de ejecución / mes",
+          "4 000 Power / mes, hasta 7 000 almacenados",
           "Workspaces colaborativos y uso compartido",
           "Conectores y plugins ilimitados (Figma, Supabase, Slack)",
           "Servidores MCP y API REST personalizadas",
