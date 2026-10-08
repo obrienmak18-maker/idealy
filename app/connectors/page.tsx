@@ -44,6 +44,16 @@ const brandColors: Record<string, string> = {
 };
 
 const orbitIds = ["github", "figma", "supabase", "stripe", "vercel", "slack"];
+const oauthConnectors = new Set([
+  "github",
+  "vercel",
+  "canva",
+  "figma",
+  "google-drive",
+  "notion",
+  "slack",
+]);
+
 const orbitPositions = [
   { x: 50, y: 8 },
   { x: 81, y: 24 },
@@ -225,7 +235,7 @@ export default function ConnectorsPage() {
                     <article key={connector.id} className="group rounded-xl border border-border/70 bg-card/40 p-4 transition hover:border-primary/35 hover:bg-card/80">
                       <div className="flex items-start gap-3">
                         <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background text-foreground"><BrandMark id={connector.id} size={23} /></div>
-                        <div className="min-w-0 flex-1 pt-0.5"><div className="flex items-center gap-2"><h3 className="text-sm font-semibold">{connector.label}</h3><span className={`size-1.5 rounded-full ${configured ? "bg-emerald-500" : "bg-muted-foreground/40"}`} /><span className="text-[10px] text-muted-foreground">{configured ? "Configuré" : "Bientôt disponible"}</span></div><p className="mt-1.5 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{connector.description}</p></div>
+                        <div className="min-w-0 flex-1 pt-0.5"><div className="flex items-center gap-2"><h3 className="text-sm font-semibold">{connector.label}</h3><span className={`size-1.5 rounded-full ${configured ? "bg-emerald-500" : "bg-muted-foreground/40"}`} /><span className="text-[10px] text-muted-foreground">{configured ? "Connecté" : oauthConnectors.has(connector.id) ? "À connecter" : "À venir"}</span></div><p className="mt-1.5 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{connector.description}</p></div>
                       </div>
                       <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
                         <span className="text-[10px] uppercase tracking-[.12em] text-muted-foreground">{connector.category}</span>
@@ -245,7 +255,7 @@ export default function ConnectorsPage() {
       {selectedConnector && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
           <section role="dialog" aria-modal="true" aria-labelledby="connector-detail-title" className="w-full max-w-md rounded-t-2xl border border-border bg-background p-5 shadow-2xl sm:rounded-2xl sm:p-6">
-            <div className="mb-5 flex items-start justify-between"><div className="flex items-center gap-3"><div className="flex size-12 items-center justify-center rounded-xl border border-border bg-card"><BrandMark id={selectedConnector.id} size={25} /></div><div><h2 id="connector-detail-title" className="font-semibold">{selectedConnector.label}</h2><p className="mt-0.5 text-xs text-muted-foreground">{selectedConnector.availability === "configured" ? "Intégration configurée" : "Intégration planifiée"}</p></div></div><button type="button" onClick={() => setSelected(null)} aria-label="Fermer" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"><X size={16} /></button></div>
+            <div className="mb-5 flex items-start justify-between"><div className="flex items-center gap-3"><div className="flex size-12 items-center justify-center rounded-xl border border-border bg-card"><BrandMark id={selectedConnector.id} size={25} /></div><div><h2 id="connector-detail-title" className="font-semibold">{selectedConnector.label}</h2><p className="mt-0.5 text-xs text-muted-foreground">{connectedProviders.includes(selectedConnector.id) ? "Connecté" : oauthConnectors.has(selectedConnector.id) ? "Prêt à connecter" : "À venir"}</p></div></div><button type="button" onClick={() => setSelected(null)} aria-label="Fermer" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"><X size={16} /></button></div>
             <p className="text-sm leading-6 text-muted-foreground">{selectedConnector.description}</p>
             <div className="mt-5 rounded-xl border border-border/70 bg-muted/30 p-3.5"><div className="mb-2 flex items-center gap-2 text-xs font-medium"><ShieldCheck size={14} className="text-emerald-500" /> Périmètre d'accès</div><p className="text-xs leading-5 text-muted-foreground">{selectedConnector.dataBoundary === "user-selected-assets" ? "Accès limité aux ressources que vous sélectionnez et autorisez." : selectedConnector.dataBoundary === "server-managed" ? "Les autorisations sont gérées côté serveur, sans exposer les secrets au navigateur." : "Accès aux métadonnées uniquement."}</p></div>
             <div className="mt-4"><p className="mb-2 text-xs font-medium">Capacités prévues</p><ul className="space-y-2">{selectedConnector.operations.slice(0, 4).map((operation) => <li key={operation.id} className="flex items-center gap-2 text-xs text-muted-foreground"><span className="size-1 rounded-full bg-primary" />{operation.label}</li>)}</ul></div>
