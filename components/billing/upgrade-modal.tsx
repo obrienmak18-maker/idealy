@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/provider";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { getPricingTier } from "@/config/pricing";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -100,8 +101,14 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
     }
   };
 
-  const proPrice = annual ? "23" : "29";
-  const businessPrice = annual ? "63" : "79";
+  const proTier = getPricingTier("pro");
+  const businessTier = getPricingTier("business");
+  const proPrice = annual
+    ? (proTier.annualPriceEur ?? proTier.priceMonthlyEur * 12) / 12
+    : proTier.priceMonthlyEur;
+  const businessPrice = annual
+    ? (businessTier.annualPriceEur ?? businessTier.priceMonthlyEur * 12) / 12
+    : businessTier.priceMonthlyEur;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,7 +162,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
               >
                 <span>{isEn ? "Yearly" : isEs ? "Anual" : "Annuel"}</span>
                 <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                  -20%
+                  {isEn ? "2 months free" : isEs ? "2 meses gratis" : "2 mois offerts"}
                 </span>
               </button>
             </div>
@@ -189,7 +196,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
 
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="text-4xl font-extrabold tracking-tight text-foreground">
-                  {proPrice} €
+                  {proPrice.toFixed(2)} €
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {isEn ? "/ month" : isEs ? "/ mes" : "/ mois"}
@@ -198,7 +205,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
 
               <ul className="mt-5 space-y-2.5 text-xs text-foreground/90">
                 {[
-                  `1 000 ${wayTiers.resource} Points / mois (100 simples ou 20 escouades)`,
+                  `${proTier.power.monthlyAllocation.toLocaleString()} ${wayTiers.resource} Points / mois`,
                   isEn
                     ? "Complete multi-agent squad (Architect, Builder, Reviewer)"
                     : isEs
@@ -266,7 +273,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
 
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="text-4xl font-extrabold tracking-tight text-foreground">
-                  {businessPrice} €
+                  {businessPrice.toFixed(2)} €
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {isEn ? "/ month" : isEs ? "/ mes" : "/ mois"}
@@ -275,7 +282,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
 
               <ul className="mt-5 space-y-2.5 text-xs text-foreground/90">
                 {[
-                  `3 000 ${wayTiers.resource} Points / mois (300 simples ou 60 escouades)`,
+                  `${businessTier.power.monthlyAllocation.toLocaleString()} ${wayTiers.resource} Points / mois`,
                   isEn
                     ? "Customizable specialized agents and roles"
                     : isEs
