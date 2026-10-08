@@ -2,7 +2,7 @@ import { getToken } from "next-auth/jwt";
 import { createClient } from "@supabase/supabase-js";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { pluginRegistry } from "@/lib/idealy/plugins";
-import { resolveGrantablePermissions } from "@/lib/idealy/plugins/permissions";
+import { checkPlanMinimum, resolveGrantablePermissions } from "@/lib/idealy/plugins/permissions";
 import {
   getVerifiedUserPlan,
   listPluginInstallations,
@@ -61,6 +61,20 @@ export async function POST(
   const { error: planError, plan } = await getVerifiedUserPlan({ accessToken });
   if (planError || !plan) {
     return json({ error: planError ?? "Plan indisponible." }, 503);
+  }
+
+  const planCheck = checkPlanMinimum({
+    minimumPlan: manifest.minimumPlan,
+    userPlan: plan,
+  });
+  if (!planCheck.allowed) {
+    return json(
+      {
+        code: planCheck.code,
+        error: planCheck.reason,
+      },
+      403,
+    );
   }
 
   const { error: existingError, installations } =
