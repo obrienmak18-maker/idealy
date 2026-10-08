@@ -441,9 +441,26 @@ Deno.serve(async (request) => {
     let specialistReport: Record<string, unknown> | null = null;
     let lastReviewerReport: Record<string, unknown> | null = null;
 
-    while (iteration <= MAX_REVIEW_ITERATIONS) {
-      await delay(150);
+    // The five Way agents form the real execution team. The chief creates the
+    // mission plan first; the designer and specialist are independent planning
+    // nodes and can run concurrently; the builder consumes both plans; the
+    // reviewer closes the loop. This is the live runtime's first safe DAG edge.
+    [designerReport, specialistReport] = await Promise.all([
+      runAgent(
+        designer,
+        1,
+        `Agis comme ${designer.name}, spécialiste ${designer.role}. Tu es le responsable UI/UX de préparation de mission. À partir du plan du chef, définis les contraintes d'expérience, de structure d'écran, de cohérence visuelle et d'accessibilité que le builder doit respecter. Ne modifie aucun fichier et n'appelle aucun connecteur. Signale uniquement des exigences vérifiables et produis un rapport structuré. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 10_000)}. Contexte : ${missionContext}`,
+        { planOnly: true },
+      ),
+      runAgent(
+        specialist,
+        1,
+        `Agis comme ${specialist.name}, spécialiste ${specialist.role}. Tu es le responsable architecture et risques de préparation de mission. À partir du plan du chef, définis les contraintes d'architecture, de sécurité, de dépendances, de performance et de régression que le builder doit respecter. Ne modifie aucun fichier et n'appelle aucun connecteur. Signale uniquement des exigences vérifiables et produis un rapport structuré. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 10_000)}. Contexte : ${missionContext}`,
+        { planOnly: true },
+      ),
+    ]);
 
+    while (iteration <= MAX_REVIEW_ITERATIONS) {
       const diagnosticGuidance =
         currentValidation && currentValidation.errors.length > 0
           ? `\\nDIAGNOSTIC DU REVIEWER (Itération précédente) :\\n${JSON.stringify(currentValidation.errors.slice(0, 5))}\\nCorrige impérativement ces erreurs sans introduire de régression.`
@@ -452,7 +469,7 @@ Deno.serve(async (request) => {
       await runAgent(
         builder,
         iteration,
-        `Agis comme ${builder.name}, builder réel de la Way active. Construis uniquement le livrable borné et rends les fichiers vérifiables. ${iteration > 1 ? `Applique la correction ciblée (itération ${iteration}/${MAX_REVIEW_ITERATIONS}).` : "Construis la première version."} Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. ${missionVoice} Plan du chef : ${JSON.stringify(plan).slice(0, 12_000)}. Contexte : ${missionContext}${diagnosticGuidance}`,
+        `Agis comme ${builder.name}, builder réel de la Way active. Construis uniquement le livrable borné et rends les fichiers vérifiables. ${iteration > 1 ? `Applique la correction ciblée (itération ${iteration}/${MAX_REVIEW_ITERATIONS}).` : "Construis la première version."} Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. ${missionVoice} Plan du chef : ${JSON.stringify(plan).slice(0, 12_000)}. Préparation UI/UX de ${designer.name} : ${JSON.stringify(designerReport).slice(0, 8_000)}. Préparation technique de ${specialist.name} : ${JSON.stringify(specialistReport).slice(0, 8_000)}. Contexte : ${missionContext}${diagnosticGuidance}`,
         { workspaceStream: true },
       );
 
@@ -489,22 +506,10 @@ Deno.serve(async (request) => {
 
       if (validationUpdateError) throw new Error(`VALIDATION_PERSISTENCE_FAILED:${validationUpdateError.message}`);
 
-      designerReport = await runAgent(
-        designer,
-        iteration,
-        `Agis comme ${designer.name}, spécialiste ${designer.role}. Tu es un agent d'audit réel : ne modifie aucun fichier. Vérifie l'expérience, la cohérence UI/UX et la qualité des écrans à partir des fichiers réellement enregistrés et du plan. Signale uniquement ce qui est observable ou inférable avec preuve. Produit des diagnostics structurés avec evidence, expectedBehavior, file, location, problem, severity et suggestedCorrection. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 12000)}`,
-      );
-
-      specialistReport = await runAgent(
-        specialist,
-        iteration,
-        `Agis comme ${specialist.name}, spécialiste ${specialist.role}. Tu es un agent d'audit réel : ne modifie aucun fichier. Vérifie architecture, sécurité, dépendances, performance et risques de régression à partir des fichiers réellement enregistrés et du plan. Signale uniquement ce qui est observable ou inférable avec preuve. Produit des diagnostics structurés avec evidence, expectedBehavior, file, location, problem, severity et suggestedCorrection. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 12000)}`,
-      );
-
       lastReviewerReport = await runAgent(
         reviewer,
         iteration,
-        `Agis comme ${reviewer.name}, agent de ${reviewer.role}. Tu es la dernière vérification réelle. Ne modifie aucun fichier. Contrôle les faits, les risques, la conformité au plan, le préflight structurel et les rapports des autres agents. Émets un PASS/FAIL honnête et un diagnostic précis avec evidence, expectedBehavior, file, location, problem, severity et suggestedCorrection. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Audit UI/UX : ${JSON.stringify(designerReport).slice(0, 8000)}. Audit technique : ${JSON.stringify(specialistReport).slice(0, 8000)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 8000)}`,
+        `Agis comme ${reviewer.name}, agent de ${reviewer.role}. Tu es la dernière vérification réelle. Ne modifie aucun fichier. Contrôle les faits, les risques, la conformité au plan, le préflight structurel et les rapports de préparation des autres agents. Émets un PASS/FAIL honnête et un diagnostic précis avec evidence, expectedBehavior, file, location, problem, severity et suggestedCorrection. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préparation UI/UX : ${JSON.stringify(designerReport).slice(0, 8_000)}. Préparation technique : ${JSON.stringify(specialistReport).slice(0, 8_000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
       );
 
       if (currentValidation.status === "passed") break;
