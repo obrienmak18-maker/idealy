@@ -24,11 +24,35 @@ Deno.serve(async (request) => {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const missionId = typeof body?.missionId === "string" ? body.missionId : "";
   const confirmationToken = typeof body?.confirmationToken === "string" ? body.confirmationToken : "";
-  const requestedOperation = typeof body?.operation === "string" ? body.operation : "github:export";
-  const allowedOperations = new Set(["github:export", "vercel:deploy"]);
+  const requestedOperation =
+    typeof body?.operation === "string" ? body.operation.trim().toLowerCase() : "github:export";
+  const allowedOperations = new Set([
+    "github:export",
+    "vercel:deploy",
+    "github:create-branch",
+    "github:open-pull-request",
+    "canva:create-design",
+    "canva:export-design",
+    "notion:append-page",
+    "slack:send-message",
+    "supabase:append-mission-event",
+  ]);
   if (!allowedOperations.has(requestedOperation)) {
     return corsResponse({ error: "Unsupported confirmation operation." }, 400, request);
   }
+
+  const providerByOperation: Record<string, string | null> = {
+    "github:export": "github",
+    "vercel:deploy": "vercel",
+    "github:create-branch": "github",
+    "github:open-pull-request": "github",
+    "canva:create-design": "canva",
+    "canva:export-design": "canva",
+    "notion:append-page": "notion",
+    "slack:send-message": "slack",
+    "supabase:append-mission-event": null,
+  };
+  const provider = providerByOperation[requestedOperation];
   if (!UUID_PATTERN.test(missionId) || !TOKEN_PATTERN.test(confirmationToken)) {
     return corsResponse({ error: "A mission id and a safe confirmation token are required." }, 400, request);
   }
@@ -38,19 +62,24 @@ Deno.serve(async (request) => {
     if (!/^[a-f0-9]{64}$/i.test(payloadDigest)) return corsResponse({ error: "A SHA-256 payload digest is required." }, 400, request);
     const { data: mission } = await admin.from("missions").select("id").eq("id", missionId).eq("user_id", auth.user.id).maybeSingle();
     if (!mission) return corsResponse({ error: "Mission not found." }, 404, request);
-    const { data: integration } = await admin
-      .from("user_integrations")
-      .select("id")
-      .eq("user_id", auth.user.id)
-      .eq("provider", requestedOperation === "vercel:deploy" ? "vercel" : "github")
-      .eq("status", "active")
-      .maybeSingle();
-    if (!integration) {
-      return corsResponse(
-        { error: requestedOperation === "vercel:deploy" ? "Vercel not connected." : "GitHub not connected." },
-        400,
-        request,
-      );
+    let integrationId: string | null = null;
+    if (provider) {
+      const { data: integration } = await admin
+        .from("user_integrations")
+        .select("id")
+        .eq("user_id", auth.user.id)
+        .eq("provider", provider)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (!integration) {
+        return corsResponse(
+          { error: `${provider} not connected.` },
+          400,
+          request,
+        );
+      }
+      integrationId = integration.id;
     }
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const { data, error } = await admin.from("mission_action_confirmations").insert({
