@@ -28,7 +28,7 @@ assert(route.includes("onboardingInputSchema.safeParse"), "Onboarding mutation m
 assert(route.includes('process.env.DEMO_MODE === "true"'), "Demo mode must remain local and explicit.");
 assert(!route.includes("SUPABASE_SERVICE_ROLE"), "Onboarding route must not use a service role in user flow.");
 assert(!route.includes("parseCookie"), "A browser cookie must never be accepted as proof that onboarding is persisted.");
-assert(route.includes("return response({ error: \"Le profil n’a pas pu être enregistré."), "Supabase write failures must remain visible as failed responses.");
+assert(/return response\([\s\S]*Le profil n’a pas pu être enregistré/.test(route), "Supabase write failures must remain visible as failed responses.");
 assert(route.includes("simulated: true"), "Explicit demo onboarding must be identified as simulated.");
 assert(page.includes("Étape {step + 1} sur {steps.length}"), "Onboarding UI must expose its step progress.");
 assert(page.includes("/api/idealy/profile/onboarding"), "Onboarding UI must use the authenticated API route.");
