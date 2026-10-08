@@ -7,7 +7,7 @@ const APP_ORIGIN =
   "http://localhost:3000";
 
 function redirect(query: string) {
-  return Response.redirect(`${APP_ORIGIN.replace(/\/$/, "")}?${query}`);
+  return Response.redirect(`${APP_ORIGIN.replace(/\/$/, "")}/connectors?${query}`);
 }
 
 function encodeBase64Url(bytes: ArrayBuffer | Uint8Array): string {
@@ -75,18 +75,6 @@ Deno.serve(async (request) => {
         : "";
 
     if (!codeVerifier) return redirect("error=missing_pkce_state");
-
-    const { data: consumedState, error: consumeError } = await admin
-      .from("integration_oauth_states")
-      .update({ consumed_at: new Date().toISOString() })
-      .eq("id", oauthState.id)
-      .is("consumed_at", null)
-      .select("id")
-      .maybeSingle();
-
-    if (consumeError || !consumedState) {
-      return redirect("error=state_already_consumed");
-    }
 
     const tokenResponse = await fetch(
       "https://api.vercel.com/login/oauth/token",
@@ -226,6 +214,47 @@ Deno.serve(async (request) => {
         .eq("id", integration.id)
         .eq("user_id", oauthState.user_id);
       return redirect("error=credential_storage_failed");
+    }
+
+    const { error: pluginInstallError } = await admin
+      .from("plugin_installations")
+      .upsert(
+        {
+          user_id: oauthState.user_id,
+          plugin_id: "vercel",
+          plugin_version: "1.0.0",
+          state: "installed",
+          granted_permissions: ["tool.execute", "deployment.execute"],
+          connector_provider: "vercel",
+          configuration: {},
+          installed_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        },
+        { onConflict: "user_id,plugin_id" },
+      );
+
+    if (pluginInstallError) {
+      console.error("Vercel plugin activation failed", pluginInstallError);
+      return redirect("error=plugin_activation_failed");
+    }
+
+    await admin.from("plugin_events").insert({
+      user_id: oauthState.user_id,
+      plugin_id: "vercel",
+      event_type: "plugin_installed",
+      to_state: "installed",
+      payload: { source: "oauth_callback", provider: "vercel" },
+    });
+
+    const { error: consumeError } = await admin
+      .from("integration_oauth_states")
+      .update({ consumed_at: now.toISOString() })
+      .eq("id", oauthState.id)
+      .eq("user_id", oauthState.user_id)
+      .is("consumed_at", null);
+
+    if (consumeError) {
+      return redirect("error=state_consume_failed");
     }
 
     return redirect("connected=vercel");
