@@ -12,7 +12,17 @@ type IntegrationStatus = {
   displayName?: string | null;
 };
 
-const VISIBLE_PROVIDERS = new Set(["github", "supabase", "canva"]);
+const VISIBLE_PROVIDERS = new Set([
+  "github",
+  "supabase",
+  "stripe",
+  "vercel",
+  "canva",
+  "figma",
+  "google",
+  "notion",
+  "slack",
+]);
 
 export function ConnectorCatalog({
   connectors,
