@@ -135,15 +135,40 @@ export async function POST(
     );
   }
 
-  return json(
-    {
-      admissible: true,
-      pluginId: manifest.id,
-      pluginVersion: manifest.version,
-      toolId: body.toolId,
-    },
-    200
-  );
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
+    const anonKey = process.env.SUPABASE_ANON_KEY?.trim();
+    if (!supabaseUrl || !anonKey) {
+      return json({ error: "Le moteur plugin n’est pas configuré.", status: "unavailable" }, 503);
+    }
+
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/plugin-engine`,
+      {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: anonKey,
+          "Content-Type": "application/json",
+          "x-client-info": "idealy-plugin-executor",
+        },
+        body: JSON.stringify({
+          action: "execute",
+          pluginId: manifest.id,
+          toolId: body.toolId,
+          confirmed: body.confirmed === true,
+          input: (body as Record<string, unknown>).input ?? {},
+          missionId: body.missionId,
+          taskId: body.taskId,
+        }),
+      }
+    );
+    const payload = await response.json().catch(() => null);
+    return json(payload ?? { error: "Réponse plugin invalide." }, response.status);
+  } catch {
+    return json({ error: "Le moteur plugin est momentanément indisponible.", status: "unavailable" }, 502);
+  }
 }
 
 export async function GET(
