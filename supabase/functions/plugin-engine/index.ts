@@ -423,24 +423,54 @@ Deno.serve(async (request) => {
   const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
   if (action === "install") {
-    const requested = Array.isArray(body.requestedPermissions) ? body.requestedPermissions.filter((x): x is string => typeof x === "string") : [];
-    const allowed = new Set<string>(Object.values(manifest.tools).flatMap(tool => tool.permissions));
-    const granted = requested.filter(permission => allowed.has(permission));
+    if (body.confirmed !== true) {
+      return json(request, {
+        code: "CONFIRMATION_REQUIRED",
+        error: "Plugin installation requires explicit confirmation.",
+      }, 409);
+    }
+
+    const plan = await currentPlan(admin, auth.user.id);
+    if (PLAN_RANK[plan] < PLAN_RANK[manifest.minimumPlan]) {
+      return json(request, { code: "PLAN_INSUFFICIENT", status: "denied" }, 403);
+    }
+
+    const requested = Array.isArray(body.requestedPermissions)
+      ? body.requestedPermissions.filter((x): x is string => typeof x === "string")
+      : [];
+    const allowed = new Set<string>(
+      Object.values(manifest.tools).flatMap((tool) => tool.permissions),
+    );
+    const granted = requested.filter((permission) => allowed.has(permission));
     const now = new Date().toISOString();
-    const {data,error}=await admin.from("plugin_installations").upsert({
-      user_id:auth.user.id,
-      plugin_id:pluginId,
-      plugin_version:"1.0.0",
-      state:"installed",
-      granted_permissions:granted,
-      connector_provider:manifest.provider,
-      configuration:{},
-      installed_at:now,
-      updated_at:now,
-    },{onConflict:"user_id,plugin_id"}).select("*").single();
-    if(error) return json(request,{error:error.message},500);
-    await admin.from("plugin_events").insert({user_id:auth.user.id,plugin_id:pluginId,event_type:"plugin_installed",to_state:"installed",payload:{grantedPermissions:granted}});
-    return json(request,{installation:data},200);
+
+    const { data, error } = await admin
+      .from("plugin_installations")
+      .upsert({
+        user_id: auth.user.id,
+        plugin_id: pluginId,
+        plugin_version: "1.0.0",
+        state: "installed",
+        granted_permissions: granted,
+        connector_provider: manifest.provider,
+        configuration: {},
+        installed_at: now,
+        updated_at: now,
+      }, { onConflict: "user_id,plugin_id" })
+      .select("*")
+      .single();
+
+    if (error) return json(request, { error: error.message }, 500);
+
+    await admin.from("plugin_events").insert({
+      user_id: auth.user.id,
+      plugin_id: pluginId,
+      event_type: "plugin_installed",
+      to_state: "installed",
+      payload: { grantedPermissions: granted, source: "edge_install" },
+    });
+
+    return json(request, { installation: data }, 200);
   }
 
   if (action !== "execute") return json(request,{error:"Unsupported action."},400);
