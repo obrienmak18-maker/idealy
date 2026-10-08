@@ -26,6 +26,7 @@ assert(orchestrator.includes('admin.rpc("reserve_power_points"'), "Squad orchest
 assert(orchestrator.includes('admin.rpc("settle_power_reservation"'), "Squad orchestration must settle reserved Power after execution.");
 assert(orchestrator.includes('admin.rpc("release_power_reservation"'), "Squad orchestration must release reserved Power after failure.");
 assert(orchestrator.includes('const SQUAD_POWER_POINTS = 50'), "Squad orchestration must use the approved bounded Power reservation.");
+assert(orchestrator.includes("squadRun: true"), "Every squad agent invocation must bypass the simple mission charge.");
 
 assert(orchestrator.includes("POWER_DEPLETED"), "Squad depletion must have a stable public code.");
 assert(orchestrator.includes("powerDepletionMessage"), "Squad depletion must be contextualized by Way.");
