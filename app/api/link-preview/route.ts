@@ -7,9 +7,6 @@ import { ChatbotError } from "@/lib/errors";
 import { getLinkPreview, normalizePreviewUrl } from "@/lib/link-preview";
 import { checkIpRateLimit } from "@/lib/ratelimit";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 function json(body: unknown, status: number) {
   return Response.json(body, {
     headers: {
