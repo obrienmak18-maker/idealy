@@ -61,7 +61,7 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
     category: "code",
     auth: "oauth2",
     runtime: "idealy-server",
-    availability: "planned",
+    availability: "configured",
     docsUrl: "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps",
     scopes: ["repo", "read:user"],
     operations: [
