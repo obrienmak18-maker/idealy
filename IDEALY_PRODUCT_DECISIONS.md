@@ -52,7 +52,7 @@ Decision:
 - [ ] Change Alvin's role.
 
 Decision:
-Chat context may show both the Way-specific agent name and the execution role; compact status surfaces may show only the name or role when space requires it.
+Alvin remains the universal dispatcher. The runtime squad uses the five Way-specific agents; chat/status surfaces may show both the Way-specific name and its execution role depending on available space.
 
 ### 1.4 Sub-agents
 
@@ -84,7 +84,7 @@ Should chat messages display:
 - [x] Both, depending on context
 
 Decision:
-Keep the custom Power control visible but disabled with an explicit unavailable/future state.
+Keep the custom Power control visible but clearly unavailable/future. It must never appear billable or usable until its backend contract is implemented.
 
 ---
 
@@ -145,7 +145,7 @@ Choose:
 - [ ] Make it fully billable now.
 
 Decision:
-Firebase remains the login authority, Supabase remains the application data/control plane, and NextAuth remains the server session wrapper. No in-memory identity fallback is permitted.
+Firebase remains the login authority, Supabase remains the application data/control plane and persistence authority, and NextAuth remains the server session wrapper. Local/in-memory auth fallbacks are forbidden.
 
 ---
 
@@ -206,7 +206,7 @@ Should local development fall back to an in-memory/local identity?
 - [x] No, authentication failures must fail closed.
 
 Decision:
-Use the current five-agent sequential squad as the safe canonical runtime. Keep the DAG scheduler/library available for later orchestration expansion; do not expose the DAG as live until its persistence and provider execution are fully wired. Power for squad execution uses reserve → execute → settle/release; direct charge is kept only for simple AI requests that already use the simple-action contract.
+Keep the safe five-agent sequential squad as the canonical runtime for now. The DAG scheduler/library may remain available for later expansion, but it is not presented as live. Squad execution uses reserve → execute → settle/release; simple mission execution uses the simple-action Power contract.
 
 ---
 
@@ -247,7 +247,7 @@ Should Power use:
 - [ ] Other
 
 Decision:
-Presence must be real Supabase Realtime presence. Until the browser has a secure authenticated Realtime token path, the UI must not show simulated people as online.
+Presence must be real Supabase Realtime presence. The browser presence client uses an authenticated Firebase token bridge into Supabase; simulated collaborators are forbidden.
 
 ---
 
@@ -261,7 +261,7 @@ Choose:
 - [ ] Keep it only in DEMO_MODE.
 
 Decision:
-Standardize fr/en/es through one i18n layer, migrate to next-intl without dropping the existing locales, and pass the active locale into mission/AI execution so generated responses follow the user locale unless an explicit language override is requested.
+Keep fr/en/es for the next release, standardize them under one i18n layer, and migrate to next-intl without dropping any existing locale. AI/mission responses must follow the active user locale, with an explicit language override allowed.
 
 ---
 
@@ -286,7 +286,7 @@ Should AI-generated mission responses follow the user's locale?
 - [ ] Other.
 
 Decision:
-Current recognizable Way names remain for the private prototype; replace them with original Idealy characters before public commercial launch.
+Current recognizable Way names are prototype-only. Replace them with original Idealy characters before any public commercial launch.
 
 ---
 
@@ -306,26 +306,20 @@ _
 
 ## 11. Deployment / production behavior
 
-Which capabilities are allowed to appear as production-ready in the UI?
+The source decision is: everything intended for the product must genuinely work, with anything not yet configured or verified clearly marked as requiring configuration / coming soon. The implementation must never use simulated success states.
 
-- [ ] Chat
-- [ ] Mission planning
-- [ ] Squad execution
-- [ ] VFS
-- [ ] Preview
-- [ ] GitHub
-- [ ] Supabase
-- [ ] Stripe
-- [ ] Vercel deployment
-- [ ] Plugins
-- [ ] Power
-- [ ] Checkpoints / rollback
-- [ ] Other: _
+Current implementation status:
+- Chat: implemented in the existing application architecture.
+- Mission planning: implemented.
+- Five-agent squad execution: implemented and persisted.
+- VFS / mission files / event timeline: implemented in Supabase.
+- Preview: existing workspace implementation remains subject to the current production verification flow.
+- GitHub / Supabase / Stripe / Vercel / Canva / Figma / Google Drive / Notion / Slack: backend connector paths implemented; provider credentials remain external dependencies.
+- Plugins: live admission + execution engine implemented.
+- Power: V2 policy, reservation, settlement and direct simple-action charging implemented.
+- Checkpoints / rollback: existing Supabase contract remains in place and must stay fail-closed.
 
-Any capability that is not selected must not be presented as fully live.
-
-Decision:
-I don't know what works. I know nothing about what works. The main thing is that everything must work: chats, mission planning, squad execution, VFC, VFS, the preview, guitables, superbases, strikes, opposing deployments, plugins, power, points, controls. So rollbacks too—everything must work without exception.
+Any capability not verified in a live provider environment must not be shown as connected/active merely because code exists.
 
 ---
 
@@ -364,6 +358,10 @@ Vercel App: NEXT_PUBLIC_VERCEL_APP_CLIENT_ID + VERCEL_APP_CLIENT_SECRET and the 
 OAuth credentials for Canva, Figma, Google Drive, Notion and Slack, with redirect URIs and approved scopes configured at each provider.
 3.
 Integration encryption key for server-side credential storage: INTEGRATION_ENCRYPTION_KEY (32-byte base64 value).
+
+Implementation status:
+- The OAuth state, callback, encrypted credential storage, connector status, plugin execution and Vercel deployment paths are implemented.
+- Provider OAuth credentials remain an external configuration dependency; the UI must show configuration required rather than pretending a connector is connected when those secrets are absent.
 
 ---
 
