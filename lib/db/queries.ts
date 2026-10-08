@@ -36,88 +36,46 @@ import { generateHashedPassword } from "./utils";
 const client = postgres(process.env.POSTGRES_URL ?? "");
 const db = drizzle(client);
 
-// In-memory fallback cache for development/resilience when Postgres is offline
-const fallbackUsers = (
-  globalThis as unknown as { __idealy_fallback_users?: Map<string, User> }
-).__idealy_fallback_users ??= new Map<string, User>();
-
-const fallbackChats = (
-  globalThis as unknown as { __idealy_fallback_chats?: Map<string, Chat> }
-).__idealy_fallback_chats ??= new Map<string, Chat>();
-
-const fallbackMessages = (
-  globalThis as unknown as { __idealy_fallback_messages?: Map<string, DBMessage[]> }
-).__idealy_fallback_messages ??= new Map<string, DBMessage[]>();
-
-const fallbackStreams = (
-  globalThis as unknown as { __idealy_fallback_streams?: Map<string, string[]> }
-).__idealy_fallback_streams ??= new Map<string, string[]>();
-
-export async function getUser(email: string): Promise<User[]> {
-  try {
-    if (!process.env.POSTGRES_URL) {
-      const cached = fallbackUsers.get(email.toLowerCase());
-      return cached ? [cached] : [];
-    }
-    return await db.select().from(user).where(eq(user.email, email));
-  } catch {
-    const cached = fallbackUsers.get(email.toLowerCase());
-    return cached ? [cached] : [];
+function ensureDatabaseConfigured() {
+  if (!process.env.POSTGRES_URL?.trim()) {
+    throw new ChatbotError("bad_request:database", "Postgres is not configured.");
   }
 }
 
+export async function getUser(email: string): Promise<User[]> {
+  ensureDatabaseConfigured();
+  try {
+    return await db.select().from(user).where(eq(user.email, email));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
 export async function getUserBySupabaseUserId(
   supabaseUserId: string
 ): Promise<User | null> {
+  ensureDatabaseConfigured();
   try {
-    if (!process.env.POSTGRES_URL) {
-      for (const u of fallbackUsers.values()) {
-        if (u.supabaseUserId === supabaseUserId) return u;
-      }
-      return null;
-    }
-    const [selectedUser] = await db
-      .select()
-      .from(user)
-      .where(eq(user.supabaseUserId, supabaseUserId))
-      .limit(1);
+    const [selectedUser] = await db.select().from(user).where(eq(user.supabaseUserId, supabaseUserId)).limit(1);
     return selectedUser ?? null;
-  } catch {
-    for (const u of fallbackUsers.values()) {
-      if (u.supabaseUserId === supabaseUserId) return u;
-    }
-    return null;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function createUser(email: string, password: string): Promise<User[]> {
+  ensureDatabaseConfigured();
   const hashedPassword = generateHashedPassword(password);
-  const normalizedEmail = email.toLowerCase();
-  const newUser: User = {
-    id: generateUUID(),
-    email: normalizedEmail,
-    name: null,
-    password: hashedPassword,
-    image: null,
-    isAnonymous: false,
-    emailVerified: false,
-    supabaseUserId: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  fallbackUsers.set(normalizedEmail, newUser);
-
   try {
-    if (process.env.POSTGRES_URL) {
-      await db.insert(user).values({ email: normalizedEmail, password: hashedPassword });
-    }
-    return [newUser];
-  } catch {
-    return [newUser];
+    const created = await db.insert(user).values({
+      email: email.toLowerCase(),
+      password: hashedPassword,
+    }).returning();
+    if (!created.length) throw new ChatbotError("bad_request:database", "User creation returned no row");
+    return created;
+  } catch (error) {
+    if (error instanceof ChatbotError) throw error;
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function linkUserToSupabaseUser({
   localUserId,
   supabaseUserId,
@@ -125,57 +83,32 @@ export async function linkUserToSupabaseUser({
   localUserId: string;
   supabaseUserId: string;
 }) {
-  for (const u of fallbackUsers.values()) {
-    if (u.id === localUserId) {
-      u.supabaseUserId = supabaseUserId;
-      u.updatedAt = new Date();
-    }
-  }
-
+  ensureDatabaseConfigured();
   try {
-    if (process.env.POSTGRES_URL) {
-      const [linkedUser] = await db
-        .update(user)
-        .set({ supabaseUserId, updatedAt: new Date() })
-        .where(eq(user.id, localUserId))
-        .returning({ id: user.id, supabaseUserId: user.supabaseUserId });
-      return linkedUser;
-    }
-    return { id: localUserId, supabaseUserId };
-  } catch {
-    return { id: localUserId, supabaseUserId };
+    const [linkedUser] = await db.update(user)
+      .set({ supabaseUserId, updatedAt: new Date() })
+      .where(eq(user.id, localUserId))
+      .returning({ id: user.id, supabaseUserId: user.supabaseUserId });
+    if (!linkedUser) throw new ChatbotError("not_found:database", "User not found");
+    return linkedUser;
+  } catch (error) {
+    if (error instanceof ChatbotError) throw error;
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function createGuestUser(): Promise<User[]> {
+  ensureDatabaseConfigured();
   const email = `guest-${Date.now()}@idealy.local`;
   const password = generateHashedPassword(generateUUID());
-  const guestUser: User = {
-    id: generateUUID(),
-    email,
-    name: "Invité",
-    password,
-    image: null,
-    isAnonymous: true,
-    emailVerified: false,
-    supabaseUserId: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  fallbackUsers.set(email, guestUser);
-
   try {
-    if (process.env.POSTGRES_URL) {
-      const [created] = await db.insert(user).values({ email, password }).returning();
-      return created ? [created] : [guestUser];
-    }
-    return [guestUser];
-  } catch {
-    return [guestUser];
+    const [created] = await db.insert(user).values({ email, password }).returning();
+    if (!created) throw new ChatbotError("bad_request:database", "Guest user creation returned no row");
+    return [created];
+  } catch (error) {
+    if (error instanceof ChatbotError) throw error;
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function saveChat({
   id,
   userId,
@@ -187,90 +120,43 @@ export async function saveChat({
   title: string;
   visibility: VisibilityType;
 }) {
-  const newChat: Chat = {
-    createdAt: new Date(),
-    id,
-    title,
-    userId,
-    visibility,
-  };
-  fallbackChats.set(id, newChat);
-
+  ensureDatabaseConfigured();
   try {
-    if (process.env.POSTGRES_URL) {
-      await db.insert(chat).values(newChat);
-    }
-    return newChat;
-  } catch {
-    return newChat;
+    const [created] = await db.insert(chat).values({ createdAt: new Date(), id, title, userId, visibility }).returning();
+    if (!created) throw new ChatbotError("bad_request:database", "Chat creation returned no row");
+    return created;
+  } catch (error) {
+    if (error instanceof ChatbotError) throw error;
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function deleteChatById({ id }: { id: string }) {
-  const deleted = fallbackChats.get(id);
-  fallbackChats.delete(id);
-  fallbackMessages.delete(id);
-  fallbackStreams.delete(id);
-
+  ensureDatabaseConfigured();
   try {
-    if (process.env.POSTGRES_URL) {
-      await db.delete(vote).where(eq(vote.chatId, id));
-      await db.delete(message).where(eq(message.chatId, id));
-      await db.delete(stream).where(eq(stream.chatId, id));
-
-      const [chatsDeleted] = await db
-        .delete(chat)
-        .where(eq(chat.id, id))
-        .returning();
-      return chatsDeleted ?? deleted;
-    }
+    await db.delete(vote).where(eq(vote.chatId, id));
+    await db.delete(message).where(eq(message.chatId, id));
+    await db.delete(stream).where(eq(stream.chatId, id));
+    const [deleted] = await db.delete(chat).where(eq(chat.id, id)).returning();
     return deleted;
-  } catch {
-    return deleted;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
-  let deletedCount = 0;
-  for (const [chatId, c] of Array.from(fallbackChats.entries())) {
-    if (c.userId === userId) {
-      fallbackChats.delete(chatId);
-      fallbackMessages.delete(chatId);
-      fallbackStreams.delete(chatId);
-      deletedCount++;
-    }
-  }
-
+  ensureDatabaseConfigured();
   try {
-    if (process.env.POSTGRES_URL) {
-      const userChats = await db
-        .select({ id: chat.id })
-        .from(chat)
-        .where(eq(chat.userId, userId));
-
-      if (userChats.length === 0) {
-        return { deletedCount };
-      }
-
-      const chatIds = userChats.map((c) => c.id);
-
-      await db.delete(vote).where(inArray(vote.chatId, chatIds));
-      await db.delete(message).where(inArray(message.chatId, chatIds));
-      await db.delete(stream).where(inArray(stream.chatId, chatIds));
-
-      const deletedChats = await db
-        .delete(chat)
-        .where(eq(chat.userId, userId))
-        .returning();
-
-      return { deletedCount: deletedChats.length };
-    }
-    return { deletedCount };
-  } catch {
-    return { deletedCount };
+    const userChats = await db.select({ id: chat.id }).from(chat).where(eq(chat.userId, userId));
+    if (userChats.length === 0) return { deletedCount: 0 };
+    const chatIds = userChats.map((c) => c.id);
+    await db.delete(vote).where(inArray(vote.chatId, chatIds));
+    await db.delete(message).where(inArray(message.chatId, chatIds));
+    await db.delete(stream).where(inArray(stream.chatId, chatIds));
+    const deletedChats = await db.delete(chat).where(eq(chat.userId, userId)).returning();
+    return { deletedCount: deletedChats.length };
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function getChatsByUserId({
   id,
   limit,
@@ -282,126 +168,52 @@ export async function getChatsByUserId({
   startingAfter: string | null;
   endingBefore: string | null;
 }) {
-  const getFallbackResult = () => {
-    let list = Array.from(fallbackChats.values())
-      .filter((c) => c.userId === id)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-
-    if (startingAfter) {
-      const idx = list.findIndex((c) => c.id === startingAfter);
-      if (idx !== -1) {
-        list = list.filter(
-          (c) => new Date(c.createdAt) > new Date(list[idx].createdAt)
-        );
-      }
-    } else if (endingBefore) {
-      const idx = list.findIndex((c) => c.id === endingBefore);
-      if (idx !== -1) {
-        list = list.filter(
-          (c) => new Date(c.createdAt) < new Date(list[idx].createdAt)
-        );
-      }
-    }
-
-    const hasMore = list.length > limit;
-    return {
-      chats: hasMore ? list.slice(0, limit) : list,
-      hasMore,
-    };
-  };
-
+  ensureDatabaseConfigured();
   try {
-    if (!process.env.POSTGRES_URL) {
-      return getFallbackResult();
-    }
-
     const extendedLimit = limit + 1;
-
     const query = (whereCondition?: SQL<unknown>) =>
-      db
-        .select()
-        .from(chat)
-        .where(
-          whereCondition
-            ? and(whereCondition, eq(chat.userId, id))
-            : eq(chat.userId, id)
-        )
-        .orderBy(desc(chat.createdAt))
-        .limit(extendedLimit);
+      db.select().from(chat).where(
+        whereCondition ? and(whereCondition, eq(chat.userId, id)) : eq(chat.userId, id),
+      ).orderBy(desc(chat.createdAt)).limit(extendedLimit);
 
     let filteredChats: Chat[] = [];
-
     if (startingAfter) {
-      const [selectedChat] = await db
-        .select()
-        .from(chat)
-        .where(eq(chat.id, startingAfter))
-        .limit(1);
-
-      if (!selectedChat) {
-        return getFallbackResult();
-      }
-
+      const [selectedChat] = await db.select().from(chat)
+        .where(and(eq(chat.id, startingAfter), eq(chat.userId, id))).limit(1);
+      if (!selectedChat) return { chats: [], hasMore: false };
       filteredChats = await query(gt(chat.createdAt, selectedChat.createdAt));
     } else if (endingBefore) {
-      const [selectedChat] = await db
-        .select()
-        .from(chat)
-        .where(eq(chat.id, endingBefore))
-        .limit(1);
-
-      if (!selectedChat) {
-        return getFallbackResult();
-      }
-
+      const [selectedChat] = await db.select().from(chat)
+        .where(and(eq(chat.id, endingBefore), eq(chat.userId, id))).limit(1);
+      if (!selectedChat) return { chats: [], hasMore: false };
       filteredChats = await query(lt(chat.createdAt, selectedChat.createdAt));
     } else {
       filteredChats = await query();
     }
 
     const hasMore = filteredChats.length > limit;
-
-    return {
-      chats: hasMore ? filteredChats.slice(0, limit) : filteredChats,
-      hasMore,
-    };
-  } catch {
-    return getFallbackResult();
+    return { chats: hasMore ? filteredChats.slice(0, limit) : filteredChats, hasMore };
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function getChatById({ id }: { id: string }) {
+  ensureDatabaseConfigured();
   try {
-    if (!process.env.POSTGRES_URL) {
-      return fallbackChats.get(id) ?? null;
-    }
     const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
-    return selectedChat ?? fallbackChats.get(id) ?? null;
-  } catch {
-    return fallbackChats.get(id) ?? null;
+    return selectedChat ?? null;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function saveMessages({ messages }: { messages: DBMessage[] }) {
-  for (const m of messages) {
-    const list = fallbackMessages.get(m.chatId) ?? [];
-    list.push(m);
-    fallbackMessages.set(m.chatId, list);
-  }
-
+  ensureDatabaseConfigured();
   try {
-    if (process.env.POSTGRES_URL) {
-      return await db.insert(message).values(messages);
-    }
-    return messages;
-  } catch {
-    return messages;
+    return await db.insert(message).values(messages);
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function updateMessage({
   id,
   parts,
@@ -409,44 +221,21 @@ export async function updateMessage({
   id: string;
   parts: DBMessage["parts"];
 }) {
-  for (const list of fallbackMessages.values()) {
-    const found = list.find((m) => m.id === id);
-    if (found) {
-      found.parts = parts;
-      break;
-    }
-  }
-
+  ensureDatabaseConfigured();
   try {
-    if (process.env.POSTGRES_URL) {
-      return await db.update(message).set({ parts }).where(eq(message.id, id));
-    }
-  } catch {
-    // Non-blocking
+    return await db.update(message).set({ parts }).where(eq(message.id, id));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function getMessagesByChatId({ id }: { id: string }) {
-  const getFallbackMsgs = () =>
-    (fallbackMessages.get(id) ?? []).slice().sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-
+  ensureDatabaseConfigured();
   try {
-    if (!process.env.POSTGRES_URL) {
-      return getFallbackMsgs();
-    }
-    return await db
-      .select()
-      .from(message)
-      .where(eq(message.chatId, id))
-      .orderBy(asc(message.createdAt));
-  } catch {
-    return getFallbackMsgs();
+    return await db.select().from(message).where(eq(message.chatId, id)).orderBy(asc(message.createdAt));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function voteMessage({
   chatId,
   messageId,
@@ -481,16 +270,13 @@ export async function voteMessage({
 }
 
 export async function getVotesByChatId({ id }: { id: string }) {
+  ensureDatabaseConfigured();
   try {
-    if (!process.env.POSTGRES_URL) {
-      return [];
-    }
     return await db.select().from(vote).where(eq(vote.chatId, id));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function saveDocument({
   id,
   title,
@@ -640,24 +426,13 @@ export async function getSuggestionsByDocumentId({
 }
 
 export async function getMessageById({ id }: { id: string }) {
+  ensureDatabaseConfigured();
   try {
-    if (!process.env.POSTGRES_URL) {
-      for (const list of fallbackMessages.values()) {
-        const found = list.find((m) => m.id === id);
-        if (found) return [found];
-      }
-      return [];
-    }
     return await db.select().from(message).where(eq(message.id, id));
-  } catch {
-    for (const list of fallbackMessages.values()) {
-      const found = list.find((m) => m.id === id);
-      if (found) return [found];
-    }
-    return [];
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function deleteMessagesByChatIdAfterTimestamp({
   chatId,
   timestamp,
@@ -665,43 +440,19 @@ export async function deleteMessagesByChatIdAfterTimestamp({
   chatId: string;
   timestamp: Date;
 }) {
-  const fallbackList = fallbackMessages.get(chatId);
-  if (fallbackList) {
-    fallbackMessages.set(
-      chatId,
-      fallbackList.filter((m) => new Date(m.createdAt) < timestamp)
-    );
-  }
-
+  ensureDatabaseConfigured();
   try {
-    if (!process.env.POSTGRES_URL) {
-      return [];
-    }
-
-    const messagesToDelete = await db
-      .select({ id: message.id })
-      .from(message)
-      .where(
-        and(eq(message.chatId, chatId), gte(message.createdAt, timestamp))
-      );
-
+    const messagesToDelete = await db.select({ id: message.id }).from(message)
+      .where(and(eq(message.chatId, chatId), gte(message.createdAt, timestamp)));
     const messageIds = messagesToDelete.map((m) => m.id);
-
-    if (messageIds.length > 0) {
-      await db.delete(vote).where(inArray(vote.messageId, messageIds));
-      return await db
-        .delete(message)
-        .where(
-          and(eq(message.chatId, chatId), gte(message.createdAt, timestamp))
-        )
-        .returning();
-    }
-    return [];
-  } catch {
-    return [];
+    if (messageIds.length === 0) return [];
+    await db.delete(vote).where(inArray(vote.messageId, messageIds));
+    return await db.delete(message)
+      .where(and(eq(message.chatId, chatId), gte(message.createdAt, timestamp))).returning();
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function updateChatVisibilityById({
   chatId,
   visibility,
@@ -737,56 +488,18 @@ export async function getMessageCountByUserId({
   id: string;
   differenceInHours: number;
 }) {
-  const fallbackCount = () => {
-    const cutoffTime = new Date(
-      Date.now() - differenceInHours * 60 * 60 * 1000
-    );
-    const userChatIds = new Set(
-      Array.from(fallbackChats.values())
-        .filter((c) => c.userId === id)
-        .map((c) => c.id)
-    );
-    let count = 0;
-    for (const [chatId, msgs] of fallbackMessages.entries()) {
-      if (userChatIds.has(chatId)) {
-        for (const m of msgs) {
-          if (m.role === "user" && new Date(m.createdAt) >= cutoffTime) {
-            count++;
-          }
-        }
-      }
-    }
-    return count;
-  };
-
+  ensureDatabaseConfigured();
   try {
-    if (!process.env.POSTGRES_URL) {
-      return fallbackCount();
-    }
-
-    const cutoffTime = new Date(
-      Date.now() - differenceInHours * 60 * 60 * 1000
-    );
-
-    const [stats] = await db
-      .select({ count: count(message.id) })
-      .from(message)
+    const cutoffTime = new Date(Date.now() - differenceInHours * 60 * 60 * 1000);
+    const [stats] = await db.select({ count: count(message.id) }).from(message)
       .innerJoin(chat, eq(message.chatId, chat.id))
-      .where(
-        and(
-          eq(chat.userId, id),
-          gte(message.createdAt, cutoffTime),
-          eq(message.role, "user")
-        )
-      )
+      .where(and(eq(chat.userId, id), gte(message.createdAt, cutoffTime), eq(message.role, "user")))
       .execute();
-
-    return stats?.count ?? fallbackCount();
-  } catch {
-    return fallbackCount();
+    return stats?.count ?? 0;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function createStreamId({
   streamId,
   chatId,
@@ -794,35 +507,20 @@ export async function createStreamId({
   streamId: string;
   chatId: string;
 }) {
-  const list = fallbackStreams.get(chatId) ?? [];
-  list.push(streamId);
-  fallbackStreams.set(chatId, list);
-
+  ensureDatabaseConfigured();
   try {
-    if (process.env.POSTGRES_URL) {
-      await db
-        .insert(stream)
-        .values({ chatId, createdAt: new Date(), id: streamId });
-    }
-  } catch {
-    // Non-blocking
+    await db.insert(stream).values({ chatId, createdAt: new Date(), id: streamId });
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
-
 export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
+  ensureDatabaseConfigured();
   try {
-    if (!process.env.POSTGRES_URL) {
-      return fallbackStreams.get(chatId) ?? [];
-    }
-    const streamIds = await db
-      .select({ id: stream.id })
-      .from(stream)
-      .where(eq(stream.chatId, chatId))
-      .orderBy(asc(stream.createdAt))
-      .execute();
-
+    const streamIds = await db.select({ id: stream.id }).from(stream)
+      .where(eq(stream.chatId, chatId)).orderBy(asc(stream.createdAt)).execute();
     return streamIds.map(({ id }) => id);
-  } catch {
-    return fallbackStreams.get(chatId) ?? [];
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
