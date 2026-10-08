@@ -30,14 +30,14 @@ const M: Record<string, Manifest> = {
     },
   },
   "google-drive": {
-    id:"google-drive", minimumPlan:"free", provider:"google",
+    id:"google-drive", minimumPlan:"free", provider:"google", requiredScopes:["https://www.googleapis.com/auth/drive.metadata.readonly"],
     tools:{
       "google-drive-list-drive-files": {permissions:["tool.execute","project.read"],risk:"read",requiresConfirmation:false},
       "google-drive-read-drive-metadata": {permissions:["tool.execute","project.read"],risk:"read",requiresConfirmation:false},
     },
   },
   vercel: {
-    id:"vercel", minimumPlan:"free", provider:"vercel",
+    id:"vercel", minimumPlan:"free", provider:"vercel", requiredScopes:[],
     tools:{
       "vercel-list-projects": {permissions:["tool.execute","deployment.execute"],risk:"read",requiresConfirmation:false},
       "vercel-get-deployment": {permissions:["tool.execute","deployment.execute"],risk:"read",requiresConfirmation:false},
@@ -46,7 +46,7 @@ const M: Record<string, Manifest> = {
     },
   },
   canva: {
-    id:"canva", minimumPlan:"free", provider:"canva",
+    id:"canva", minimumPlan:"free", provider:"canva", requiredScopes:["design:meta:read","design:content:read","design:content:write","asset:read","asset:write"],
     tools:{
       "canva-list-designs": {permissions:["tool.execute","files.read"],risk:"read",requiresConfirmation:false},
       "canva-get-design": {permissions:["tool.execute","files.read"],risk:"read",requiresConfirmation:false},
@@ -55,14 +55,14 @@ const M: Record<string, Manifest> = {
     },
   },
   figma: {
-    id:"figma", minimumPlan:"free", provider:"figma",
+    id:"figma", minimumPlan:"free", provider:"figma", requiredScopes:["file_content:read"],
     tools:{
       "figma-read-file": {permissions:["tool.execute","files.read"],risk:"read",requiresConfirmation:false},
       "figma-export-assets": {permissions:["tool.execute","files.read"],risk:"read",requiresConfirmation:false},
     },
   },
   notion: {
-    id:"notion", minimumPlan:"free", provider:"notion",
+    id:"notion", minimumPlan:"free", provider:"notion", requiredScopes:[],
     tools:{
       "notion-search-pages": {permissions:["tool.execute","project.read"],risk:"read",requiresConfirmation:false},
       "notion-read-page": {permissions:["tool.execute","project.read"],risk:"read",requiresConfirmation:false},
@@ -70,7 +70,7 @@ const M: Record<string, Manifest> = {
     },
   },
   slack: {
-    id:"slack", minimumPlan:"free", provider:"slack",
+    id:"slack", minimumPlan:"free", provider:"slack", requiredScopes:["channels:read","chat:write"],
     tools:{
       "slack-list-channels": {permissions:["tool.execute","project.read"],risk:"read",requiresConfirmation:false},
       "slack-send-message": {permissions:["tool.execute","network.access"],risk:"write",requiresConfirmation:true},
