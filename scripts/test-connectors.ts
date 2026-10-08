@@ -22,7 +22,7 @@ for (const provider of [
   "github",
   "canva",
   "figma",
-  "google",
+  "google-drive",
   "notion",
   "slack",
   "vercel",
