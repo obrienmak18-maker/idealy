@@ -84,6 +84,13 @@ function providerConfig(provider: string) {
         tokenUrl: "https://slack.com/api/oauth.v2.access",
         needsBasic: false,
       };
+    case "vercel":
+      return {
+        clientId: env("VERCEL_APP_CLIENT_ID") || env("NEXT_PUBLIC_VERCEL_APP_CLIENT_ID"),
+        clientSecret: env("VERCEL_APP_CLIENT_SECRET"),
+        tokenUrl: "https://api.vercel.com/login/oauth/token",
+        needsBasic: false,
+      };
     default:
       return null;
   }
@@ -176,6 +183,30 @@ async function identityFor(provider: string, token: TokenResult, accessToken: st
     };
   }
 
+  if (provider === "vercel") {
+    const response = await fetch("https://api.vercel.com/login/oauth/userinfo", {
+      headers: { Authorization: "Bearer " + accessToken },
+    });
+    const profile = await response.json().catch(() => null) as {
+      sub?: string;
+      email?: string;
+      email_verified?: boolean;
+      name?: string;
+      preferred_username?: string;
+      picture?: string;
+    } | null;
+    if (!response.ok || !profile?.sub) throw new Error("vercel_identity_failed");
+    return {
+      externalAccountId: profile.sub,
+      displayName: profile.name || profile.preferred_username || profile.email || "Vercel",
+      metadata: {
+        email: profile.email ?? null,
+        emailVerified: profile.email_verified ?? null,
+        avatar: profile.picture ?? null,
+      },
+    };
+  }
+
   throw new Error("unsupported_provider");
 }
 
@@ -228,7 +259,12 @@ Deno.serve(async (request) => {
     if (!config.needsBasic) body.set("client_id", config.clientId);
     if (!config.needsBasic && config.clientSecret) body.set("client_secret", config.clientSecret);
 
-    if (provider === "canva" || provider === "figma" || provider === "google") {
+    if (
+      provider === "canva" ||
+      provider === "figma" ||
+      provider === "google" ||
+      provider === "vercel"
+    ) {
       const verifier = typeof metadata.code_verifier === "string" ? metadata.code_verifier : "";
       if (!verifier) return redirect("error=missing_pkce_state");
       body.set("code_verifier", verifier);
