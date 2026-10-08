@@ -59,8 +59,8 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     priceMonthlyEur: 0,
     priceMonthlyUsd: 0,
     power: {
-      monthlyAllocation: powerPlanPolicy.free.monthlyAllocation, // 100 pts
-      walletCap: powerPlanPolicy.free.walletCap,                 // 100 pts
+      monthlyAllocation: powerPlanPolicy.free.monthlyAllocation, // Power V2
+      walletCap: powerPlanPolicy.free.walletCap,                 // Power V2
       simpleMissionsIncluded: Math.floor(powerPlanPolicy.free.monthlyAllocation / powerActionCosts.mission_simple), // 10
       squadMissionsIncluded: Math.floor(powerPlanPolicy.free.monthlyAllocation / powerActionCosts.mission_squad),   // 2
     },
@@ -97,11 +97,9 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     stripeAnnualPriceIdUsd: process.env.STRIPE_PRO_PRICE_ID_YEARLY_USD,
     popular: true,
     power: {
-      monthlyAllocation: powerPlanPolicy.pro.monthlyAllocation, // 1 000 pts
-      walletCap: powerPlanPolicy.pro.walletCap,                 // 1 000 pts
-      simpleMissionsIncluded: Math.floor(powerPlanPolicy.pro.monthlyAllocation / powerActionCosts.mission_simple), // 100
-      squadMissionsIncluded: Math.floor(powerPlanPolicy.pro.monthlyAllocation / powerActionCosts.mission_squad),   // 20
-    },
+      monthlyAllocation: powerPlanPolicy.pro.monthlyAllocation, // Power V2
+      walletCap: powerPlanPolicy.pro.walletCap,                 // Power V2
+      simpleMissionsIncluded: Math.floor(powerPlanPolicy.pro.monthlyAllocation / powerActionCosts.mission_simple),       squadMissionsIncluded: Math.floor(powerPlanPolicy.pro.monthlyAllocation / powerActionCosts.mission_squad),       },
     quotas: {
       maxProjects: "unlimited",
       maxActiveMissions: 5,
@@ -134,11 +132,9 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     stripeAnnualPriceIdEur: process.env.STRIPE_BUSINESS_PRICE_ID_YEARLY_EUR,
     stripeAnnualPriceIdUsd: process.env.STRIPE_BUSINESS_PRICE_ID_YEARLY_USD,
     power: {
-      monthlyAllocation: powerPlanPolicy.business.monthlyAllocation, // 3 000 pts
-      walletCap: powerPlanPolicy.business.walletCap,                 // 3 000 pts
-      simpleMissionsIncluded: Math.floor(powerPlanPolicy.business.monthlyAllocation / powerActionCosts.mission_simple), // 300
-      squadMissionsIncluded: Math.floor(powerPlanPolicy.business.monthlyAllocation / powerActionCosts.mission_squad),   // 60
-    },
+      monthlyAllocation: powerPlanPolicy.business.monthlyAllocation, // Power V2
+      walletCap: powerPlanPolicy.business.walletCap,                 // Power V2
+      simpleMissionsIncluded: Math.floor(powerPlanPolicy.business.monthlyAllocation / powerActionCosts.mission_simple),       squadMissionsIncluded: Math.floor(powerPlanPolicy.business.monthlyAllocation / powerActionCosts.mission_squad),       },
     quotas: {
       maxProjects: "unlimited",
       maxActiveMissions: 20,
