@@ -97,11 +97,9 @@ async function getSupabaseAccessToken(request: Request) {
   } catch {
     // Session token extraction fallback
   }
-  return (
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    null
-  );
+  // Never fall back to an anonymous/public key: the Edge path requires
+  // an authenticated Supabase access token and must fail closed.
+  return null;
 }
 
 function getTextFromMessageParts(message: ChatMessage | undefined) {
