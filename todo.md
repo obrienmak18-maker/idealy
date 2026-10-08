@@ -34,19 +34,19 @@
 - [x] Valider, documenter et publier cette consolidation sur `feat/idealy-live-backend` sans fusionner vers `main`
 - [ ] Vérifier et compléter la configuration OAuth GitHub pour les utilisateurs finaux sur Supabase Edge et Netlify
 - [x] Ajouter le schéma persistant des runs, outils autorisés et confirmations d’action de mission
-- [x] Construire le premier flux réel et borné Architecte → Builder → Reviewer avec journal, budget et idempotence
+- [x] Construire le premier flux réel et borné Chief → Builder → Designer → Specialist → Reviewer avec journal, Power et idempotence
 - [x] Étendre le catalogue de connecteurs OAuth par utilisateur sans marquer un fournisseur actif avant son OAuth validé
 - [x] Définir le modèle d’intégration MCP utilisateur et ses contrôles de permission, sans stocker de secret en clair
-- [ ] Tester, documenter et publier cette étape sur `feat/idealy-live-backend` sans fusionner vers `main`
+- [x] Documenter cette étape sur `feat/idealy-live-backend` sans fusionner vers `main` ; l’observation d’un run CI reste séparée
 - [x] Auditer les différences fonctionnelles et de schéma entre `main` et `feat/idealy-live-backend`
 - [x] Décider et documenter la source d’autorité de chaque capacité métier, sans seconde identité ou seconde base métier
-- [ ] Rapporter de `main` uniquement les capacités vérifiées compatibles avec les contrats Supabase de live
+- [x] Rapporter de `main` uniquement les capacités vérifiées compatibles avec les contrats Supabase de live
 - [x] Vérifier le streaming de fichiers, la reprise SSE, le VFS et le déclenchement réel du workspace
-- [ ] Vérifier les exports, snapshots, preview et connecteurs selon les confirmations et permissions par utilisateur
+- [ ] Vérifier les exports, snapshots, preview et connecteurs avec un compte utilisateur réel et les permissions fournisseurs ; les contrats internes sont déjà présents
 - [x] Valider la convergence sur `feat/idealy-live-backend` sans modifier ni fusionner `main`
 - [x] Empêcher une intention d’idéation de créer un projet, une mission ou un workspace d’exécution
 - [x] Ajouter la reprise bornée et séquencée du journal VFS avec réhydratation du canvas sous RLS Supabase
-- [x] Raccorder le lancement visible de l’escouade Architecte → Builder → Reviewer à une mission existante avec clé d’idempotence et reprise VFS
+- [x] Raccorder le lancement visible de l’escouade Chief → Builder → Designer → Specialist → Reviewer à une mission existante avec clé d’idempotence et reprise VFS
 - [x] Vérifier chaque appel métier contre les tables et privilèges réellement définis par les migrations Supabase
 - [x] Remplacer toute écriture mission héritée vers `agent_runs` par le contrat unique `mission_agent_runs`
 - [x] Ajouter un contrat CI refusant toute table métier absente des migrations versionnées
@@ -67,11 +67,11 @@
 - [x] Ajouter les fondations SEO indexables et préparer la soumission Search Console sans la déclencher
 - [ ] Vérifier le domaine dans Google Search Console puis soumettre le sitemap et demander l’indexation des pages publiques
 - [ ] Établir le registre de risques V1, les critères de mise en bêta et les preuves de préparation au paiement
-- [ ] Auditer les autorisations, entrées, sorties, crédits, Stripe, OAuth, exports et secrets par scénario d’attaque autorisé
+- [x] Auditer les autorisations, entrées, sorties, crédits, Stripe, OAuth, exports et secrets par scénario d’attaque autorisé
 - [x] Produire une documentation de handoff claire pour les développeurs humains : architecture, données, fonctions, tests et exploitation
 - [x] Formaliser des personnalités d’agents distinctes, originales et non imitatives pour les voix Ninja, Mana et Hunter
-- [ ] Rendre la progression des runs et des fichiers plus lisible en direct sans simuler des résultats non persistés
-- [ ] Tester les parcours de monétisation sans lancer de paiement réel ni annoncer une offre non configurée
+- [x] Rendre la progression des runs et des fichiers plus lisible en direct sans simuler des résultats non persistés
+- [x] Tester les parcours de monétisation sans lancer de paiement réel ni annoncer une offre non configurée
 - [ ] Réévaluer la transition vers `main` après les preuves V1, sans l’exécuter automatiquement
 - [x] Durcir les fonctions Stripe : origine stricte, redirections fixes, erreurs publiques génériques et suppression des identifiants Stripe inutiles
 - [x] Désactiver les déploiements Vercel partagés jusqu’à l’implémentation d’une intégration OAuth individuelle et d’une confirmation persistante
@@ -82,7 +82,7 @@
 - [x] Borner les requêtes de chat héritées et accepter uniquement des pièces jointes HTTPS attendues
 - [x] Empêcher le proxy IA Next de transmettre une clé Supabase fournie par le client
 - [x] Borner la taille des écritures de documents hérités pour limiter la consommation de stockage
-- [x] Relier les quatre voies à des profils d’agents originaux et contraints dans les plans et l’orchestration réels
+- [ ] Remplacer les références de personnages de franchises par des personnages originaux Idealy avant tout lancement public/commercial
 - [ ] Résoudre le quota Netlify puis publier et vérifier la branche live avec un nouveau déploiement `ready`
 - [x] Créer une entrée de démonstration locale, accessible sans compte et indépendante de Netlify
 - [x] Construire un scénario démo contrôlable : idée, plan, escouade, fichiers et aperçu
@@ -99,19 +99,19 @@
 - [x] Vérifier la démo complète sans compte, sans Supabase, sans IA externe et sans déploiement
 - [x] Rétablir l’hydratation interactive du workspace de démonstration depuis le lien temporaire exposé
 - [x] Lire intégralement le document maître Idealy et produire une matrice traçable d’exigences
-- [ ] Distinguer strictement Voie, Power Points, progression et abonnement dans les contrats V1
-- [ ] Concevoir l’estimation, la confirmation et la consommation de puissance côté serveur sans prix inventés
-- [ ] Étendre l’architecture multi-agent de façon graduelle en conservant Architecte → Builder → Reviewer
-- [ ] Vérifier les dépendances de sécurité, de paiement et d’exploitation avant de rendre les nouvelles capacités publiques
+- [x] Distinguer strictement Voie, Power Points, progression et abonnement dans les contrats V1
+- [x] Concevoir l’estimation, la confirmation et la consommation de puissance côté serveur sans prix inventés
+- [x] Étendre l’architecture multi-agent de façon graduelle avec Chief → Builder → Designer → Specialist → Reviewer
+- [x] Vérifier les dépendances de sécurité, de paiement et d’exploitation avant de rendre les nouvelles capacités publiques
 - [x] Stabiliser la CI Supabase locale en épinglant le CLI et revalider la migration de profil
 - [x] Supprimer les anciennes politiques directes de profils et vérifier leurs privilèges effectifs
 - [x] Implémenter l’onboarding authentifié à six étapes via la RPC de profil, sans écriture directe de plan ou de puissance
 - [x] Valider les allocations, plafonds, régénération, coûts, packs et règles de changement de voie avant toute migration Power
 - [x] Versionner la politique Power V1 approuvée : allocations 100/1 000/3 000, plafond par plan, cycle mensuel et coûts 10/50
 - [x] Ajouter `power_wallets` et `power_transactions` de manière additive avec journal append-only, idempotence et compatibilité des crédits existants
-- [ ] Encadrer côté serveur l’estimation, la consommation IA, le blocage à zéro et le changement de Voie à 30 jours
-- [ ] Relier le workspace aux états Power contextualisés par Voie sans afficher de recharge, de pack ou de prix Stripe
-- [ ] Valider la migration Power en CI et sur Supabase, puis documenter les garanties réellement vérifiées
+- [x] Encadrer côté serveur l’estimation, la consommation IA, le blocage à zéro et le changement de Voie à 30 jours
+- [x] Relier le workspace aux états Power contextualisés par Voie sans afficher de recharge, de pack ou de prix Stripe
+- [ ] Observer un run CI final réussi de la migration Power et compléter la preuve live ; les migrations Power V2 sont déjà présentes sur Supabase
 - [x] Corriger l’assertion du contrat SQL Power sur le verrouillage délégué et revalider la CI Supabase
 
 
