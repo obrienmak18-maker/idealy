@@ -119,15 +119,11 @@ export function ConnectorCatalog({
           const status = statusByProvider.get(connector.provider);
           return (
             <ConnectorCard
-              connected={
-                connector.provider === "github" && status?.status === "active"
-              }
+              connected={status?.status === "active"}
               connector={connector}
               connectServiceState={connectServiceState}
               connectUnavailableReason={notice}
-              displayName={
-                connector.provider === "github" ? status?.displayName : null
-              }
+              displayName={status?.displayName ?? null}
               key={connector.id}
               managed={connector.availability === "configured"}
             />
