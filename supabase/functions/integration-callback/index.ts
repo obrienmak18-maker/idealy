@@ -342,6 +342,50 @@ Deno.serve(async (request) => {
 
     if (credentialError) return redirect("error=credential_storage_failed");
 
+    // A successful OAuth consent also activates the matching connector plugin
+    // with the permissions required by its declared tools. Provider-level writes
+    // still require an explicit action confirmation at execution time.
+    const pluginPermissions: Record<string, string[]> = {
+      github: ["tool.execute", "repository.read", "repository.write"],
+      canva: ["tool.execute", "files.read"],
+      figma: ["tool.execute", "files.read"],
+      google: ["tool.execute", "project.read"],
+      notion: ["tool.execute", "project.read", "project.write"],
+      slack: ["tool.execute", "project.read", "network.access"],
+      vercel: ["tool.execute", "deployment.execute"],
+    };
+    const pluginId = provider === "google" ? "google-drive" : provider;
+    if (pluginPermissions[provider]) {
+      const { data: pluginInstallation, error: pluginInstallError } = await admin
+        .from("plugin_installations")
+        .upsert({
+          user_id: oauthState.user_id,
+          plugin_id: pluginId,
+          plugin_version: "1.0.0",
+          state: "installed",
+          granted_permissions: pluginPermissions[provider],
+          connector_provider: provider,
+          configuration: {},
+          installed_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        }, { onConflict: "user_id,plugin_id" })
+        .select("id")
+        .single();
+
+      if (pluginInstallError || !pluginInstallation) {
+        console.error("Plugin installation bootstrap failed", pluginId, pluginInstallError);
+        return redirect("error=plugin_activation_failed");
+      }
+
+      await admin.from("plugin_events").insert({
+        user_id: oauthState.user_id,
+        plugin_id: pluginId,
+        event_type: "plugin_installed",
+        to_state: "installed",
+        payload: { source: "oauth_callback", provider },
+      });
+    }
+
     const { error: consumeStateError } = await admin
       .from("integration_oauth_states")
       .update({ consumed_at: now.toISOString() })
