@@ -168,30 +168,32 @@ export const {
           if (supabaseAuth?.status === "authenticated" && supabaseAuth.accessToken) {
             if (!localUser) {
               try {
-                await createUser(email, password);
-                const [created] = await getUser(email);
+                const [created] = await createUser(email, password);
                 localUser = created ?? null;
               } catch {
-                // Non-blocking
+                throw new IdealyCredentialsSignin("service_unavailable");
               }
             }
 
-            const userId = localUser?.id ?? supabaseAuth.userId ?? generateUUID();
-            if (supabaseAuth.userId && localUser?.id) {
+            if (!localUser?.id) {
+              throw new IdealyCredentialsSignin("service_unavailable");
+            }
+
+            if (supabaseAuth.userId) {
               try {
                 await linkUserToSupabaseUser({
                   localUserId: localUser.id,
                   supabaseUserId: supabaseAuth.userId,
                 });
               } catch {
-                // Non-blocking link
+                throw new IdealyCredentialsSignin("service_unavailable");
               }
             }
 
             return {
-              ...(localUser ?? {}),
+              ...localUser,
               email,
-              id: userId,
+              id: localUser.id,
               supabaseAccessToken: supabaseAuth.accessToken,
               supabaseAccessTokenExpiresAt: supabaseAuth.expiresAt ?? undefined,
               supabaseRefreshToken: supabaseAuth.refreshToken ?? undefined,
