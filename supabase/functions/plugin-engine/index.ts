@@ -49,12 +49,15 @@ const M: Record<string, Manifest> = {
     tools:{
       "canva-list-designs": {permissions:["tool.execute","files.read"],risk:"read",requiresConfirmation:false},
       "canva-get-design": {permissions:["tool.execute","files.read"],risk:"read",requiresConfirmation:false},
+      "canva-create-design": {permissions:["tool.execute","files.write","asset.generate"],risk:"write",requiresConfirmation:true},
+      "canva-export-design": {permissions:["tool.execute","files.read"],risk:"write",requiresConfirmation:true},
     },
   },
   figma: {
     id:"figma", minimumPlan:"free", provider:"figma",
     tools:{
       "figma-read-file": {permissions:["tool.execute","files.read"],risk:"read",requiresConfirmation:false},
+      "figma-export-assets": {permissions:["tool.execute","files.read"],risk:"read",requiresConfirmation:false},
     },
   },
   notion: {
@@ -117,7 +120,26 @@ async function readToken(admin: ReturnType<typeof createClient>, userId: string,
     .eq("integration_id", integration.id)
     .maybeSingle();
   if (!credential) throw new Error("CONNECTOR_CREDENTIAL_MISSING");
-  return decryptIntegrationToken(credential.ciphertext, credential.iv);
+
+  const decrypted = await decryptIntegrationToken(
+    credential.ciphertext,
+    credential.iv,
+  );
+
+  try {
+    const parsed = JSON.parse(decrypted) as { accessToken?: unknown };
+    if (typeof parsed.accessToken === "string" && parsed.accessToken.length > 0) {
+      return parsed.accessToken;
+    }
+  } catch {
+    // Older connector credentials may contain the raw token string.
+  }
+
+  if (decrypted.trim().length === 0) {
+    throw new Error("CONNECTOR_CREDENTIAL_INVALID");
+  }
+
+  return decrypted;
 }
 
 async function providerFetch(url: string, token: string, init: RequestInit = {}) {
