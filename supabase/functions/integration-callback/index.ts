@@ -7,7 +7,7 @@ const APP_ORIGIN =
   "http://localhost:3000";
 
 function redirect(query: string) {
-  return Response.redirect(APP_ORIGIN.replace(/\/$/, "") + "?" + query);
+  return Response.redirect(APP_ORIGIN.replace(/\/$/, "") + "/connectors?" + query);
 }
 
 function env(name: string) {
