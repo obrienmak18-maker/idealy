@@ -646,7 +646,7 @@ export async function POST(request: Request) {
               const assistantId = generateId();
               dataStream.write({ id: assistantId, type: "text-start" });
               dataStream.write({
-                delta: `Plan enregistré pour **${missionPlan.projectKind}**. L’escouade reste en attente de votre validation : ouvrez le workspace puis choisissez **Run squad** pour lancer Architecte, Builder et Reviewer.`,
+                delta: `Plan enregistré pour **${missionPlan.projectKind}**. L’escouade reste en attente de votre validation : ouvrez le workspace puis choisissez **Run squad** pour lancer le Chief, le Builder, le Designer, le Specialist et le Reviewer de votre Voie.`,
                 id: assistantId,
                 type: "text-delta",
               });
