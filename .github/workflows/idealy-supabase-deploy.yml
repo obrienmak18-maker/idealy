@@ -40,6 +40,8 @@ jobs:
           test -f supabase/migrations/20261012050000_database_performance_hardening.sql
           test -f supabase/migrations/20261012060000_way_agent_runtime.sql
           test -f supabase/migrations/20261012070000_oauth_state_metadata.sql
+          test -f supabase/migrations/20261012091000_missions_contract_alignment.sql
+          test -f supabase/migrations/20261012092000_realtime_presence_authorization.sql
       - name: Deploy selected Edge functions
         env:
           FUNCTIONS: ${{ inputs.functions || 'integration-connect integration-callback integration-status github-export process-ai-request orchestrate-mission mission-action-confirmation plugin-engine stripe-webhook check-subscription create-billing-portal create-checkout-session cancel-subscription refund-ai-credit designer-tools vercel-deploy vercel-status' }}
