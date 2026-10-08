@@ -83,3 +83,21 @@ Stated plainly, because a partial delivery presented as a finished one is the fa
 2. **Stripe secrets / price IDs** — Power Pack end-to-end cannot be proven; only the decision logic is unit-tested.
 3. **Environment memory (PROVEN, not assumed)** — `next build` fails with exit 143 (SIGTERM) during the compile phase. This was verified against a pristine git worktree at commit `2514acd` containing **none** of these changes: it fails identically. The failure is therefore an environment memory limit, not a code regression. It needs a rerun on a larger runner before any deployment claim can be made.
 4. **OAuth provider credentials** — each additional provider needs client id/secret before it can move past `CONFIGURATION_REQUIRED`.
+
+## Current convergence addendum — 2026-10-08
+
+The historical findings above describe earlier repository states and must not be read as the current runtime contract. Since that audit:
+
+- the canonical mission squad is now five Way-specific agents: Chief, Builder, Designer, Specialist, Reviewer;
+- mission execution uses persisted `mission_agent_runs`, bounded correction iterations and the reserve → execute → settle/release Power flow;
+- Firebase login is bridged server-side to a real Supabase Auth session before the Supabase token enters NextAuth;
+- in-memory persistence fallbacks have been removed;
+- the live `missions` table has been aligned additively with the current mission contract;
+- connector OAuth now covers the catalog providers, with encrypted credentials and real status checks;
+- Vercel deployment is user-scoped and confirmation-protected;
+- GitHub export never targets the repository default branch, and existing-repository sync uses an explicit one-shot confirmation;
+- the plugin engine executes real provider operations after connector, scope, plan, permission and confirmation checks;
+- browser presence uses a private Supabase Realtime channel backed by the authenticated Supabase session and mission-owner RLS.
+
+Still not claimed as complete: end-to-end provider tests with real user accounts, final provider credentials/configuration, authenticated mission/VFS/replay smoke tests, Stripe live-payment verification, and any capability whose product economics remain intentionally undefined.
+
