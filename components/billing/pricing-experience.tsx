@@ -23,15 +23,9 @@ const copy = {
   en: {
     all: "Everything in the previous levels",
     annualCharge: "charged once per year",
-    annualSavings: "saved over the year",
-    businessPrice: "Price to confirm",
     checkoutError: "Unable to prepare payment. Try again or contact the team.",
-    choose: "Continue with this level",
-    contact: "Talk to the team",
     core: "Idealy tools included in every Way",
     custom: "Adjust your monthly Power",
-    customHelp: "Add capacity without changing your level.",
-    first: "From",
     footer:
       "Pro and Business use Stripe checkout. Custom Power remains unavailable until its billing and economics are configured.",
     loading: "Opening Stripe…",
@@ -80,15 +74,10 @@ const copy = {
   es: {
     all: "Todo lo incluido en los niveles anteriores",
     annualCharge: "cobrados en un pago anual",
-    annualSavings: "ahorrados durante el año",
-    businessPrice: "Precio por confirmar",
     checkoutError:
       "No se pudo preparar el pago. Inténtalo de nuevo o contacta con el equipo.",
-    choose: "Continuar con este nivel",
-    contact: "Hablar con el equipo",
     core: "Herramientas Idealy incluidas en todas las Vías",
     custom: "Ajusta tu reserva mensual",
-    customHelp: "Añade capacidad sin cambiar de nivel.",
     first: "Desde",
     footer:
       "Pro y Business usan Stripe. El Power personalizado no está disponible hasta configurar su facturación y economía.",
@@ -139,16 +128,10 @@ const copy = {
   fr: {
     all: "Tout ce qui est inclus dans les niveaux précédents",
     annualCharge: "facturés en une fois",
-    annualSavings: "économisés sur l’année",
-    businessPrice: "Prix à confirmer",
     checkoutError:
       "Impossible de préparer le paiement. Réessayez ou contactez l’équipe.",
-    choose: "Continuer avec ce niveau",
-    contact: "Parler à l’équipe",
     core: "Outils Idealy inclus dans toutes les Voies",
     custom: "Ajustez votre réserve mensuelle",
-    customHelp: "Augmentez votre réserve sans changer de niveau.",
-    first: "À partir de",
     footer:
       "Les offres Pro et Business passent par Stripe. Le Power personnalisé reste indisponible tant que sa facturation et son économie ne sont pas configurées.",
     loading: "Ouverture de Stripe…",
