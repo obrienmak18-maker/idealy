@@ -23,7 +23,6 @@ export default function PluginsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [connectedList, setConnectedList] = useState<string[]>([]);
-  const [statusReady, setStatusReady] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -41,12 +40,10 @@ export default function PluginsPage() {
               entry.provider === "google" ? ["google-drive"] : entry.provider ? [entry.provider] : []
             )
         );
-        setStatusReady(true);
       })
       .catch(() => {
         if (active) {
           setConnectedList([]);
-          setStatusReady(false);
         }
       });
     return () => {
@@ -289,12 +286,12 @@ export default function PluginsPage() {
 
                     <button
                       type="button"
-                      disabled={connectedList.includes(connector.id) || !statusReady || connector.id !== "github"}
+                      disabled={connectedList.includes(connector.id) || connector.id !== "github"}
                       onClick={() => connectConnector(connector.id)}
                       className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                         isConnected
                           ? "bg-muted/80 text-foreground border border-border cursor-default"
-                          : connector.id === "github" && statusReady
+                          : connector.id === "github"
                           ? "bg-primary text-primary-foreground hover:opacity-90 shadow-xs"
                           : "bg-muted text-muted-foreground border border-border cursor-not-allowed"
                       }`}
