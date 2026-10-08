@@ -53,7 +53,7 @@ export function McpConfigModal({
   );
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
-  const [pingLatency, setPingLatency] = useState<number | null>(null);
+  const [endpointStatus, setEndpointStatus] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const handleJsonChange = useCallback((val: string) => {
@@ -75,7 +75,7 @@ export function McpConfigModal({
    */
   const handleTestConnection = useCallback(async () => {
     setIsTesting(true);
-    setPingLatency(null);
+    setEndpointStatus(null);
     try {
       const parsed: unknown = JSON.parse(jsonConfig);
       if (!parsed || typeof parsed !== "object") {
@@ -88,6 +88,7 @@ export function McpConfigModal({
           ? (config.servers as Record<string, unknown>)
           : null;
       const hasEndpoint =
+        Boolean(serverUrl.trim()) ||
         Boolean(config.url) ||
         Boolean(servers && Object.keys(servers).length > 0);
 
@@ -97,21 +98,36 @@ export function McpConfigModal({
         );
       }
 
-      const startedAt = performance.now();
-      if (typeof config.url === "string" && /^https?:\/\//i.test(config.url)) {
-        // A real reachability probe against the endpoint the user configured.
-        await fetch(config.url, {
-          cache: "no-store",
-          method: "HEAD",
-          mode: "cors",
-        });
+      if (serverUrl.trim() && !/^https?:\/\//i.test(serverUrl.trim())) {
+        throw new Error("L'URL du serveur doit commencer par http:// ou https://.");
       }
-      setPingLatency(Math.round(performance.now() - startedAt));
+
+      if (serverUrl.trim()) {
+        try {
+          const response = await fetch(serverUrl.trim(), {
+            cache: "no-store",
+            method: "HEAD",
+            mode: "cors",
+          });
+          setEndpointStatus(
+            response.ok
+              ? "Endpoint HTTP accessible (" + response.status + ")"
+              : "Endpoint HTTP joignable, réponse " + response.status
+          );
+        } catch {
+          setEndpointStatus(null);
+          throw new Error(
+            "Impossible d'atteindre l'endpoint depuis ce navigateur. Cela peut aussi être dû à la politique CORS du serveur."
+          );
+        }
+      } else {
+        setEndpointStatus("Aucun endpoint HTTP à tester.");
+      }
 
       toast.success(
         t(
           "connectors.configValid",
-          "Configuration valide. La connexion au serveur MCP n'est pas encore vérifiée."
+          "Configuration JSON valide. L'endpoint a été vérifié séparément."
         )
       );
     } catch (error) {
@@ -139,7 +155,10 @@ export function McpConfigModal({
     }
     try {
       const parsed = JSON.parse(jsonConfig);
-      localStorage.setItem("idealy_mcp_config", JSON.stringify(parsed));
+      localStorage.setItem(
+        "idealy_mcp_config",
+        JSON.stringify({ endpoint: serverUrl.trim(), config: parsed })
+      );
       toast.success("Configuration MCP enregistrée !");
       onOpenChange(false);
     } catch {
@@ -209,11 +228,11 @@ export function McpConfigModal({
                 Tester
               </Button>
             </div>
-            {pingLatency !== null && (
-              <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                ● En ligne · Latence : {pingLatency} ms
+            {endpointStatus ? (
+              <p className="text-[11px] text-muted-foreground font-medium">
+                ● {endpointStatus}
               </p>
-            )}
+            ) : null}
           </div>
 
           <div className="space-y-1.5">
