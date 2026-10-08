@@ -123,13 +123,16 @@ export const register = async (
       terms: formData.get("terms"),
     });
 
-    if (process.env.DEMO_MODE !== "true") {
+    const demoMode =
+      process.env.DEMO_MODE === "true" && isDevelopmentEnvironment;
+
+    if (!demoMode) {
       let existingUser = null;
       try {
         const users = await getUser(validatedData.email);
         existingUser = users[0];
       } catch {
-        // Fallback: proceed to Supabase check
+        return { status: "service_unavailable" };
       }
 
       if (existingUser) {
@@ -171,7 +174,7 @@ export const register = async (
       }
     }
 
-    if (process.env.DEMO_MODE === "true") {
+    if (demoMode) {
       return { status: "success" };
     }
 
