@@ -21,7 +21,7 @@ The current repository already defines 5 agents per Way in:
 Do NOT invent new names.
 
 Decision:
-- [ ] Keep the current Way rosters exactly as they are.
+- [x] Keep the current Way rosters exactly as they are.
 - [ ] Change one or more names/roles.
 
 Notes:
@@ -35,7 +35,7 @@ Current runtime has generic roles:
 - Reviewer
 
 Choose one:
-- [ ] A) The 5 Way agents are the real execution team. Map each one to tasks.
+- [x] A) The 5 Way agents are the real execution team. Map each one to tasks.
 - [ ] B) The 5 Way agents are the product/personality layer, while Architect/Builder/Reviewer are execution roles underneath.
 - [ ] C) Another model.
 
@@ -48,7 +48,7 @@ Current repository definition:
 - Alvin = universal messenger / dispatcher.
 
 Decision:
-- [ ] Keep Alvin as the universal dispatcher.
+- [x] Keep Alvin as the universal dispatcher.
 - [ ] Change Alvin's role.
 
 Decision:
@@ -57,7 +57,7 @@ _
 ### 1.4 Sub-agents
 
 Decision:
-- [ ] Every Way can select specialized sub-agents dynamically.
+- [x] Every Way can select specialized sub-agents dynamically.
 - [ ] Sub-agents are only narrative/product concepts for now.
 - [ ] Other.
 
@@ -71,7 +71,7 @@ _
 The repo currently contains several identity systems (Way characters, generic runtime personas, and chat labels).
 
 Choose the canonical runtime identity:
-- [ ] Way-specific names
+- [x] Way-specific names
 - [ ] Neutral original Idealy names
 - [ ] Other
 
@@ -81,7 +81,7 @@ _
 Should chat messages display:
 - [ ] Agent name + role
 - [ ] Only role
-- [ ] Both, depending on context
+- [x] Both, depending on context
 
 Decision:
 _
@@ -98,46 +98,50 @@ The repository currently has conflicting prices between:
 ### 3.1 Current intended prices
 
 Free:
-_
+Pricing adapts dynamically based on the path chosen by the user (profile universe):
+- **Ninja Path**: `Genin` (Free) | `Chunin` (Pro) | `Jonin` (Business/Studio) | `Kage / Sannin` (Enterprise)
+- **Mage Path**: `Apprenti` (Free) | `Mage` (Pro) | `Archimage` (Business) | `Grand Primordial` (Enterprise)
+- **Hunter Path**: `Candidat` (Free) | `Hunter Licencié` (Pro) | `Double Star Hunter` (Business) | `Triple Star Hunter` (Enterprise)
+- **Professional Path**: `Starter` | `Pro` | `Team` | `Enterprise`
 
 Pro:
-- Monthly: _
-- Yearly: _
+- Monthly: 19
+- Yearly: 15,90
 
 Business:
-- Monthly: _
-- Yearly: _
+- Monthly: 49
+- Yearly: 40,90
 
 Currency:
 - [ ] EUR
 - [ ] USD
-- [ ] Both
+- [x] Both
 
 ### 3.2 Power
 
 Free:
-- Monthly allocation: _
-- Wallet cap: _
+- Monthly allocation: 200
+- Wallet cap: 250
 
 Pro:
-- Monthly allocation: _
-- Wallet cap: _
+- Monthly allocation: 2500
+- Wallet cap: 3500
 
 Business:
-- Monthly allocation: _
-- Wallet cap: _
+- Monthly allocation: 4000
+- Wallet cap: 7000
 
 Simple mission cost:
-_
+It depends on the mission. It depends on the mission, but we need to be reasonable.
 
 Squad mission cost:
-_
+That also depends on the mission, but still, because it has been used a lot in Sharia, it is going to be much more expensive.
 
 ### 3.3 Custom Power
 
 Choose:
 - [ ] Remove the custom Power slider for now.
-- [ ] Keep it visually but clearly mark it unavailable.
+- [x] Keep it visually but clearly mark it unavailable.
 - [ ] Make it fully billable now.
 
 Decision:
@@ -150,37 +154,37 @@ _
 ### 4.1 Real connector state
 
 Choose:
-- [ ] Only real backend state may display CONNECTED/ACTIVE.
+- [x] Only real backend state may display CONNECTED/ACTIVE.
 - [ ] Demo mode may show simulated connected state.
 - [ ] Other.
 
 Decision:
-_
+The connectors need to work on all ports. When the user clicks, when they reconnect, we bring up the name to connect and show the logo of the application requesting the connection. Like ChatGPT does. When ChatGPT connects, we ask: do you want to give this application access to this one? Yes, yes, yes, yes to everything. Then it connects, and afterward it can use those connectors. So it has to work.
 
 ### 4.2 Initial integrations
 
 Which connectors must be genuinely working for the next product milestone?
 
-- [ ] GitHub
-- [ ] Supabase
-- [ ] Stripe
-- [ ] Vercel
-- [ ] Canva
-- [ ] Figma
-- [ ] Google Drive
-- [ ] Notion
-- [ ] Slack
+- [x] GitHub
+- [x] Supabase
+- [x] Stripe
+- [x] Vercel
+- [x] Canva
+- [x] Figma
+- [x] Google Drive
+- [x] Notion
+- [x] Slack
 - [ ] Other: _
 
 ### 4.3 Vercel
 
 Choose:
-- [ ] Implement real user-scoped OAuth + explicit deployment confirmation.
+- [x] Implement real user-scoped OAuth + explicit deployment confirmation.
 - [ ] Hide deployment until later.
 - [ ] Other.
 
 Decision:
-_
+Yes, we really need that. We need to set up a proper one, but we also shouldn't have to log in all the time. So we're already logged in, the application has already been closed, and it has permission to publish to the account. Maybe it will do a few small checks, but it shouldn't say we're disconnected again when publishing—just a few small checks.
 
 ---
 
@@ -192,14 +196,14 @@ Choose the long-term authority:
 - [ ] Supabase Auth
 - [ ] Firebase Auth
 - [ ] NextAuth only
-- [ ] Hybrid (describe below)
+- [x] Hybrid (describe below)
 
 Decision:
-_
+Each has its role. Firebase Auth is what we use to log in. That's where everything is. Supabase is where everything is managed. So even Firebase is managed in Supabase. Next Auth, I don't know what it's for, but at least it's there, and I think it's useful. For what, I don't know, but I don't know what needs to be done. If it shouldn't combine the Supabase projects, then Next Auth, Next Auth only. I don't know what it's for.
 
 Should local development fall back to an in-memory/local identity?
 - [ ] Yes, DEMO/dev only.
-- [ ] No, authentication failures must fail closed.
+- [x] No, authentication failures must fail closed.
 
 Decision:
 _
@@ -214,12 +218,12 @@ Current repo has:
 
 Choose:
 - [ ] Keep both with a strict boundary.
-- [ ] Migrate everything to Supabase.
+- [x] Migrate everything to Supabase.
 - [ ] Migrate everything to the Drizzle database.
 - [ ] Other.
 
 Decision:
-_
+It's a very technical process, so I'll leave it to you. Migration on that basis, but one thing: if Dreizel is important, then if it doesn't work, it just mustn't damage our project. What needs to be done mustn't damage our project; it should always remain understandable.
 
 ---
 
@@ -235,11 +239,11 @@ Choose:
 - [ ] Other.
 
 Decision:
-_
+Yeah, I don't even know what DAGs are. DAGs, I don't know them at all. I wouldn't know how to answer that question. But what you should do is... whatever is necessary without damaging anything.
 
 Should Power use:
-- [ ] reserve -> execute -> settle/release
-- [ ] direct upfront charge
+- [x] reserve -> execute -> settle/release
+- [x] direct upfront charge
 - [ ] Other
 
 Decision:
@@ -253,7 +257,7 @@ The workspace currently contains a visual collaborator-presence treatment but no
 
 Choose:
 - [ ] Remove simulated presence.
-- [ ] Implement real Supabase Realtime presence.
+- [x] Implement real Supabase Realtime presence.
 - [ ] Keep it only in DEMO_MODE.
 
 Decision:
@@ -269,16 +273,16 @@ Current locales:
 - es
 
 Target languages for the next release:
-_
+The three languages already there suit us very well. They are the most widely spoken languages in the world. If you think you can add more, go ahead, but in my opinion, we shouldn't overload the application for now.
 
 Choose architecture:
-- [ ] Standardize existing i18n layer.
-- [ ] Adopt next-intl.
+- [x] Standardize existing i18n layer.
+- [x] Adopt next-intl.
 - [ ] Other.
 
 Should AI-generated mission responses follow the user's locale?
-- [ ] Always.
-- [ ] Only when explicitly requested.
+- [x] Always.
+- [x] Only when explicitly requested.
 - [ ] Other.
 
 Decision:
@@ -292,7 +296,7 @@ The current Ways use recognizable characters from existing franchises as visual/
 
 Choose:
 - [ ] Keep for internal prototype/demo only.
-- [ ] Replace with original Idealy characters before public commercial launch.
+- [x] Replace with original Idealy characters before public commercial launch.
 - [ ] Other.
 
 Decision:
@@ -321,14 +325,14 @@ Which capabilities are allowed to appear as production-ready in the UI?
 Any capability that is not selected must not be presented as fully live.
 
 Decision:
-_
+I don't know what works. I know nothing about what works. The main thing is that everything must work: chats, mission planning, squad execution, VFC, VFS, the preview, guitables, superbases, strikes, opposing deployments, plugins, power, points, controls. So rollbacks too—everything must work without exception.
 
 ---
 
 ## 12. What should remain demo-only?
 
 List features that are intentionally simulated:
-_
+I haven't seen them, and I don't know all the features that are simulated, but nothing should be simulated. Everything in the application must genuinely work well, whether it's in the code or anything else—everything must work. Things that won't work, things we need to... we haven't discussed them yet, but we could classify them as coming in a future version. It should be clearly visible on screen that they will work soon, 'coming soon,' or another phrase you can choose or come up with. But there you go, I don't have any features to exclude.
 
 ---
 
@@ -337,20 +341,20 @@ _
 ### Work delegated to Antigravity
 
 1.
-_
+I haven't given anything to Anti-gravité yet, not until you've written the code. Until you've finished with SFS and everything you said you could do, I won't tell it to do anything.
 2.
-_
+I haven't given anything to Anti-gravité yet, not until you've written the code. Until you've finished with SFS and everything you said you could do, I won't tell it to do anything.
 3.
-_
+I haven't given anything to Anti-gravité yet, not until you've written the code. Until you've finished with SFS and everything you said you could do, I won't tell it to do anything.
 
 ### Work delegated to ChatGPT / direct repository changes
 
 1.
-_
+You have access to everything you can modify. Whatever you can do, do it without breaking my code, without damaging anything that has already been done, without damaging it or breaking everything. You have permission to do everything you can, without breaking or damaging anything.
 2.
-_
+You have access to everything you can modify. Whatever you can do, do it without breaking my code, without damaging anything that has already been done, without damaging it or breaking everything. You have permission to do everything you can, without breaking or damaging anything.
 3.
-_
+You have access to everything you can modify. Whatever you can do, do it without breaking my code, without damaging anything that has already been done, without damaging it or breaking everything. You have permission to do everything you can, without breaking or damaging anything.
 
 ### External services / secrets required from the team
 
@@ -370,21 +374,21 @@ Complete this sentence:
 "Idealy is not primarily ________. It is ________."
 
 Decision:
-_
+Ideally is not primarily an IDE. It's more like an assistant, not like a chatbot, but like ChatGPT: something with a simple interface, but ideal for anything you want to create, whether for web, mobile, or desktop. It's ideal. And you should use Ideally ideally.
 
 Complete this sentence:
 
 "The most important experience we want a user to feel is ________."
 
 Decision:
-_
+So what we want for the user is for them to see that they can build something, an application that seems difficult, a professional application, while having fun, while staying in a great environment, while having fun and having the right tools and the right workforce for whatever they want.
 
 Complete this sentence:
 
 "The one thing Idealy must never pretend to do when it has not actually done it is ________."
 
 Decision:
-_
+I don't know what it shouldn't... I don't know what it shouldn't claim to actually know how to do, but it shouldn't claim anything if it hasn't actually done anything. Everything it says, everything it does, it must genuinely be 99 % sure that it works. It must never lie or claim to have done something it hasn't done. If it can't do it, it should say so clearly or suggest solutions within its domain.
 
 ---
 
