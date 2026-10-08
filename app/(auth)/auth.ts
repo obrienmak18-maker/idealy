@@ -2,9 +2,8 @@ import { compare } from "bcrypt-ts";
 import NextAuth, { CredentialsSignin, type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
-import { DUMMY_PASSWORD } from "@/lib/constants";
+import { DUMMY_PASSWORD, isDevelopmentEnvironment } from "@/lib/constants";
 import {
-  createGuestUser,
   createUser,
   getUser,
   getUserBySupabaseUserId,
@@ -18,7 +17,6 @@ import {
   type SupabasePasswordAuthResult,
 } from "@/lib/idealy/supabase-auth";
 import { generateUUID } from "@/lib/utils";
-import { isDevelopmentEnvironment } from "@/lib/constants";
 import { verifyFirebaseToken } from "@/lib/firebase/admin";
 import { authConfig } from "./auth.config";
 
