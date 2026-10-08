@@ -25,9 +25,9 @@ assert.match(welcome, /setSelectedWay/);
 assert.match(welcome, /register\?way=\$\{selectedWay\}/);
 assert.doesNotMatch(welcome, /Les Nains|selectedVoice|dwarves/);
 
-assert.match(powerPolicy, /free: \{ monthlyAllocation: 100, walletCap: 100 \}/);
-assert.match(powerPolicy, /pro: \{ monthlyAllocation: 1_000, walletCap: 1_000 \}/);
-assert.match(powerPolicy, /business: \{ monthlyAllocation: 3_000, walletCap: 3_000 \}/);
+assert.match(powerPolicy, /free: \{ monthlyAllocation: 200, walletCap: 250 \}/);
+assert.match(powerPolicy, /pro: \{ monthlyAllocation: 2_500, walletCap: 3_500 \}/);
+assert.match(powerPolicy, /business: \{ monthlyAllocation: 4_000, walletCap: 7_000 \}/);
 assert.match(powerPolicy, /mission_simple: 10/);
 assert.match(powerPolicy, /mission_squad: 50/);
 assert.match(powerPolicy, /regenerationCadence: "monthly"/);
