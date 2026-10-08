@@ -32,12 +32,12 @@
     "badge": "Your multi-agent AI studio to turn ideas into production applications",
     "title1": "Bring your ideas to life.",
     "title2": "One mission at a time.",
-    "subtitle": "Idealy orchestrates an expert AI squad (Architect, Builder, Reviewer) to transform your vision into clean, production-ready code.",
+    "subtitle": "Idealy orchestrates a real five-agent AI squad to transform your vision into verifiable software.",
     "ctaPrimary": "Start My First Mission",
     "ctaSecondary": "Explore Plans",
     "features": [
       "Describe your project in plain natural language",
-      "The agent squad plans, codes, and validates",
+      "The five-agent squad plans, builds, audits, and validates",
       "Live preview instantly, iterate, and download as ZIP"
     ]
   },
@@ -93,7 +93,7 @@
     "subtitle": "Tune your anticipated development volume to discover the perfect plan.",
     "simpleLabel": "Single missions (1 agent)",
     "simpleUnit": "month",
-    "squadLabel": "Full squad missions (3 agents)",
+    "squadLabel": "Full squad missions (5 agents)",
     "squadUnit": "month",
     "estimatedNeed": "Estimated need:",
     "perMonth": "Power Points / month",
@@ -128,13 +128,13 @@
       },
       "pro": {
         "name": "Pro",
-        "price": "29 €",
+        "price": "19 €",
         "period": "per month",
         "badge": "Most Popular",
         "desc": "Expanded compute capacity, parallel AI assistants, high-speed models, and full integrations.",
         "features": [
-          "Customizable Power volume (1,000 to 6,000 credits)",
-          "Parallel AI assistants (Architect, Builder, Reviewer)",
+          "2,500 Power / month, up to 3,500 stored",
+          "Specialized five-agent AI squad",
           "High-speed models & network priority",
           "Direct export and sync to GitHub",
           "Full chat history & continuous context",
@@ -144,12 +144,12 @@
       },
       "business": {
         "name": "Business Studio",
-        "price": "89 €",
+        "price": "49 €",
         "period": "per month",
         "badge": "Teams & Scale",
         "desc": "For studios, agencies, and teams demanding maximum horsepower and friction-free collaboration.",
         "features": [
-          "5,000+ execution credits / month",
+          "4,000 Power / month, up to 7,000 stored",
           "Collaborative workspaces & team sharing",
           "Unlimited connectors & plugins (Figma, Supabase, Slack)",
           "Custom MCP servers & external REST APIs",
