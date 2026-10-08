@@ -315,7 +315,7 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     requestBody =
-      process.env.DEMO_MODE === "true"
+      process.env.DEMO_MODE === "true" && isDevelopmentEnvironment
         ? (json as PostRequestBody)
         : postRequestBodySchema.parse(json);
   } catch {
@@ -326,7 +326,7 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
-    if (process.env.DEMO_MODE === "true") {
+    if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
       const demoText =
         "J’ai compris votre idée. En mode démonstration, les agents Idealy prennent le relais : l’Architecte structure la mission, le Builder prépare le premier écran et le Reviewer vérifie la cohérence. La preview s’ouvre maintenant dans le canvas de droite, comme dans l’espace de création V0.";
       const demoCode = `import React from "react";\n\nexport default function MissionWorkspace() {\n  return (\n    <main className="min-h-screen bg-slate-950 px-6 py-12 text-slate-100 md:px-12">\n      <div className="mx-auto max-w-5xl">\n        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">Idealy / Build complete</p>\n        <h1 className="mt-6 max-w-3xl text-5xl font-semibold tracking-tight md:text-7xl">Turn one clear idea into a beautiful product.</h1>\n        <p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">A focused workspace for shaping the experience, validating the details, and moving from concept to launch.</p>\n        <div className="mt-14 h-px w-full bg-gradient-to-r from-sky-400/70 via-violet-400/40 to-transparent" />\n        <div className="mt-6 flex flex-wrap gap-x-10 gap-y-3 text-sm text-slate-400">\n          <span><strong className="text-slate-100">Product direction</strong> defined</span>\n          <span><strong className="text-slate-100">Interface system</strong> ready</span>\n          <span><strong className="text-slate-100">Launch checklist</strong> 4 items left</span>\n        </div>\n      </div>\n    </main>\n  );\n}`;
