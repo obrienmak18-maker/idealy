@@ -97,7 +97,7 @@ export default function AboutPage() {
           </section>
         </section>
         <p className="mt-5 text-center text-xs text-muted-foreground/65">
-          © {new Date().getFullYear()} Idealy
+          © 2026 Idealy
         </p>
       </div>
     </main>
