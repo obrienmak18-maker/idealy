@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
+import { isDevelopmentEnvironment } from "@/lib/constants";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import {
   deleteDocumentsByIdAfterTimestamp,
@@ -17,7 +18,7 @@ const documentSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  if (process.env.DEMO_MODE === "true") {
+  if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return Response.json([], { status: 200 });
   }
 
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (process.env.DEMO_MODE === "true") {
+  if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return Response.json({ success: true }, { status: 200 });
   }
 
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (process.env.DEMO_MODE === "true") {
+  if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return Response.json({ success: true }, { status: 200 });
   }
 
