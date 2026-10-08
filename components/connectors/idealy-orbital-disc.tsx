@@ -9,13 +9,13 @@ interface OrbitalConnector {
   id: string;
   name: string;
   category: string;
-  status: "connected" | "available" | "slot";
+  status: "available" | "slot";
 }
 
 const ORBITAL_CONNECTORS: OrbitalConnector[] = [
-  // Arc Supérieur : Connecteurs intégrés avec logos officiels
-  { id: "github", name: "GitHub", category: "Code", status: "connected" },
-  { id: "supabase", name: "Supabase", category: "Database", status: "connected" },
+  // The orbital disc is presentation-only. Live connection state comes from props.
+  { id: "github", name: "GitHub", category: "Code", status: "available" },
+  { id: "supabase", name: "Supabase", category: "Database", status: "available" },
   { id: "stripe", name: "Stripe", category: "Payments", status: "available" },
   { id: "vercel", name: "Vercel", category: "Deploy", status: "available" },
   { id: "canva", name: "Canva", category: "Design", status: "available" },
@@ -28,7 +28,13 @@ const ORBITAL_CONNECTORS: OrbitalConnector[] = [
   { id: "slot-4", name: "Extension", category: "Figma Sync", status: "slot" },
 ];
 
-export function IdealyOrbitalDisc({ onSelectConnector }: { onSelectConnector?: (id: string) => void }) {
+export function IdealyOrbitalDisc({
+  connectedIds = [],
+  onSelectConnector,
+}: {
+  connectedIds?: readonly string[];
+  onSelectConnector?: (id: string) => void;
+}) {
   const [activeItem, setActiveItem] = useState<string>("github");
 
   return (
@@ -64,6 +70,7 @@ export function IdealyOrbitalDisc({ onSelectConnector }: { onSelectConnector?: (
 
           const isSlot = connector.status === "slot";
           const isSelected = activeItem === connector.id;
+          const isConnected = connectedIds.includes(connector.id);
 
           return (
             <div
@@ -99,7 +106,7 @@ export function IdealyOrbitalDisc({ onSelectConnector }: { onSelectConnector?: (
                   <div className="flex items-center justify-center">
                     {getConnectorBrandLogo(connector.id, "size-5 text-foreground")}
                   </div>
-                  {connector.status === "connected" && (
+                  {isConnected && (
                     <span className="absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xs">
                       <CheckIcon className="size-2.5 stroke-[3]" />
                     </span>
@@ -119,7 +126,7 @@ export function IdealyOrbitalDisc({ onSelectConnector }: { onSelectConnector?: (
       <div className="mt-4 flex items-center gap-6 text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <span className="size-2 rounded-full bg-emerald-500" />
-          <span>Connecteurs intégrés</span>
+          <span>Connecteurs connectés</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="size-2 rounded-full border border-dashed border-foreground/50" />
