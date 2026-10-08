@@ -138,7 +138,7 @@ export async function POST(
     if (error) return json({ error: "État du connecteur indisponible." }, 503);
     connectorActive = connector?.status === "active";
 
-    if (!connectorActive) {
+    if (!connectorActive || !connector) {
       return json(
         {
           code: "CONNECTOR_REQUIRED",
