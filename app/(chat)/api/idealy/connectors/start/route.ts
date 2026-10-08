@@ -8,7 +8,6 @@ const SUPPORTED_OAUTH_PROVIDERS = new Set([
   "google-drive",
   "notion",
   "slack",
-  "vercel",
 ]);
 
 function jsonError(error: string, status: number) {
