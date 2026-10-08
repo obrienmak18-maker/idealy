@@ -879,7 +879,7 @@ export function BuildTopBar() {
           }}
           type="button"
         >
-          Déployer
+          Configurer
         </button>
       </div>
 
