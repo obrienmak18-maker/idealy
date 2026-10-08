@@ -524,14 +524,14 @@ export function PricingExperience({
                 ) : (
                   <>
                     <span className="text-3xl font-semibold tracking-[-.04em] text-white">
-                      ${shownPrice.toFixed(2)} €
+                      {shownPrice.toFixed(2)} €
                     </span>
                     <span className="ml-1 text-xs text-white/45">
                       {text.perMonth}
                     </span>
                     {annual && shownPrice > 0 ? (
                       <span className="mt-1 block text-[11px] leading-4 text-emerald-200/80">
-                        ${annualPrice?.toFixed(2) ?? "—"} € /{" "}
+                        {annualPrice?.toFixed(2) ?? "—"} € /{" "}
                         {locale === "fr"
                           ? "an"
                           : locale === "es"
