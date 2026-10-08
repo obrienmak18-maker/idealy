@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { IdealyMark } from "@/components/branding/idealy-logo";
+import { toast } from "sonner";
 import { connectorCatalog } from "@/lib/idealy/connectors";
 
 const filters = [
@@ -254,15 +255,19 @@ export default function ConnectorsPage() {
     <button
       type="button"
       onClick={async () => {
-        const route = selectedConnector.id === "github"
-          ? "/api/idealy/connectors/github/start"
-          : "/api/idealy/connectors/vercel/start";
-        const response = await fetch(route, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-        const payload = await response.json().catch(() => null);
-        if (!response.ok || !payload?.url) {
-          throw new Error(payload?.error ?? "Connexion indisponible.");
+        try {
+          const route = selectedConnector.id === "github"
+            ? "/api/idealy/connectors/github/start"
+            : "/api/idealy/connectors/vercel/start";
+          const response = await fetch(route, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.url) {
+            throw new Error(payload?.error ?? "Connexion indisponible.");
+          }
+          window.location.assign(payload.url);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "Connexion indisponible.");
         }
-        window.location.assign(payload.url);
       }}
       className="rounded-lg bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground"
     >
