@@ -97,6 +97,15 @@ function getProviderConfig(provider: string): ProviderConfig | null {
         usePkce: false,
         extraParams: { user_scope: "channels:read,chat:write" },
       };
+    case "vercel":
+      return {
+        storageProvider: "vercel",
+        clientId: env("VERCEL_APP_CLIENT_ID") || env("NEXT_PUBLIC_VERCEL_APP_CLIENT_ID"),
+        clientSecret: env("VERCEL_APP_CLIENT_SECRET"),
+        authorizationUrl: "https://vercel.com/oauth/authorize",
+        scopes: "openid email profile offline_access",
+        usePkce: true,
+      };
     default:
       return null;
   }
