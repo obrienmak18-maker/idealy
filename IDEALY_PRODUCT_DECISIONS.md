@@ -84,7 +84,7 @@ Should chat messages display:
 - [x] Both, depending on context
 
 Decision:
-Keep the custom Power control visible but clearly unavailable/future. It must never appear billable or usable until its backend contract is implemented.
+Custom Power reste visible pour préserver l'expérience produit, mais il est explicitement indisponible et non facturable. Aucun slider, pack, prix ou checkout ne doit laisser croire qu'il est utilisable. Il ne devient actif qu'après un contrat serveur, une estimation vérifiable, une politique d'usage et un parcours de facturation réellement configurés.
 
 ---
 
@@ -206,7 +206,7 @@ Should local development fall back to an in-memory/local identity?
 - [x] No, authentication failures must fail closed.
 
 Decision:
-Keep the safe five-agent sequential squad as the canonical runtime for now. The DAG scheduler/library may remain available for later expansion, but it is not presented as live. Squad execution uses reserve → execute → settle/release; simple mission execution uses the simple-action Power contract.
+Les échecs d'authentification doivent échouer fermement (fail closed). Firebase reste l'autorité de connexion ; le serveur établit/valide la session Supabase utilisée pour RLS et le contrôle métier ; NextAuth reste l'enveloppe de session côté serveur. Aucun utilisateur synthétique, fallback mémoire ou identité locale ne doit être admis en production.
 
 ---
 
@@ -247,7 +247,9 @@ Should Power use:
 - [ ] Other
 
 Decision:
-Presence must be real Supabase Realtime presence. Firebase remains the login authority, then the server-backed Supabase session is used to authorize the private browser channel. Simulated collaborators are forbidden.
+Le runtime canonique visible reste l'escouade réelle en cinq rôles Chief → Builder → Designer → Specialist → Reviewer, avec les noms de la Voie active. Le scheduler DAG peut rester comme infrastructure interne vérifiable pour une extension graduelle, mais il ne doit pas être présenté comme une fonctionnalité live tant que son intégration produit et E2E n'est pas validée.
+
+Power : les opérations à coût mesuré utilisent reserve → execute → settle/release. Une facturation directe n'est autorisée que pour une opération à coût fixe déjà approuvé et sans second ledger concurrent. Il ne doit jamais exister deux systèmes de consommation Power concurrents.
 
 ---
 
@@ -286,7 +288,7 @@ Should AI-generated mission responses follow the user's locale?
 - [ ] Other.
 
 Decision:
-Current recognizable Way names are prototype-only. Replace them with original Idealy characters before any public commercial launch.
+Conserver fr/en/es pour la prochaine release, standardiser l'i18n sous une couche unique et adopter next-intl sans retirer de locale existante. Les réponses IA et les missions suivent la locale active de l'utilisateur ; un override explicite est autorisé.
 
 ---
 
@@ -300,7 +302,7 @@ Choose:
 - [ ] Other.
 
 Decision:
-_
+Les noms de personnages reconnaissables des franchises restent limités au prototype interne. Avant tout lancement commercial/public, ils doivent être remplacés par des personnages originaux Idealy en conservant les responsabilités, la personnalité produit et la structure des cinq rôles.
 
 ---
 
