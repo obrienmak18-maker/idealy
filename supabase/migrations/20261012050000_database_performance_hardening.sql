@@ -1,20 +1,6 @@
--- Production hardening: index foreign keys and optimize RLS evaluation.
+-- Production hardening: index foreign keys in the canonical Supabase schema and optimize RLS evaluation.
 -- The changes are additive or remove only redundant legacy policies.
 
-CREATE INDEX IF NOT EXISTS chat_userid_idx
-  ON public."Chat" ("userId");
-CREATE INDEX IF NOT EXISTS document_userid_idx
-  ON public."Document" ("userId");
-CREATE INDEX IF NOT EXISTS message_v2_chatid_idx
-  ON public."Message_v2" ("chatId");
-CREATE INDEX IF NOT EXISTS stream_chatid_idx
-  ON public."Stream" ("chatId");
-CREATE INDEX IF NOT EXISTS suggestion_document_created_idx
-  ON public."Suggestion" ("documentId", "documentCreatedAt");
-CREATE INDEX IF NOT EXISTS suggestion_userid_idx
-  ON public."Suggestion" ("userId");
-CREATE INDEX IF NOT EXISTS vote_v2_messageid_idx
-  ON public."Vote_v2" ("messageId");
 CREATE INDEX IF NOT EXISTS credit_ledger_mission_id_idx
   ON public.credit_ledger (mission_id);
 CREATE INDEX IF NOT EXISTS mission_action_confirmations_integration_id_idx
