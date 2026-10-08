@@ -339,3 +339,11 @@ La validation finale locale a été exécutée sans déclarer de succès non vé
 ### État final réel
 
 La base locale est cohérente au niveau TypeScript et des contrats exécutables, mais **n'est pas déclarée production-ready**. Les prérequis restants sont : exécuter un build de production dans un environnement disposant des ressources externes nécessaires, exécuter les quatre tests bloqués par l'environnement, appliquer et vérifier la migration de checkpoints sur Supabase, puis réaliser un smoke test authentifié avant tout déploiement.
+
+
+## Current convergence addendum — 2026-10-08
+
+This audit is historical. The current `feat/idealy-live-backend` branch has since closed several of the gaps listed above: the five-agent Way runtime is live in code, plugin execution reaches real provider adapters, connector OAuth is user-scoped, Vercel/GitHub writes are confirmation-bound, Firebase identities are bridged into Supabase Auth sessions, and the live missions schema has been reconciled additively.
+
+Production-readiness is still not declared globally because external OAuth credentials, provider E2E tests, authenticated smoke tests and final monetization verification require environments/accounts not represented by static repository tests.
+
