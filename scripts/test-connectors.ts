@@ -13,12 +13,14 @@ async function main() {
 
   const [
     oauthStartRoute,
+    vercelStartRoute,
     integrationConnect,
     integrationCallback,
     vercelConnect,
     vercelCallback,
   ] = await Promise.all([
     readFile("app/(chat)/api/idealy/connectors/start/route.ts", "utf8"),
+    readFile("app/api/idealy/connectors/vercel/start/route.ts", "utf8"),
     readFile("supabase/functions/integration-connect/index.ts", "utf8"),
     readFile("supabase/functions/integration-callback/index.ts", "utf8"),
     readFile("supabase/functions/vercel-connect/index.ts", "utf8"),
@@ -39,7 +41,7 @@ async function main() {
     assert.match(integrationCallback, new RegExp(`case "${callbackProvider}"`));
   }
 
-  assert.match(oauthStartRoute, /vercel-connect/);
+  assert.match(vercelStartRoute, /vercel-connect/);
   assert.match(vercelConnect, /https:\/\/vercel\.com\/oauth\/authorize/);
   assert.match(
     vercelCallback,
