@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
+import { isDevelopmentEnvironment } from "@/lib/constants";
 import { getChatById, getVotesByChatId, voteMessage } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
 
@@ -10,7 +11,7 @@ const voteSchema = z.object({
 });
 
 export async function GET(request: Request) {
-  if (process.env.DEMO_MODE === "true") {
+  if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return Response.json([], { status: 200 });
   }
 
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (process.env.DEMO_MODE === "true") {
+  if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return new Response("Demo vote recorded", { status: 200 });
   }
 
