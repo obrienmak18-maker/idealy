@@ -132,10 +132,10 @@ Business:
 - Wallet cap: 7000
 
 Simple mission cost:
-It depends on the mission. It depends on the mission, but we need to be reasonable.
+It depends on the mission, but no approved estimator/formula is specified yet.
 
 Squad mission cost:
-That also depends on the mission, but still, because it has been used a lot in Sharia, it is going to be much more expensive.
+It depends on the mission and must remain materially more expensive than a simple mission. Until a dynamic estimator is explicitly approved, the live Power V2 runtime uses the bounded execution-unit contract already implemented (simple = 10, squad = 50) rather than inventing a new economic formula.
 
 ### 3.3 Custom Power
 
