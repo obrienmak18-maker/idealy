@@ -177,16 +177,13 @@ async function getSupabaseServerContext(request: Request) {
     process.env.SUPABASE_ANON_KEY?.trim() ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   const accessToken =
-    (typeof token?.supabaseAccessToken === "string"
-      ? token.supabaseAccessToken
-      : null) ||
-    anonKey ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
-    null;
+    typeof token?.supabaseAccessToken === "string"
+      ? token.supabaseAccessToken.trim()
+      : null;
   const userId =
-    (typeof token?.supabaseUserId === "string" ? token.supabaseUserId : null) ||
-    (typeof token?.id === "string" ? token.id : null) ||
-    "idealy-user";
+    typeof token?.supabaseUserId === "string"
+      ? token.supabaseUserId.trim()
+      : null;
 
   if (!accessToken || !userId || !url || !anonKey) {
     throw new Error(
