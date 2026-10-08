@@ -91,7 +91,7 @@
     "tag": "Smart Estimator",
     "title": "Estimate your monthly needs",
     "subtitle": "Tune your anticipated development volume to discover the perfect plan.",
-    "simpleLabel": "Single missions (1 agent)",
+    "simpleLabel": "Simple missions (variable Power)",
     "simpleUnit": "month",
     "squadLabel": "Full squad missions (5 agents)",
     "squadUnit": "month",
@@ -99,9 +99,9 @@
     "perMonth": "Power Points / month",
     "recommendedFormula": "Recommended plan: ",
     "freePlan": "Discovery (Free)",
-    "proStandardPlan": "Pro Standard (1,000 pts)",
-    "proBoostPlan": "Pro Boost (2,000 pts)",
-    "businessPlan": "Business Studio (5,000+ pts)"
+    "proStandardPlan": "Pro (2,500 Power)",
+    "proBoostPlan": "Pro — up to 3,500 stored Power",
+    "businessPlan": "Business Studio (4,000 Power)"
   },
   "pricing": {
     "tag": "Total Transparency",
