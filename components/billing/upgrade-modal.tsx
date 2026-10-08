@@ -129,10 +129,10 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                 {isEn
-                  ? "Unlock full multi-agent squad power and ship your apps without limits."
+                  ? "Unlock full multi-agent squad power and ship your apps avec les contrôles et limites du plan."
                   : isEs
-                  ? "Desbloquea el poder total del equipo de IA y crea tus apps sin límites."
-                  : "Débloquez la puissance maximale de l'escouade multi-agents et construisez vos apps sans limite."}
+                  ? "Desbloquea el poder total del equipo de IA y crea tus apps avec les contrôles et limites du plan."
+                  : "Débloquez la puissance maximale de l'escouade multi-agents et construisez vos apps avec les contrôles et limites du plan."}
               </DialogDescription>
             </div>
           </div>
@@ -207,10 +207,10 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
                 {[
                   `${proTier.power.monthlyAllocation.toLocaleString()} ${wayTiers.resource} Points / mois`,
                   isEn
-                    ? "Complete multi-agent squad (Architect, Builder, Reviewer)"
+                    ? "Complete five-agent Way squad"
                     : isEs
-                    ? "Equipo multi-agente completo (Arquitecto, Builder, Revisor)"
-                    : "Escouade multi-agents complète (Architecte + Builder + Reviewer)",
+                    ? "Escuadrón completo de cinco agentes"
+                    : "Escouade complète de cinq agents",
                   isEn
                     ? "High performance AI models with priority speed"
                     : isEs
@@ -220,7 +220,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
                     ? "Direct GitHub sync & bidirectional commits"
                     : isEs
                     ? "Conexión directa con GitHub y sync bidireccional"
-                    : "Intégration directe GitHub & export sans limite",
+                    : "Intégration directe GitHub & export avec les contrôles et limites du plan",
                   isEn
                     ? "Unlimited mission history and context retention"
                     : isEs
