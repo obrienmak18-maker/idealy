@@ -1,11 +1,112 @@
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
-  getCreditRefillFromCheckout,
-  getPowerPackFromCheckout,
-  parseCreditPackCatalog,
-  type PowerPack,
-} from "./stripe-webhook.ts";
+type CreditPackCatalog = Record<string, number>;
+
+type PowerPack = {
+  points: number;
+  powerPoints: number;
+};
+
+type PowerPackPurchase = {
+  eventId: string;
+  packId: string;
+  powerPoints: number;
+  userId: string;
+};
+
+type CheckoutSessionCompletedEvent = {
+  id: string;
+};
+
+type CheckoutSession = Stripe.Checkout.Session;
+
+function positiveInteger(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 100_000) return null;
+  return parsed;
+}
+
+function parseCreditPackCatalog(value: string | undefined): CreditPackCatalog {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([packId, credits]) => {
+        const amount = positiveInteger(credits);
+        return packId.trim() && amount ? [[packId.trim(), amount]] : [];
+      }),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function getCreditRefillFromCheckout(
+  event: CheckoutSessionCompletedEvent,
+  session: CheckoutSession,
+  creditPackCatalog: CreditPackCatalog,
+) {
+  if (session.mode !== "payment") return null;
+  const userId = session.metadata?.user_id?.trim();
+  const packId = session.metadata?.credit_pack_id?.trim();
+  const amount = packId ? positiveInteger(creditPackCatalog[packId]) : null;
+  if (!userId || !amount) return null;
+
+  return {
+    amount,
+    eventId: event.id,
+    packId,
+    reason: `stripe:checkout.session.completed:${session.mode ?? "payment"}`,
+    sessionId: session.id,
+    userId,
+  };
+}
+
+function parsePowerPackCatalog(value: string | undefined): Record<string, PowerPack> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([packId, pack]) => {
+        if (!packId.trim() || !pack || typeof pack !== "object") return [];
+        const entry = pack as Record<string, unknown>;
+        const powerPoints = positiveInteger(entry.powerPoints);
+        return powerPoints
+          ? [[packId.trim(), { points: 1, powerPoints }]]
+          : [];
+      }),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function getPowerPackFromCheckout(
+  event: CheckoutSessionCompletedEvent,
+  session: CheckoutSession,
+  catalog: Record<string, PowerPack>,
+): PowerPackPurchase | null {
+  if (session.mode !== "payment") return null;
+
+  const userId = session.metadata?.user_id?.trim();
+  const packId = session.metadata?.power_pack_id?.trim();
+  if (!userId || !packId) return null;
+
+  const pack = catalog[packId];
+  if (!pack) return null;
+
+  const powerPoints = positiveInteger(pack.powerPoints);
+  if (!powerPoints) return null;
+
+  return {
+    eventId: event.id,
+    packId,
+    powerPoints,
+    userId,
+  };
+}
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2025-02-24.acacia",
