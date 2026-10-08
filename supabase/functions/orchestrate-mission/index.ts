@@ -232,36 +232,51 @@ Deno.serve(async (request) => {
   );
   if (insertError) return corsResponse({ error: "Unable to reserve mission run." }, 409, request);
 
-  const { data: powerCharge, error: powerChargeError } = await admin.rpc("consume_power_points", {
-    p_action_type: "mission_squad",
-    p_idempotency_key: `${runKey}:power:mission_squad`,
-    p_mission_id: missionId,
+  const squadPowerPoints = 50;
+  const powerReservationKey = `${runKey}:power:mission_squad:reserve`;
+  const { data: powerReservation, error: powerReservationError } = await admin.rpc("reserve_power_points", {
     p_user_id: auth.user.id,
+    p_operation: "mission_squad",
+    p_reserved_points: squadPowerPoints,
+    p_idempotency_key: powerReservationKey,
+    p_mission_id: missionId,
+    p_metadata: { actionType: "mission_squad", source: "orchestrate-mission", runKey },
   });
-  if (powerChargeError) {
+  if (powerReservationError) {
     await admin.from("mission_agent_runs").delete().eq("mission_id", missionId).eq("run_key", runKey);
-    if (powerChargeError.message.includes("Insufficient Power Points")) {
+    if (powerReservationError.message.includes("Insufficient Power")) {
       return corsResponse({
         error: powerDepletionMessage(mission.way),
         code: "POWER_DEPLETED",
       }, 402, request);
     }
-    console.error("Power charge failed before mission squad", powerChargeError);
+    console.error("Power reservation failed before mission squad", powerReservationError);
     return corsResponse({ error: "La puissance Idealy est momentanément indisponible." }, 503, request);
   }
 
-  const rawCharge = Array.isArray(powerCharge) ? powerCharge[0] : powerCharge;
-  const charge = rawCharge && typeof rawCharge === "object"
-    ? (rawCharge as Record<string, unknown>)
+  const rawReservation = Array.isArray(powerReservation) ? powerReservation[0] : powerReservation;
+  const reservation = rawReservation && typeof rawReservation === "object"
+    ? (rawReservation as Record<string, unknown>)
     : {};
-  await appendEvent(admin, "power_consumed", missionId, `${runKey}:power:consumed`, {
+  const reservationId = typeof reservation.reservation_id === "string" ? reservation.reservation_id : null;
+  if (!reservationId) {
+    await admin.rpc("release_power_reservation", {
+      p_idempotency_key: powerReservationKey,
+      p_reason: "missing_reservation_id",
+    }).catch(() => undefined);
+    await admin.from("mission_agent_runs").delete().eq("mission_id", missionId).eq("run_key", runKey);
+    return corsResponse({ error: "La réservation Power n’a pas pu être confirmée." }, 503, request);
+  }
+
+  await appendEvent(admin, "power_reserved", missionId, `${runKey}:power:reserved`, {
     actionType: "mission_squad",
-    amountCharged: typeof charge.amount_charged === "number" ? charge.amount_charged : 50,
-    powerRemaining: typeof charge.power_remaining === "number" ? charge.power_remaining : null,
+    amountReserved: squadPowerPoints,
+    reservationId,
     runKey,
     source: "orchestrate-mission",
   });
 
+  let powerReservationHeld = true;
   let activeAgent: (typeof agents)[number] | null = null;
   const updateRun = async (agentKey: (typeof agents)[number], values: Record<string, unknown>) => {
     const { error } = await admin.from("mission_agent_runs")
@@ -457,6 +472,28 @@ Deno.serve(async (request) => {
       validation: finalValidationPayload,
     }).eq("id", missionId).eq("user_id", auth.user.id);
 
+    const { data: settledPower, error: settlePowerError } = await admin.rpc("settle_power_reservation", {
+      p_idempotency_key: powerReservationKey,
+      p_actual_points: squadPowerPoints,
+    });
+    if (settlePowerError) {
+      throw new Error(`POWER_SETTLEMENT_FAILED:${settlePowerError.message}`);
+    }
+    powerReservationHeld = false;
+    const rawSettlement = Array.isArray(settledPower) ? settledPower[0] : settledPower;
+    const settlement = rawSettlement && typeof rawSettlement === "object"
+      ? (rawSettlement as Record<string, unknown>)
+      : {};
+    await appendEvent(admin, "power_consumed", missionId, `${runKey}:power:consumed`, {
+      actionType: "mission_squad",
+      amountCharged: typeof settlement.charged_points === "number" ? settlement.charged_points : squadPowerPoints,
+      powerReleased: typeof settlement.released_points === "number" ? settlement.released_points : 0,
+      powerRemaining: typeof settlement.balance === "number" ? settlement.balance : null,
+      reservationId,
+      runKey,
+      source: "orchestrate-mission",
+    });
+
     await appendEvent(admin, "mission_completed", missionId, `${runKey}:mission:completed`, {
       finalStatus: missionStatus,
       iterationsExecuted: Math.min(iteration, MAX_REVIEW_ITERATIONS),
@@ -478,6 +515,14 @@ Deno.serve(async (request) => {
       validation: finalValidationPayload,
     }, 200, request);
   } catch (error) {
+    if (powerReservationHeld) {
+      await admin.rpc("release_power_reservation", {
+        p_idempotency_key: powerReservationKey,
+        p_reason: error instanceof Error ? error.message.slice(0, 180) : "MISSION_RUN_FAILED",
+      }).catch((releaseError) => {
+        console.error("Power reservation release failed", releaseError);
+      });
+    }
     const code = error instanceof Error ? error.message.slice(0, 180) : "MISSION_RUN_FAILED";
     if (activeAgent) {
       await admin.from("mission_agent_runs")
