@@ -23,6 +23,8 @@ assert.match(personas, /normalizeIdealyWay/);
 assert.match(welcome, /voiesCatalog/);
 assert.match(welcome, /setSelectedWay/);
 assert.match(welcome, /register\?way=\$\{selectedWay\}/);
+assert.match(welcome, /powerPlanPolicy/);
+assert.doesNotMatch(welcome, /100 Power Points|1 000 Power Points|3 000 Power Points|29 €|79 €|Architecte \+ Builder \+ Reviewer/);
 assert.doesNotMatch(welcome, /Les Nains|selectedVoice|dwarves/);
 
 assert.match(powerPolicy, /free: \{ monthlyAllocation: 200, walletCap: 250 \}/);
