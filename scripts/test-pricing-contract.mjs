@@ -18,13 +18,15 @@ assert.match(pricingFile, /export function estimateRequiredPower/);
 assert.match(pricingFile, /free: \{/);
 assert.match(pricingFile, /pro: \{/);
 assert.match(pricingFile, /business: \{/);
-assert.match(pricingFile, /priceMonthlyEur: 29/);
-assert.match(pricingFile, /priceMonthlyEur: 79/);
+assert.match(pricingFile, /priceMonthlyEur: 19/);
+assert.match(pricingFile, /priceMonthlyEur: 49/);
+assert.match(pricingFile, /annualPriceEur: 190\.8/);
+assert.match(pricingFile, /annualPriceEur: 490\.8/);
 
 // 3. Cohérence avec README.md
-assert.match(readmeFile, /Découverte \(Free\).*100 Power Points/);
-assert.match(readmeFile, /Pro.*29 € \/ mois.*1 000 Power Points/);
-assert.match(readmeFile, /Business.*79 € \/ mois.*3 000 Power Points/);
+assert.match(readmeFile, /Découverte.*200 Power Points/);
+assert.match(readmeFile, /Pro.*19 € \/ mois.*2 500 Power Points/);
+assert.match(readmeFile, /Business.*49 € \/ mois.*4 000 Power Points/);
 
 // 4. Formule de calcul d'estimation
 assert.match(pricingFile, /simple \* powerActionCosts\.mission_simple \+ squad \* powerActionCosts\.mission_squad/);
@@ -33,12 +35,12 @@ assert.match(pricingFile, /simple \* powerActionCosts\.mission_simple \+ squad \
 assert.match(pricingFile, /priceMonthlyUsd: PRICING_DISPLAY\.pro\.monthlyUsd/);
 assert.match(pricingFile, /priceMonthlyUsd: PRICING_DISPLAY\.business\.monthlyUsd/);
 assert.match(pricingUi, /import \{ PRICING_DISPLAY \} from "@\/config\/pricing-display"/);
-assert.match(pricingUi, /PRICING_DISPLAY\.pro\.monthlyUsd/);
-assert.match(pricingUi, /PRICING_DISPLAY\.business\.monthlyUsd/);
+assert.match(pricingUi, /PRICING_DISPLAY\.pro\.monthlyEur/);
+assert.match(pricingUi, /PRICING_DISPLAY\.business\.monthlyEur/);
 assert.match(pricingUi, /powerPlanPolicy\.pro\.monthlyAllocation/);
 assert.match(pricingUi, /powerPlanPolicy\.business\.monthlyAllocation/);
 assert.doesNotMatch(pricingUi, /price: (?:19\.99|89),/);
-assert.match(publicPrices, /pro: \{ monthlyUsd: 19\.99 \}/);
-assert.match(publicPrices, /business: \{ monthlyUsd: 89 \}/);
+assert.match(publicPrices, /pro: \{ monthlyEur: 19, annualEur: 190\.8, monthlyUsd: null \}/);
+assert.match(publicPrices, /business: \{ monthlyEur: 49, annualEur: 490\.8, monthlyUsd: null \}/);
 
 console.log("Idealy pricing contract passed.");
