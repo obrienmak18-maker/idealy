@@ -25,7 +25,7 @@ assert(!estimateRoute.includes("SUPABASE_SERVICE_ROLE"), "Power estimate must no
 assert(orchestrator.includes('admin.rpc("reserve_power_points"'), "Squad orchestration must reserve Power before execution.");
 assert(orchestrator.includes('admin.rpc("settle_power_reservation"'), "Squad orchestration must settle reserved Power after execution.");
 assert(orchestrator.includes('admin.rpc("release_power_reservation"'), "Squad orchestration must release reserved Power after failure.");
-assert(orchestrator.includes('p_reserved_points: squadPowerPoints'), "Squad orchestration must use an explicit bounded reservation.");
+assert(orchestrator.includes('const SQUAD_POWER_POINTS = 50'), "Squad orchestration must use the approved bounded Power reservation.");
 
 assert(orchestrator.includes("POWER_DEPLETED"), "Squad depletion must have a stable public code.");
 assert(orchestrator.includes("powerDepletionMessage"), "Squad depletion must be contextualized by Way.");
