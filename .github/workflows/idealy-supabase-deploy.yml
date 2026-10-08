@@ -36,8 +36,8 @@ jobs:
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_PROJECT_ID" ]; then
-            echo "Supabase deployment skipped: GitHub secrets are not configured."
-            exit 0
+            echo "Supabase deployment blocked: GitHub secrets are not configured." >&2
+            exit 1
           fi
           for function in $FUNCTIONS; do
             case "$function" in
