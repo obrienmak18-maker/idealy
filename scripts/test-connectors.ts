@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   filterConnectorCatalog,
   getConnectorDefinition,
@@ -8,6 +9,37 @@ import {
 
 const definitions = listConnectorDefinitions();
 assert(definitions.length >= 8);
+
+const [oauthStartRoute, integrationConnect, integrationCallback] =
+  await Promise.all([
+    readFile("app/(chat)/api/idealy/connectors/start/route.ts", "utf8"),
+    readFile("supabase/functions/integration-connect/index.ts", "utf8"),
+    readFile("supabase/functions/integration-callback/index.ts", "utf8"),
+  ]);
+
+for (const provider of [
+  "github",
+  "canva",
+  "figma",
+  "google-drive",
+  "notion",
+  "slack",
+  "vercel",
+]) {
+  assert.match(oauthStartRoute, new RegExp(`"${provider}"`));
+  assert.match(integrationConnect, new RegExp(`case "${provider}"`));
+  assert.match(integrationCallback, new RegExp(`case "${provider}"`));
+}
+
+assert.match(integrationConnect, /https:\/\/vercel\.com\/oauth\/authorize/);
+assert.match(
+  integrationCallback,
+  /https:\/\/api\.vercel\.com\/login\/oauth\/token/
+);
+assert.match(
+  integrationCallback,
+  /https:\/\/api\.vercel\.com\/login\/oauth\/userinfo/
+);
 
 const canva = getConnectorDefinition("canva");
 assert(canva);
