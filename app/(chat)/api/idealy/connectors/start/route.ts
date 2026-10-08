@@ -5,7 +5,7 @@ const SUPPORTED_OAUTH_PROVIDERS = new Set([
   "github",
   "canva",
   "figma",
-  "google-drive",
+  "google",
   "notion",
   "slack",
   "vercel",
