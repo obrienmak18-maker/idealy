@@ -4,14 +4,11 @@ import {
   CheckCircle2Icon,
   ExternalLinkIcon,
   LockKeyholeIcon,
-  Settings2,
   Sparkles,
 } from "lucide-react";
-import { useCallback, useState } from "react";
 import type { ConnectorDefinition } from "@/lib/idealy/connectors";
 import { Button } from "../ui/button";
-import { GitHubConnectButton } from "./github-connect-button";
-import { McpConfigModal } from "./mcp-config-modal";
+import { ConnectorConnectButton } from "./connector-connect-button";
 import { getConnectorBrandLogo } from "./brand-logos";
 
 interface ConnectorCardProps {
@@ -31,9 +28,6 @@ export function ConnectorCard({
   managed,
   displayName,
 }: ConnectorCardProps) {
-  const [mcpOpen, setMcpOpen] = useState(false);
-  const openMcpConfig = useCallback(() => setMcpOpen(true), []);
-
   // No latency badge: /api/connectors/ping returned a random number rather than
   // a real measurement, so any "Xms" shown here would be an invented metric.
   // A connector reports its real state (connected / managed / to configure)
@@ -96,17 +90,12 @@ export function ConnectorCard({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {connector.provider === "github" ? <GitHubConnectButton /> : null}
-
-            <Button
-              className="gap-1.5 text-xs cursor-pointer"
-              onClick={openMcpConfig}
-              size="sm"
-              variant="outline"
-            >
-              <Settings2 className="size-3.5 text-primary" />
-              <span>Configurer MCP</span>
-            </Button>
+            {connector.auth === "oauth2" ? (
+              <ConnectorConnectButton
+                label={connector.label}
+                provider={connector.provider}
+              />
+            ) : null}
 
             {connector.docsUrl ? (
               <Button
@@ -148,11 +137,6 @@ export function ConnectorCard({
         )}
       </article>
 
-      <McpConfigModal
-        connectorName={connector.label}
-        onOpenChange={setMcpOpen}
-        open={mcpOpen}
-      />
     </>
   );
 }
