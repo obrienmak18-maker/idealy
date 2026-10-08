@@ -28,14 +28,14 @@
 - [x] Valider et publier la revue de lancement sur `feat/idealy-live-backend` sans fusionner vers `main`
 - [x] Auditer les connecteurs réellement disponibles et les prérequis OAuth, permissions, stockage de jetons et consentement
 - [x] Définir puis amorcer l’architecture d’exécution multi-agent persistante, autorisée et traçable
-- [ ] Raccorder les connecteurs et plugins utilisables sans exposer de secret ni promettre une intégration non configurée
+- [x] Raccorder les connecteurs et plugins utilisables sans exposer de secret ni promettre une intégration non configurée
 - [x] Renforcer la palette Google/Idealy et réduire les surfaces visuellement blanches dans le workspace et les pages publiques
 - [x] Ajouter les pages produit professionnelles : à propos, documentation, confidentialité, conditions et contact
 - [x] Valider, documenter et publier cette consolidation sur `feat/idealy-live-backend` sans fusionner vers `main`
 - [ ] Vérifier et compléter la configuration OAuth GitHub pour les utilisateurs finaux sur Supabase Edge et Netlify
 - [x] Ajouter le schéma persistant des runs, outils autorisés et confirmations d’action de mission
 - [x] Construire le premier flux réel et borné Architecte → Builder → Reviewer avec journal, budget et idempotence
-- [ ] Étendre le catalogue de connecteurs OAuth par utilisateur sans marquer un fournisseur actif avant son OAuth validé
+- [x] Étendre le catalogue de connecteurs OAuth par utilisateur sans marquer un fournisseur actif avant son OAuth validé
 - [x] Définir le modèle d’intégration MCP utilisateur et ses contrôles de permission, sans stocker de secret en clair
 - [ ] Tester, documenter et publier cette étape sur `feat/idealy-live-backend` sans fusionner vers `main`
 - [x] Auditer les différences fonctionnelles et de schéma entre `main` et `feat/idealy-live-backend`
@@ -113,3 +113,8 @@
 - [ ] Relier le workspace aux états Power contextualisés par Voie sans afficher de recharge, de pack ou de prix Stripe
 - [ ] Valider la migration Power en CI et sur Supabase, puis documenter les garanties réellement vérifiées
 - [x] Corriger l’assertion du contrat SQL Power sur le verrouillage délégué et revalider la CI Supabase
+
+
+## État de convergence — 2026-10-08
+
+Le backend connector/plugin, l’exécution cinq agents, les confirmations d’actions externes, le pont Firebase → Supabase, la présence Realtime privée et l’alignement du schéma live `missions` ont été implémentés sur `feat/idealy-live-backend`. Les tâches restantes ci-dessus sont volontairement celles qui nécessitent encore une vérification E2E avec des fournisseurs externes, un compte utilisateur réel, ou une décision produit non suffisamment définie pour être inventée dans le code.
