@@ -135,7 +135,7 @@ export const {
         const password = String(credentials.password ?? "demo-password");
 
         try {
-          if (process.env.DEMO_MODE === "true") {
+          if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
             await compare(password, DUMMY_PASSWORD);
             return {
               email,
