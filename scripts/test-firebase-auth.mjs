@@ -26,8 +26,16 @@ assert.match(files.auth, /credentials: \{/);
 assert.match(files.auth, /id: "guest"/);
 assert.match(files.auth, /id: "firebase"/);
 assert.match(files.auth, /getUserBySupabaseUserId/);
-assert.match(files.auth, /An identical email is not proof of ownership/);
-assert.match(files.auth, /if \(existingEmailUser\) \{/);
+assert.match(files.auth, /An identical email is not proof of ownership/i);
+assert.match(files.auth, /existingEmailUser/);
+assert.match(
+  files.auth,
+  /throw new IdealyCredentialsSignin\("invalid_credentials"\);/
+);
+assert.doesNotMatch(
+  files.auth,
+  /linkUserToSupabaseUser\(\{[\s\S]*localUserId: existingEmailUser\.id/
+);
 assert.match(files.supabase, /Authorization: `Bearer \$\{accessToken\}`/);
 assert.doesNotMatch(files.client, /FIREBASE_PRIVATE_KEY|FIREBASE_CLIENT_EMAIL/);
 assert.doesNotMatch(
