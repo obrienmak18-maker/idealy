@@ -20,7 +20,7 @@ assert.match(contract, /idealyPlans = \["free", "pro", "business"\]/);
 assert.match(contract, /formatPowerPoints/);
 assert.match(contract, /points"} de \$\{resource\}/);
 assert.match(personas, /normalizeIdealyWay/);
-assert.match(welcome, /wayPresentations\.mage/);
+assert.match(welcome, /voiesCatalog/);
 assert.match(welcome, /setSelectedWay/);
 assert.match(welcome, /register\?way=\$\{selectedWay\}/);
 assert.doesNotMatch(welcome, /Les Nains|selectedVoice|dwarves/);
