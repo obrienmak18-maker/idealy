@@ -2,6 +2,9 @@ type SupabaseAuthUser = {
   id?: string;
 };
 
+import { createClient } from "@supabase/supabase-js";
+import { createHmac } from "node:crypto";
+
 type SupabaseAuthPayload = {
   access_token?: string;
   expires_in?: number;
@@ -133,6 +136,75 @@ export async function getSupabaseUserWithAccessToken(
   } catch {
     return null;
   }
+}
+
+export async function signInFirebaseUserThroughSupabase(
+  email: string,
+): Promise<SupabasePasswordAuthResult> {
+  const config = getSupabaseAuthConfig();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const bridgeSecret = process.env.AUTH_SECRET?.trim();
+
+  if (!config || !serviceRoleKey || !bridgeSecret) {
+    return emptyResult("not_configured", false);
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const bridgePassword = createHmac("sha256", bridgeSecret)
+    .update(`idealy-firebase-bridge:${normalizedEmail}`)
+    .digest("hex")
+    .slice(0, 48);
+
+  const firstAttempt = await signInWithSupabasePassword(
+    normalizedEmail,
+    bridgePassword,
+  );
+  if (firstAttempt.status === "authenticated") {
+    return firstAttempt;
+  }
+
+  const admin = createClient(config.url, serviceRoleKey);
+  let supabaseUserId: string | null = null;
+
+  try {
+    const created = await admin.auth.admin.createUser({
+      email: normalizedEmail,
+      password: bridgePassword,
+      email_confirm: true,
+    });
+    if (created.error) {
+      const listed = await admin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      const existing = listed.data.users.find(
+        (candidate) => candidate.email?.toLowerCase() === normalizedEmail,
+      );
+
+      if (!existing?.id) {
+        return emptyResult("unavailable", true);
+      }
+
+      const updated = await admin.auth.admin.updateUserById(existing.id, {
+        password: bridgePassword,
+        email_confirm: true,
+      });
+      if (updated.error) {
+        return emptyResult("unavailable", true);
+      }
+      supabaseUserId = existing.id;
+    } else {
+      supabaseUserId = created.data.user?.id ?? null;
+    }
+  } catch {
+    return emptyResult("unavailable", true);
+  }
+
+  if (!supabaseUserId) {
+    return emptyResult("unavailable", true);
+  }
+
+  return signInWithSupabasePassword(normalizedEmail, bridgePassword);
 }
 
 export async function signInWithSupabasePassword(
