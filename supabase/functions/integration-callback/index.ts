@@ -347,7 +347,7 @@ Deno.serve(async (request) => {
     // still require an explicit action confirmation at execution time.
     const pluginPermissions: Record<string, string[]> = {
       github: ["tool.execute", "repository.read", "repository.write"],
-      canva: ["tool.execute", "files.read"],
+      canva: ["tool.execute", "files.read", "files.write", "asset.generate"],
       figma: ["tool.execute", "files.read"],
       google: ["tool.execute", "project.read"],
       notion: ["tool.execute", "project.read", "project.write"],
