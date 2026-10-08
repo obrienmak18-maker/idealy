@@ -1,6 +1,10 @@
 import { authenticate } from '../_shared/auth.ts';
 import { corsResponse, optionsResponse } from '../_shared/cors.ts';
 
+function canonicalProvider(provider: string) {
+  return provider === 'google' ? 'google-drive' : provider;
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return optionsResponse(request);
   if (request.method !== 'GET' && request.method !== 'POST') return corsResponse({ error: 'Method not allowed' }, 405, request);
@@ -19,6 +23,7 @@ Deno.serve(async (request) => {
     return corsResponse({ error: 'Unable to read connector status.' }, 500, request);
   }
 
+  const now = Date.now();
   return corsResponse({
     integrations: (data ?? []).map((integration: {
       provider: string;
@@ -28,14 +33,21 @@ Deno.serve(async (request) => {
       expires_at?: string | null;
       updated_at?: string | null;
       metadata?: Record<string, unknown> | null;
-    }) => ({
-      provider: integration.provider,
-      displayName: integration.display_name ?? integration.provider,
-      // A missing database status is not proof of a live authorization.
-      status: integration.status ?? 'unknown',
-      connectedAt: integration.last_verified_at ?? integration.updated_at ?? null,
-      expiresAt: integration.expires_at ?? null,
-      metadata: integration.metadata ?? {},
-    })),
+    }) => {
+      const expiresAt = integration.expires_at ?? null;
+      const expired =
+        Boolean(expiresAt) &&
+        Number.isFinite(Date.parse(expiresAt)) &&
+        Date.parse(expiresAt) <= now;
+
+      return {
+        provider: canonicalProvider(integration.provider),
+        displayName: integration.display_name ?? integration.provider,
+        status: expired ? 'expired' : integration.status ?? 'unknown',
+        connectedAt: integration.last_verified_at ?? integration.updated_at ?? null,
+        expiresAt,
+        metadata: integration.metadata ?? {},
+      };
+    }),
   }, 200, request);
 });
