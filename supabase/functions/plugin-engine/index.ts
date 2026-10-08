@@ -554,6 +554,21 @@ Deno.serve(async (request) => {
       Object.values(manifest.tools).flatMap((tool) => tool.permissions),
     );
     const granted = requested.filter((permission) => allowed.has(permission));
+    if (
+      granted.length !== new Set(manifest.tools ? Object.values(manifest.tools).flatMap((tool) => tool.permissions) : []).size
+      && granted.length === 0
+    ) {
+      return json(
+        request,
+        {
+          code: "PERMISSIONS_REQUIRED",
+          error: "Toutes les permissions nécessaires doivent être explicitement approuvées.",
+          status: "denied",
+        },
+        409,
+      );
+    }
+
     const now = new Date().toISOString();
 
     const { data, error } = await admin
