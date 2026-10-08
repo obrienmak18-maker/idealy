@@ -15,12 +15,13 @@ type Manifest = {
   id: string;
   minimumPlan: Plan;
   provider: string | null;
+  requiredScopes: string[];
   tools: Record<string, Tool>;
 };
 
 const M: Record<string, Manifest> = {
   github: {
-    id: "github", minimumPlan: "free", provider: "github",
+    id: "github", minimumPlan: "free", provider: "github", requiredScopes: ["repo", "read:user"],
     tools: {
       "github-list-repositories": { permissions:["tool.execute","repository.read"], risk:"read", requiresConfirmation:false },
       "github-read-repository": { permissions:["tool.execute","repository.read"], risk:"read", requiresConfirmation:false },
@@ -76,7 +77,7 @@ const M: Record<string, Manifest> = {
     },
   },
   supabase: {
-    id:"supabase", minimumPlan:"free", provider:null,
+    id:"supabase", minimumPlan:"free", provider:null, requiredScopes: [],
     tools:{
       "supabase-read-mission": {permissions:["tool.execute","project.read"],risk:"read",requiresConfirmation:false},
       "supabase-read-mission-files": {permissions:["tool.execute","files.read"],risk:"read",requiresConfirmation:false},
@@ -84,7 +85,7 @@ const M: Record<string, Manifest> = {
     },
   },
   stripe: {
-    id:"stripe", minimumPlan:"free", provider:null,
+    id:"stripe", minimumPlan:"free", provider:null, requiredScopes: [],
     tools:{
       "stripe-read-subscription": {permissions:["tool.execute","project.read"],risk:"read",requiresConfirmation:false},
       "stripe-read-invoice": {permissions:["tool.execute","project.read"],risk:"read",requiresConfirmation:false},
@@ -102,6 +103,87 @@ function safeObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+const TOKEN_PATTERN = /^[a-zA-Z0-9_-]{32,180}$/;
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return "[" + value.map(stableJson).join(",") + "]";
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => JSON.stringify(key) + ":" + stableJson(item));
+    return "{" + entries.join(",") + "}";
+  }
+  return JSON.stringify(value);
+}
+
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function pluginPayloadDigest({
+  input,
+  missionId,
+  pluginId,
+  toolId,
+}: {
+  input: Record<string, unknown>;
+  missionId: string;
+  pluginId: string;
+  toolId: string;
+}) {
+  return sha256(
+    stableJson({
+      input,
+      missionId,
+      pluginId,
+      toolId,
+    }),
+  );
+}
+
+async function requireConnectorReady(
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+  manifest: Manifest,
+) {
+  if (!manifest.provider) return null;
+
+  const { data: integration, error } = await admin
+    .from("user_integrations")
+    .select("id,status,scopes")
+    .eq("user_id", userId)
+    .eq("provider", manifest.provider)
+    .maybeSingle();
+
+  if (error || !integration || integration.status !== "active") {
+    throw new Error("CONNECTOR_NOT_ACTIVE");
+  }
+
+  const grantedScopes = new Set<string>(
+    Array.isArray(integration.scopes)
+      ? integration.scopes.filter((scope): scope is string => typeof scope === "string")
+      : [],
+  );
+
+  const missingScopes = manifest.requiredScopes.filter((scope) =>
+    !grantedScopes.has(scope)
+  );
+
+  if (missingScopes.length > 0) {
+    throw new Error(`CONNECTOR_SCOPES_MISSING:${missingScopes.join(",")}`);
+  }
+
+  return integration.id as string;
 }
 
 async function readToken(admin: ReturnType<typeof createClient>, userId: string, provider: string) {
@@ -435,6 +517,21 @@ Deno.serve(async (request) => {
       return json(request, { code: "PLAN_INSUFFICIENT", status: "denied" }, 403);
     }
 
+    let connectorIntegrationId: string | null = null;
+    try {
+      connectorIntegrationId = await requireConnectorReady(admin, auth.user.id, manifest);
+    } catch (error) {
+      return json(
+        request,
+        {
+          code: error instanceof Error ? error.message.split(":")[0] : "CONNECTOR_NOT_READY",
+          status: "denied",
+          error: "Le connecteur requis n’est pas connecté ou ne possède pas les scopes nécessaires.",
+        },
+        409,
+      );
+    }
+
     const requested = Array.isArray(body.requestedPermissions)
       ? body.requestedPermissions.filter((x): x is string => typeof x === "string")
       : [];
@@ -453,7 +550,9 @@ Deno.serve(async (request) => {
         state: "installed",
         granted_permissions: granted,
         connector_provider: manifest.provider,
-        configuration: {},
+        configuration: {
+          connectorIntegrationId,
+        },
         installed_at: now,
         updated_at: now,
       }, { onConflict: "user_id,plugin_id" })
@@ -482,13 +581,86 @@ Deno.serve(async (request) => {
   const plan = await currentPlan(admin, auth.user.id);
   if (PLAN_RANK[plan] < PLAN_RANK[manifest.minimumPlan]) return json(request,{code:"PLAN_INSUFFICIENT",status:"denied"},403);
 
+  let connectorIntegrationId: string | null = null;
+  try {
+    connectorIntegrationId = await requireConnectorReady(admin, auth.user.id, manifest);
+  } catch (error) {
+    return json(
+      request,
+      {
+        code: error instanceof Error ? error.message.split(":")[0] : "CONNECTOR_NOT_READY",
+        error: "Le connecteur requis n’est pas connecté ou ne possède pas les scopes nécessaires.",
+        status: "denied",
+      },
+      409,
+    );
+  }
+
   const {data:installation,error:installationError}=await admin.from("plugin_installations").select("*").eq("user_id",auth.user.id).eq("plugin_id",pluginId).maybeSingle();
   if(installationError) return json(request,{error:installationError.message},500);
   if(!installation) return json(request,{code:"PLUGIN_NOT_AVAILABLE",error:"Le connecteur doit d'abord être activé dans Idealy.",status:"denied"},409);
   const granted = Array.isArray(installation.granted_permissions) ? installation.granted_permissions as string[] : [];
   const missing = tool.permissions.filter(permission => !granted.includes(permission));
   if(missing.length > 0) return json(request,{code:"PERMISSION_NOT_GRANTED",missingPermissions:missing,status:"denied"},403);
-  if(tool.requiresConfirmation && body.confirmed !== true) return json(request,{code:"CONFIRMATION_REQUIRED",status:"denied"},409);
+  const missionId = typeof body.missionId === "string" ? body.missionId : "";
+  const input = safeObject(body.input);
+
+  let confirmationId: string | null = null;
+  if (tool.requiresConfirmation) {
+    const confirmationToken =
+      typeof body.confirmationToken === "string" ? body.confirmationToken : "";
+
+    if (!TOKEN_PATTERN.test(confirmationToken) || !missionId) {
+      return json(
+        request,
+        {
+          code: "CONFIRMATION_REQUIRED",
+          error: "Une confirmation à usage unique et liée à la mission est requise.",
+          operation: `${pluginId}:${toolId}`,
+          status: "denied",
+        },
+        409,
+      );
+    }
+
+    const digest = await pluginPayloadDigest({
+      input,
+      missionId,
+      pluginId,
+      toolId,
+    });
+
+    const { data: confirmation, error: confirmationError } = await admin
+      .from("mission_action_confirmations")
+      .select("id,resource_snapshot")
+      .eq("mission_id", missionId)
+      .eq("user_id", auth.user.id)
+      .eq("operation", `${pluginId}:${toolId}`)
+      .eq("confirmation_token_hash", await sha256(confirmationToken))
+      .eq("status", "approved")
+      .gt("expires_at", new Date().toISOString())
+      .is("consumed_at", null)
+      .maybeSingle();
+
+    const snapshot = confirmation?.resource_snapshot as { payload_digest?: unknown } | null;
+    if (
+      confirmationError ||
+      !confirmation ||
+      snapshot?.payload_digest !== digest
+    ) {
+      return json(
+        request,
+        {
+          code: "CONFIRMATION_INVALID",
+          error: "La confirmation est expirée, déjà consommée ou ne correspond pas exactement à cette action.",
+          status: "denied",
+        },
+        409,
+      );
+    }
+
+    confirmationId = confirmation.id;
+  }
 
   const executionKey = typeof body.idempotencyKey === "string" && body.idempotencyKey.length >= 8 ? body.idempotencyKey : crypto.randomUUID();
   const {data:existing}=await admin.from("plugin_executions").select("*").eq("user_id",auth.user.id).eq("idempotency_key",executionKey).maybeSingle();
@@ -515,10 +687,34 @@ Deno.serve(async (request) => {
   await admin.from("plugin_events").insert({user_id:auth.user.id,plugin_id:pluginId,execution_id:execution.id,event_type:"execution_started",from_state:"available",to_state:"executing",payload:{toolId,executionKey}});
 
   try {
-    const output=await executeProvider(admin,auth.user.id,pluginId,toolId,safeObject(body.input),request);
+    const output=await executeProvider(admin,auth.user.id,pluginId,toolId,input,request);
     const completedAt=new Date().toISOString();
     await admin.from("plugin_executions").update({status:"succeeded",output,completed_at:completedAt,duration_ms:Date.parse(completedAt)-Date.parse(startedAt)}).eq("id",execution.id);
-    await admin.from("plugin_events").insert({user_id:auth.user.id,plugin_id:pluginId,execution_id:execution.id,event_type:"execution_succeeded",from_state:"executing",to_state:"available",payload:{toolId}});
+    if (confirmationId) {
+      const { error: consumeConfirmationError } = await admin
+        .from("mission_action_confirmations")
+        .update({
+          consumed_at: new Date().toISOString(),
+          status: "consumed",
+        })
+        .eq("id", confirmationId)
+        .eq("user_id", auth.user.id)
+        .eq("status", "approved")
+        .is("consumed_at", null);
+
+      if (consumeConfirmationError) {
+        return json(
+          request,
+          {
+            error: "L’action externe a été exécutée mais sa confirmation n’a pas pu être consommée. Ne relancez pas automatiquement.",
+            code: "CONFIRMATION_CONSUME_FAILED",
+          },
+          500,
+        );
+      }
+    }
+
+    await admin.from("plugin_events").insert({user_id:auth.user.id,plugin_id:pluginId,execution_id:execution.id,event_type:"execution_succeeded",from_state:"executing",to_state:"available",payload:{toolId,connectorIntegrationId}});
     return json(request,{ok:true,executionId:execution.id,output},200);
   } catch(error) {
     const completedAt=new Date().toISOString();
