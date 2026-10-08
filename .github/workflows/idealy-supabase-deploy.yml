@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/idealy-live-backend
   workflow_dispatch:
     inputs:
       functions:
@@ -29,6 +30,14 @@ jobs:
         with:
           version: latest
 
+      - name: Verify migration source integrity
+        run: |
+          echo "Checking canonical migration files without pushing the remote schema."
+          test -f supabase/migrations/20261011000000_power_purchases_and_reservations.sql
+          test -f supabase/migrations/20261012020000_mission_file_event_compatibility.sql
+          test -f supabase/migrations/20261012030000_power_reservations_repair.sql
+          test -f supabase/migrations/20261012040000_power_v2_policy.sql
+          test -f supabase/migrations/20261012050000_database_performance_hardening.sql
       - name: Deploy selected Edge functions
         env:
           FUNCTIONS: ${{ inputs.functions || 'integration-connect integration-callback integration-status github-export process-ai-request orchestrate-mission mission-action-confirmation stripe-webhook check-subscription create-billing-portal create-checkout-session cancel-subscription refund-ai-credit designer-tools vercel-deploy vercel-status' }}
