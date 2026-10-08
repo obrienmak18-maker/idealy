@@ -56,6 +56,9 @@ export async function POST(
     permissions?: unknown;
     taskId?: unknown;
     toolId?: unknown;
+    workspaceId?: unknown;
+    confirmationToken?: unknown;
+    idempotencyKey?: unknown;
   } | null;
 
   if (!body || typeof body.toolId !== "string") {
@@ -161,6 +164,9 @@ export async function POST(
           input: (body as Record<string, unknown>).input ?? {},
           missionId: body.missionId,
           taskId: body.taskId,
+          workspaceId: body.workspaceId,
+          confirmationToken: body.confirmationToken,
+          idempotencyKey: body.idempotencyKey,
         }),
       }
     );
