@@ -10,7 +10,7 @@ on:
       functions:
         description: "Fonctions Edge à déployer, séparées par des espaces"
         required: false
-        default: "integration-connect integration-callback integration-status github-export process-ai-request orchestrate-mission mission-action-confirmation stripe-webhook check-subscription create-billing-portal create-checkout-session cancel-subscription refund-ai-credit designer-tools vercel-deploy vercel-status"
+        default: "integration-connect integration-callback integration-status github-export process-ai-request orchestrate-mission mission-action-confirmation stripe-webhook check-subscription create-billing-portal create-checkout-session cancel-subscription refund-ai-credit designer-tools vercel-connect vercel-callback vercel-deploy vercel-status"
         type: string
 
 permissions:
@@ -38,6 +38,8 @@ jobs:
           test -f supabase/migrations/20261012030000_power_reservations_repair.sql
           test -f supabase/migrations/20261012040000_power_v2_policy.sql
           test -f supabase/migrations/20261012050000_database_performance_hardening.sql
+          test -f supabase/migrations/20261012060000_way_agent_runtime.sql
+          test -f supabase/migrations/20261012070000_oauth_state_metadata.sql
       - name: Deploy selected Edge functions
         env:
           FUNCTIONS: ${{ inputs.functions || 'integration-connect integration-callback integration-status github-export process-ai-request orchestrate-mission mission-action-confirmation stripe-webhook check-subscription create-billing-portal create-checkout-session cancel-subscription refund-ai-credit designer-tools vercel-deploy vercel-status' }}
