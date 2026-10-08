@@ -115,7 +115,51 @@ type ReviewerDiagnostic = {
   suggestedCorrection: string;
 };
 
-function parseReviewerDecision(value: unknown): {\n  reviewStatus: "PASS" | "FAIL";\n  diagnostics: ReviewerDiagnostic[];\n} {\n  const raw = value && typeof value === "object" && typeof (value as Record<string, unknown>).message === "string"\n    ? String((value as Record<string, unknown>).message)\n    : "";\n  const cleaned = raw.replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/i, "").trim();\n  try {\n    const parsed = JSON.parse(cleaned) as { reviewStatus?: unknown; diagnostics?: unknown };\n    const diagnostics = Array.isArray(parsed.diagnostics) ? parsed.diagnostics.filter((item): item is ReviewerDiagnostic => Boolean(item && typeof item === "object" && typeof (item as Record<string, unknown>).problem === "string" && typeof (item as Record<string, unknown>).severity === "string")) : [];\n    return { diagnostics, reviewStatus: parsed.reviewStatus === "PASS" ? "PASS" : "FAIL" };\n  } catch {\n    return { diagnostics: [{ evidence: raw.slice(0, 2000) || "Réponse Reviewer vide ou non JSON.", expectedBehavior: "Le Reviewer doit renvoyer un JSON structuré avec reviewStatus=PASS ou FAIL.", file: "", location: "", problem: "Réponse Reviewer non conforme au contrat de validation.", severity: "critical", suggestedCorrection: "Relancer l’itération avec un rapport Reviewer JSON strict." }], reviewStatus: "FAIL" };\n  }\n}\n\nfunction validateWorkspaceStructure(files: Array<{ checksum: string | null; path: string; status: string }>) {
+function parseReviewerDecision(value: unknown): {
+  reviewStatus: "PASS" | "FAIL";
+  diagnostics: ReviewerDiagnostic[];
+} {
+  const raw = value && typeof value === "object" && typeof (value as Record<string, unknown>).message === "string"
+    ? String((value as Record<string, unknown>).message)
+    : "";
+  const cleaned = raw
+    .replace(/^\s*```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
+  try {
+    const parsed = JSON.parse(cleaned) as { reviewStatus?: unknown; diagnostics?: unknown };
+    const diagnostics = Array.isArray(parsed.diagnostics)
+      ? parsed.diagnostics.filter(
+          (item): item is ReviewerDiagnostic =>
+            Boolean(
+              item &&
+                typeof item === "object" &&
+                typeof (item as Record<string, unknown>).problem === "string" &&
+                typeof (item as Record<string, unknown>).severity === "string",
+            ),
+        )
+      : [];
+    return {
+      diagnostics,
+      reviewStatus: parsed.reviewStatus === "PASS" ? "PASS" : "FAIL",
+    };
+  } catch {
+    return {
+      diagnostics: [{
+        evidence: raw.slice(0, 2000) || "Réponse Reviewer vide ou non JSON.",
+        expectedBehavior: "Le Reviewer doit renvoyer un JSON structuré avec reviewStatus=PASS ou FAIL.",
+        file: "",
+        location: "",
+        problem: "Réponse Reviewer non conforme au contrat de validation.",
+        severity: "critical",
+        suggestedCorrection: "Relancer l’itération avec un rapport Reviewer JSON strict.",
+      }],
+      reviewStatus: "FAIL",
+    };
+  }
+}
+
+function validateWorkspaceStructure(files: Array<{ checksum: string | null; path: string; status: string }>) {
   const expectedPaths = ["package.json", "index.html"];
   const savedPaths = new Set(files.map((file) => file.path));
   const missing = expectedPaths.filter((path) => !savedPaths.has(path));
