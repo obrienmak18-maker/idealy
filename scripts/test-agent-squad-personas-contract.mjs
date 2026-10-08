@@ -22,7 +22,7 @@ function read(rel) {
 
 const personas = read("lib/idealy/agent-personas.ts");
 for (const key of ["chief", "builder", "designer", "specialist", "reviewer"]) {
-  assert.match(personas, new RegExp(`key: "\${key}"`), `\${key} must exist in every Way roster`);
+  assert.match(personas, new RegExp(`key: "${key}"`), `${key} must exist in every Way roster`);
 }
 
 for (const name of [
@@ -31,12 +31,12 @@ for (const name of [
   "Netero", "Gon", "Leolio", "Kurapika", "Killua",
   "Daniel", "Kevin", "Leslie", "Bill", "Maya",
 ]) {
-  assert.match(personas, new RegExp(`name: "\${name}"`), `Way agent \${name} must be present`);
+  assert.match(personas, new RegExp(`name: "${name}"`), `Way agent ${name} must be present`);
 }
 
 const orchestrator = read("supabase/functions/orchestrate-mission/index.ts");
 for (const role of ["chief", "builder", "designer", "specialist", "reviewer"]) {
-  assert.match(orchestrator, new RegExp(`key: "\${role}"`), `orchestrator must declare \${role}`);
+  assert.match(orchestrator, new RegExp(`key: "${role}"`), `orchestrator must declare ${role}`);
 }
 for (const way of ["hunter:", "mage:", "ninja:", "professional:"]) {
   assert.match(orchestrator, new RegExp(way), `orchestrator must handle \${way}`);
