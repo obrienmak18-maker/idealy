@@ -35,3 +35,14 @@ Les providers `configured` du registre désignent uniquement les services intern
 [2]: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
 [3]: https://www.canva.dev/docs/connect/
 [4]: https://vercel.com/docs/integrations
+
+
+
+## Convergence 2026-10-08
+
+Le backend n’est plus limité au seul flux GitHub : `integration-connect` / `integration-callback` couvrent GitHub, Canva, Figma, Google Drive, Notion et Slack ; Vercel dispose de son propre flux OAuth utilisateur, stockage chiffré et vérification d’accès.
+
+Le moteur de plugins exécute désormais les opérations réelles derrière les permissions, les scopes, l’état d’installation, le plan et les confirmations. Les écritures externes utilisent des confirmations à usage unique liées à la mission et à un digest de payload.
+
+Point restant : l’intégration fournisseur ne doit être affichée comme connectée que lorsque les credentials OAuth du fournisseur sont configurés et qu’un parcours réel de connexion a été vérifié avec un compte de test. Les secrets manquants restent un état de configuration, jamais un faux succès.
+
