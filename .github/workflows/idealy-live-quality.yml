@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: idealy-live-quality-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-and-next:
     name: Backend parity and Next build
