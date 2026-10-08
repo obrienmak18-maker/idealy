@@ -26,7 +26,7 @@ export type PricingTier = {
   tagline: string;
   badge?: string;
   priceMonthlyEur: number;
-  priceMonthlyUsd: number;
+  priceMonthlyUsd: number | null;
   annualPriceEur?: number;
   annualPriceUsd?: number;
   stripePriceIdEur?: string;
@@ -76,7 +76,7 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
       { label: "Accès complet aux 4 Voies (Ninja, Mage, Hunter, Pro)", included: true },
       { label: "Orchestration multi-agents Architecte → Builder → Reviewer", included: true },
       { label: "Virtual File System (VFS) & Export PKZip immédiat", included: true },
-      { label: "100 Power Points rechargeables mensuellement", included: true },
+      { label: "200 Power Points rechargeables mensuellement", included: true },
       { label: "Preview temps réel du code généré", included: true },
       { label: "Connecteurs OAuth avancés", included: false, hint: "Réservé aux plans Pro & Business" },
       { label: "Génération illimitée et modèles de raisonnement profonds", included: false },
@@ -84,11 +84,13 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
   },
   pro: {
     id: "pro",
-    name: "Professionnel (Chūnin)",
+    name: "Professionnel (Pro)",
     tagline: "Pour les créateurs, freelances et développeurs bâtissant des applications réelles en production.",
     badge: "Le plus choisi",
-    priceMonthlyEur: 29,
-    priceMonthlyUsd: 32,
+    priceMonthlyEur: 19,
+    // USD pricing has not yet been decided in the product decisions.
+    priceMonthlyUsd: null,
+    annualPriceEur: 190.8,
     stripePriceIdEur: process.env.STRIPE_PRO_PRICE_ID_EUR,
     stripePriceIdUsd: process.env.STRIPE_PRO_PRICE_ID_USD,
     stripeAnnualPriceIdEur: process.env.STRIPE_PRO_PRICE_ID_YEARLY_EUR,
@@ -110,7 +112,7 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     },
     features: [
       { label: "Tout ce qui est inclus dans Découverte", included: true },
-      { label: "1 000 Power Points par mois (cumulables jusqu'au plafond)", included: true },
+      { label: "2 500 Power Points par mois (cumulables jusqu'au plafond)", included: true },
       { label: "Projets et dépôts illimités", included: true },
       { label: "Intégration GitHub OAuth & Sync de branches", included: true },
       { label: "VFS étendu jusqu'à 300 fichiers par mission", included: true },
@@ -120,11 +122,13 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
   },
   business: {
     id: "business",
-    name: "Business (Jōnin)",
+    name: "Business (Team)",
     tagline: "Pour les startups, agences et équipes requérant une puissance de génération soutenue.",
     badge: "Haute Capacité",
-    priceMonthlyEur: 79,
-    priceMonthlyUsd: 89,
+    priceMonthlyEur: 49,
+    // USD pricing has not yet been decided in the product decisions.
+    priceMonthlyUsd: null,
+    annualPriceEur: 490.8,
     stripePriceIdEur: process.env.STRIPE_BUSINESS_PRICE_ID_EUR,
     stripePriceIdUsd: process.env.STRIPE_BUSINESS_PRICE_ID_USD,
     stripeAnnualPriceIdEur: process.env.STRIPE_BUSINESS_PRICE_ID_YEARLY_EUR,
@@ -145,7 +149,7 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     },
     features: [
       { label: "Tout ce qui est inclus dans Professionnel", included: true },
-      { label: "3 000 Power Points par mois", included: true },
+      { label: "4 000 Power Points par mois", included: true },
       { label: "Orchestration multi-projets parallèle (20 missions actives)", included: true },
       { label: "Accès anticipé aux connecteurs MCP & intégrations cloud", included: true },
       { label: "Auto-correction Reviewer boucle fermée (3 passes)", included: true },
