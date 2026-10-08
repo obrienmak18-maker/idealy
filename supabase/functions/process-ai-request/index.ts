@@ -528,9 +528,15 @@ serve(async (req) => {
     const intentCategory = input.intentCategory ?? 'EXECUTION';
     let energyRemaining: number | null = null;
 
-    // Simple missions are charged once here. Squad runs are charged once by
-    // orchestrate-mission before invoking Architecte, Builder and Reviewer.
-    const isSimpleMission = Boolean(input.missionId) && intentCategory === 'EXECUTION' && input.workspaceStream !== true;
+    // Any mission runtime is billed by the canonical Power contract:
+    // - simple mission: consume_power_points once here
+    // - squad mission: reserve -> execute -> settle/release in orchestrate-mission
+    // Legacy user_credits must never be charged in parallel for mission work.
+    const isMissionRuntime = Boolean(input.missionId);
+    const isSimpleMission =
+      isMissionRuntime &&
+      intentCategory === 'EXECUTION' &&
+      input.workspaceStream !== true;
     if (managed && isSimpleMission) {
       const powerKey = input.idempotencyKey?.trim() || `${user.id}:mission-simple:${input.missionId}`;
       const { error: powerError } = await supabaseAdmin.rpc('consume_power_points', {
@@ -547,19 +553,16 @@ serve(async (req) => {
       }
     }
 
-    // Every centrally managed inference consumes credits. BYOK requests still
-    // bypass the managed balance, but not the server-side request pacing.
-    if (managed) {
+    // Legacy managed credits remain only for non-mission chat/ideation.
+    // Mission execution is already accounted for by Power and must not debit
+    // the legacy user_credits ledger a second time. BYOK never debits either.
+    if (managed && !isMissionRuntime) {
       const idempotencyKey = input.idempotencyKey?.trim() || `${user.id}:${crypto.randomUUID()}`;
-      const amount = intentCategory === 'CONVERSATION'
-        ? 1
-        : intentCategory === 'IDEATION'
-          ? 3
-          : 10;
+      const amount = intentCategory === 'CONVERSATION' ? 1 : 3;
       try {
         const debit = await consumeManagedCredit(supabaseAdmin, {
           userId: user.id,
-          missionId: input.missionId,
+          missionId: null,
           idempotencyKey,
           amount,
           reason: `ai:${intentCategory.toLowerCase()}:${provider}:${model}`,
