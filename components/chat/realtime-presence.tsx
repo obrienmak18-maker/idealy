@@ -38,7 +38,10 @@ export function RealtimePresence({ roomId }: { roomId: string | null }) {
 
         const supabase = getFirebaseSupabaseClient();
         channel = supabase.channel(`idealy-presence:${roomId}`, {
-          config: { presence: { key: user.uid } },
+          config: {
+            private: true,
+            presence: { key: user.uid },
+          },
         });
 
         const updateCount = () => {
