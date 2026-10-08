@@ -127,6 +127,7 @@ export default function PluginsPage() {
 
           {/* Animation du disque orbital */}
           <IdealyOrbitalDisc
+            connectedIds={connectedList}
             onSelectConnector={(id) => {
               setSearchQuery(id);
               setSelectedCategory("all");
