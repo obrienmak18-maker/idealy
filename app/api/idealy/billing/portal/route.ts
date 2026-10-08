@@ -17,13 +17,9 @@ export async function POST(request: Request) {
       ? token.supabaseAccessToken
       : null;
 
-  let authorization =
+  const authorization =
     explicitAuthorization ??
     (supabaseAccessToken ? `Bearer ${supabaseAccessToken}` : null);
-
-  if (!authorization && session?.user) {
-    authorization = `Bearer ${process.env.SUPABASE_ANON_KEY ?? "idealy_authenticated_user"}`;
-  }
 
   if (!authorization || (!session?.user && !token)) {
     return Response.json(
