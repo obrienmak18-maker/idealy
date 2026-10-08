@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -92,6 +92,7 @@ export default function ConnectorsPage() {
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [connectedProviders, setConnectedProviders] = useState<string[]>([]);
 
   const visibleConnectors = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -103,7 +104,31 @@ export default function ConnectorsPage() {
   }, [activeFilter, query]);
 
   const selectedConnector = connectorCatalog.find((connector) => connector.id === selected);
-  const configuredCount = connectorCatalog.filter((connector) => connector.availability === "configured").length;
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/idealy/connectors/status", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error("connector status unavailable");
+        return response.json() as Promise<{
+          integrations?: Array<{ provider?: string; status?: string }>;
+        }>;
+      })
+      .then((payload) => {
+        if (!active) return;
+        setConnectedProviders(
+          (payload.integrations ?? [])
+            .filter((integration) => integration.status === "active" && integration.provider)
+            .map((integration) => integration.provider as string)
+        );
+      })
+      .catch(() => {
+        if (active) setConnectedProviders([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -141,7 +166,7 @@ export default function ConnectorsPage() {
               </div>
               <div className="flex shrink-0 items-center gap-2 rounded-xl border border-border/70 bg-card/50 px-3.5 py-2.5">
                 <span className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500"><Check size={16} /></span>
-                <div><div className="text-sm font-semibold">{configuredCount} intégrations configurées</div><div className="text-[11px] text-muted-foreground">sur {connectorCatalog.length} disponibles au catalogue</div></div>
+                <div><div className="text-sm font-semibold">{connectedProviders.length} intégration{connectedProviders.length === 1 ? "" : "s"} connectée{connectedProviders.length === 1 ? "" : "s"}</div><div className="text-[11px] text-muted-foreground">état issu du backend, sur {connectorCatalog.length} au catalogue</div></div>
               </div>
             </div>
 
