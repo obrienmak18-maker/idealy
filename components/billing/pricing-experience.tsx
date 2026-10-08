@@ -10,7 +10,7 @@ import { powerPlanPolicy } from "@/lib/idealy/power-policy";
 import { cn } from "@/lib/utils";
 
 type Locale = "fr" | "en" | "es";
-type TierId = "free" | "pro" | "max" | "max_plus" | "business" | "enterprise";
+type TierId = "free" | "pro" | "business" | "enterprise";
 type Tier = {
   id: TierId;
   price: number | null;
@@ -33,7 +33,7 @@ const copy = {
     customHelp: "Add capacity without changing your level.",
     first: "From",
     footer:
-      "Pro and Business use Stripe checkout. Max, Max+ and custom Power reserves will be enabled once their billing is configured.",
+      "Pro and Business use Stripe checkout. Custom Power remains unavailable until its billing and economics are configured.",
     loading: "Opening Stripe…",
     max: "Included Power to be confirmed",
     month: "Monthly",
@@ -46,32 +46,24 @@ const copy = {
       hunter: [
         "Candidate",
         "Licensed Hunter",
-        "One-Star Hunter",
-        "Elite Hunter",
         "Double Star Hunter",
         "Triple Star Hunter",
       ],
       mage: [
         "Apprentice",
         "Mage",
-        "S-Class Mage",
-        "Elemental Mage",
         "Archmage",
         "Grand Primordial",
       ],
       ninja: [
         "Genin",
         "Chunin",
-        "Special Chunin",
-        "Anbu",
         "Jonin",
         "Kage / Sannin",
       ],
       professional: [
         "Starter",
         "Pro",
-        "Max",
-        "Max+",
         "Team",
         "Enterprise",
       ],
@@ -99,7 +91,7 @@ const copy = {
     customHelp: "Añade capacidad sin cambiar de nivel.",
     first: "Desde",
     footer:
-      "Pro y Business usan Stripe. Max, Max+ y las reservas de Power personalizadas se activarán cuando se configure su facturación.",
+      "Pro y Business usan Stripe. El Power personalizado no está disponible hasta configurar su facturación y economía.",
     loading: "Abriendo Stripe…",
     max: "Power incluido por confirmar",
     month: "Mensual",
@@ -113,32 +105,24 @@ const copy = {
       hunter: [
         "Candidato",
         "Hunter Licenciado",
-        "Hunter de una estrella",
-        "Hunter de Élite",
         "Double Star Hunter",
         "Triple Star Hunter",
       ],
       mage: [
         "Aprendiz",
         "Mago",
-        "Mago de rango S",
-        "Mago Elemental",
         "Archimago",
         "Gran Primordial",
       ],
       ninja: [
         "Genin",
         "Chunin",
-        "Chunin Especial",
-        "Anbu",
         "Jonin",
         "Kage / Sannin",
       ],
       professional: [
         "Starter",
         "Pro",
-        "Max",
-        "Max+",
         "Team",
         "Empresa",
       ],
@@ -166,7 +150,7 @@ const copy = {
     customHelp: "Augmentez votre réserve sans changer de niveau.",
     first: "À partir de",
     footer:
-      "Les offres Pro et Business passent par Stripe. Les niveaux Max, Max+ et les réserves de Power personnalisées seront activés quand leur facturation sera configurée.",
+      "Les offres Pro et Business passent par Stripe. Le Power personnalisé reste indisponible tant que sa facturation et son économie ne sont pas configurées.",
     loading: "Ouverture de Stripe…",
     max: "Power inclus à confirmer",
     month: "Mensuel",
@@ -180,24 +164,18 @@ const copy = {
       hunter: [
         "Candidat",
         "Hunter Licencié",
-        "Hunter 1 Étoile",
-        "Hunter d'Élite",
         "Double Star Hunter",
         "Triple Star Hunter",
       ],
       mage: [
         "Apprenti",
         "Mage",
-        "Mage de rang S",
-        "Mage Élémentaire",
         "Archimage",
         "Grand Primordial",
       ],
       ninja: [
         "Genin",
         "Chunin",
-        "Chunin Spécial",
-        "Anbu",
         "Jonin",
         "Kage / Sannin",
       ],
@@ -243,11 +221,11 @@ const plans = [
       professional: "Pour tester votre première idée",
     },
     points: powerPlanPolicy.free.monthlyAllocation,
-    price: 0,
+    price: PRICING_DISPLAY.free.monthlyEur,
   },
   {
     features: [
-      "Plus de missions chaque mois",
+      "Capacité étendue pour les missions",
       "Escouade IA complète",
       "Historique de projet",
     ],
@@ -259,43 +237,13 @@ const plans = [
       professional: "Pour un MVP en construction",
     },
     points: powerPlanPolicy.pro.monthlyAllocation,
-    price: PRICING_DISPLAY.pro.monthlyUsd,
+    price: PRICING_DISPLAY.pro.monthlyEur,
   },
   {
     features: [
-      "Capacité et tarif en cours de définition",
-      "Aucune souscription disponible pour le moment",
-    ],
-    id: "max",
-    notes: {
-      hunter: "Pour comparer et construire davantage",
-      mage: "Pour explorer plusieurs pistes",
-      ninja: "Pour accélérer plusieurs projets",
-      professional: "Pour plusieurs projets actifs",
-    },
-    points: null,
-    price: null,
-  },
-  {
-    features: [
-      "Capacité et tarif en cours de définition",
-      "Aucune souscription disponible pour le moment",
-    ],
-    id: "max_plus",
-    notes: {
-      hunter: "Pour les Hunters trois étoiles",
-      mage: "Le rang des Dix Mages Sacrés",
-      ninja: "Pour les missions les plus ambitieuses",
-      professional: "Pour faire avancer plusieurs projets",
-    },
-    points: null,
-    price: null,
-  },
-  {
-    features: [
-      "3 000 Power Points par mois",
+      "Capacité et collaboration pour les équipes",
       "Jusqu’à 20 missions actives",
-      "Workspace jusqu’à 1 000 fichiers par mission",
+      "Workspace étendu",
     ],
     id: "business",
     notes: {
@@ -305,12 +253,12 @@ const plans = [
       professional: "Pour les équipes produit",
     },
     points: powerPlanPolicy.business.monthlyAllocation,
-    price: PRICING_DISPLAY.business.monthlyUsd,
+    price: PRICING_DISPLAY.business.monthlyEur,
   },
   {
     features: [
       "Quotas et espaces sur mesure",
-      "Gouvernance et sécurité à définir",
+      "Gouvernance et sécurité",
       "Conditions et accompagnement sur mesure",
     ],
     id: "enterprise",
@@ -323,7 +271,7 @@ const plans = [
     points: null,
     price: null,
   },
-] as const satisfies readonly Tier[];
+] as const
 
 const wayNames: Record<IdealyWay, Record<Locale, string>> = {
   hunter: { en: "Hunter Way", es: "Vía Hunter", fr: "Voie du Hunter" },
@@ -358,10 +306,10 @@ export function PricingExperience({
     const value = Number(selectedPower);
     return Number.isFinite(value) &&
       value >= 1000 &&
-      value <= 6000 &&
-      value % 1000 === 0
+      value <= powerPlanPolicy.pro.walletCap &&
+      value % 500 === 0
       ? value
-      : 1000;
+      : powerPlanPolicy.pro.monthlyAllocation;
   });
   const chosenPlans = plans;
   const names = text.routes[way];
@@ -503,25 +451,35 @@ export function PricingExperience({
         </span>
       </div>
 
-      <div className="grid items-stretch gap-4 sm:grid-cols-2 2xl:grid-cols-6">
+      <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {chosenPlans.map((tier, index) => {
           const { id, points, features } = tier;
           const basePrice = tier.price;
           const isPopular = index === 1;
           const isSelected = selectedLevel === names[index];
           const price = basePrice;
+          const annualPrice =
+            id === "pro"
+              ? PRICING_DISPLAY.pro.annualEur
+              : id === "business"
+                ? PRICING_DISPLAY.business.annualEur
+                : null;
           const shownPrice =
-            price === null ? null : annual ? price * (10 / 12) : price;
+            price === null
+              ? null
+              : annual && annualPrice !== null
+                ? annualPrice / 12
+                : price;
           const label = names[index];
           const priceLabel =
             shownPrice === null
               ? id === "enterprise"
                 ? text.quote
                 : text.pendingPrice
-              : `$${shownPrice.toFixed(2)} ${text.perMonth}`;
+              : `${shownPrice.toFixed(2)} € € ${text.perMonth}`;
           const billingPlan = id === "business" ? "business" : "pro";
           const href = `/register?way=${way}&plan=${billingPlan}&level=${encodeURIComponent(label)}&cycle=${annual ? "yearly" : "monthly"}&power=${index === 1 ? customPower : (points ?? "custom")}`;
-          const selectedPowerIsBillable = id !== "pro" || customPower === 1000;
+          const selectedPowerIsBillable = true;
           const planIsAvailable = id === "pro" || id === "business";
           return (
             <article
@@ -581,7 +539,7 @@ export function PricingExperience({
                     </span>
                     {annual && shownPrice > 0 ? (
                       <span className="mt-1 block text-[11px] leading-4 text-emerald-200/80">
-                        ${(shownPrice * 12).toFixed(2)} /{" "}
+                        ${annualPrice?.toFixed(2) ?? "—"} € /{" "}
                         {locale === "fr"
                           ? "an"
                           : locale === "es"
@@ -611,21 +569,20 @@ export function PricingExperience({
                     aria-label={text.custom}
                     className="mt-3 h-1.5 w-full cursor-pointer accent-violet-300"
                     id="custom-power"
-                    max={6000}
+                    max={powerPlanPolicy.pro.walletCap}
                     min={1000}
                     onChange={handleCustomPowerChange}
-                    step={1000}
+                    step={500}
                     type="range"
                     value={customPower}
+                    disabled
                   />
                   <div className="mt-1 flex justify-between text-[10px] text-white/40">
                     <span>1 000</span>
-                    <span>6 000</span>
+                    <span>{powerPlanPolicy.pro.walletCap.toLocaleString(locale)}</span>
                   </div>
                   <p className="mt-2 text-[10px] leading-4 text-white/45">
-                    {customPower === 1000
-                      ? text.customHelp
-                      : text.powerUnavailable}
+                    {text.powerUnavailable}
                   </p>
                 </div>
               ) : (
