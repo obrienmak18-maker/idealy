@@ -3,21 +3,23 @@ import type { IdealyPlan, IdealyWay } from "./product-contract";
 export const POWER_POLICY_VERSION = "power-v2";
 
 // ─── Plan allocations ────────────────────────────────────────────────────────
-// Free    :   100 pts / month  (découverte)
-// Pro     : 2 500 pts / month  (base) — customisable jusqu'à 6 000 pts max
-// Business: 8 000 pts / month  (toujours au-dessus du plafond Pro customisé)
+// Product-approved allocations and wallet caps.
+// Free: 200 / 250
+// Pro: 2 500 / 3 500
+// Business: 4 000 / 7 000
+// Custom Power remains non-billable until its economics and checkout are implemented.
 export const powerPlanPolicy: Record<
   IdealyPlan,
   { monthlyAllocation: number; walletCap: number }
 > = {
-  business: { monthlyAllocation: 3_000, walletCap: 3_000 },
-  free: { monthlyAllocation: 100, walletCap: 100 },
-  pro: { monthlyAllocation: 1_000, walletCap: 1_000 },
+  business: { monthlyAllocation: 4_000, walletCap: 7_000 },
+  free: { monthlyAllocation: 200, walletCap: 250 },
+  pro: { monthlyAllocation: 2_500, walletCap: 3_500 },
 };
 
-// ─── Pro custom packs (choix de volume au checkout) ─────────────────────────
-// L'utilisateur choisit son volume lors de l'abonnement Pro.
-// La limite absolue est 6 000 pts — jamais dépassée.
+// ─── Historical Pro pack definitions ────────────────────────────────────────
+// Kept in code for compatibility; packs are currently disabled and are not
+// exposed as billable choices until the billing model is finalized.
 export const PRO_PACK_OPTIONS = [
   { points: 2_500, priceEur: 29, label: "Starter" },
   { points: 3_500, priceEur: 39, label: "Growth" },
@@ -26,7 +28,7 @@ export const PRO_PACK_OPTIONS = [
 ] as const satisfies readonly { points: number; priceEur: number; label: string }[];
 
 export type ProPack = (typeof PRO_PACK_OPTIONS)[number];
-export const PRO_PACK_MAX_POINTS = 6_000;
+export const PRO_PACK_MAX_POINTS = 3_500;
 export const PRO_PACK_DEFAULT_POINTS = 2_500;
 
 export const powerActionCosts = {
