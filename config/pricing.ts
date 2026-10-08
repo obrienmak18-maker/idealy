@@ -74,7 +74,7 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     },
     features: [
       { label: "Accès complet aux 4 Voies (Ninja, Mage, Hunter, Pro)", included: true },
-      { label: "Orchestration multi-agents Architecte → Builder → Reviewer", included: true },
+      { label: "Orchestration multi-agents adaptée à la Voie choisie", included: true },
       { label: "Virtual File System (VFS) & Export PKZip immédiat", included: true },
       { label: "200 Power Points rechargeables mensuellement", included: true },
       { label: "Preview temps réel du code généré", included: true },
@@ -112,7 +112,7 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     },
     features: [
       { label: "Tout ce qui est inclus dans Découverte", included: true },
-      { label: "2 500 Power Points par mois (cumulables jusqu'au plafond)", included: true },
+      { label: "2 500 Power Points par mois (jusqu’au plafond de 3 500)", included: true },
       { label: "Projets et dépôts illimités", included: true },
       { label: "Intégration GitHub OAuth & Sync de branches", included: true },
       { label: "VFS étendu jusqu'à 300 fichiers par mission", included: true },
@@ -149,7 +149,7 @@ export const PRICING_TIERS: Record<IdealyPlan, PricingTier> = {
     },
     features: [
       { label: "Tout ce qui est inclus dans Professionnel", included: true },
-      { label: "4 000 Power Points par mois", included: true },
+      { label: "4 000 Power Points par mois (jusqu’au plafond de 7 000)", included: true },
       { label: "Orchestration multi-projets parallèle (20 missions actives)", included: true },
       { label: "Accès anticipé aux connecteurs MCP & intégrations cloud", included: true },
       { label: "Auto-correction Reviewer boucle fermée (3 passes)", included: true },
