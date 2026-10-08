@@ -131,6 +131,15 @@ function isValidUUID(value: string): boolean {
   return UUID_PATTERN.test(value);
 }
 
+function normalizeResponseLanguage(value: unknown): 'fr' | 'en' | 'es' {
+  if (value === 'en' || value === 'es' || value === 'fr') return value;
+  if (typeof value === 'string') {
+    const base = value.trim().toLowerCase().split('-')[0];
+    if (base === 'en' || base === 'es' || base === 'fr') return base;
+  }
+  return 'fr';
+}
+
 function isAgentUIPhase(value: unknown): value is AgentUIPhase {
   return value === 'planning' || value === 'building' || value === 'validating' || value === 'completed' || value === 'needs-fix';
 }
@@ -456,6 +465,8 @@ serve(async (req) => {
     if (input.planOnly !== undefined && typeof input.planOnly !== 'boolean') return jsonError('planOnly must be boolean.', 400, headers);
     if (input.workspaceStream !== undefined && typeof input.workspaceStream !== 'boolean') return jsonError('workspaceStream must be boolean.', 400, headers);
     if (input.squadRun !== undefined && typeof input.squadRun !== 'boolean') return jsonError('squadRun must be boolean.', 400, headers);
+    if (input.language !== undefined && typeof input.language !== 'string') return jsonError('language must be a string.', 400, headers);
+    if (input.language !== undefined && !['fr','en','es'].includes(normalizeResponseLanguage(input.language))) return jsonError('Unsupported language.', 400, headers);
     if (input.workspaceStream === true && (!input.missionId || !isValidUUID(input.missionId))) return jsonError('workspaceStream requires a missionId.', 400, headers);
 
     if (input.intentOnly === true) {
@@ -581,10 +592,23 @@ serve(async (req) => {
     }
 
     const config = PROVIDER_CONFIGS[resolution.provider];
+    const languageFromRequest = input.language ? normalizeResponseLanguage(input.language) : null;
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('preferred_language')
+      .eq('id', user.id)
+      .maybeSingle();
+    const responseLanguage = languageFromRequest ?? normalizeResponseLanguage(profile?.preferred_language);
+    const languageInstruction =
+      responseLanguage === 'en'
+        ? 'Always respond in English.'
+        : responseLanguage === 'es'
+          ? 'Responde siempre en español.'
+          : 'Réponds toujours en français.';
     const messages: { role: 'system' | 'user'; content: string }[] = [];
     const effectiveSystemPrompt = input.workspaceStream
-      ? `${systemPrompt ?? ''}\n${WORKSPACE_SYSTEM_PROMPT}`.trim()
-      : systemPrompt;
+      ? `${systemPrompt ?? ''}\n${WORKSPACE_SYSTEM_PROMPT}\n${languageInstruction}`.trim()
+      : [systemPrompt, languageInstruction].filter(Boolean).join('\n');
     if (effectiveSystemPrompt) messages.push({ role: 'system', content: effectiveSystemPrompt });
     messages.push({ role: 'user', content: prompt });
 
