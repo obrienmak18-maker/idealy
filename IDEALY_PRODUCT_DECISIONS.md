@@ -40,7 +40,7 @@ Choose one:
 - [ ] C) Another model.
 
 Decision:
-_
+The five Way agents are now the real execution team. Runtime responsibilities are Chief → Builder → Designer → Specialist → Reviewer, with the exact Way-specific names from the catalog.
 
 ### 1.3 Alvin
 
@@ -52,7 +52,7 @@ Decision:
 - [ ] Change Alvin's role.
 
 Decision:
-_
+Chat context may show both the Way-specific agent name and the execution role; compact status surfaces may show only the name or role when space requires it.
 
 ### 1.4 Sub-agents
 
@@ -62,7 +62,7 @@ Decision:
 - [ ] Other.
 
 How should selection happen?
-_
+The Chief selects the active mission plan; Designer and Specialist are always attached to the squad for their defined quality domains. Additional sub-agents may be selected from the active Way when the mission plan identifies a concrete capability gap. Selection must be persisted and visible; no simulated agent is allowed.
 
 ---
 
@@ -76,7 +76,7 @@ Choose the canonical runtime identity:
 - [ ] Other
 
 Canonical names:
-_
+The exact Way rosters already defined in lib/idealy/voies-catalog.ts. Runtime display uses those Way-specific names; no generic Sélène/Maël/Iris identities are canonical anymore.
 
 Should chat messages display:
 - [ ] Agent name + role
@@ -84,7 +84,7 @@ Should chat messages display:
 - [x] Both, depending on context
 
 Decision:
-_
+Keep the custom Power control visible but disabled with an explicit unavailable/future state.
 
 ---
 
@@ -145,7 +145,7 @@ Choose:
 - [ ] Make it fully billable now.
 
 Decision:
-_
+Firebase remains the login authority, Supabase remains the application data/control plane, and NextAuth remains the server session wrapper. No in-memory identity fallback is permitted.
 
 ---
 
@@ -206,7 +206,7 @@ Should local development fall back to an in-memory/local identity?
 - [x] No, authentication failures must fail closed.
 
 Decision:
-_
+Use the current five-agent sequential squad as the safe canonical runtime. Keep the DAG scheduler/library available for later orchestration expansion; do not expose the DAG as live until its persistence and provider execution are fully wired. Power for squad execution uses reserve → execute → settle/release; direct charge is kept only for simple AI requests that already use the simple-action contract.
 
 ---
 
@@ -247,7 +247,7 @@ Should Power use:
 - [ ] Other
 
 Decision:
-_
+Presence must be real Supabase Realtime presence. Until the browser has a secure authenticated Realtime token path, the UI must not show simulated people as online.
 
 ---
 
@@ -261,7 +261,7 @@ Choose:
 - [ ] Keep it only in DEMO_MODE.
 
 Decision:
-_
+Standardize fr/en/es through one i18n layer, migrate to next-intl without dropping the existing locales, and pass the active locale into mission/AI execution so generated responses follow the user locale unless an explicit language override is requested.
 
 ---
 
@@ -286,7 +286,7 @@ Should AI-generated mission responses follow the user's locale?
 - [ ] Other.
 
 Decision:
-_
+Current recognizable Way names remain for the private prototype; replace them with original Idealy characters before public commercial launch.
 
 ---
 
@@ -359,11 +359,11 @@ You have access to everything you can modify. Whatever you can do, do it without
 ### External services / secrets required from the team
 
 1.
-_
+Vercel App: NEXT_PUBLIC_VERCEL_APP_CLIENT_ID + VERCEL_APP_CLIENT_SECRET and the production callback URL configured in the Vercel App dashboard.
 2.
-_
+OAuth credentials for Canva, Figma, Google Drive, Notion and Slack, with redirect URIs and approved scopes configured at each provider.
 3.
-_
+Integration encryption key for server-side credential storage: INTEGRATION_ENCRYPTION_KEY (32-byte base64 value).
 
 ---
 
