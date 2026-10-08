@@ -66,7 +66,7 @@
 - [x] Auditer robots, sitemap, métadonnées, contenu public et canonicals pour Google Search
 - [x] Ajouter les fondations SEO indexables et préparer la soumission Search Console sans la déclencher
 - [ ] Vérifier le domaine dans Google Search Console puis soumettre le sitemap et demander l’indexation des pages publiques
-- [ ] Établir le registre de risques V1, les critères de mise en bêta et les preuves de préparation au paiement
+- [x] Établir le registre de risques V1, les critères de mise en bêta et les preuves de préparation au paiement
 - [x] Auditer les autorisations, entrées, sorties, crédits, Stripe, OAuth, exports et secrets par scénario d’attaque autorisé
 - [x] Produire une documentation de handoff claire pour les développeurs humains : architecture, données, fonctions, tests et exploitation
 - [x] Formaliser des personnalités d’agents distinctes, originales et non imitatives pour les voix Ninja, Mana et Hunter
