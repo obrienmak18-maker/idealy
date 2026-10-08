@@ -19,7 +19,7 @@ const VISIBLE_PROVIDERS = new Set([
   "vercel",
   "canva",
   "figma",
-  "google",
+  "google-drive",
   "notion",
   "slack",
 ]);
