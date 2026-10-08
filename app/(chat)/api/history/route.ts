@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/app/(auth)/auth";
+import { isDevelopmentEnvironment } from "@/lib/constants";
 import { deleteAllChatsByUserId, getChatsByUserId } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
-  if (process.env.DEMO_MODE === "true") {
+  if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return Response.json({ chats: [], hasMore: false }, { status: 200 });
   }
 
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE() {
-  if (process.env.DEMO_MODE === "true") {
+  if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return Response.json({ success: true }, { status: 200 });
   }
 
