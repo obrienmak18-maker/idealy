@@ -1,10 +1,11 @@
 import { auth } from "@/app/(auth)/auth";
+import { isDevelopmentEnvironment } from "@/lib/constants";
 import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
 import { convertToUIMessages } from "@/lib/utils";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  if (process.env.DEMO_MODE === "true") {
+  if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return Response.json(
       {
         isReadonly: false,
