@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   ArrowLeftIcon,
   SearchIcon,
@@ -22,7 +22,37 @@ export default function PluginsPage() {
   const connectors = listConnectorDefinitions();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [connectedList, setConnectedList] = useState<string[]>(["github", "supabase"]);
+  const [connectedList, setConnectedList] = useState<string[]>([]);
+  const [statusReady, setStatusReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/idealy/connectors/status", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("connector_status_unavailable");
+        const payload = (await response.json()) as {
+          integrations?: Array<{ provider?: string; status?: string }>;
+        };
+        if (!active) return;
+        setConnectedList(
+          (payload.integrations ?? [])
+            .filter((entry) => entry.status === "active")
+            .flatMap((entry) =>
+              entry.provider === "google" ? ["google-drive"] : entry.provider ? [entry.provider] : []
+            )
+        );
+        setStatusReady(true);
+      })
+      .catch(() => {
+        if (active) {
+          setConnectedList([]);
+          setStatusReady(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const categories = [
     { id: "all", label: "Tous", count: connectors.length },
@@ -49,13 +79,24 @@ export default function PluginsPage() {
     });
   }, [connectors, searchQuery, selectedCategory, connectedList]);
 
-  const toggleConnect = (id: string) => {
-    if (connectedList.includes(id)) {
-      setConnectedList(connectedList.filter((item) => item !== id));
-      toast.info(`Connecteur ${id} déconnecté.`);
-    } else {
-      setConnectedList([...connectedList, id]);
-      toast.success(`Connecteur ${id} activé et prêt pour l'escouade.`);
+  const connectConnector = async (id: string) => {
+    if (id !== "github") {
+      toast.info("La connexion réelle de ce fournisseur sera disponible prochainement.");
+      return;
+    }
+    try {
+      const response = await fetch("/api/idealy/connectors/github/start", {
+        body: JSON.stringify({}),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload?.error ?? "Connexion GitHub indisponible.");
+      }
+      window.location.assign(payload.url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Connexion du connecteur indisponible.");
     }
   };
 
@@ -247,11 +288,14 @@ export default function PluginsPage() {
 
                     <button
                       type="button"
-                      onClick={() => toggleConnect(connector.id)}
+                      disabled={connectedList.includes(connector.id) || !statusReady || connector.id !== "github"}
+                      onClick={() => connectConnector(connector.id)}
                       className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                         isConnected
-                          ? "bg-muted/80 text-foreground hover:bg-destructive/15 hover:text-destructive border border-border"
-                          : "bg-primary text-primary-foreground hover:opacity-90 shadow-xs"
+                          ? "bg-muted/80 text-foreground border border-border cursor-default"
+                          : connector.id === "github" && statusReady
+                          ? "bg-primary text-primary-foreground hover:opacity-90 shadow-xs"
+                          : "bg-muted text-muted-foreground border border-border cursor-not-allowed"
                       }`}
                     >
                       {isConnected ? (
@@ -262,7 +306,7 @@ export default function PluginsPage() {
                       ) : (
                         <>
                           <PlusIcon className="size-3.5" />
-                          <span>Connecter</span>
+                          <span>{connector.id === "github" ? "Connecter" : "Bientôt disponible"}</span>
                         </>
                       )}
                     </button>
