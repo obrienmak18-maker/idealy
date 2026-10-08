@@ -115,7 +115,7 @@ type ReviewerDiagnostic = {
   suggestedCorrection: string;
 };
 
-function validateWorkspaceStructure(files: Array<{ checksum: string | null; path: string; status: string }>) {
+function parseReviewerDecision(value: unknown): {\n  reviewStatus: "PASS" | "FAIL";\n  diagnostics: ReviewerDiagnostic[];\n} {\n  const raw = value && typeof value === "object" && typeof (value as Record<string, unknown>).message === "string"\n    ? String((value as Record<string, unknown>).message)\n    : "";\n  const cleaned = raw.replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/i, "").trim();\n  try {\n    const parsed = JSON.parse(cleaned) as { reviewStatus?: unknown; diagnostics?: unknown };\n    const diagnostics = Array.isArray(parsed.diagnostics) ? parsed.diagnostics.filter((item): item is ReviewerDiagnostic => Boolean(item && typeof item === "object" && typeof (item as Record<string, unknown>).problem === "string" && typeof (item as Record<string, unknown>).severity === "string")) : [];\n    return { diagnostics, reviewStatus: parsed.reviewStatus === "PASS" ? "PASS" : "FAIL" };\n  } catch {\n    return { diagnostics: [{ evidence: raw.slice(0, 2000) || "Réponse Reviewer vide ou non JSON.", expectedBehavior: "Le Reviewer doit renvoyer un JSON structuré avec reviewStatus=PASS ou FAIL.", file: "", location: "", problem: "Réponse Reviewer non conforme au contrat de validation.", severity: "critical", suggestedCorrection: "Relancer l’itération avec un rapport Reviewer JSON strict." }], reviewStatus: "FAIL" };\n  }\n}\n\nfunction validateWorkspaceStructure(files: Array<{ checksum: string | null; path: string; status: string }>) {
   const expectedPaths = ["package.json", "index.html"];
   const savedPaths = new Set(files.map((file) => file.path));
   const missing = expectedPaths.filter((path) => !savedPaths.has(path));
@@ -436,6 +436,7 @@ Deno.serve(async (request) => {
     let designerReport: Record<string, unknown> | null = null;
     let specialistReport: Record<string, unknown> | null = null;
     let lastReviewerReport: Record<string, unknown> | null = null;
+    let reviewerDecision: ReturnType<typeof parseReviewerDecision> = { diagnostics: [], reviewStatus: "FAIL" };
 
     // The five Way agents form the real execution team. The chief creates the
     // mission plan first; the designer and specialist are independent planning
@@ -457,9 +458,10 @@ Deno.serve(async (request) => {
     ]);
 
     while (iteration <= MAX_REVIEW_ITERATIONS) {
+      const correctionInputs = [...(currentValidation?.errors ?? []), ...(reviewerDecision.diagnostics ?? [])].slice(0, 8);
       const diagnosticGuidance =
-        currentValidation && currentValidation.errors.length > 0
-          ? `\\nDIAGNOSTIC DU REVIEWER (Itération précédente) :\\n${JSON.stringify(currentValidation.errors.slice(0, 5))}\\nCorrige impérativement ces erreurs sans introduire de régression.`
+        correctionInputs.length > 0
+          ? `\\nDIAGNOSTICS DE VALIDATION (Itération précédente) :\\n${JSON.stringify(correctionInputs)}\\nCorrige impérativement ces problèmes sans introduire de régression.`
           : "";
 
       await runAgent(
@@ -505,10 +507,17 @@ Deno.serve(async (request) => {
       lastReviewerReport = await runAgent(
         reviewer,
         iteration,
-        `Agis comme ${reviewer.name}, agent de ${reviewer.role}. Tu es la dernière vérification réelle. Ne modifie aucun fichier. Contrôle les faits, les risques, la conformité au plan, le préflight structurel et les rapports de préparation des autres agents. Émets un PASS/FAIL honnête et un diagnostic précis avec evidence, expectedBehavior, file, location, problem, severity et suggestedCorrection. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préparation UI/UX : ${JSON.stringify(designerReport).slice(0, 8_000)}. Préparation technique : ${JSON.stringify(specialistReport).slice(0, 8_000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
+        `Agis comme ${reviewer.name}, agent de ${reviewer.role}. Tu es la dernière vérification réelle. Ne modifie aucun fichier. Contrôle les faits, les risques, la conformité au plan, le préflight structurel et les rapports de préparation des autres agents. ${missionVoice} Réponds UNIQUEMENT avec un JSON valide de la forme {"reviewStatus":"PASS"|"FAIL","diagnostics":[{"evidence":"...","expectedBehavior":"...","file":"...","location":"...","problem":"...","severity":"critical|warning|info","suggestedCorrection":"..."}]}. Utilise PASS uniquement si tu as des preuves suffisantes et aucun blocage critique. Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préparation UI/UX : ${JSON.stringify(designerReport).slice(0, 8_000)}. Préparation technique : ${JSON.stringify(specialistReport).slice(0, 8_000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
       );
 
-      if (currentValidation.status === "passed") break;
+      reviewerDecision = parseReviewerDecision(lastReviewerReport);
+      const reviewerPassed =
+        reviewerDecision.reviewStatus === "PASS" &&
+        reviewerDecision.diagnostics.every(
+          (diagnostic) => diagnostic.severity !== "critical",
+        );
+
+      if (currentValidation.status === "passed" && reviewerPassed) break;
 
       iteration++;
       if (iteration <= MAX_REVIEW_ITERATIONS) {
@@ -529,7 +538,13 @@ Deno.serve(async (request) => {
       }
     }
 
-    const isPassed = currentValidation?.status === "passed";
+    const structuralPassed = currentValidation?.status === "passed";
+    const reviewerPassed =
+      reviewerDecision.reviewStatus === "PASS" &&
+      reviewerDecision.diagnostics.every(
+        (diagnostic) => diagnostic.severity !== "critical",
+      );
+    const isPassed = structuralPassed && reviewerPassed;
     const finalValidationStatus = isPassed ? "passed" : "needs-user-input";
     const missionStatus = isPassed ? "ready" : "needs-fix";
 
@@ -543,6 +558,7 @@ Deno.serve(async (request) => {
         source: "structural-preflight" as const,
       }),
       diagnosticReport: lastReviewerReport,
+      reviewerDecision,
       iteration: Math.min(iteration, MAX_REVIEW_ITERATIONS),
       maxIterations: MAX_REVIEW_ITERATIONS,
       status: finalValidationStatus,
