@@ -35,12 +35,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 async function SidebarShell({ children }: { children: React.ReactNode }) {
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
   const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
-  const hasCompletedCookie = cookieStore.get("idealy_onboarding_completed")?.value === "true";
   let onboardingRequired = false;
+  let onboardingStatusUnavailable = false;
   if (
     process.env.DEMO_MODE !== "true" &&
-    session?.user.type === "regular" &&
-    !hasCompletedCookie
+    session?.user.type === "regular"
   ) {
     try {
       const requestHeaders = await headers();
@@ -53,12 +52,35 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
       });
       onboardingRequired = !onboarding.onboardingCompleted;
     } catch (error) {
-      // Graceful local degradation: if remote backend check is not available, allow entering workspace
-      console.warn("Idealy onboarding check skipped (local environment fallback):", (error as Error)?.message || "unknown");
+      onboardingStatusUnavailable = true;
+      console.error(
+        "Idealy onboarding status could not be verified:",
+        (error as Error)?.message || "unknown",
+      );
     }
   }
 
   if (onboardingRequired) redirect("/onboarding");
+
+  if (onboardingStatusUnavailable) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background px-6 text-foreground">
+        <div className="max-w-md rounded-2xl border border-border/60 bg-card p-8 text-center shadow-[var(--shadow-float)]">
+          <h1 className="text-lg font-semibold">Impossible de vérifier votre profil</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Idealy ne peut pas confirmer l’état de votre onboarding pour le moment.
+            Aucun accès au workspace n’est accordé tant que cette vérification n’a pas réussi.
+          </p>
+          <a
+            href="/onboarding"
+            className="mt-6 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Réessayer
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
