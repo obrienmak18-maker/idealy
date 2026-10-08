@@ -437,22 +437,7 @@ export function BuildTopBar() {
           <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
         </button>
 
-        {/* Présence multijoueur discrète */}
-        <div
-          className="hidden items-center -space-x-1.5 sm:flex ml-1"
-          title="3 collaborateurs actifs sur cette session"
-        >
-          <div className="relative flex size-6 items-center justify-center rounded-full border border-background bg-gradient-to-tr from-sky-500 to-indigo-600 text-[9.5px] font-bold text-white shadow-xs">
-            <span>A</span>
-            <span className="absolute -bottom-0.5 -right-0.5 size-1.5 rounded-full bg-emerald-500 ring-1 ring-background" />
-          </div>
-          <div className="relative flex size-6 items-center justify-center rounded-full border border-background bg-gradient-to-tr from-violet-500 to-purple-600 text-[9.5px] font-bold text-white shadow-xs">
-            <span>L</span>
-          </div>
-          <div className="relative flex size-6 items-center justify-center rounded-full border border-background bg-gradient-to-tr from-emerald-500 to-teal-600 text-[9.5px] font-bold text-white shadow-xs">
-            <span>M</span>
-          </div>
-        </div>
+        {/* Real-time collaboration presence is rendered only when backed by a real presence channel. */}
       </div>
 
       <div className="hidden items-center gap-1.5 md:flex">
