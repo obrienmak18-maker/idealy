@@ -301,19 +301,9 @@ export const {
           const [existingEmailUser] = await getUser(effectiveEmail);
 
           if (existingEmailUser) {
-            try {
-              await linkUserToSupabaseUser({
-                localUserId: existingEmailUser.id,
-                supabaseUserId,
-              });
-            } catch {
-              throw new IdealyCredentialsSignin("service_unavailable");
-            }
-
-            localUser = {
-              ...existingEmailUser,
-              supabaseUserId,
-            };
+            // An identical email is not proof of ownership of an existing local account.
+            // Reuse is allowed only when the external provider UID was already linked.
+            throw new IdealyCredentialsSignin("invalid_credentials");
           } else {
             try {
               const [createdUser] = await createUser(
