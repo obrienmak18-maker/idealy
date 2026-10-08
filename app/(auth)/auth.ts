@@ -273,62 +273,67 @@ export const {
         }
 
         // 2. Fallback: Check if this was a Supabase token
-        if (!email) {
+        if (!supabaseAuth?.accessToken) {
           const supabaseUser = await getSupabaseUserWithAccessToken(idToken);
           if (supabaseUser?.email) {
             email = supabaseUser.email.trim().toLowerCase();
-            firebaseUid = supabaseUser.id;
+            supabaseAuth = {
+              accessToken: idToken,
+              configured: true,
+              expiresAt: Date.now() + 55 * 60 * 1000,
+              refreshToken: null,
+              status: "authenticated",
+              userId: supabaseUser.id,
+            };
+            firebaseUid = null;
           }
         }
 
-        if (!email && !firebaseUid) {
+        if (!email || !supabaseAuth?.accessToken || !supabaseAuth.userId) {
           return null;
         }
 
-        const effectiveEmail = email || `user-${firebaseUid}@idealy.local`;
+        const effectiveEmail = email;
+        const supabaseUserId = supabaseAuth.userId;
+        let localUser = await getUserBySupabaseUserId(supabaseUserId);
 
-        // 4. Secure user resolution: verify explicit supabase/firebase UID link first
-        let localUser = firebaseUid ? await getUserBySupabaseUserId(firebaseUid) : null;
         if (!localUser) {
           const [existingEmailUser] = await getUser(effectiveEmail);
+
           if (existingEmailUser) {
-            if (firebaseUid) {
-              try {
-                await linkUserToSupabaseUser({
-                  localUserId: existingEmailUser.id,
-                  supabaseUserId: firebaseUid,
-                });
-              } catch {
-                throw new IdealyCredentialsSignin("service_unavailable");
-              }
+            try {
+              await linkUserToSupabaseUser({
+                localUserId: existingEmailUser.id,
+                supabaseUserId,
+              });
+            } catch {
+              throw new IdealyCredentialsSignin("service_unavailable");
             }
+
             localUser = {
               ...existingEmailUser,
-              supabaseUserId: firebaseUid ?? existingEmailUser.supabaseUserId,
+              supabaseUserId,
             };
           } else {
             try {
-              await createUser(effectiveEmail, `firebase-${generateUUID()}`);
-              const [createdUser] = await getUser(effectiveEmail);
+              const [createdUser] = await createUser(
+                effectiveEmail,
+                `firebase-${generateUUID()}`,
+              );
+
               if (!createdUser) {
                 throw new IdealyCredentialsSignin("service_unavailable");
               }
-              if (firebaseUid) {
-                try {
-                  await linkUserToSupabaseUser({
-                    localUserId: createdUser.id,
-                    supabaseUserId: firebaseUid,
-                  });
-                } catch {
-                  throw new IdealyCredentialsSignin("service_unavailable");
-                }
-                localUser = {
-                  ...createdUser,
-                  supabaseUserId: firebaseUid,
-                };
-              } else {
-                localUser = createdUser;
-              }
+
+              await linkUserToSupabaseUser({
+                localUserId: createdUser.id,
+                supabaseUserId,
+              });
+
+              localUser = {
+                ...createdUser,
+                supabaseUserId,
+              };
             } catch (error) {
               if (error instanceof IdealyCredentialsSignin) throw error;
               throw new IdealyCredentialsSignin("service_unavailable");
@@ -336,7 +341,7 @@ export const {
           }
         }
 
-        const userId = localUser?.id ?? firebaseUid ?? generateUUID();
+        const userId = localUser.id;
 
         return {
           ...(localUser ?? {}),
@@ -344,9 +349,10 @@ export const {
           id: userId,
           image: photoUrl ?? localUser?.image ?? null,
           name: displayName ?? localUser?.name ?? "Utilisateur Idealy",
-          supabaseAccessToken: idToken,
-          supabaseAccessTokenExpiresAt: Date.now() + 55 * 60 * 1000,
-          supabaseUserId: firebaseUid ?? undefined,
+          supabaseAccessToken: supabaseAuth.accessToken,
+          supabaseAccessTokenExpiresAt: supabaseAuth.expiresAt ?? undefined,
+          supabaseRefreshToken: supabaseAuth.refreshToken ?? undefined,
+          supabaseUserId: supabaseAuth.userId,
           type: "regular",
         };
       },
