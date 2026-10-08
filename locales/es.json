@@ -91,7 +91,7 @@
     "tag": "Calculadora Inteligente",
     "title": "Calcula tus necesidades mensuales",
     "subtitle": "Ajusta tu volumen de desarrollo para encontrar el plan ideal.",
-    "simpleLabel": "Misiones simples (1 agente)",
+    "simpleLabel": "Misiones simples (Power variable)",
     "simpleUnit": "mes",
     "squadLabel": "Misiones completas (5 agentes)",
     "squadUnit": "mes",
@@ -99,9 +99,9 @@
     "perMonth": "Power Points / mes",
     "recommendedFormula": "Plan recomendado: ",
     "freePlan": "Descubrimiento (Gratis)",
-    "proStandardPlan": "Pro Estándar (1 000 pts)",
-    "proBoostPlan": "Pro Boost (2 000 pts)",
-    "businessPlan": "Business Studio (5 000+ pts)"
+    "proStandardPlan": "Pro (2 500 Power)",
+    "proBoostPlan": "Pro — hasta 3 500 Power almacenados",
+    "businessPlan": "Business Studio (4 000 Power)"
   },
   "pricing": {
     "tag": "Transparencia Total",
