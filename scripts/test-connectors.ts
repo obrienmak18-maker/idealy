@@ -85,4 +85,7 @@ async function main() {
   console.log(`Connector registry checks passed: ${definitions.length} definitions.`);
 }
 
-await main();
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
