@@ -19,7 +19,7 @@ async function main() {
     vercelConnect,
     vercelCallback,
   ] = await Promise.all([
-    readFile("app/(chat)/api/idealy/connectors/start/route.ts", "utf8"),
+    readFile("app/api/idealy/connectors/start/route.ts", "utf8"),
     readFile("app/api/idealy/connectors/vercel/start/route.ts", "utf8"),
     readFile("supabase/functions/integration-connect/index.ts", "utf8"),
     readFile("supabase/functions/integration-callback/index.ts", "utf8"),
