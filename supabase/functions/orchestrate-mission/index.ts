@@ -379,6 +379,7 @@ Deno.serve(async (request) => {
         prompt,
         stream: options?.workspaceStream === true,
         workspaceStream: options?.workspaceStream === true,
+        squadRun: true,
       },
     });
 
