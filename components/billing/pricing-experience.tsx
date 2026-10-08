@@ -3,7 +3,7 @@
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { type ChangeEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PRICING_DISPLAY } from "@/config/pricing-display";
 import type { IdealyWay } from "@/lib/idealy/product-contract";
 import { powerPlanPolicy } from "@/lib/idealy/power-policy";
@@ -295,15 +295,6 @@ export function PricingExperience({
   const [checkoutPending, setCheckoutPending] = useState<TierId | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [annual, setAnnual] = useState(selectedCycle === "yearly");
-  const [customPower, setCustomPower] = useState(() => {
-    const value = Number(selectedPower);
-    return Number.isFinite(value) &&
-      value >= 1000 &&
-      value <= powerPlanPolicy.pro.walletCap &&
-      value % 500 === 0
-      ? value
-      : powerPlanPolicy.pro.monthlyAllocation;
-  });
   const chosenPlans = plans;
   const names = text.routes[way];
 
@@ -349,28 +340,9 @@ export function PricingExperience({
   );
   const setMonthly = useCallback(() => setAnnual(false), []);
   const setYearly = useCallback(() => setAnnual(true), []);
-  const handleCustomPowerChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      setCustomPower(Number(event.target.value));
-    },
-    []
-  );
-
   useEffect(() => {
     setAnnual(selectedCycle === "yearly");
   }, [selectedCycle]);
-
-  useEffect(() => {
-    const value = Number(selectedPower);
-    if (
-      Number.isFinite(value) &&
-      value >= 1000 &&
-      value <= powerPlanPolicy.pro.walletCap &&
-      value % 500 === 0
-    ) {
-      setCustomPower(value);
-    }
-  }, [selectedPower]);
 
   return (
     <section
@@ -537,8 +509,7 @@ export function PricingExperience({
                           : locale === "es"
                             ? "año"
                             : "year"}{" "}
-                        · {text.annualCharge} · $
-                        {((basePrice ?? 0) * 2).toFixed(2)} {text.annualSavings}
+                        · {text.annualCharge}
                       </span>
                     ) : null}
                   </>
@@ -554,7 +525,7 @@ export function PricingExperience({
                       {text.custom}
                     </label>
                     <span className="text-xs font-semibold tabular-nums text-violet-100">
-                      {customPower.toLocaleString(locale)} {resource[way][locale]}
+                      {powerPlanPolicy.pro.monthlyAllocation.toLocaleString(locale)} {resource[way][locale]}
                     </span>
                   </div>
                   <input
@@ -563,10 +534,9 @@ export function PricingExperience({
                     id="custom-power"
                     max={powerPlanPolicy.pro.walletCap}
                     min={1000}
-                    onChange={handleCustomPowerChange}
                     step={500}
                     type="range"
-                    value={customPower}
+                    value={powerPlanPolicy.pro.monthlyAllocation}
                     disabled
                   />
                   <div className="mt-1 flex justify-between text-[10px] text-white/40">
