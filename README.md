@@ -6,10 +6,7 @@
 
 ## 🚀 Vue d'ensemble
 
-Idealy est une plateforme de développement et de génération d'applications pilotée par IA. Elle combine une interface de workspace interactive (Chat + Canvas de Preview réactif + Visualiseur de code + Console d'exécution) avec un système multi-agents :
-- **Architecte (Lyra / Shikamaru)** : Analyse des besoins, spécification et conception du plan.
-- **Builder (Mason / Naruto)** : Génération de code TypeScript/React, écriture de composants et architecture de fichiers.
-- **Reviewer (Nova / Sasuke)** : Validation qualité, sécurité, vérification des erreurs et optimisation.
+Idealy est une plateforme de développement et de génération d'applications pilotée par IA. Elle combine une interface de workspace interactive (Chat + Canvas de Preview réactif + Visualiseur de code + Console d'exécution) avec un système multi-agents organisé par **Voies**. Chaque Voie possède cinq agents spécialisés ; Alvin reçoit les demandes et les transmet à la Voie active. L'exécution combine architecture, construction, design, QA/sécurité, performance et validation selon la mission.
 
 ---
 
