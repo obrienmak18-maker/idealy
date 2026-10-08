@@ -99,7 +99,7 @@ export function RealtimePresence({ roomId }: { roomId: string | null }) {
 
   return (
     <div
-      aria-label={`${count} collaborateur${count > 1 ? "s" : ""} présent${count > 1 ? "s" : ""}`}
+      aria-label={`${count} utilisateur${count > 1 ? "s" : ""} actif${count > 1 ? "s" : ""}`}
       className="pointer-events-none fixed right-4 top-4 z-40 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur-xl"
       title="Présence temps réel"
     >
