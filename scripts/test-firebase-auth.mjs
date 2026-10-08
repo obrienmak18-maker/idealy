@@ -37,6 +37,9 @@ assert.doesNotMatch(
   /linkUserToSupabaseUser\(\{[\s\S]*localUserId: existingEmailUser\.id/
 );
 assert.match(files.supabase, /Authorization: `Bearer \$\{accessToken\}`/);
+assert.match(files.supabase, /signInFirebaseUserThroughSupabase/);
+assert.match(files.auth, /signInFirebaseUserThroughSupabase\(email\)/);
+assert.match(files.auth, /supabaseAccessToken: supabaseAuth\.accessToken/);
 assert.doesNotMatch(files.client, /FIREBASE_PRIVATE_KEY|FIREBASE_CLIENT_EMAIL/);
 assert.doesNotMatch(
   files.client,
