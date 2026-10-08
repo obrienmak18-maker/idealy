@@ -1,6 +1,6 @@
 # ⚡ Idealy Studio
 
-> **L'IDE IA multi-agents avec gamification par Voies (Mage, Ninja, Hunter, Pro), orchestrateur d'escouade et système de puissance Power.**
+> **L’assistant/workspace Idealy pour transformer une idée en logiciel avec la bonne équipe d’agents, organisée par Voies.**
 
 ---
 
@@ -32,11 +32,14 @@ Chaque utilisateur dispose d'un portefeuille Power rattaché à sa Voie :
 - **Professionnel** : *Énergie*
 
 ### Plans et Allocations :
-| Plan | Tarif | Allocation mensuelle | Coût Mission Simple | Coût Mission Escouade |
-|---|---|---|---|---|
-| **Découverte (Free)** | 0 € | 100 Power Points | 10 pts | 50 pts |
-| **Pro** | 29 € / mois | 1 000 Power Points | 10 pts | 50 pts |
-| **Business** | 79 € / mois | 3 000 Power Points | 10 pts | 50 pts |
+| Niveau | Tarif mensuel | Allocation mensuelle | Plafond portefeuille |
+|---|---:|---:|---:|
+| **Free** | 0 € | 200 Power Points | 250 |
+| **Pro** | 19 € | 2 500 Power Points | 3 500 |
+| **Business / Team** | 49 € | 4 000 Power Points | 7 000 |
+| **Enterprise** | Sur devis | Sur mesure | Sur mesure |
+
+Les coûts d’une mission sont déterminés par sa complexité et son exécution réelle. Ils ne doivent pas être présentés comme un prix fixe tant que la politique de calcul n’est pas finalisée.
 
 ---
 
