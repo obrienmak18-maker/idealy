@@ -123,7 +123,10 @@ Deno.serve(async (req) => {
         : subscription.customer.id;
     const priceId = subscription.items.data[0]?.price.id;
     const isDeleted = event.type === "customer.subscription.deleted";
-    const plan = isDeleted ? "free" : (PRICE_TO_PLAN[priceId] ?? "free");
+    if (!isDeleted && (!priceId || !PRICE_TO_PLAN[priceId])) {
+      return response("Unrecognized subscription price", 400);
+    }
+    const plan = isDeleted ? "free" : PRICE_TO_PLAN[priceId!];
     const status = isInvoiceEvent
       ? event.type === "invoice.paid" ? "active" : "past_due"
       : subscription.status;
