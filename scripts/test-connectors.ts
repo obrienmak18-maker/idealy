@@ -7,6 +7,7 @@ import {
   toPublicConnectorDefinition,
 } from "../lib/idealy/connectors";
 
+async function main() {
 const definitions = listConnectorDefinitions();
 assert(definitions.length >= 8);
 
@@ -72,3 +73,6 @@ const publishConnectors = filterConnectorCatalog({
 assert(publishConnectors.some((connector) => connector.id === "vercel"));
 
 console.log(`Connector registry checks passed: ${definitions.length} definitions.`);
+}
+
+await main();
