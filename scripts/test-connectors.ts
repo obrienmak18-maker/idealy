@@ -11,12 +11,19 @@ async function main() {
 const definitions = listConnectorDefinitions();
 assert(definitions.length >= 8);
 
-const [oauthStartRoute, integrationConnect, integrationCallback] =
-  await Promise.all([
-    readFile("app/(chat)/api/idealy/connectors/start/route.ts", "utf8"),
-    readFile("supabase/functions/integration-connect/index.ts", "utf8"),
-    readFile("supabase/functions/integration-callback/index.ts", "utf8"),
-  ]);
+const [
+  oauthStartRoute,
+  integrationConnect,
+  integrationCallback,
+  vercelConnect,
+  vercelCallback,
+] = await Promise.all([
+  readFile("app/(chat)/api/idealy/connectors/start/route.ts", "utf8"),
+  readFile("supabase/functions/integration-connect/index.ts", "utf8"),
+  readFile("supabase/functions/integration-callback/index.ts", "utf8"),
+  readFile("supabase/functions/vercel-connect/index.ts", "utf8"),
+  readFile("supabase/functions/vercel-callback/index.ts", "utf8"),
+]);
 
 for (const provider of [
   "github",
@@ -25,12 +32,14 @@ for (const provider of [
   "google-drive",
   "notion",
   "slack",
-  "vercel",
 ]) {
   assert.match(oauthStartRoute, new RegExp(`"${provider}"`));
   assert.match(integrationConnect, new RegExp(`case "${provider}"`));
-  assert.match(integrationCallback, new RegExp(`case "${provider}"`));
+  assert.match(integrationCallback, new RegExp(`case "${provider === "google-drive" ? "google" : provider}"`));
 }
+assert.match(oauthStartRoute, /vercel-connect/);
+assert.match(vercelConnect, /vercel.com/oauth/authorize/);
+assert.match(vercelCallback, /api.vercel.com/login/oauth/token/);
 
 assert.match(integrationConnect, /https:\/\/vercel\.com\/oauth\/authorize/);
 assert.match(
