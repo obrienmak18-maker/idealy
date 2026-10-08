@@ -39,7 +39,7 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
     availability: "planned",
     docsUrl: "https://www.canva.dev/docs/connect/",
     authorizationUrl: "https://www.canva.dev/docs/connect/authentication/",
-    scopes: ["design:content:read", "design:content:write", "asset:read", "asset:write"],
+    scopes: ["design:meta:read", "design:content:read", "design:content:write", "asset:read", "asset:write"],
     operations: [
       readOperation("list-designs", "Lister les designs autorisés", "design-assets-read"),
       readOperation("get-design", "Lire un design sélectionné", "design-assets-read"),
@@ -110,7 +110,7 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
     runtime: "idealy-server",
     availability: "planned",
     docsUrl: "https://vercel.com/docs/integrations",
-    scopes: ["project:read", "deployment:read", "deployment:create"],
+    scopes: [],
     operations: [
       readOperation("list-projects", "Lister les projets Vercel", "deployment-preview"),
       readOperation("get-deployment", "Lire le statut d’un déploiement", "deployment-preview"),
