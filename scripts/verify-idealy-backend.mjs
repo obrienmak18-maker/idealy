@@ -40,6 +40,7 @@ const requiredFunctions = [
   "integration-status",
   "mission-action-confirmation",
   "process-ai-request",
+  "plugin-engine",
   "refund-ai-credit",
   "stripe-webhook",
   "vercel-deploy",
