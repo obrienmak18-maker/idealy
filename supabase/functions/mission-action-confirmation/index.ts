@@ -24,6 +24,11 @@ Deno.serve(async (request) => {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const missionId = typeof body?.missionId === "string" ? body.missionId : "";
   const confirmationToken = typeof body?.confirmationToken === "string" ? body.confirmationToken : "";
+  const requestedOperation = typeof body?.operation === "string" ? body.operation : "github:export";
+  const allowedOperations = new Set(["github:export", "vercel:deploy"]);
+  if (!allowedOperations.has(requestedOperation)) {
+    return corsResponse({ error: "Unsupported confirmation operation." }, 400, request);
+  }
   if (!UUID_PATTERN.test(missionId) || !TOKEN_PATTERN.test(confirmationToken)) {
     return corsResponse({ error: "A mission id and a safe confirmation token are required." }, 400, request);
   }
@@ -37,10 +42,16 @@ Deno.serve(async (request) => {
       .from("user_integrations")
       .select("id")
       .eq("user_id", auth.user.id)
-      .eq("provider", "github")
+      .eq("provider", requestedOperation === "vercel:deploy" ? "vercel" : "github")
       .eq("status", "active")
       .maybeSingle();
-    if (!integration) return corsResponse({ error: "GitHub not connected." }, 400, request);
+    if (!integration) {
+      return corsResponse(
+        { error: requestedOperation === "vercel:deploy" ? "Vercel not connected." : "GitHub not connected." },
+        400,
+        request,
+      );
+    }
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const { data, error } = await admin.from("mission_action_confirmations").insert({
       confirmation_token_hash: await sha256(confirmationToken),
@@ -60,7 +71,7 @@ Deno.serve(async (request) => {
     .update({ approved_at: new Date().toISOString(), status: "approved" })
     .eq("mission_id", missionId)
     .eq("user_id", auth.user.id)
-    .eq("operation", "github:export")
+.eq("operation", requestedOperation)
     .eq("confirmation_token_hash", await sha256(confirmationToken))
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
