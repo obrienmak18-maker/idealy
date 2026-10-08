@@ -27,3 +27,14 @@ Les variables doivent être installées dans le gestionnaire de secrets de la ci
 ## Validation prévue
 
 La validation doit suivre cet ordre : migration Postgres locale, inscription, confirmation email éventuelle, connexion, création d’un chat, persistance des messages, appel `intentOnly`, appel `planOnly`, streaming `process-ai-request`, contrôle des crédits, puis création de mission et de runs d’agents. Aucun bouton Publish, export GitHub, déploiement Vercel ou action Stripe ne doit être considéré fonctionnel avant son test explicite avec confirmation.
+
+
+
+## Convergence 2026-10-08
+
+Le chemin Firebase n’accepte plus un simple email comme preuve de propriété d’un compte Postgres local. Un ID token Firebase vérifié est d’abord transformé côté serveur en une vraie session Supabase Auth, puis cette session Supabase est stockée dans le JWT serveur NextAuth. La relation `User.supabaseUserId` reste la clé de rattachement.
+
+Le navigateur n’envoie pas de token Firebase directement à Supabase Realtime pour la présence : il récupère un token Supabase de session via une route NextAuth serveur, puis le client Realtime rejoint un canal **privé** autorisé par RLS.
+
+Les anciens fallbacks d’identité en mémoire ont été supprimés : si la persistance Postgres ou la session Supabase n’est pas disponible, l’opération échoue explicitement.
+
