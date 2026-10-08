@@ -63,3 +63,14 @@ Canva, Figma, Notion, Slack et Vercel restent affichés comme **à configurer** 
 ## Conditions de mise en production
 
 Avant de retirer l’étiquette de simulation, il faut déployer la migration d’exécution, créer l’endpoint d’orchestration, valider les tests de propriété/idempotence/annulation, tester un compte GitHub de test et démontrer un parcours complet : brief → plan → fichiers → validation → confirmation → branche ou pull request de test. Aucune publication de production, aucun paiement et aucun message externe ne doivent servir de test initial.
+
+
+
+## Convergence 2026-10-08
+
+Le runtime canonique de cette branche a été aligné sur la décision produit : les cinq agents de la Way active sont réellement persistés dans `mission_agent_runs` avec les rôles **Chief → Builder → Designer → Specialist → Reviewer**. L’orchestrateur reste séquentiel et borné ; le DAG de persistance reste disponible pour une évolution ultérieure et n’est pas présenté comme le runtime live.
+
+Le cycle Power d’une escouade reste **reserve → execute → settle/release**. Chaque invocation interne du moteur IA de l’escouade est marquée `squadRun` afin de ne pas débiter en parallèle l’ancien ledger `user_credits`.
+
+La construction, les audits Designer/Specialist, le Reviewer et les corrections bornées produisent des sorties persistées et vérifiables. Aucune étape ne doit déclarer un résultat qu’elle n’a pas réellement observé.
+
