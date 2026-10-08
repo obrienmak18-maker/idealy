@@ -56,3 +56,12 @@ La clé `SUPABASE_SERVICE_ROLE_KEY` ne doit être utilisée que par la fonction 
 Il n’est pas nécessaire d’envoyer une clé secrète dans le chat. La méthode la plus sûre est de configurer les variables dans le tableau de bord de l’hébergeur et les secrets dans Supabase, puis de confirmer uniquement que la configuration est terminée. Si une saisie guidée dans un tableau de bord est nécessaire, l’utilisateur peut reprendre la main dans la page déjà ouverte et saisir lui-même les valeurs.
 
 Le projet peut ensuite être vérifié avec des tests qui ne révèlent jamais la valeur des secrets : présence/absence, statut HTTP, connexion réussie ou erreur d’autorisation, sans imprimer les variables.
+
+
+
+## Convergence 2026-10-08
+
+Supabase est désormais la source d’autorité pour les missions, profils, Power, intégrations, runs et contrôles métier Idealy. Le Postgres Drizzle reste un sous-système historique de chat et ne possède aucun fallback mémoire : une panne de persistance doit échouer clairement plutôt que simuler une sauvegarde réussie.
+
+Pour Firebase, le flux live vérifie l’identité côté Admin SDK puis obtient une session Supabase réelle côté serveur. NextAuth sert de wrapper de session serveur et conserve le token Supabase ; il ne remplace ni Firebase comme login, ni Supabase comme plan de contrôle métier.
+
