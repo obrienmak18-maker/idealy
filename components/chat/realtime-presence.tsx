@@ -1,5 +1,7 @@
 "use client";
 
+import { getAuth } from "firebase/auth";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getFirebaseSupabaseClient } from "@/lib/firebase/supabase-client";
@@ -21,11 +23,11 @@ export function RealtimePresence({ roomId }: { roomId: string | null }) {
     }
 
     let cancelled = false;
-    let channel: ReturnType<ReturnType<typeof getFirebaseSupabaseClient>["channel"]> | null = null;
+    let channel: RealtimeChannel | null = null;
 
     async function connect() {
       try {
-        const user = (await import("firebase/auth")).getAuth().currentUser;
+        const user = getAuth().currentUser;
         if (!user) {
           if (!cancelled) {
             setCount(0);
