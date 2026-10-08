@@ -86,10 +86,6 @@ function voiceDirection(way: unknown) {
   return `${profiles[typeof way === "string" ? way : ""] ?? profiles.professional} Ne pas imiter, citer ou revendiquer l’identité d’un personnage ou d’une franchise existante. Ne jamais annoncer une action, un test, une publication ou un état live non observé.`;
 }
 
-function delay(milliseconds: number) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
 async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
