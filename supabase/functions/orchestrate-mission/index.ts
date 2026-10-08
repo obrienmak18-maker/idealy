@@ -572,7 +572,10 @@ Deno.serve(async (request) => {
           `${runKey}:correction:${iteration}`,
           {
             attempt: iteration,
-            errors: currentValidation.errors,
+            errors: [
+              ...currentValidation.errors,
+              ...reviewerDecision.diagnostics,
+            ],
             maxAttempts: MAX_REVIEW_ITERATIONS,
             runKey,
             correctionOwner: builder.name,
