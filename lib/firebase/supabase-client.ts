@@ -1,7 +1,6 @@
 "use client";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getAuth } from "firebase/auth";
 
 let client: SupabaseClient | null = null;
 
@@ -24,8 +23,23 @@ export function getFirebaseSupabaseClient(): SupabaseClient {
   const { publishableKey, url } = getSupabaseConfig();
   client = createClient(url, publishableKey, {
     accessToken: async () => {
-      const user = getAuth().currentUser;
-      return (await user?.getIdToken(false)) ?? null;
+      try {
+        const response = await fetch("/api/idealy/realtime-token", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!response.ok) {
+          return null;
+        }
+        const payload = (await response.json().catch(() => null)) as {
+          accessToken?: unknown;
+        } | null;
+        return typeof payload?.accessToken === "string"
+          ? payload.accessToken
+          : null;
+      } catch {
+        return null;
+      }
     },
   });
 
