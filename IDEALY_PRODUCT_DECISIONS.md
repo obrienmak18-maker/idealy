@@ -145,7 +145,7 @@ Choose:
 - [ ] Make it fully billable now.
 
 Decision:
-Firebase remains the login authority, Supabase remains the application data/control plane and persistence authority, and NextAuth remains the server session wrapper. Local/in-memory auth fallbacks are forbidden.
+Custom Power reste visible mais clairement indisponible et non facturable. Aucun slider, pack, prix ou checkout ne doit laisser croire qu'il est utilisable. L'activation future exige d'abord un contrat serveur, une estimation vérifiable, une politique d'usage et un parcours de facturation réellement configurés.
 
 ---
 
@@ -239,7 +239,7 @@ Choose:
 - [ ] Other.
 
 Decision:
-Yeah, I don't even know what DAGs are. DAGs, I don't know them at all. I wouldn't know how to answer that question. But what you should do is... whatever is necessary without damaging anything.
+Le runtime canonique visible est l'escouade réelle en cinq rôles Chief → Builder → Designer → Specialist → Reviewer, avec les noms de la Voie active. Le scheduler DAG reste une infrastructure interne disponible pour une extension graduelle ; il ne doit pas être présenté comme live tant que son intégration produit et ses preuves E2E ne sont pas validées.
 
 Should Power use:
 - [x] reserve -> execute -> settle/release
@@ -247,9 +247,7 @@ Should Power use:
 - [ ] Other
 
 Decision:
-Le runtime canonique visible reste l'escouade réelle en cinq rôles Chief → Builder → Designer → Specialist → Reviewer, avec les noms de la Voie active. Le scheduler DAG peut rester comme infrastructure interne vérifiable pour une extension graduelle, mais il ne doit pas être présenté comme une fonctionnalité live tant que son intégration produit et E2E n'est pas validée.
-
-Power : les opérations à coût mesuré utilisent reserve → execute → settle/release. Une facturation directe n'est autorisée que pour une opération à coût fixe déjà approuvé et sans second ledger concurrent. Il ne doit jamais exister deux systèmes de consommation Power concurrents.
+Les opérations à coût mesuré utilisent reserve → execute → settle/release. Une facturation directe n'est autorisée que pour une opération à coût fixe explicitement approuvée et sans second ledger concurrent. Il ne doit jamais exister deux systèmes de consommation Power concurrents.
 
 ---
 
@@ -263,7 +261,7 @@ Choose:
 - [ ] Keep it only in DEMO_MODE.
 
 Decision:
-Keep fr/en/es for the next release, standardize them under one i18n layer, and migrate to next-intl without dropping any existing locale. AI/mission responses must follow the active user locale, with an explicit language override allowed.
+La présence collaborative doit utiliser Supabase Realtime sur un canal privé autorisé par RLS pour le propriétaire de la mission. Aucun curseur, collaborateur ou état de présence simulé ne doit être affiché comme live.
 
 ---
 
