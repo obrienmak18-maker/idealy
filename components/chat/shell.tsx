@@ -34,6 +34,7 @@ import { DataStreamHandler } from "./data-stream-handler";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
+import { RealtimePresence } from "./realtime-presence";
 
 class ArtifactErrorBoundary extends Component<
   { children: ReactNode },
@@ -399,6 +400,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
         </main>
       </div>
 
+      <RealtimePresence roomId={chatId} />
       <DataStreamHandler />
       <CommandPalette />
 
