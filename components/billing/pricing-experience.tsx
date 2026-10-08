@@ -179,14 +179,7 @@ const copy = {
         "Jonin",
         "Kage / Sannin",
       ],
-      professional: [
-        "Starter",
-        "Pro",
-        "Max",
-        "Max+",
-        "Team",
-        "Enterprise",
-      ],
+      professional: ["Starter", "Pro", "Team", "Enterprise"],
     } as Record<IdealyWay, string[]>,
     save: "2 mois offerts sur Pro et Business",
     starts: "Inclut les outils essentiels pour créer et piloter une mission.",
@@ -271,7 +264,7 @@ const plans = [
     points: null,
     price: null,
   },
-] as const
+] as const;
 
 const wayNames: Record<IdealyWay, Record<Locale, string>> = {
   hunter: { en: "Hunter Way", es: "Vía Hunter", fr: "Voie du Hunter" },
@@ -372,8 +365,8 @@ export function PricingExperience({
     if (
       Number.isFinite(value) &&
       value >= 1000 &&
-      value <= 6000 &&
-      value % 1000 === 0
+      value <= powerPlanPolicy.pro.walletCap &&
+      value % 500 === 0
     ) {
       setCustomPower(value);
     }
@@ -476,10 +469,9 @@ export function PricingExperience({
               ? id === "enterprise"
                 ? text.quote
                 : text.pendingPrice
-              : `${shownPrice.toFixed(2)} € € ${text.perMonth}`;
+              : `${shownPrice.toFixed(2)} € ${text.perMonth}`;
           const billingPlan = id === "business" ? "business" : "pro";
-          const href = `/register?way=${way}&plan=${billingPlan}&level=${encodeURIComponent(label)}&cycle=${annual ? "yearly" : "monthly"}&power=${index === 1 ? customPower : (points ?? "custom")}`;
-          const selectedPowerIsBillable = true;
+          const href = `/register?way=${way}&plan=${billingPlan}&level=${encodeURIComponent(label)}&cycle=${annual ? "yearly" : "monthly"}&power=${points ?? "custom"}`;
           const planIsAvailable = id === "pro" || id === "business";
           return (
             <article
@@ -532,7 +524,7 @@ export function PricingExperience({
                 ) : (
                   <>
                     <span className="text-3xl font-semibold tracking-[-.04em] text-white">
-                      ${shownPrice.toFixed(2)}
+                      ${shownPrice.toFixed(2)} €
                     </span>
                     <span className="ml-1 text-xs text-white/45">
                       {text.perMonth}
@@ -622,7 +614,7 @@ export function PricingExperience({
                       : "Start for free"}
                   <ArrowRight className="size-3.5" />
                 </Link>
-              ) : planIsAvailable && selectedPowerIsBillable ? (
+              ) : planIsAvailable ? (
                 sessionStatus === "authenticated" &&
                 session?.user?.type !== "guest" ? (
                   <button
@@ -671,11 +663,7 @@ export function PricingExperience({
                 <button
                   className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/10 px-3 text-center text-xs font-medium text-white/40"
                   disabled
-                  title={
-                    selectedPowerIsBillable
-                      ? text.unavailable
-                      : text.powerUnavailable
-                  }
+                  title={text.unavailable}
                   type="button"
                 >
                   {text.unavailable}
