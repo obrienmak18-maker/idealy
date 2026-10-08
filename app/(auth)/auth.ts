@@ -13,6 +13,7 @@ import {
 import {
   getSupabaseUserWithAccessToken,
   refreshSupabaseSession,
+  signInFirebaseUserThroughSupabase,
   signInWithSupabasePassword,
   type SupabasePasswordAuthResult,
 } from "@/lib/idealy/supabase-auth";
@@ -246,6 +247,7 @@ export const {
         let firebaseUid: string | null = null;
         let displayName: string | null = null;
         let photoUrl: string | null = null;
+        let supabaseAuth: SupabasePasswordAuthResult | null = null;
 
         // 1. Try Firebase Admin token verification
         try {
@@ -255,8 +257,18 @@ export const {
             firebaseUid = decoded.uid;
             displayName = decoded.name ?? null;
             photoUrl = decoded.picture ?? null;
+
+            if (!email) {
+              throw new IdealyCredentialsSignin("service_unavailable");
+            }
+
+            supabaseAuth = await signInFirebaseUserThroughSupabase(email);
+            if (supabaseAuth.status !== "authenticated" || !supabaseAuth.accessToken) {
+              throw new IdealyCredentialsSignin("service_unavailable");
+            }
           }
-        } catch {
+        } catch (error) {
+          if (error instanceof IdealyCredentialsSignin) throw error;
           // Firebase Admin verification is authoritative. Never trust an unverified JWT payload.
         }
 
