@@ -281,7 +281,10 @@ Deno.serve(async (request) => {
     });
     const tokenData = await tokenResponse.json().catch(() => null) as TokenResult | null;
 
-    const accessToken = tokenData?.access_token ?? tokenData?.authed_user?.access_token ?? "";
+    const accessToken =
+      provider === "slack"
+        ? tokenData?.authed_user?.access_token ?? tokenData?.access_token ?? ""
+        : tokenData?.access_token ?? "";
     if (!tokenResponse.ok || !tokenData || !accessToken) {
       console.error("OAuth token exchange failed", provider, tokenResponse.status, tokenData?.error);
       return redirect("error=token_exchange_failed");
