@@ -247,7 +247,7 @@ Should Power use:
 - [ ] Other
 
 Decision:
-Presence must be real Supabase Realtime presence. The browser presence client uses an authenticated Firebase token bridge into Supabase; simulated collaborators are forbidden.
+Presence must be real Supabase Realtime presence. Firebase remains the login authority, then the server-backed Supabase session is used to authorize the private browser channel. Simulated collaborators are forbidden.
 
 ---
 
