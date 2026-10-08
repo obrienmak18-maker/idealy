@@ -251,15 +251,15 @@ export default function ConnectorsPage() {
             <div className="mt-4"><p className="mb-2 text-xs font-medium">Capacités prévues</p><ul className="space-y-2">{selectedConnector.operations.slice(0, 4).map((operation) => <li key={operation.id} className="flex items-center gap-2 text-xs text-muted-foreground"><span className="size-1 rounded-full bg-primary" />{operation.label}</li>)}</ul></div>
             <div className="mt-6 flex gap-2">
   <a href={selectedConnector.docsUrl} target="_blank" rel="noreferrer" className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2.5 text-xs font-medium transition hover:bg-muted">Documentation <ExternalLink size={13} /></a>
-  {(selectedConnector.id === "github" || selectedConnector.id === "vercel") && !connectedProviders.includes(selectedConnector.id) && (
+  {oauthConnectors.has(selectedConnector.id) && !connectedProviders.includes(selectedConnector.id) && (
     <button
       type="button"
       onClick={async () => {
         try {
-          const route = selectedConnector.id === "github"
-            ? "/api/idealy/connectors/github/start"
-            : "/api/idealy/connectors/vercel/start";
-          const response = await fetch(route, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          const route = selectedConnector.id === "vercel"
+            ? "/api/idealy/connectors/vercel/start"
+            : "/api/idealy/connectors/start";
+          const response = await fetch(route, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ provider: selectedConnector.id }) });
           const payload = await response.json().catch(() => null);
           if (!response.ok || !payload?.url) {
             throw new Error(payload?.error ?? "Connexion indisponible.");
