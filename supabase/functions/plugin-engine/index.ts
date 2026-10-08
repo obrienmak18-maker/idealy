@@ -269,10 +269,55 @@ async function executeProvider(
       if (!id) throw new Error("DESIGN_ID_REQUIRED");
       return providerFetch(`https://api.canva.com/rest/v1/designs/${encodeURIComponent(id)}`, token);
     }
+    case "canva-create-design": {
+      const title = typeof input.title === "string" ? input.title.slice(0, 255) : undefined;
+      const designType = safeObject(input.designType);
+      const assetId = typeof input.assetId === "string" ? input.assetId : undefined;
+      const name = typeof designType.name === "string" ? designType.name : "doc";
+      const payload = {
+        type: "type_and_asset",
+        design_type: { type: "preset", name },
+        ...(assetId ? { asset_id: assetId } : {}),
+        ...(title ? { title } : {}),
+      };
+      return providerFetch("https://api.canva.com/rest/v1/designs", token, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload),
+      });
+    }
+    case "canva-export-design": {
+      const designId = String(input.designId ?? "");
+      const format = safeObject(input.format);
+      const formatType = typeof format.type === "string" ? format.type : "pdf";
+      if (!designId) throw new Error("DESIGN_ID_REQUIRED");
+      return providerFetch("https://api.canva.com/rest/v1/exports", token, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          design_id: designId,
+          format: {
+            type: formatType,
+            ...(typeof format.size === "string" ? { size: format.size } : {}),
+            ...(Array.isArray(format.pages) ? { pages: format.pages } : {}),
+          },
+        }),
+      });
+    }
     case "figma-read-file": {
       const key = String(input.fileKey ?? "");
       if (!key) throw new Error("FIGMA_FILE_KEY_REQUIRED");
       return providerFetch(`https://api.figma.com/v1/files/${encodeURIComponent(key)}`, token);
+    }
+    case "figma-export-assets": {
+      const key = String(input.fileKey ?? "");
+      const ids = typeof input.ids === "string" ? input.ids : "";
+      if (!key || !ids) throw new Error("FIGMA_FILE_AND_NODE_IDS_REQUIRED");
+      const url = new URL(`https://api.figma.com/v1/images/${encodeURIComponent(key)}`);
+      url.searchParams.set("ids", ids);
+      url.searchParams.set("format", typeof input.format === "string" ? input.format : "png");
+      if (typeof input.scale === "number") url.searchParams.set("scale", String(Math.min(Math.max(input.scale, 0.01), 4)));
+      return providerFetch(url.toString(), token);
     }
     case "notion-search-pages":
       return providerFetch("https://api.notion.com/v1/search", token, {
@@ -323,9 +368,10 @@ async function executeProvider(
           method:"POST",
           headers: {"Content-Type":"application/json","Authorization":accessToken,"apikey":anonKey},
           body: JSON.stringify({
-            ...(input ?? {}),
+            missionId: typeof input.missionId === "string" ? input.missionId : undefined,
             confirmationToken: typeof input.confirmationToken === "string" ? input.confirmationToken : undefined,
-            production: toolId === "vercel-deploy-production",
+            projectName: typeof input.projectName === "string" ? input.projectName : undefined,
+            target: toolId === "vercel-deploy-production" ? "production" : "preview",
           }),
         });
       }
