@@ -41,6 +41,7 @@ type LLMRequest = {
   uiProgress?: number;
   planOnly?: boolean;
   workspaceStream?: boolean;
+  squadRun?: boolean;
 };
 
 const DEFAULT_MODELS: Record<Provider, string> = {
@@ -454,6 +455,7 @@ serve(async (req) => {
     if (input.uiStream !== undefined && typeof input.uiStream !== 'boolean') return jsonError('uiStream must be boolean.', 400, headers);
     if (input.planOnly !== undefined && typeof input.planOnly !== 'boolean') return jsonError('planOnly must be boolean.', 400, headers);
     if (input.workspaceStream !== undefined && typeof input.workspaceStream !== 'boolean') return jsonError('workspaceStream must be boolean.', 400, headers);
+    if (input.squadRun !== undefined && typeof input.squadRun !== 'boolean') return jsonError('squadRun must be boolean.', 400, headers);
     if (input.workspaceStream === true && (!input.missionId || !isValidUUID(input.missionId))) return jsonError('workspaceStream requires a missionId.', 400, headers);
 
     if (input.intentOnly === true) {
@@ -535,6 +537,7 @@ serve(async (req) => {
     const isMissionRuntime = Boolean(input.missionId);
     const isSimpleMission =
       isMissionRuntime &&
+      input.squadRun !== true &&
       intentCategory === 'EXECUTION' &&
       input.workspaceStream !== true;
     if (managed && isSimpleMission) {
