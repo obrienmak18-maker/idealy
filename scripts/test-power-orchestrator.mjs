@@ -22,11 +22,15 @@ assert(policy.includes("cooldownDays: 30"), "Power Way cooldown must remain 30 d
 assert(estimateRoute.includes("getToken"), "Power estimate must require the server session.");
 assert(estimateRoute.includes("getPowerActionCost"), "Power estimate must use the server policy.");
 assert(!estimateRoute.includes("SUPABASE_SERVICE_ROLE"), "Power estimate must not expose a service role.");
-assert(orchestrator.includes('admin.rpc("consume_power_points"'), "Squad orchestration must consume Power through the RPC.");
-assert(orchestrator.includes('p_action_type: "mission_squad"'), "Squad orchestration must use the squad cost.");
+assert(orchestrator.includes('admin.rpc("reserve_power_points"'), "Squad orchestration must reserve Power before execution.");
+assert(orchestrator.includes('admin.rpc("settle_power_reservation"'), "Squad orchestration must settle reserved Power after execution.");
+assert(orchestrator.includes('admin.rpc("release_power_reservation"'), "Squad orchestration must release reserved Power after failure.");
+assert(orchestrator.includes('p_reserved_points: squadPowerPoints'), "Squad orchestration must use an explicit bounded reservation.");
+
 assert(orchestrator.includes("POWER_DEPLETED"), "Squad depletion must have a stable public code.");
 assert(orchestrator.includes("powerDepletionMessage"), "Squad depletion must be contextualized by Way.");
-assert(orchestrator.includes('appendEvent(admin, "power_consumed"'), "Orchestrator must persist the Power consumption event.");
+assert(orchestrator.includes('appendEvent(admin, "power_reserved"'), "Orchestrator must persist the Power reservation event.");
+assert(orchestrator.includes('appendEvent(admin, "power_consumed"'), "Orchestrator must persist the measured Power consumption event.");
 assert(migration.includes("power_wallets"), "Power wallet migration must be present.");
 assert(migration.includes("power_transactions"), "Power transaction migration must be present.");
 assert(sqlContract.includes("Power consumption is missing concurrency"), "Power SQL contract must cover consumption guards.");
