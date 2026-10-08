@@ -7,7 +7,7 @@ function encodeBase64Url(bytes: ArrayBuffer | Uint8Array): string {
   for (const byte of new Uint8Array(bytes)) binary += String.fromCharCode(byte);
   return btoa(binary)
     .replace(/+/g, "-")
-    .replace(///g, "_")
+    .replace(/\//g, "_")
     .replace(/=+$/g, "");
 }
 
