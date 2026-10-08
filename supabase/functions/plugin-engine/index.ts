@@ -235,11 +235,26 @@ async function providerFetch(url: string, token: string, init: RequestInit = {})
   });
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    const message = data && typeof data === "object" && "message" in data
-      ? String(data.message)
-      : `PROVIDER_HTTP_${response.status}`;
+    const message =
+      data && typeof data === "object" && "message" in data
+        ? String(data.message)
+        : `PROVIDER_HTTP_${response.status}`;
     throw new Error(message);
   }
+
+  if (
+    data &&
+    typeof data === "object" &&
+    "ok" in data &&
+    (data as { ok?: unknown }).ok === false
+  ) {
+    const message =
+      "error" in data && typeof (data as { error?: unknown }).error === "string"
+        ? String((data as { error: string }).error)
+        : "PROVIDER_RESPONSE_NOT_OK";
+    throw new Error(message);
+  }
+
   return data;
 }
 
