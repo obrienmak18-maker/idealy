@@ -199,6 +199,15 @@ Deno.serve(async (request) => {
 
     if (consumedError) {
       console.error("Vercel confirmation could not be consumed", consumedError);
+      return corsResponse(
+        {
+          error:
+            "Le déploiement Vercel a été déclenché mais sa confirmation n’a pas pu être consommée. Ne relancez pas automatiquement.",
+          code: "CONFIRMATION_CONSUME_FAILED",
+        },
+        500,
+        request,
+      );
     }
 
     await admin
