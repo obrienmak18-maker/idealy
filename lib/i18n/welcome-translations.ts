@@ -17,12 +17,12 @@ export const welcomeTranslations = {
       title1: "Donnez vie à vos idées.",
       title2: "Une mission à la fois.",
       subtitle:
-        "Idealy orchestre une escouade d'agents IA (Architecte, Builder, Reviewer) pour transformer votre vision en code de production prêt à l'emploi.",
+        "Idealy orchestre une véritable escouade de cinq agents IA pour transformer votre vision en logiciel vérifiable.",
       ctaPrimary: "Lancer ma première mission",
       ctaSecondary: "Explorer les plans",
       features: [
         "Décrivez votre projet en langage naturel",
-        "L'escouade d'agents génère, teste et valide",
+        "L'escouade de cinq agents planifie, construit, audite et valide",
         "Visualisez en direct, itérez et téléchargez en ZIP",
       ],
     },
@@ -30,7 +30,7 @@ export const welcomeTranslations = {
       tag: "Intelligence Collective",
       title: "Votre Escouade d'Agents Spécialisés",
       subtitle:
-        "Contrairement aux chatbots simples, Idealy fait collaborer 3 agents experts pour chaque mission.",
+        "Idealy coordonne cinq agents spécialisés pour chaque mission.",
       agents: [
         {
           role: "Architecte",
@@ -115,11 +115,11 @@ export const welcomeTranslations = {
           price: "0 €",
           period: "Gratuit à vie",
           badge: "Pour tester",
-          desc: "100 Power Points de bienvenue pour tester vos premières missions et explorer le workspace.",
+          desc: "200 Power Points pour tester vos premières missions et explorer le workspace.",
           features: [
-            "100 Power Points de bienvenue",
+            "200 Power Points",
             "Accès au Workspace interactif & Live Preview",
-            "Missions Simples (1 agent)",
+            "Missions Simples (Power variable)",
             "Export de projet ZIP sans limite",
             "Sauvegarde cloud de vos missions",
           ],
@@ -127,13 +127,13 @@ export const welcomeTranslations = {
         },
         pro: {
           name: "Pro",
-          price: "29 €",
+          price: "19 €",
           period: "par mois",
           badge: "Le plus populaire",
           desc: "1 000 Power Points / mois, escouade multi-agents complète, modèles IA prioritaires et vitesse maximale.",
           features: [
-            "1 000 Power Points / mois (100 simples ou 20 escouades)",
-            "Escouade multi-agents complète (Architecte + Builder + Reviewer)",
+            "1 000 Power Points / mois (250 simples ou 50 escouades)",
+            "Escouade multi-agents complète (Chef + Builder + Designer + Specialist + Reviewer)",
             "Modèles IA haute performance & vitesse prioritaire",
             "Intégration et export direct vers GitHub",
             "Historique illimité et rétention avancée",
@@ -143,12 +143,12 @@ export const welcomeTranslations = {
         },
         business: {
           name: "Business",
-          price: "79 €",
+          price: "49 €",
           period: "par mois",
           badge: "Équipes & Scale",
-          desc: "3 000 Power Points / mois, collaboration d’équipe, support prioritaire 24/7 et accès anticipé.",
+          desc: "4 000 Power Points / mois, collaboration d’équipe, support prioritaire 24/7 et accès anticipé.",
           features: [
-            "3 000 Power Points / mois (300 simples ou 60 escouades)",
+            "4 000 Power Points / mois (400 simples ou 80 escouades)",
             "Agents spécialisés personnalisables",
             "Espaces partagés et collaboration multi-utilisateurs",
             "Gestion de flotte de clés API et connecteurs d'entreprise",
@@ -170,10 +170,10 @@ export const welcomeTranslations = {
       estimatedNeed: "Besoin total estimé :",
       perMonth: "pts / mois",
       recommendedFormula: "Formule recommandée : ",
-      freePlan: "Découverte (0 € / Gratuit)",
-      proStandardPlan: "Pro Standard (29 € / mois - 1 000 pts)",
-      proBoostPlan: "Pro Boost (49 € / mois - 2 000 pts)",
-      businessPlan: "Business Équipe (79 € / mois - 3 000 pts)",
+      freePlan: "Découverte (200 Power)",
+      proStandardPlan: "Pro (2 500 Power / mois)",
+      proBoostPlan: "Pro Boost (49 € / mois - 2 500 pts)",
+      businessPlan: "Business (4 000 Power / mois)",
     },
     modal: {
       stepOf: "Étape {step} sur 2",
@@ -214,12 +214,12 @@ export const welcomeTranslations = {
       title1: "Bring your ideas to life.",
       title2: "One mission at a time.",
       subtitle:
-        "Idealy orchestrates a multi-agent squad (Architect, Builder, Reviewer) to turn your vision into production-ready software.",
+        "Idealy orchestrates a real five-agent AI squad to turn your vision into verifiable software.",
       ctaPrimary: "Launch first mission",
       ctaSecondary: "Explore plans",
       features: [
         "Describe your project in natural language",
-        "The agent squad builds, tests and reviews",
+        "The five-agent squad plans, builds, audits and reviews",
         "Live interactive preview, iterate and export ZIP",
       ],
     },
@@ -227,7 +227,7 @@ export const welcomeTranslations = {
       tag: "Collective Intelligence",
       title: "Your Specialized Agent Squad",
       subtitle:
-        "Unlike generic single chatbots, Idealy coordinates 3 specialized AI agents for every mission.",
+        "Idealy coordinates five specialized AI agents for every mission.",
       agents: [
         {
           role: "Architect",
@@ -323,7 +323,7 @@ export const welcomeTranslations = {
         },
         pro: {
           name: "Pro",
-          price: "29 €",
+          price: "19 €",
           period: "per month",
           badge: "Most Popular",
           desc: "1,000 Power Points / month, full multi-agent squad, priority AI models and max speed.",
@@ -339,7 +339,7 @@ export const welcomeTranslations = {
         },
         business: {
           name: "Business",
-          price: "79 €",
+          price: "49 €",
           period: "per month",
           badge: "Teams & Scale",
           desc: "3,000 Power Points / month, team collaboration, 24/7 dedicated support and early access.",
@@ -367,9 +367,9 @@ export const welcomeTranslations = {
       perMonth: "pts / month",
       recommendedFormula: "Recommended plan: ",
       freePlan: "Discovery (0 € / Free)",
-      proStandardPlan: "Pro Standard (29 € / mo - 1,000 pts)",
+      proStandardPlan: "Pro Standard (19 € / mo - 1,000 pts)",
       proBoostPlan: "Pro Boost (49 € / mo - 2,000 pts)",
-      businessPlan: "Business Team (79 € / mo - 3,000 pts)",
+      businessPlan: "Business Team (49 € / mo - 3,000 pts)",
     },
     modal: {
       stepOf: "Step {step} of 2",
@@ -423,7 +423,7 @@ export const welcomeTranslations = {
       tag: "Inteligencia Colectiva",
       title: "Tu Escuadrón de Agentes Especializados",
       subtitle:
-        "A diferencia de los chatbots simples, Idealy coordina 3 agentes expertos para cada misión.",
+        "A diferencia de los chatbots simples, Idealy coordina 5 agentes expertos para cada misión.",
       agents: [
         {
           role: "Arquitecto",
@@ -519,7 +519,7 @@ export const welcomeTranslations = {
         },
         pro: {
           name: "Pro",
-          price: "29 €",
+          price: "19 €",
           period: "por mes",
           badge: "Más Popular",
           desc: "1 000 Power Points / mes, escuadrón multiagente completo, modelos IA prioritarios y velocidad máxima.",
@@ -535,7 +535,7 @@ export const welcomeTranslations = {
         },
         business: {
           name: "Business",
-          price: "79 €",
+          price: "49 €",
           period: "por mes",
           badge: "Equipos & Escala",
           desc: "3 000 Power Points / mes, colaboración en equipo, soporte prioritario 24/7 y acceso anticipado.",
@@ -563,9 +563,9 @@ export const welcomeTranslations = {
       perMonth: "pts / mes",
       recommendedFormula: "Fórmula recomendada: ",
       freePlan: "Descubrimiento (0 € / Gratis)",
-      proStandardPlan: "Pro Estándar (29 € / mes - 1 000 pts)",
-      proBoostPlan: "Pro Boost (49 € / mes - 2 000 pts)",
-      businessPlan: "Business Equipo (79 € / mes - 3 000 pts)",
+      proStandardPlan: "Pro Estándar (19 € / mes - 2 500 pts)",
+      proBoostPlan: "Pro Boost (49 € / mes - 2 500 pts)",
+      businessPlan: "Business Equipo (49 € / mes - 4 000 pts)",
     },
     modal: {
       stepOf: "Paso {step} de 2",
