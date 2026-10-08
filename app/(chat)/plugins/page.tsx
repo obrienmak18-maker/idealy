@@ -77,19 +77,21 @@ export default function PluginsPage() {
   }, [connectors, searchQuery, selectedCategory, connectedList]);
 
   const connectConnector = async (id: string) => {
-    if (id !== "github") {
-      toast.info("La connexion réelle de ce fournisseur sera disponible prochainement.");
+    const connector = connectors.find((entry) => entry.id === id);
+    if (!connector || connector.auth !== "oauth2") {
+      toast.info("Ce connecteur est géré par Idealy et ne nécessite pas de connexion OAuth.");
       return;
     }
+
     try {
-      const response = await fetch("/api/idealy/connectors/github/start", {
-        body: JSON.stringify({}),
+      const response = await fetch("/api/idealy/connectors/start", {
+        body: JSON.stringify({ provider: connector.provider }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
       const payload = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
       if (!response.ok || !payload?.url) {
-        throw new Error(payload?.error ?? "Connexion GitHub indisponible.");
+        throw new Error(payload?.error ?? `Connexion ${connector.label} indisponible.`);
       }
       window.location.assign(payload.url);
     } catch (error) {
@@ -286,12 +288,12 @@ export default function PluginsPage() {
 
                     <button
                       type="button"
-                      disabled={connectedList.includes(connector.id) || connector.id !== "github"}
+                      disabled={connectedList.includes(connector.id) || connector.auth !== "oauth2"}
                       onClick={() => connectConnector(connector.id)}
                       className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                         isConnected
                           ? "bg-muted/80 text-foreground border border-border cursor-default"
-                          : connector.id === "github"
+                          : connector.auth === "oauth2"
                           ? "bg-primary text-primary-foreground hover:opacity-90 shadow-xs"
                           : "bg-muted text-muted-foreground border border-border cursor-not-allowed"
                       }`}
@@ -304,7 +306,7 @@ export default function PluginsPage() {
                       ) : (
                         <>
                           <PlusIcon className="size-3.5" />
-                          <span>{connector.id === "github" ? "Connecter" : "Bientôt disponible"}</span>
+                          <span>{connector.auth === "oauth2" ? "Connecter" : "Géré par Idealy"}</span>
                         </>
                       )}
                     </button>
