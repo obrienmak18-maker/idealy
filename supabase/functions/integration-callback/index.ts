@@ -228,7 +228,7 @@ Deno.serve(async (request) => {
     if (!config.needsBasic) body.set("client_id", config.clientId);
     if (!config.needsBasic && config.clientSecret) body.set("client_secret", config.clientSecret);
 
-    if (provider === "canva" || provider === "figma") {
+    if (provider === "canva" || provider === "figma" || provider === "google") {
       const verifier = typeof metadata.code_verifier === "string" ? metadata.code_verifier : "";
       if (!verifier) return redirect("error=missing_pkce_state");
       body.set("code_verifier", verifier);
