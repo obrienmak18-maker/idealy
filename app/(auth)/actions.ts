@@ -2,6 +2,7 @@
 
 import { CredentialsSignin } from "next-auth";
 import { z } from "zod";
+import { isDevelopmentEnvironment } from "@/lib/constants";
 
 import { createUser, getUser } from "@/lib/db/queries";
 import {
@@ -80,7 +81,7 @@ export const login = async (
       password: formData.get("password"),
     });
 
-    if (process.env.DEMO_MODE === "true") {
+    if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
       return { status: "success" };
     }
 
@@ -142,7 +143,7 @@ export const register = async (
           validatedData.password
         );
       } catch {
-        // Supabase GoTrue endpoint network error - continue locally
+        return { status: "service_unavailable" };
       }
 
       if (supabaseAuth?.status === "already_registered") {
@@ -153,10 +154,20 @@ export const register = async (
         return { status: "pending_confirmation" };
       }
 
+      if (supabaseAuth?.status !== "authenticated" || !supabaseAuth.userId) {
+        return { status: "service_unavailable" };
+      }
+
       try {
-        await createUser(validatedData.email, validatedData.password);
+        const [createdUser] = await createUser(
+          validatedData.email,
+          validatedData.password
+        );
+        if (!createdUser?.id) {
+          return { status: "service_unavailable" };
+        }
       } catch {
-        // Safe to continue
+        return { status: "service_unavailable" };
       }
     }
 
