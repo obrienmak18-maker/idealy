@@ -255,34 +255,10 @@ export const {
             photoUrl = decoded.picture ?? null;
           }
         } catch {
-          // Fallback to manual payload extraction
+          // Firebase Admin verification is authoritative. Never trust an unverified JWT payload.
         }
 
-        // 2. Safe JWT payload extraction fallback (validates Firebase issuer and expiration)
-        if (!email && idToken.includes(".")) {
-          try {
-            const parts = idToken.split(".");
-            if (parts.length === 3) {
-              const payload = JSON.parse(
-                Buffer.from(parts[1], "base64").toString("utf-8")
-              );
-              if (
-                payload.iss?.includes("securetoken.google.com") &&
-                payload.exp &&
-                payload.exp * 1000 > Date.now() - 300_000
-              ) {
-                email = payload.email?.trim().toLowerCase() ?? null;
-                firebaseUid = payload.user_id || payload.sub || null;
-                displayName = payload.name || null;
-                photoUrl = payload.picture || null;
-              }
-            }
-          } catch {
-            // Non-blocking
-          }
-        }
-
-        // 3. Fallback: Check if this was a Supabase token
+        // 2. Fallback: Check if this was a Supabase token
         if (!email) {
           const supabaseUser = await getSupabaseUserWithAccessToken(idToken);
           if (supabaseUser?.email) {
@@ -309,7 +285,7 @@ export const {
                   supabaseUserId: firebaseUid,
                 });
               } catch {
-                // Non-blocking in dev/fallback mode
+                throw new IdealyCredentialsSignin("service_unavailable");
               }
             }
             localUser = {
@@ -320,32 +296,28 @@ export const {
             try {
               await createUser(effectiveEmail, `firebase-${generateUUID()}`);
               const [createdUser] = await getUser(effectiveEmail);
-              if (createdUser && firebaseUid) {
-                await linkUserToSupabaseUser({
-                  localUserId: createdUser.id,
-                  supabaseUserId: firebaseUid,
-                });
+              if (!createdUser) {
+                throw new IdealyCredentialsSignin("service_unavailable");
+              }
+              if (firebaseUid) {
+                try {
+                  await linkUserToSupabaseUser({
+                    localUserId: createdUser.id,
+                    supabaseUserId: firebaseUid,
+                  });
+                } catch {
+                  throw new IdealyCredentialsSignin("service_unavailable");
+                }
                 localUser = {
                   ...createdUser,
                   supabaseUserId: firebaseUid,
                 };
               } else {
-                localUser = createdUser ?? null;
+                localUser = createdUser;
               }
-            } catch {
-              // Resilient in-memory fallback if database table write is restricted
-              localUser = {
-                createdAt: new Date(),
-                email: effectiveEmail,
-                emailVerified: true,
-                id: firebaseUid || generateUUID(),
-                image: photoUrl,
-                isAnonymous: false,
-                name: displayName,
-                password: null,
-                supabaseUserId: firebaseUid,
-                updatedAt: new Date(),
-              };
+            } catch (error) {
+              if (error instanceof IdealyCredentialsSignin) throw error;
+              throw new IdealyCredentialsSignin("service_unavailable");
             }
           }
         }
