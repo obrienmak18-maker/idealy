@@ -5,7 +5,7 @@ const SUPPORTED_OAUTH_PROVIDERS = new Set([
   "github",
   "canva",
   "figma",
-  "google",
+  "google-drive",
   "notion",
   "slack",
   "vercel",
@@ -35,8 +35,9 @@ export async function POST(request: Request) {
     typeof body?.provider === "string"
       ? body.provider.trim().toLowerCase()
       : "";
+  const oauthProvider = provider === "google" ? "google-drive" : provider;
 
-  if (!SUPPORTED_OAUTH_PROVIDERS.has(provider)) {
+  if (!SUPPORTED_OAUTH_PROVIDERS.has(oauthProvider)) {
     return jsonError("Unsupported or non-OAuth connector.", 400);
   }
 
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     const response = await fetch(
       `${supabaseUrl}/functions/v1/integration-connect`,
       {
-        body: JSON.stringify({ provider }),
+        body: JSON.stringify({ provider: oauthProvider }),
         cache: "no-store",
         headers: {
           Authorization: `Bearer ${accessToken}`,
