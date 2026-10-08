@@ -91,7 +91,7 @@
     "tag": "Calculateur Intelligent",
     "title": "Simulez vos besoins mensuels",
     "subtitle": "Ajustez vos estimations de développement pour identifier la formule la plus adaptée.",
-    "simpleLabel": "Missions simples (1 agent)",
+    "simpleLabel": "Missions simples (Power variable)",
     "simpleUnit": "mois",
     "squadLabel": "Missions complètes (Escouade 5 agents)",
     "squadUnit": "mois",
@@ -99,9 +99,9 @@
     "perMonth": "Power Points / mois",
     "recommendedFormula": "Formule recommandée : ",
     "freePlan": "Découverte (Gratuit)",
-    "proStandardPlan": "Pro Standard (1 000 pts)",
-    "proBoostPlan": "Pro Boost (2 000 pts)",
-    "businessPlan": "Business Studio (5 000+ pts)"
+    "proStandardPlan": "Pro (2 500 Power)",
+    "proBoostPlan": "Pro — jusqu'à 3 500 Power stockés",
+    "businessPlan": "Business Studio (4 000 Power)"
   },
   "pricing": {
     "tag": "Transparence Totale",
