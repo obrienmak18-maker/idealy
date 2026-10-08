@@ -15,6 +15,53 @@ type MissionPlan = {
   v1Scope?: string;
 };
 
+type AgentKey = "chief" | "builder" | "designer" | "specialist" | "reviewer";
+
+type AgentDefinition = {
+  key: AgentKey;
+  name: string;
+  role: string;
+};
+
+const MAX_REVIEW_ITERATIONS = 3;
+const SQUAD_POWER_POINTS = 50;
+
+const WAY_AGENTS: Record<string, AgentDefinition[]> = {
+  ninja: [
+    { key: "chief", name: "Minato", role: "Chef de mission et coordination stratégique" },
+    { key: "builder", name: "Naruto", role: "Construction full-stack et implémentation" },
+    { key: "designer", name: "Sakura", role: "UI/UX, expérience et qualité visuelle" },
+    { key: "specialist", name: "Sasuke", role: "Architecture, systèmes et risques techniques" },
+    { key: "reviewer", name: "Shikamaru", role: "Tactique, QA et vérification finale" },
+  ],
+  mage: [
+    { key: "chief", name: "Erza", role: "Chef de mission et coordination stratégique" },
+    { key: "builder", name: "Natsu", role: "Construction et implémentation" },
+    { key: "designer", name: "Lucie", role: "UI/UX et expérience produit" },
+    { key: "specialist", name: "Luxus", role: "Performance et robustesse technique" },
+    { key: "reviewer", name: "Mirajane", role: "Sécurité, qualité et vérification finale" },
+  ],
+  hunter: [
+    { key: "chief", name: "Netero", role: "Chef de mission et coordination stratégique" },
+    { key: "builder", name: "Gon", role: "Construction et implémentation" },
+    { key: "designer", name: "Leolio", role: "UI/UX et expérience produit" },
+    { key: "specialist", name: "Kurapika", role: "Architecture, risques et conformité technique" },
+    { key: "reviewer", name: "Killua", role: "Performance, QA et vérification finale" },
+  ],
+  professional: [
+    { key: "chief", name: "Daniel", role: "Chef de mission et coordination stratégique" },
+    { key: "builder", name: "Kevin", role: "Construction senior full-stack" },
+    { key: "designer", name: "Leslie", role: "Produit, UI/UX et cohérence d’expérience" },
+    { key: "specialist", name: "Bill", role: "Cloud, infrastructure et SRE" },
+    { key: "reviewer", name: "Maya", role: "QA, conformité et vérification finale" },
+  ],
+};
+
+function getWayAgents(way: unknown): AgentDefinition[] {
+  const key = typeof way === "string" ? way.toLowerCase() : "";
+  return WAY_AGENTS[key] ?? WAY_AGENTS.professional;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RUN_KEY_PATTERN = /^[a-zA-Z0-9:_-]{16,180}$/;
 const PROCESS_FUNCTION = "process-ai-request";
@@ -202,7 +249,7 @@ Deno.serve(async (request) => {
 
   const { data: existingRuns, error: existingError } = await admin
     .from("mission_agent_runs")
-    .select("id,agent_key,status,output_summary,error_code")
+    .select("id,agent_key,agent_name,agent_role,status,output_summary,error_code")
     .eq("mission_id", missionId)
     .eq("run_key", runKey)
     .order("step_index");
@@ -219,10 +266,12 @@ Deno.serve(async (request) => {
   }).slice(0, 18_000);
   const missionVoice = voiceDirection(mission.way);
   const inputDigest = await sha256(missionContext);
-  const agents = ["architect", "builder", "reviewer"] as const;
+  const wayAgents = getWayAgents(mission.way);
   const { error: insertError } = await admin.from("mission_agent_runs").insert(
-    agents.map((agentKey, index) => ({
-      agent_key: agentKey,
+    wayAgents.map((agent, index) => ({
+      agent_key: agent.key,
+      agent_name: agent.name,
+      agent_role: agent.role,
       input_digest: inputDigest,
       mission_id: missionId,
       run_key: runKey,
@@ -277,8 +326,11 @@ Deno.serve(async (request) => {
   });
 
   let powerReservationHeld = true;
-  let activeAgent: (typeof agents)[number] | null = null;
-  const updateRun = async (agentKey: (typeof agents)[number], values: Record<string, unknown>) => {
+  let activeAgent: AgentDefinition | null = null;
+  const updateRun = async (
+    agentKey: AgentKey,
+    values: Record<string, unknown>,
+  ) => {
     const { error } = await admin.from("mission_agent_runs")
       .update(values)
       .eq("mission_id", missionId)
@@ -287,102 +339,121 @@ Deno.serve(async (request) => {
     if (error) throw new Error(`RUN_PERSISTENCE_FAILED:${error.message}`);
   };
 
-  try {
-    await appendEvent(admin, "mission_started", missionId, `${runKey}:mission:started`, { runKey, source: "orchestrate-mission" });
+  const runAgent = async (
+    agent: AgentDefinition,
+    iteration: number,
+    prompt: string,
+    options?: { workspaceStream?: boolean; planOnly?: boolean },
+  ) => {
+    activeAgent = agent;
+    const idempotencyKey =
+      iteration === 1
+        ? `${runKey}:${agent.key}`
+        : `${runKey}:${agent.key}:iteration-${iteration}`;
 
-    activeAgent = "architect";
-    await updateRun("architect", { started_at: new Date().toISOString(), status: "running" });
-    await appendEvent(admin, "agent_started", missionId, `${runKey}:architect:started`, { agent: "architect", runKey });
+    await updateRun(agent.key, {
+      started_at: new Date().toISOString(),
+      status: "running",
+    });
+
+    await appendEvent(admin, "agent_started", missionId, `${idempotencyKey}:started`, {
+      agent: agent.key,
+      agentName: agent.name,
+      agentRole: agent.role,
+      iteration,
+      maxIterations: MAX_REVIEW_ITERATIONS,
+      runKey,
+    });
+
+    const result = await invokeProcess({
+      authorization,
+      anonKey,
+      supabaseUrl,
+      body: {
+        idempotencyKey,
+        intentCategory: options?.planOnly ? "IDEATION" : "EXECUTION",
+        iteration,
+        missionId,
+        mode: "auto",
+        planOnly: options?.planOnly === true,
+        prompt,
+        stream: options?.workspaceStream === true,
+        workspaceStream: options?.workspaceStream === true,
+      },
+    });
+
+    await updateRun(agent.key, {
+      completed_at: new Date().toISOString(),
+      output_summary: summary({
+        agent: agent.name,
+        role: agent.role,
+        iteration,
+        upstream: result,
+      }),
+      status: "succeeded",
+    });
+
+    await appendEvent(admin, "agent_completed", missionId, `${idempotencyKey}:completed`, {
+      agent: agent.key,
+      agentName: agent.name,
+      agentRole: agent.role,
+      iteration,
+      runKey,
+    });
+
+    return result;
+  };
+
+  try {
+    await appendEvent(admin, "mission_started", missionId, `${runKey}:mission:started`, {
+      runKey,
+      source: "orchestrate-mission",
+      way: mission.way,
+      agentTeam: wayAgents,
+    });
+
+    const chief = wayAgents.find((agent) => agent.key === "chief")!;
+    const builder = wayAgents.find((agent) => agent.key === "builder")!;
+    const designer = wayAgents.find((agent) => agent.key === "designer")!;
+    const specialist = wayAgents.find((agent) => agent.key === "specialist")!;
+    const reviewer = wayAgents.find((agent) => agent.key === "reviewer")!;
+
+    const missionVoice = voiceDirection(mission.way);
     const persistedPlan =
       mission.dna && typeof mission.dna === "object"
         ? (mission.dna as { plan?: unknown }).plan
         : undefined;
-    const architect = isMissionPlan(persistedPlan)
-      ? { plan: persistedPlan, reusedPersistedPlan: true }
-      : await invokeProcess({
-          authorization,
-          anonKey,
-          supabaseUrl,
-          body: {
-            idempotencyKey: `${runKey}:architect`,
-            intentCategory: "IDEATION",
-            missionId,
-            mode: "auto",
-            planOnly: true,
-            prompt: `Agis comme Sélène Ardent (Architecte Idealy). Cadre le périmètre, les hypothèses et les critères de réussite. Établis le plan strictement borné de cette mission Idealy. Propose uniquement Architecte, Builder et Reviewer, chacun une seule fois. N’ajoute aucun outil externe, aucune publication et aucune action sur un compte tiers. ${missionVoice} Contexte mission : ${missionContext}`,
-          },
-        });
-    const plan = architect.plan as MissionPlan | undefined;
-    if (!isMissionPlan(plan)) throw new Error("ARCHITECT_INVALID_PLAN");
-    await updateRun("architect", {
-      completed_at: new Date().toISOString(),
-      output_summary: summary({ plan, reusedPersistedPlan: architect.reusedPersistedPlan === true }),
-      status: "succeeded",
-    });
-    await appendEvent(admin, "agent_completed", missionId, `${runKey}:architect:completed`, {
-      agent: "architect",
-      reusedPersistedPlan: architect.reusedPersistedPlan === true,
-      runKey,
-    });
 
-    const MAX_REVIEW_ITERATIONS = 3;
+    const chiefResult = await runAgent(
+      chief,
+      1,
+      `Agis comme ${chief.name}, chef de mission de la Way active. Tu es le coordinateur réel de cette mission Idealy. Cadre l’objectif, les hypothèses, les dépendances et les critères de réussite. Prépare un plan exploitable par les quatre autres agents : ${builder.name} (construction), ${designer.name} (UI/UX), ${specialist.name} (architecture/risques) et ${reviewer.name} (QA/finalisation). Le plan doit rester strictement dans le périmètre de la mission et ne doit déclencher aucun connecteur, aucune publication ni aucune action sur un compte tiers. ${missionVoice} ${persistedPlan ? `Plan précédemment enregistré à utiliser comme contexte, pas comme vérité : ${JSON.stringify(persistedPlan).slice(0, 8000)}` : ""} Contexte mission : ${missionContext}`,
+      { planOnly: true },
+    );
+
+    const plan = chiefResult.plan as MissionPlan | undefined;
+    if (!isMissionPlan(plan)) throw new Error("CHIEF_INVALID_PLAN");
+
     let iteration = 1;
     let currentValidation: ReturnType<typeof validateWorkspaceStructure> | null = null;
+    let designerReport: Record<string, unknown> | null = null;
+    let specialistReport: Record<string, unknown> | null = null;
     let lastReviewerReport: Record<string, unknown> | null = null;
 
     while (iteration <= MAX_REVIEW_ITERATIONS) {
       await delay(150);
-      activeAgent = "builder";
-      const builderKey = iteration === 1 ? `${runKey}:builder` : `${runKey}:builder:iteration-${iteration}`;
-      await updateRun("builder", { started_at: new Date().toISOString(), status: "running" });
-      await appendEvent(admin, "agent_started", missionId, `${builderKey}:started`, {
-        agent: "builder",
-        iteration,
-        maxIterations: MAX_REVIEW_ITERATIONS,
-        runKey,
-      });
 
       const diagnosticGuidance =
         currentValidation && currentValidation.errors.length > 0
-          ? `\nDIAGNOSTIC DU REVIEWER (Itération précédente) :\n${JSON.stringify(currentValidation.errors.slice(0, 5))}\nCorrige impérativement ces erreurs sans introduire de régression.`
+          ? `\\nDIAGNOSTIC DU REVIEWER (Itération précédente) :\\n${JSON.stringify(currentValidation.errors.slice(0, 5))}\\nCorrige impérativement ces erreurs sans introduire de régression.`
           : "";
 
-      const builder = await invokeProcess({
-        authorization,
-        anonKey,
-        supabaseUrl,
-        body: {
-          idempotencyKey: builderKey,
-          intentCategory: "EXECUTION",
-          iteration,
-          missionId,
-          mode: "auto",
-          prompt: `Agis comme Maël Forge (Builder Idealy). Construis uniquement le livrable borné et rends les fichiers vérifiables. Construis ${iteration > 1 ? `la correction ciblée (itération ${iteration}/${MAX_REVIEW_ITERATIONS})` : "la première version"} conforme au plan suivant. Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 10_000)}. Contexte : ${missionContext}${diagnosticGuidance}`,
-          stream: true,
-          workspaceStream: true,
-        },
-      });
-      await updateRun("builder", {
-        completed_at: new Date().toISOString(),
-        output_summary: summary({ iteration, persistedWorkspace: true, upstream: builder }),
-        status: "succeeded",
-      });
-      await appendEvent(admin, "agent_completed", missionId, `${builderKey}:completed`, {
-        agent: "builder",
+      await runAgent(
+        builder,
         iteration,
-        runKey,
-      });
-
-      await delay(150);
-      activeAgent = "reviewer";
-      const reviewerKey = iteration === 1 ? `${runKey}:reviewer` : `${runKey}:reviewer:iteration-${iteration}`;
-      await updateRun("reviewer", { started_at: new Date().toISOString(), status: "running" });
-      await appendEvent(admin, "agent_started", missionId, `${reviewerKey}:started`, {
-        agent: "reviewer",
-        iteration,
-        maxIterations: MAX_REVIEW_ITERATIONS,
-        runKey,
-      });
+        `Agis comme ${builder.name}, builder réel de la Way active. Construis uniquement le livrable borné et rends les fichiers vérifiables. ${iteration > 1 ? `Applique la correction ciblée (itération ${iteration}/${MAX_REVIEW_ITERATIONS}).` : "Construis la première version."} Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. ${missionVoice} Plan du chef : ${JSON.stringify(plan).slice(0, 12_000)}. Contexte : ${missionContext}${diagnosticGuidance}`,
+        { workspaceStream: true },
+      );
 
       const { data: files, error: filesError } = await admin
         .from("mission_files")
@@ -391,7 +462,8 @@ Deno.serve(async (request) => {
         .eq("status", "saved")
         .order("path")
         .limit(500);
-      if (filesError) throw new Error(`REVIEWER_FILE_READ_FAILED:${filesError.message}`);
+
+      if (filesError) throw new Error(`DESIGN_REVIEW_FILE_READ_FAILED:${filesError.message}`);
 
       currentValidation = validateWorkspaceStructure(files ?? []);
       const enrichedValidation = {
@@ -400,51 +472,58 @@ Deno.serve(async (request) => {
         maxIterations: MAX_REVIEW_ITERATIONS,
       };
 
-      await appendEvent(admin, "validation_result", missionId, `${reviewerKey}:validation:structural`, enrichedValidation);
+      await appendEvent(
+        admin,
+        "validation_result",
+        missionId,
+        `${runKey}:validation:structural:${iteration}`,
+        enrichedValidation,
+      );
+
       const { error: validationUpdateError } = await admin
         .from("missions")
         .update({ validation: enrichedValidation })
         .eq("id", missionId)
         .eq("user_id", auth.user.id);
+
       if (validationUpdateError) throw new Error(`VALIDATION_PERSISTENCE_FAILED:${validationUpdateError.message}`);
 
-      const reviewer = await invokeProcess({
-        authorization,
-        anonKey,
-        supabaseUrl,
-        body: {
-          idempotencyKey: reviewerKey,
-          intentCategory: "IDEATION",
-          iteration,
-          missionId,
-          mode: "auto",
-          prompt: `Agis comme Iris Vale (Reviewer Idealy, itération ${iteration}/${MAX_REVIEW_ITERATIONS}). Contrôle les faits, les risques et la conformité structurelle sans inventer de résultat. Évalue les métadonnées de fichiers, le préflight structurel et le plan. Émets un diagnostic précis (PASS/FAIL) avec sévérité, anomalie, localisation et correction conseillée. Ne publie rien et ne modifie aucun fichier. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
-        },
-      });
-      lastReviewerReport = reviewer;
-      await updateRun("reviewer", {
-        completed_at: new Date().toISOString(),
-        output_summary: summary({ iteration, reviewer, validation: enrichedValidation }),
-        status: "succeeded",
-      });
-      await appendEvent(admin, "agent_completed", missionId, `${reviewerKey}:completed`, {
-        agent: "reviewer",
+      designerReport = await runAgent(
+        designer,
         iteration,
-        runKey,
-      });
+        `Agis comme ${designer.name}, spécialiste ${designer.role}. Tu es un agent d'audit réel : ne modifie aucun fichier. Vérifie l'expérience, la cohérence UI/UX et la qualité des écrans à partir des fichiers réellement enregistrés et du plan. Signale uniquement ce qui est observable ou inférable avec preuve. Produit des diagnostics structurés avec evidence, expectedBehavior, file, location, problem, severity et suggestedCorrection. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 12000)}`,
+      );
 
-      if (currentValidation.status === "passed") {
-        break; // Succès validé par le Reviewer !
-      }
+      specialistReport = await runAgent(
+        specialist,
+        iteration,
+        `Agis comme ${specialist.name}, spécialiste ${specialist.role}. Tu es un agent d'audit réel : ne modifie aucun fichier. Vérifie architecture, sécurité, dépendances, performance et risques de régression à partir des fichiers réellement enregistrés et du plan. Signale uniquement ce qui est observable ou inférable avec preuve. Produit des diagnostics structurés avec evidence, expectedBehavior, file, location, problem, severity et suggestedCorrection. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 12000)}`,
+      );
+
+      lastReviewerReport = await runAgent(
+        reviewer,
+        iteration,
+        `Agis comme ${reviewer.name}, agent de ${reviewer.role}. Tu es la dernière vérification réelle. Ne modifie aucun fichier. Contrôle les faits, les risques, la conformité au plan, le préflight structurel et les rapports des autres agents. Émets un PASS/FAIL honnête et un diagnostic précis avec evidence, expectedBehavior, file, location, problem, severity et suggestedCorrection. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 8000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Audit UI/UX : ${JSON.stringify(designerReport).slice(0, 8000)}. Audit technique : ${JSON.stringify(specialistReport).slice(0, 8000)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 8000)}`,
+      );
+
+      if (currentValidation.status === "passed") break;
 
       iteration++;
       if (iteration <= MAX_REVIEW_ITERATIONS) {
-        await appendEvent(admin, "auto_correction_started", missionId, `${runKey}:correction:${iteration}`, {
-          attempt: iteration,
-          errors: currentValidation.errors,
-          maxAttempts: MAX_REVIEW_ITERATIONS,
-          runKey,
-        });
+        await appendEvent(
+          admin,
+          "auto_correction_started",
+          missionId,
+          `${runKey}:correction:${iteration}`,
+          {
+            attempt: iteration,
+            errors: currentValidation.errors,
+            maxAttempts: MAX_REVIEW_ITERATIONS,
+            runKey,
+            correctionOwner: builder.name,
+            supportingAgents: [designer.name, specialist.name],
+          },
+        );
       }
     }
 
@@ -503,7 +582,7 @@ Deno.serve(async (request) => {
     });
 
     const { data: completedRuns } = await admin.from("mission_agent_runs")
-      .select("id,agent_key,status,output_summary,error_code,started_at,completed_at")
+      .select("id,agent_key,agent_name,agent_role,status,output_summary,error_code,started_at,completed_at")
       .eq("mission_id", missionId)
       .eq("run_key", runKey)
       .order("step_index");
