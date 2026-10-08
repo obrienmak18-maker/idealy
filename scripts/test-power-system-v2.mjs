@@ -65,11 +65,12 @@ for (const expected of [
 }
 const simpleMissionBlock = files.simple.slice(
   files.simple.indexOf("const isSimpleMission"),
-  files.simple.indexOf("// Every centrally managed inference consumes credits"),
+  files.simple.indexOf("// Legacy managed credits remain only for non-mission chat/ideation"),
 );
 for (const expected of [
   "isSimpleMission",
   "if (managed && isSimpleMission)",
+  "const isMissionRuntime = Boolean(input.missionId);",
   "p_action_type: 'mission_simple'",
   "POWER_REQUIRED",
   "workspaceStream !== true",
@@ -78,6 +79,9 @@ for (const expected of [
   if (!simpleMissionBlock.includes(expected)) {
     throw new Error(`Simple mission Power debit missing: ${expected}`);
   }
+}
+if (simpleMissionBlock.includes("consumeManagedCredit")) {
+  throw new Error("Mission runtime must not consume legacy managed credits.");
 }
 if (simpleMissionBlock.includes("managed === false")) {
   throw new Error("BYOK must not reach consume_power_points");
