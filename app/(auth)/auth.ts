@@ -149,11 +149,23 @@ export const {
           try {
             supabaseAuth = await signInWithSupabasePassword(email, password);
           } catch {
-            // Supabase GoTrue endpoint network error
+            throw new IdealyCredentialsSignin("service_unavailable");
           }
 
-          if (supabaseAuth?.status === "confirmation_required") {
+          if (supabaseAuth.status === "confirmation_required") {
             throw new IdealyCredentialsSignin("confirmation_required");
+          }
+
+          if (supabaseAuth.status === "invalid_credentials") {
+            throw new IdealyCredentialsSignin("invalid_credentials");
+          }
+
+          if (
+            supabaseAuth.status !== "authenticated" ||
+            !supabaseAuth.accessToken ||
+            !supabaseAuth.userId
+          ) {
+            throw new IdealyCredentialsSignin("service_unavailable");
           }
 
           let localUser = null;
@@ -161,67 +173,41 @@ export const {
             const [found] = await getUser(email);
             localUser = found ?? null;
           } catch {
-            // Database lookup error
+            throw new IdealyCredentialsSignin("service_unavailable");
           }
 
-          // ── Case 1: Supabase authenticated ────────────────────────────────
-          if (supabaseAuth?.status === "authenticated" && supabaseAuth.accessToken) {
-            if (!localUser) {
-              try {
-                const [created] = await createUser(email, password);
-                localUser = created ?? null;
-              } catch {
-                throw new IdealyCredentialsSignin("service_unavailable");
-              }
-            }
-
-            if (!localUser?.id) {
+          if (!localUser) {
+            try {
+              const [created] = await createUser(email, password);
+              localUser = created ?? null;
+            } catch {
               throw new IdealyCredentialsSignin("service_unavailable");
             }
-
-            if (supabaseAuth.userId) {
-              try {
-                await linkUserToSupabaseUser({
-                  localUserId: localUser.id,
-                  supabaseUserId: supabaseAuth.userId,
-                });
-              } catch {
-                throw new IdealyCredentialsSignin("service_unavailable");
-              }
-            }
-
-            return {
-              ...localUser,
-              email,
-              id: localUser.id,
-              supabaseAccessToken: supabaseAuth.accessToken,
-              supabaseAccessTokenExpiresAt: supabaseAuth.expiresAt ?? undefined,
-              supabaseRefreshToken: supabaseAuth.refreshToken ?? undefined,
-              supabaseUserId: supabaseAuth.userId ?? undefined,
-              type: "regular",
-            };
           }
 
-          // ── Case 2: Local user exists in database or memory cache ──────────
-          if (localUser?.password) {
-            const passwordsMatch = await compare(password, localUser.password);
-            if (!passwordsMatch) {
-              throw new IdealyCredentialsSignin("invalid_credentials");
-            }
-
-            return {
-              ...localUser,
-              email: localUser.email,
-              id: localUser.id,
-              type: "regular",
-            };
+          if (!localUser?.id) {
+            throw new IdealyCredentialsSignin("service_unavailable");
           }
 
-          // Login must never provision a new identity. Account creation belongs
-          // exclusively to the register action, otherwise a typo can create a
-          // second local identity and mask an authentication failure.
-          await compare(password, DUMMY_PASSWORD);
-          throw new IdealyCredentialsSignin("invalid_credentials");
+          try {
+            await linkUserToSupabaseUser({
+              localUserId: localUser.id,
+              supabaseUserId: supabaseAuth.userId,
+            });
+          } catch {
+            throw new IdealyCredentialsSignin("service_unavailable");
+          }
+
+          return {
+            ...localUser,
+            email,
+            id: localUser.id,
+            supabaseAccessToken: supabaseAuth.accessToken,
+            supabaseAccessTokenExpiresAt: supabaseAuth.expiresAt ?? undefined,
+            supabaseRefreshToken: supabaseAuth.refreshToken ?? undefined,
+            supabaseUserId: supabaseAuth.userId,
+            type: "regular",
+          };
         } catch (error) {
           if (error instanceof IdealyCredentialsSignin) {
             throw error;
