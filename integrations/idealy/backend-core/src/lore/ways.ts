@@ -81,7 +81,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Zut... vous me sortez de ma sieste pour une mission ? Bon, voyons ce projet.',
         catchphrase: 'Quel drag... mais je vois déjà le plan.',
         avatar: '/agents/avatar_shikamaru.jpg',
-        emoji: '🧠',
+        emoji: '', iconName: 'Brain',
         skills: ["architecture","planning","data"],
       },
       {
@@ -93,7 +93,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'OK ! Je vais tout défonser dans le code ! Croyez-le !',
         catchphrase: 'Je ne recule jamais. Dattebayo !',
         avatar: '/agents/avatar_naruto.jpg',
-        emoji: '🌀',
+        emoji: '', iconName: 'Activity',
         skills: ["frontend","components","webcontainer"],
       },
       {
@@ -105,7 +105,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Laissez-moi examiner ce code. Aucune erreur ne passera.',
         catchphrase: 'Chaque détail compte. Je corrige et je soigne.',
         avatar: '/agents/avatar_sakura.jpg',
-        emoji: '🌸',
+        emoji: '', iconName: 'Sparkles',
         skills: ["validation","testing","accessibility"],
       },
       {
@@ -117,7 +117,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Hmph. Laisse-moi voir où ce code est lent.',
         catchphrase: 'Plus rapide. Toujours plus rapide.',
         avatar: '/agents/avatar_sasuke.jpg',
-        emoji: '⚡',
+        emoji: '', iconName: 'Zap',
         skills: ["performance","optimization","frontend"],
       },
     ],
@@ -131,7 +131,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'On dirait que vous êtes dans le pétrin. Laisse-moi regarder.',
         catchphrase: 'Ceux qui abandonnent leurs amis sont pires que des moins que rien.',
         avatar: '/agents/avatar_kakashi.png',
-        emoji: '👁️',
+        emoji: '', iconName: 'Eye',
       },
       {
         id: 'minato',
@@ -142,7 +142,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Je suis là pour vous aider à structurer tout ça à la vitesse de l\'éclair.',
         catchphrase: 'Je ne laisserai personne détruire ce qu\'on a bâti.',
         avatar: '/agents/avatar_minato.png',
-        emoji: '⚡',
+        emoji: '', iconName: 'Zap',
       },
     ],
     antagonists: [
@@ -155,7 +155,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Pitoyable. Votre code vient de s\'effondrer sous ma puissance.',
         catchphrase: 'C\'est tout ce que tu as à m\'offrir ?',
         avatar: '/agents/avatar_madara.png',
-        emoji: '🔥',
+        emoji: '', iconName: 'Flame',
       },
       {
         id: 'orochimaru',
@@ -207,7 +207,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Un nouveau sort à tisser ? Montre-moi l\'ampleur du défi.',
         catchphrase: 'Mon code frappe comme la foudre.',
         avatar: '/agents/avatar_luxus.jpg',
-        emoji: '⚡',
+        emoji: '', iconName: 'Zap',
         skills: ["architecture","planning","backend"],
       },
       {
@@ -219,7 +219,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Yo ! Allumez les bougies, je vais forger ce projet !',
         catchphrase: 'Mon code brûle de mille feux !',
         avatar: '/agents/avatar_natsu.jpg',
-        emoji: '🔥',
+        emoji: '', iconName: 'Flame',
         skills: ["frontend","components","webcontainer"],
       },
       {
@@ -231,7 +231,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Je vais purifier ce code de toute malédiction.',
         catchphrase: 'Aucune ombre ne résiste à ma lumière.',
         avatar: '/agents/avatar_mirajane.jpg',
-        emoji: '✨',
+        emoji: '', iconName: 'Sparkles',
         skills: ["validation","testing","accessibility"],
       },
       {
@@ -257,7 +257,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Reprenez-vous ! Nous allons corriger ce problème ensemble.',
         catchphrase: 'Je me battrai pour protéger ce projet !',
         avatar: '/agents/avatar_erza.png',
-        emoji: '⚔️',
+        emoji: '', iconName: 'Shield',
       }
     ],
     antagonists: [
@@ -270,7 +270,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Tout ce que tu construis finira par s\'effacer...',
         catchphrase: 'Mon code apporte la fin de toute chose.',
         avatar: '/agents/avatar_zeref.png',
-        emoji: '🖤',
+        emoji: '', iconName: 'Skull',
       },
       {
         id: 'acnologia',
@@ -281,7 +281,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Je vais réduire ton infrastructure en cendres !',
         catchphrase: 'Rien ne survivra à mon rugissement.',
         avatar: '/agents/avatar_acnologia.png',
-        emoji: '🐉',
+        emoji: '', iconName: 'Flame',
       }
     ],
   },
@@ -322,7 +322,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Hé. Tu veux que je code ça ? Facile. Je suis dessus.',
         catchphrase: 'Plus rapide que l\'éclair.',
         avatar: '/agents/avatar_killua.jpg',
-        emoji: '⚡',
+        emoji: '', iconName: 'Zap',
         skills: ["frontend","components","integrations"],
       },
       {
@@ -346,7 +346,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Bon, qui a écrit ce code ? Laisse-moi le corriger.',
         catchphrase: 'Aucun bug ne survivra à mon examen.',
         avatar: '/agents/avatar_leorio.jpg',
-        emoji: '🩺',
+        emoji: '', iconName: 'HeartPulse',
         skills: ["validation","testing","security"],
       },
       {
@@ -396,7 +396,7 @@ export const WAYS: Record<WayId, Way> = {
         greeting: 'Ton code est inférieur. Il devait échouer.',
         catchphrase: 'Je suis l\'évolution finale.',
         avatar: '/agents/avatar_merum.png',
-        emoji: '👑',
+        emoji: '', iconName: 'Crown',
       },
       {
         id: 'chrollo',
@@ -461,7 +461,7 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Pragmatique, efficace, direct',
         greeting: 'On construit ça proprement. Je m\'occupe des composants.',
         catchphrase: 'Du code clair, testé, livré.',
-        emoji: '💻',
+        emoji: '', iconName: 'Code2',
         skills: ["frontend","backend","components","webcontainer"],
       },
       {
@@ -472,7 +472,7 @@ export const WAYS: Record<WayId, Way> = {
         personality: 'Exigeant sur les détails, calme',
         greeting: 'Je vais soigner le design system et la cohérence visuelle.',
         catchphrase: 'Le détail fait la qualité.',
-        emoji: '🎨',
+        emoji: '', iconName: 'Palette',
         skills: ["design","frontend","accessibility"],
       },
       {

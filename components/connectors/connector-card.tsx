@@ -6,6 +6,7 @@ import {
   LockKeyholeIcon,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import type { ConnectorDefinition } from "@/lib/idealy/connectors";
 import { Button } from "../ui/button";
 import { ConnectorConnectButton } from "./connector-connect-button";
@@ -45,7 +46,12 @@ export function ConnectorCard({
                 {getConnectorBrandLogo(connector.id || connector.provider, "size-4 text-foreground")}
               </div>
               <h3 className="font-semibold text-[15px] text-foreground tracking-tight">
-                {connector.label}
+                <Link
+                  href={`/connectors/${connector.id}`}
+                  className="hover:text-primary transition-colors"
+                >
+                  {connector.label}
+                </Link>
               </h3>
 
               {connected ? (

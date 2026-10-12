@@ -223,6 +223,42 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
     secretEnvNames: [],
     notes: ["Les opérations financières d’écriture restent hors du catalogue mission par défaut."],
   },
+  {
+    id: "google-cloud",
+    provider: "google-cloud",
+    label: "Google Cloud",
+    description: "Run, Storage et BigQuery à la demande.",
+    category: "deploy",
+    auth: "service-account",
+    runtime: "idealy-server",
+    availability: "planned",
+    docsUrl: "https://cloud.google.com/docs",
+    scopes: [],
+    operations: [
+      readOperation("list-gcp-resources", "Lister les ressources Cloud", "file-storage"),
+    ],
+    dataBoundary: "user-selected-assets",
+    secretEnvNames: ["GOOGLE_APPLICATION_CREDENTIALS"],
+    notes: ["Accès aux infrastructures Cloud et déploiements."],
+  },
+  {
+    id: "postgres",
+    provider: "postgres",
+    label: "PostgreSQL",
+    description: "Connexion directe à une instance existante.",
+    category: "data",
+    auth: "managed",
+    runtime: "supabase-edge",
+    availability: "configured",
+    docsUrl: "https://www.postgresql.org/docs/",
+    scopes: [],
+    operations: [
+      readOperation("query-db", "Exécuter des requêtes de lecture", "database-read"),
+    ],
+    dataBoundary: "server-managed",
+    secretEnvNames: ["DATABASE_URL"],
+    notes: ["Accès sécurisé à une base relationnelle PostgreSQL."],
+  },
 ];
 
 export function listConnectorDefinitions() {

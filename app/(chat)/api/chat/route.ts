@@ -47,13 +47,22 @@ import {
 import { normalizeMissionWay } from "@/lib/idealy/agent-personas";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
 import { getIdealyDirectProviderModel } from "@/lib/idealy/provider-registry";
+import {
+  commitFreeGeneration,
+  FREE_QUOTA_EXCEEDED_MESSAGE,
+  getFreeQuotaStatus,
+  refundFreeGeneration,
+  reserveFreeGeneration,
+} from "@/lib/idealy/free-quota";
 import { designSpecificationToPrompt, type DesignSpecification } from "@/lib/idealy/design-engine";
 import { injectFreeIdealyBadge } from "@/lib/branding/free-badge";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { isSimpleGreeting, getGreetingReply } from "@/lib/ai/greeting-handler";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { searchImages } from "@/lib/ai/tools/search-images";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import {
   isDevelopmentEnvironment,
@@ -327,6 +336,23 @@ export async function POST(request: Request) {
       requestBody;
 
     if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
+      const lastUserPrompt =
+        message?.role === "user" ? getTextFromMessageParts(message).trim() : "";
+
+      if (isSimpleGreeting(lastUserPrompt)) {
+        const demoStream = createUIMessageStream({
+          execute: async ({ writer }) => {
+            const textId = generateId();
+            const reply = getGreetingReply({ language: "fr", way: "professional" });
+            writer.write({ id: textId, type: "text-start" });
+            writer.write({ delta: reply, id: textId, type: "text-delta" });
+            writer.write({ id: textId, type: "text-end" });
+            writer.write({ data: true, type: "data-finish" });
+          },
+        });
+        return createUIMessageStreamResponse({ stream: demoStream });
+      }
+
       const demoText =
         "J’ai compris votre idée. En mode démonstration, les agents Idealy prennent le relais : l’Architecte structure la mission, le Builder prépare le premier écran et le Reviewer vérifie la cohérence. La preview s’ouvre maintenant dans le canvas de droite, comme dans l’espace de création V0.";
       const demoCode = `import React from "react";\n\nexport default function MissionWorkspace() {\n  return (\n    <main className="min-h-screen bg-slate-950 px-6 py-12 text-slate-100 md:px-12">\n      <div className="mx-auto max-w-5xl">\n        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">Idealy / Build complete</p>\n        <h1 className="mt-6 max-w-3xl text-5xl font-semibold tracking-tight md:text-7xl">Turn one clear idea into a beautiful product.</h1>\n        <p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">A focused workspace for shaping the experience, validating the details, and moving from concept to launch.</p>\n        <div className="mt-14 h-px w-full bg-gradient-to-r from-sky-400/70 via-violet-400/40 to-transparent" />\n        <div className="mt-6 flex flex-wrap gap-x-10 gap-y-3 text-sm text-slate-400">\n          <span><strong className="text-slate-100">Product direction</strong> defined</span>\n          <span><strong className="text-slate-100">Interface system</strong> ready</span>\n          <span><strong className="text-slate-100">Launch checklist</strong> 4 items left</span>\n        </div>\n      </div>\n    </main>\n  );\n}`;
@@ -348,15 +374,13 @@ export async function POST(request: Request) {
             demoText,
           ]) {
             writer.write({ delta: chunk, id: textId, type: "text-delta" });
-            await new Promise((resolve) => setTimeout(resolve, 45));
           }
           writer.write({ id: textId, type: "text-end" });
-          for (let end = 80; end <= demoCode.length; end += 80) {
+          for (let end = 160; end <= demoCode.length; end += 160) {
             writer.write({
               data: demoCode.slice(0, end),
               type: "data-codeDelta",
             });
-            await new Promise((resolve) => setTimeout(resolve, 90));
           }
           writer.write({ data: demoCode, type: "data-codeDelta" });
           writer.write({ data: true, type: "data-finish" });
@@ -374,8 +398,94 @@ export async function POST(request: Request) {
       return new ChatbotError("forbidden:api").toResponse();
     }
 
-    if (!session?.user) {
+    let effectiveUser = session?.user;
+    if (!effectiveUser && isDevelopmentEnvironment) {
+      effectiveUser = {
+        id: "5ba1542b-5ed1-4d5c-b6de-4c133277d695",
+        email: "obrienmak18@gmail.com",
+        type: "regular",
+      };
+    }
+
+    if (!effectiveUser) {
       return new ChatbotError("unauthorized:chat").toResponse();
+    }
+
+    // Build a non-null session for tools that require Session (not Session | null).
+    // In dev mode when session is null, we synthesize one from effectiveUser.
+    const effectiveSession = session ?? {
+      user: effectiveUser,
+      expires: new Date(Date.now() + 86_400_000).toISOString(),
+    };
+
+    const userWay = getUserWayFromRequest(request);
+    const userTone = getUserToneFromRequest(request);
+    const userDisplayName = getUserDisplayNameFromRequest(request);
+    const userLanguage = getUserLanguageFromRequest(request);
+
+    const lastUserPrompt =
+      message?.role === "user" ? getTextFromMessageParts(message).trim() : "";
+
+    // Fast, resilient interceptor for conversational greetings across all environments
+    if (lastUserPrompt && isSimpleGreeting(lastUserPrompt)) {
+      const existingChat = await getChatById({ id }).catch(() => null);
+      if (!existingChat && (message?.role === "user")) {
+        await saveChat({
+          id,
+          title: "Nouvelle discussion",
+          userId: effectiveUser.id,
+          visibility: selectedVisibilityType,
+        }).catch(() => undefined);
+      }
+      if (message?.role === "user") {
+        await saveMessages({
+          messages: [
+            {
+              attachments: [],
+              chatId: id,
+              createdAt: new Date(),
+              id: message.id,
+              parts: message.parts,
+              role: "user",
+            },
+          ],
+        }).catch(() => undefined);
+      }
+
+      const greetingReply = getGreetingReply({
+        displayName: userDisplayName,
+        language: userLanguage,
+        tone: userTone,
+        way: userWay,
+      });
+
+      const greetingStream = createUIMessageStream({
+        execute: async ({ writer }) => {
+          const textId = generateId();
+          writer.write({ id: textId, type: "text-start" });
+          for (const chunk of greetingReply.match(/.{1,14}(?:\s|$)/g) ?? [greetingReply]) {
+            writer.write({ delta: chunk, id: textId, type: "text-delta" });
+          }
+          writer.write({ id: textId, type: "text-end" });
+          writer.write({ data: true, type: "data-finish" });
+        },
+        onEnd: async ({ messages: finishedMessages }) => {
+          if (finishedMessages.length > 0) {
+            await saveMessages({
+              messages: finishedMessages.map((m) => ({
+                attachments: [],
+                chatId: id,
+                createdAt: new Date(),
+                id: m.id,
+                parts: m.parts,
+                role: m.role,
+              })),
+            }).catch(() => undefined);
+          }
+        },
+      });
+
+      return createUIMessageStreamResponse({ stream: greetingStream });
     }
 
     const chatModel = allowedModelIds.has(selectedChatModel)
@@ -384,11 +494,11 @@ export async function POST(request: Request) {
 
     await checkIpRateLimit(ipAddress(request));
 
-    const userType: UserType = session.user.type;
+    const userType: UserType = effectiveUser.type;
 
     const messageCount = await getMessageCountByUserId({
       differenceInHours: 1,
-      id: session.user.id,
+      id: effectiveUser.id,
     });
 
     if (messageCount >= entitlementsByUserType[userType].maxMessagesPerHour) {
@@ -402,7 +512,7 @@ export async function POST(request: Request) {
     let titlePromise: Promise<string> | null = null;
 
     if (chat) {
-      if (chat.userId !== session.user.id) {
+      if (chat.userId !== effectiveUser.id) {
         return new ChatbotError("forbidden:chat").toResponse();
       }
       messagesFromDb = await getMessagesByChatId({ id });
@@ -446,11 +556,11 @@ export async function POST(request: Request) {
       ];
     }
 
-    if (!chat && message?.role === "user") {
+    if (!chat && (message?.role === "user")) {
       await saveChat({
         id,
         title: "Nouvelle discussion",
-        userId: session.user.id,
+        userId: effectiveUser.id,
         visibility: selectedVisibilityType,
       });
       titlePromise = generateTitleFromUserMessage({ message });
@@ -583,6 +693,28 @@ export async function POST(request: Request) {
         const userDisplayName = getUserDisplayNameFromRequest(request);
         const userLanguage = getUserLanguageFromRequest(request);
 
+        const lastUserText =
+          message?.role === "user" ? getTextFromMessageParts(message).trim() : "";
+
+        if (lastUserText && isSimpleGreeting(lastUserText)) {
+          stopWaitingStatus();
+          const assistantId = generateId();
+          const greetingReply = getGreetingReply({
+            displayName: userDisplayName,
+            language: userLanguage,
+            tone: userTone,
+            way: userWay,
+          });
+          dataStream.write({ id: assistantId, type: "text-start" });
+          dataStream.write({
+            delta: greetingReply,
+            id: assistantId,
+            type: "text-delta",
+          });
+          dataStream.write({ id: assistantId, type: "text-end" });
+          return;
+        }
+
         if (shouldUseIdealyEdgeProvider()) {
           let intentCategory:
             | "CONVERSATION"
@@ -609,6 +741,25 @@ export async function POST(request: Request) {
             // peuvent produire une réponse et une proposition, mais seule une
             // intention d’exécution ouvre un projet, une mission et le VFS.
             if (intentCategory === "EXECUTION") {
+              const quotaReservation = await reserveFreeGeneration({
+                actionType: "mission_execution",
+                idempotencyKey,
+                userId: effectiveUser.id,
+              });
+
+              if (!quotaReservation.allowed) {
+                const assistantId = generateId();
+                dataStream.write({ id: assistantId, type: "text-start" });
+                dataStream.write({
+                  delta: quotaReservation.message ?? FREE_QUOTA_EXCEEDED_MESSAGE,
+                  id: assistantId,
+                  type: "text-delta",
+                });
+                dataStream.write({ id: assistantId, type: "text-end" });
+                stopWaitingStatus();
+                return;
+              }
+
               writeWaitingStatus("thinking", "Création de l'espace de mission...");
               const activeWay = normalizeMissionWay(userWay);
               const mission = await createIdealyMission({
@@ -637,6 +788,10 @@ export async function POST(request: Request) {
                 missionId,
                 request,
                 status: "planned",
+              });
+              await commitFreeGeneration({
+                idempotencyKey,
+                userId: effectiveUser.id,
               });
             }
           }
@@ -669,6 +824,12 @@ export async function POST(request: Request) {
             }
             stopWaitingStatus();
           } catch (error) {
+            if (intentCategory === "EXECUTION") {
+              await refundFreeGeneration({
+                idempotencyKey,
+                userId: effectiveUser.id,
+              }).catch(() => undefined);
+            }
             if (missionId) {
               await updateIdealyMission({
                 validation: {
@@ -735,19 +896,20 @@ export async function POST(request: Request) {
               createDocument: createDocument({
                 dataStream,
                 modelId: chatModel,
-                session,
+                session: effectiveSession,
               }),
-              editDocument: editDocument({ dataStream, session }),
+              editDocument: editDocument({ dataStream, session: effectiveSession }),
               getWeather,
               requestSuggestions: requestSuggestions({
                 dataStream,
                 modelId: chatModel,
-                session,
+                session: effectiveSession,
               }),
+              searchImages: searchImages(),
               updateDocument: updateDocument({
                 dataStream,
                 modelId: chatModel,
-                session,
+                session: effectiveSession,
               }),
             },
           });

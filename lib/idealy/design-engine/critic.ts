@@ -81,6 +81,25 @@ export function runDesignCritic(specification: DesignSpecification): DesignCriti
     });
   }
 
+  // UI-UX Pro Max intelligence checks
+  if (specification.constraints.some((c) => c.toLowerCase().includes("emoji"))) {
+    issues.push({
+      code: "ui-ux-pro-max-no-emojis",
+      message: "Les icônes d'interface doivent être des vecteurs SVG propres (Lucide, logos de marque) et non des émojis système.",
+      recommendation: "Remplacer tout émoji par l'icône Lucide React ou le SVG équivalent.",
+      severity: "warning",
+    });
+  }
+
+  if (specification.analysis.platform === "mobile") {
+    issues.push({
+      code: "ui-ux-pro-max-touch-targets",
+      message: "Exigence tactile UI/UX Pro Max : cibles tactiles de 44×44px minimum avec 8px d'espacement.",
+      recommendation: "Appliquer min-h-[44px] min-w-[44px] sur tous les éléments cliquables sur mobile.",
+      severity: "info",
+    });
+  }
+
   const requestedMissing = specification.requestedProviders.filter(
     (provider) => getDesignProvider(provider) && !selected.includes(provider)
   );

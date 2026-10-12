@@ -20,7 +20,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, display_name, avatar_hue)
+  INSERT INTO public.profiles (id, email, display_name)
   VALUES (
     new.id,
     new.email,
@@ -28,8 +28,7 @@ BEGIN
       new.raw_user_meta_data->>'full_name',
       new.raw_user_meta_data->>'name',
       split_part(new.email, '@', 1)
-    ),
-    floor(random() * 360)::int
+    )
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN new;

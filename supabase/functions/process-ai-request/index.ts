@@ -545,12 +545,12 @@ serve(async (req) => {
     // - simple mission: consume_power_points once here
     // - squad mission: reserve -> execute -> settle/release in orchestrate-mission
     // Legacy user_credits must never be charged in parallel for mission work.
-    const isMissionRuntime = Boolean(input.missionId);
     const isSimpleMission =
-      isMissionRuntime &&
+      Boolean(input.missionId) &&
       input.squadRun !== true &&
       intentCategory === 'EXECUTION' &&
       input.workspaceStream !== true;
+    const isMissionRuntime = Boolean(input.missionId);
     if (managed && isSimpleMission) {
       const powerKey = input.idempotencyKey?.trim() || `${user.id}:mission-simple:${input.missionId}`;
       const { error: powerError } = await supabaseAdmin.rpc('consume_power_points', {

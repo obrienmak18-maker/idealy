@@ -4,6 +4,7 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import equal from "fast-deep-equal";
 import {
+  AlertCircle,
   ArrowUpIcon,
   BrainIcon,
   CheckIcon,
@@ -17,6 +18,7 @@ import {
   WrenchIcon,
   XIcon,
 } from "lucide-react";
+import { useFreeQuota } from "@/hooks/use-free-quota";
 import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -170,6 +172,7 @@ function PureMultimodalInput({
 
   const { language } = useTranslation();
   const { currentWay } = useGamificationStore();
+  const freeQuota = useFreeQuota();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
   const [showSensitiveDraft, setShowSensitiveDraft] = useState(false);
@@ -330,6 +333,14 @@ function PureMultimodalInput({
   );
 
   const submitForm = useCallback(() => {
+    if (!freeQuota.allowed || freeQuota.remaining <= 0) {
+      toast.info(
+        freeQuota.message ||
+          "Vous avez atteint votre limite de générations gratuites. Les offres payantes arrivent bientôt. Votre progression est sauvegardée."
+      );
+      return;
+    }
+
     const messageText = redactLikelySecrets(input);
     if (messageText !== input) {
       toast.warning("Une clé sensible a été masquée avant l’envoi.");
@@ -342,11 +353,15 @@ function PureMultimodalInput({
       );
     }
 
-    const connectorPrefix =
-      selectedConnectors.length > 0
-        ? `[Connecteurs liés : ${selectedConnectors.map((c) => c.toUpperCase()).join(", ")}]\n`
-        : "";
-    const finalMessageText = `${connectorPrefix}${messageText}`;
+    const finalMessageText = messageText;
+
+    // Persist selected connectors so the chat request body can include them
+    // without polluting the visible message text.
+    if (selectedConnectors.length > 0) {
+      sessionStorage.setItem("idealy:active-connectors", JSON.stringify(selectedConnectors));
+    } else {
+      sessionStorage.removeItem("idealy:active-connectors");
+    }
 
     sendMessage({
       parts: [
@@ -380,6 +395,9 @@ function PureMultimodalInput({
     width,
     chatId,
     selectedConnectors,
+    freeQuota.allowed,
+    freeQuota.remaining,
+    freeQuota.message,
   ]);
 
   const uploadFile = useCallback(async (file: File) => {
@@ -592,8 +610,26 @@ function PureMultimodalInput({
         ) : null}
       </div>
 
+      {(!freeQuota.allowed || freeQuota.remaining <= 0) && (
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-200 shadow-sm backdrop-blur-md"
+        >
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="size-4 shrink-0 text-amber-400" />
+            <span className="leading-relaxed">
+              {freeQuota.message ||
+                "Vous avez atteint votre limite de générations gratuites. Les offres payantes arrivent bientôt. Votre progression est sauvegardée."}
+            </span>
+          </div>
+          <span className="shrink-0 rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+            {freeQuota.used}/{freeQuota.limit}
+          </span>
+        </div>
+      )}
+
       <PromptInput
-        className="idealy-prompt-shell relative [&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
+        className="idealy-prompt-shell relative w-full [&>div]:rounded-2xl [&>div]:shadow-[var(--shadow-composer)]"
         onFilesDropped={handleFiles}
         onSubmit={handlePromptSubmit}
       >
@@ -654,9 +690,6 @@ function PureMultimodalInput({
         ) : null}
         {selectedConnectors.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 px-4 pt-2.5">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/70">
-              Connecteurs liés :
-            </span>
             {selectedConnectors.map((id) => (
               <span
                 key={id}

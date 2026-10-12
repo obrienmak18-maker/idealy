@@ -195,6 +195,17 @@ export async function getUserBySupabaseUserId(
   return rows[0] ? mapUser(rows[0]) : null;
 }
 
+export async function getUserById(id: string): Promise<User | null> {
+  const rows = await requestSupabase<JsonObject[]>("User", {
+    query: {
+      select: "*",
+      id: `eq.${id}`,
+      limit: "1",
+    },
+  });
+  return rows[0] ? mapUser(rows[0]) : null;
+}
+
 export async function createUser(
   email: string,
   password: string
@@ -273,6 +284,49 @@ export async function createGuestUser(): Promise<User[]> {
   return rows.map(mapUser);
 }
 
+export async function ensureUserExists({
+  id,
+  email,
+  name,
+  isAnonymous = false,
+}: {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  isAnonymous?: boolean;
+}): Promise<User> {
+  const existing = await getUserById(id).catch(() => null);
+  if (existing) return existing;
+
+  const effectiveEmail =
+    email?.trim() || `${isAnonymous ? "guest" : "user"}-${id.slice(0, 8)}@idealy.local`;
+  const password = generateHashedPassword(generateUUID());
+
+  try {
+    const rows = await requestSupabase<JsonObject[]>("User", {
+      method: "POST",
+      body: {
+        id,
+        email: effectiveEmail.toLowerCase(),
+        password,
+        name: name ?? null,
+        emailVerified: false,
+        isAnonymous,
+      },
+    });
+    if (rows[0]) {
+      return mapUser(rows[0]);
+    }
+  } catch {
+    // If conflict (user already created concurrently), fetch again
+  }
+
+  const fallback = await getUserById(id).catch(() => null);
+  if (fallback) return fallback;
+
+  throw new ChatbotError("bad_request:database", "Could not ensure user exists.");
+}
+
 export async function saveChat({
   id,
   userId,
@@ -284,6 +338,7 @@ export async function saveChat({
   title: string;
   visibility: VisibilityType;
 }) {
+  await ensureUserExists({ id: userId }).catch(() => undefined);
   const rows = await requestSupabase<JsonObject[]>("Chat", {
     method: "POST",
     body: {

@@ -98,6 +98,7 @@ DECLARE
   v_way TEXT := lower(trim(COALESCE(p_way, '')));
   v_language TEXT := lower(trim(COALESCE(p_preferred_language, 'fr')));
   v_timezone TEXT := trim(COALESCE(p_timezone, 'UTC'));
+  v_email TEXT;
 BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Authentication is required';
@@ -144,7 +145,34 @@ BEGIN
         INTO id, display_name, way, onboarding_completed;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Profile provisioning is incomplete';
+    SELECT COALESCE(u.email, '') INTO v_email FROM auth.users u WHERE u.id = v_user_id;
+    IF v_email IS NULL OR v_email = '' THEN
+      v_email := COALESCE(auth.jwt() ->> 'email', 'user@idealy.local');
+    END IF;
+
+    INSERT INTO public.profiles (
+      id, email, first_name, last_name, display_name, primary_goal,
+      project_type, experience_level, discovery_source, way,
+      preferred_language, timezone, onboarding_completed, onboarding_completed_at
+    )
+    VALUES (
+      v_user_id,
+      v_email,
+      v_first_name,
+      v_last_name,
+      left(concat_ws(' ', v_first_name, v_last_name), 120),
+      v_primary_goal,
+      v_project_type,
+      v_experience_level,
+      v_discovery_source,
+      v_way,
+      v_language,
+      v_timezone,
+      TRUE,
+      now()
+    )
+    RETURNING profiles.id, profiles.display_name, profiles.way, profiles.onboarding_completed
+         INTO id, display_name, way, onboarding_completed;
   END IF;
 
   RETURN NEXT;

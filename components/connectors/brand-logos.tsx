@@ -103,6 +103,29 @@ export function NotionLogo({ size = 18, className = "" }: { size?: number; class
   );
 }
 
+export function GoogleCloudLogo({ size = 18, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 4c1.88 0 3.59.81 4.79 2.12L14.7 8.21C13.99 7.46 13.05 7 12 7c-2.38 0-4.38 1.66-4.88 3.88l-2.66-.4C5.35 7.64 8.38 4 12 4z"
+        fill="#EA4335"
+      />
+      <path
+        d="M5.35 8.04C6.6 5.64 9.11 4 12 4l-.01 3C9.89 7 8.07 8.01 7.12 10l-1.77-1.96z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M19.35 10.04C18.67 6.59 15.64 4 12 4v3c2.76 0 5.09 1.76 5.8 4.3l1.55-1.26z"
+        fill="#34A853"
+      />
+    </svg>
+  );
+}
+
 export function getConnectorBrandLogo(id: string, className = "", size = 18): React.ReactNode {
   switch (id) {
     case "github":
@@ -119,6 +142,9 @@ export function getConnectorBrandLogo(id: string, className = "", size = 18): Re
       return <FigmaLogo size={size} className={className} />;
     case "slack":
       return <SlackLogo size={size} className={className} />;
+    case "google-cloud":
+    case "gcp":
+      return <GoogleCloudLogo size={size} className={className} />;
     case "google-drive":
     case "google":
       return <GoogleDriveLogo size={size} className={className} />;

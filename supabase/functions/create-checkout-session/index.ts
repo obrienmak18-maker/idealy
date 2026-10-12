@@ -34,6 +34,17 @@ Deno.serve(async (req) => {
     if (!authorization?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401, req);
     if (!appOrigin) return json({ error: "Billing is temporarily unavailable" }, 503, req);
 
+    if (Deno.env.get("IDEALY_PAYMENTS_ENABLED") !== "true") {
+      return json(
+        {
+          code: "PAYMENTS_DISABLED",
+          error: "Les paiements sont actuellement désactivés pour cette phase de démonstration.",
+        },
+        403,
+        req,
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,

@@ -63,19 +63,24 @@ export const localMissionPlan: MissionPlan = {
   nextStep: "Relire l’aperçu, vérifier les fichiers puis confirmer le passage à l’itération suivante.",
   agents: [
     {
-      name: "Lyra — Architecte",
-      responsibility: "Cadre l’intention, le parcours et la priorité de la première version.",
-      result: "Un plan de mission lisible et un périmètre V1 cohérent.",
+      name: "Alvin — Messager Universel",
+      responsibility: "Réceptionne le prompt, analyse l’intention et coordonne la mission.",
+      result: "Un plan de mission cadré et transmis à l’escouade.",
     },
     {
-      name: "Mason — Builder",
-      responsibility: "Prépare une structure de page responsive à partir du plan validé.",
-      result: "Les fichiers de l’aperçu et une première interface fonctionnelle.",
+      name: "Minato — Chef d’Escouade",
+      responsibility: "Cadre l’architecture globale, le parcours et la priorité de la V1.",
+      result: "Une feuille de route limpide et un découpage modulaire validé.",
     },
     {
-      name: "Nova — Reviewer",
-      responsibility: "Vérifie la clarté, la cohérence et les points à améliorer.",
-      result: "Une revue concise avant toute publication réelle.",
+      name: "Naruto — Full-stack Builder",
+      responsibility: "Implémente la structure Next.js/Tailwind responsive et les composants fonctionnels.",
+      result: "Les fichiers du projet et une interface opérationnelle prête pour la preview.",
+    },
+    {
+      name: "Shikamaru — Reviewer & QA",
+      responsibility: "Vérifie la robustesse du code, l’accessibilité et la fluidité des interactions.",
+      result: "Une revue chirurgicale garantissant zéro régression avant confirmation.",
     },
   ],
   design: {

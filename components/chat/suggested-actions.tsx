@@ -229,21 +229,21 @@ function PureSuggestedActions({
               ease: [0.22, 1, 0.36, 1],
             }}
           >
-            <button
-              className="relative flex min-h-[96px] w-full flex-col justify-between rounded-xl border border-border/70 bg-card/75 p-3.5 text-left transition-colors duration-150 hover:border-foreground/20 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer sm:min-h-[108px] sm:p-4"
+              <button
+              className="group/card relative flex min-h-[64px] sm:min-h-[72px] w-full flex-col justify-between rounded-xl border border-border/70 bg-card/75 p-3 text-left transition-all duration-150 hover:border-primary/40 hover:bg-card hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer sm:p-3.5"
               onClick={() => handleSuggestionClick(entry)}
               type="button"
             >
-              <div className="flex items-start justify-between gap-2.5">
-                <span className="font-semibold text-sm tracking-tight text-foreground transition-colors group-hover:text-primary">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-medium text-xs sm:text-[13px] tracking-tight text-foreground transition-colors group-hover/card:text-primary">
                   {entry.label}
                 </span>
-                <span className="shrink-0 rounded-full border border-border/70 bg-muted/70 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                <span className="shrink-0 rounded-full border border-border/70 bg-muted/60 px-1.5 py-0.5 text-[9.5px] font-medium text-muted-foreground">
                   Mission
                 </span>
               </div>
 
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
                 {entry.description}
               </p>
             </button>

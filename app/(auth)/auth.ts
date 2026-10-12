@@ -6,6 +6,7 @@ import { DUMMY_PASSWORD, isDevelopmentEnvironment } from "@/lib/constants";
 import {
   createUser,
   getUser,
+  getUserById,
   getUserBySupabaseUserId,
   linkUserToSupabaseUser,
 } from "@/lib/db/queries";
@@ -76,6 +77,9 @@ export const {
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
+        if (user.email) {
+          token.email = user.email;
+        }
         if (user.supabaseAccessToken) {
           token.supabaseAccessToken = user.supabaseAccessToken;
         }
@@ -114,6 +118,38 @@ export const {
         } else {
           token.supabaseAccessToken = undefined;
           token.supabaseAccessTokenExpiresAt = undefined;
+        }
+      }
+
+      if (!token.supabaseAccessToken) {
+        let email =
+          typeof token.email === "string" && token.email.trim()
+            ? token.email.trim().toLowerCase()
+            : null;
+        if (!email && token.id) {
+          const localUser = await getUserById(token.id).catch(() => null);
+          if (localUser?.email) {
+            email = localUser.email.trim().toLowerCase();
+          }
+        }
+        if (
+          email &&
+          !email.endsWith("@idealy.local") &&
+          !email.startsWith("guest-")
+        ) {
+          try {
+            const bridge = await signInFirebaseUserThroughSupabase(email);
+            if (bridge.status === "authenticated" && bridge.accessToken) {
+              token.supabaseAccessToken = bridge.accessToken;
+              token.supabaseAccessTokenExpiresAt =
+                bridge.expiresAt ?? undefined;
+              token.supabaseRefreshToken =
+                bridge.refreshToken ?? token.supabaseRefreshToken;
+              token.supabaseUserId = bridge.userId ?? token.supabaseUserId;
+            }
+          } catch (err) {
+            console.error("Auto-bridge failed in JWT callback:", err);
+          }
         }
       }
 

@@ -46,6 +46,12 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "796636377163",
     NEXT_PUBLIC_FIREBASE_APP_ID: "1:796636377163:web:19372def99061e37021dce",
     NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: "G-XCSE5WPF9M",
+    NEXT_PUBLIC_IDEALY_PAYMENTS_ENABLED:
+      process.env.IDEALY_PAYMENTS_ENABLED === "true" ? "true" : "false",
+    NEXT_PUBLIC_FREE_GENERATION_LIMIT:
+      process.env.IDEALY_FREE_GENERATION_LIMIT ?? "5",
+    NEXT_PUBLIC_WEBCONTAINER_CLIENT_ID:
+      process.env.NEXT_PUBLIC_WEBCONTAINER_CLIENT_ID ?? "",
   },
   experimental: {
     appNewScrollHandler: true,
@@ -86,6 +92,14 @@ const nextConfig: NextConfig = {
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
+          },
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "credentialless",
           },
         ],
       },

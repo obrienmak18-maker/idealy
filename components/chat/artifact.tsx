@@ -17,6 +17,7 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -30,6 +31,7 @@ import { useArtifact } from "@/hooks/use-artifact";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 import type { Document, Vote } from "@/lib/db/schema";
 import type { MissionFile } from "@/lib/idealy/mission-files";
+import { compileProjectPreview } from "@/lib/idealy/preview-compiler";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { fetcher } from "@/lib/utils";
 import { VersionFooter } from "./version-footer";
@@ -501,7 +503,19 @@ function PureArtifact({
     }
   }, [artifact.documentId, artifactDefinition, setMetadata]);
 
-  const previewHtml = artifact.preview ?? `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>${artifact.title}</title><style>*{box-sizing:border-box}body{margin:0;background:#f8fafc;color:#0f172a;font-family:Inter,system-ui,sans-serif}main{min-height:100vh;padding:32px}section{max-width:960px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:22px;padding:32px;box-shadow:0 10px 30px #0f172a12}p{color:#64748b;margin:8px 0}h1{font-size:32px;margin:8px 0 24px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.stat{border:1px solid #e2e8f0;border-radius:14px;padding:18px;background:#fff}.stat strong{display:block;font-size:24px;color:#0f172a}.bar{height:10px;margin-top:24px;border-radius:999px;background:#e2e8f0;overflow:hidden}.bar span{display:block;width:68%;height:100%;border-radius:999px;background:#38bdf8}</style></head><body><main><section><p style="color:#0284c7">Live application</p><h1>Preview is building</h1><p>Your generated application preview will appear here.</p><div class="stats"><div class="stat"><small>Status</small><strong>Building</strong></div></div><div class="bar"><span></span></div></section></main></body></html>`;
+  const compiledPreview = useMemo(() => {
+    if (artifact.preview) {
+      return { html: artifact.preview, status: "ready" as const };
+    }
+    return compileProjectPreview({
+      files: missionFiles,
+      singleCodeContent: artifact.content,
+      activePath: previewPath,
+      isStreaming: artifact.status === "streaming",
+    });
+  }, [artifact.preview, artifact.content, artifact.status, missionFiles, previewPath]);
+
+  const previewHtml = compiledPreview.html;
 
   const previewScrollbarStyle =
     '<style>html{scrollbar-width:none;-ms-overflow-style:none}html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}body{overflow-x:hidden}</style>';
@@ -761,7 +775,7 @@ function PureArtifact({
           />
         ) : (
           <div className="flex h-full min-h-0 overflow-hidden">
-            <aside className="hidden w-56 shrink-0 border-r border-sidebar-border/60 bg-sidebar/70 p-3 sm:block">
+            <aside className="hidden w-56 shrink-0 overflow-y-auto border-r border-sidebar-border/60 bg-sidebar/70 p-3 sm:block overscroll-contain">
               <div className="mb-3 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"><span>Files</span><Folder className="size-3.5" /></div>
               <div className="space-y-1 text-xs">
                 {missionFiles.length > 0 ? missionFiles.map((file) => {
@@ -791,7 +805,7 @@ function PureArtifact({
                 )}
               </div>
             </aside>
-            <div className="min-w-0 flex-1 overflow-auto">
+            <div className="min-w-0 flex-1 overflow-auto h-full overscroll-contain">
               <artifactDefinition.content
                   content={editorContent}
                 currentVersionIndex={currentVersionIndex}

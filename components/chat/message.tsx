@@ -17,6 +17,8 @@ import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
 import { IdealyMark } from "@/components/branding/idealy-logo";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
@@ -109,6 +111,13 @@ const PurePreviewMessage = ({
   );
 
   useDataStream();
+
+  const { currentWay } = useGamificationStore();
+  const activeWayData = voiesCatalog[currentWay];
+  const chiefAgent = activeWayData?.agents?.find((a) => a.isChief) ?? activeWayData?.agents?.[0];
+  const agentName = chiefAgent?.name || alvinMessenger.name;
+  const agentRole = chiefAgent?.role || alvinMessenger.role;
+  const agentAvatar = chiefAgent?.avatarUrl || alvinMessenger.avatarUrl;
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
@@ -382,17 +391,31 @@ const PurePreviewMessage = ({
       >
         {isAssistant ? (
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            {/* Affichage agent : avatar et nom au-dessus de sa réponse */}
+            {/* Affichage agent : avatar officiel et nom de la Voie active */}
             <div className="flex items-center gap-2 pt-0.5">
-              <div className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30">
-                <IdealyMark className="size-3.5" size={14} />
+              <div className="relative flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30">
+                {agentAvatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt={agentName}
+                    className="size-full object-cover"
+                    src={agentAvatar}
+                  />
+                ) : (
+                  <IdealyMark className="size-3.5" size={14} />
+                )}
               </div>
               <span className="text-[12.5px] font-semibold tracking-tight text-foreground/90">
-                Ly
+                {agentName}
               </span>
               <span className="text-[10px] text-muted-foreground font-mono">
-                • Architecte IA
+                • {agentRole}
               </span>
+              {activeWayData?.label ? (
+                <span className="hidden sm:inline-block rounded-full bg-sidebar-accent/80 border border-sidebar-border/60 px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground">
+                  {activeWayData.label}
+                </span>
+              ) : null}
             </div>
             {/* Le texte coule directement sur le fond de l'interface, sans bulle fermée ni bordure artificielle */}
             <div className="min-w-0 flex-1 text-foreground/95">{content}</div>
@@ -407,20 +430,36 @@ const PurePreviewMessage = ({
 
 export const PreviewMessage = PurePreviewMessage;
 
-export const ThinkingMessage = () => (
-  <div
-    className="group/message w-full"
-    data-role="assistant"
-    data-testid="message-assistant-loading"
-  >
-    <div className="flex items-start gap-3">
-      <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30 animate-pulse">
-          <IdealyMark className="size-4" size={16} />
-        </div>
-      </div>
+export const ThinkingMessage = () => {
+  const { currentWay } = useGamificationStore();
+  const activeWayData = voiesCatalog[currentWay];
+  const chiefAgent = activeWayData?.agents?.find((a) => a.isChief) ?? activeWayData?.agents?.[0];
+  const agentAvatar = chiefAgent?.avatarUrl || alvinMessenger.avatarUrl;
 
-      <WaitingText />
+  return (
+    <div
+      className="group/message w-full"
+      data-role="assistant"
+      data-testid="message-assistant-loading"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
+          <div className="relative flex size-7 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30 animate-pulse">
+            {agentAvatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt="Agent actif"
+                className="size-full object-cover"
+                src={agentAvatar}
+              />
+            ) : (
+              <IdealyMark className="size-4" size={16} />
+            )}
+          </div>
+        </div>
+
+        <WaitingText />
+      </div>
     </div>
-  </div>
-);
+  );
+};

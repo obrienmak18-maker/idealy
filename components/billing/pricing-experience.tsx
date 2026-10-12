@@ -427,7 +427,8 @@ export function PricingExperience({
               : `${shownPrice.toFixed(2)} € ${text.perMonth}`;
           const billingPlan = id === "business" ? "business" : "pro";
           const href = `/register?way=${way}&plan=${billingPlan}&level=${encodeURIComponent(label)}&cycle=${annual ? "yearly" : "monthly"}&power=${points ?? "custom"}`;
-          const planIsAvailable = id === "pro" || id === "business";
+          const paymentsEnabled = process.env.NEXT_PUBLIC_IDEALY_PAYMENTS_ENABLED === "true";
+          const planIsAvailable = (id === "pro" || id === "business") && paymentsEnabled;
           return (
             <article
               aria-current={isSelected ? "true" : undefined}

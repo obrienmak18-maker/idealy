@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Zap, Shield, ArrowRight, Loader2 } from "lucide-react";
+import { Check, Zap, Sparkles, Shield, Building2, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 import {
@@ -11,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/provider";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import { getPricingTier } from "@/config/pricing";
@@ -22,10 +21,9 @@ interface UpgradeModalProps {
 }
 
 export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
-  const { t, language } = useTranslation();
-  const { currentWay, powerBalance } = useGamificationStore();
+  const { language } = useTranslation();
+  const { currentWay } = useGamificationStore();
   const [annual, setAnnual] = useState(false);
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const getTierNames = (way: string) => {
     switch (way) {
@@ -34,7 +32,7 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
           free: "Genin",
           pro: "Chunin",
           business: "Jonin",
-          enterprise: "Kage / Sannin",
+          enterprise: "Kage",
           resource: "Chakra",
         };
       case "mage":
@@ -49,60 +47,29 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
         return {
           free: "Candidat",
           pro: "Hunter Licencié",
-          business: "Double Star Hunter",
-          enterprise: "Triple Star Hunter",
+          business: "Double Star",
+          enterprise: "Triple Star",
           resource: "Nen",
         };
       default:
         return {
-          free: "Starter",
+          free: "Découverte",
           pro: "Pro",
-          business: "Team",
-          enterprise: "Enterprise",
+          business: "Business",
+          enterprise: "Entreprise",
           resource: "Power",
         };
     }
   };
 
   const wayTiers = getTierNames(currentWay);
-
   const isEn = language === "en";
   const isEs = language === "es";
 
-  const handleSelectPlan = async (planKey: "pro" | "business") => {
-    setLoadingPlan(planKey);
-    try {
-      const res = await fetch("/api/idealy/billing/portal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          planId: planKey,
-          billingCycle: annual ? "yearly" : "monthly",
-        }),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        toast.info(
-          isEn
-            ? "Redirecting to checkout..."
-            : isEs
-            ? "Redirigiendo a la pasarela segura..."
-            : "Redirection vers la passerelle sécurisée..."
-        );
-        window.location.href = "/welcome#tarifs";
-      }
-    } catch {
-      window.location.href = "/welcome#tarifs";
-    } finally {
-      setLoadingPlan(null);
-    }
-  };
-
+  const freeTier = getPricingTier("free");
   const proTier = getPricingTier("pro");
   const businessTier = getPricingTier("business");
+
   const proPrice = annual
     ? (proTier.annualPriceEur ?? proTier.priceMonthlyEur * 12) / 12
     : proTier.priceMonthlyEur;
@@ -110,231 +77,315 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
     ? (businessTier.annualPriceEur ?? businessTier.priceMonthlyEur * 12) / 12
     : businessTier.priceMonthlyEur;
 
+  const handleNotifyPlan = (planName: string) => {
+    toast.info(
+      isEn
+        ? `The ${planName} plan will be available very soon. Payments are currently paused in preview mode.`
+        : isEs
+        ? `El plan ${planName} estará disponible muy pronto. Los pagos están pausados durante la fase de prueba.`
+        : `L'offre ${planName} sera disponible très prochainement. Les paiements réels sont désactivés pour cette phase.`
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh] p-0 border-border/80 bg-background/95 backdrop-blur-2xl">
-        {/* Header with glow */}
-        <div className="relative bg-gradient-to-b from-violet-500/15 via-background to-background p-6 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-sky-400 text-white shadow-md shadow-violet-500/20">
-              <IdealyMark className="size-6 text-white" size={24} />
+      <DialogContent className="w-[95vw] max-w-7xl overflow-y-auto max-h-[92vh] p-0 border-slate-800/60 bg-[#07090e]/85 text-slate-100 shadow-2xl backdrop-blur-3xl backdrop-saturate-150 rounded-3xl">
+        {/* Header exact et moderne */}
+        <div className="relative border-b border-slate-800/80 bg-gradient-to-b from-cyan-950/20 via-[#0a0e1a] to-[#07090e] px-6 py-6 sm:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-cyan-500/40 text-cyan-400 shadow-md">
+                <IdealyMark className="size-6 text-cyan-400" size={24} />
+              </div>
+              <div>
+                <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                  {isEn ? "Idealy Plans & Pricing" : isEs ? "Tarifas y Planes Idealy" : "Tarifs & Formules Idealy"}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-400 mt-0.5">
+                  {isEn
+                    ? "Transparent pricing tailored to every stage of your software development journey."
+                    : isEs
+                    ? "Precios transparentes adaptados a cada etapa del desarrollo de software."
+                    : "Des offres transparentes adaptées à chaque étape de vos projets logiciels."}
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-xl font-bold tracking-tight">
-                {isEn
-                  ? "Scale up your AI Studio"
-                  : isEs
-                  ? "Pasa al siguiente nivel"
-                  : "Passez à la vitesse supérieure"}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                {isEn
-                  ? "Unlock full multi-agent squad power and ship your apps avec les contrôles et limites du plan."
-                  : isEs
-                  ? "Desbloquea el poder total del equipo de IA y crea tus apps avec les contrôles et limites du plan."
-                  : "Débloquez la puissance maximale de l'escouade multi-agents et construisez vos apps avec les contrôles et limites du plan."}
-              </DialogDescription>
-            </div>
-          </div>
 
-          {/* Billing Cycle Toggle */}
-          <div className="mt-5 flex items-center justify-center">
-            <div className="inline-flex items-center rounded-full border border-border/80 bg-muted/60 p-1 text-xs">
+            {/* Toggle Annuel / Mensuel */}
+            <div className="inline-flex items-center rounded-full border border-slate-800 bg-slate-900/90 p-1 text-xs self-start sm:self-center">
               <button
                 onClick={() => setAnnual(false)}
-                className={`rounded-full px-4 py-1 font-medium transition-all ${
+                className={`rounded-full px-3.5 py-1 font-medium transition-all cursor-pointer ${
                   !annual
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-slate-800 text-white shadow-xs"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
                 type="button"
               >
-                {isEn ? "Monthly" : isEs ? "Mensual" : "Facturation mensuelle"}
+                {isEn ? "Monthly" : isEs ? "Mensual" : "Mensuel"}
               </button>
               <button
                 onClick={() => setAnnual(true)}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-1 font-medium transition-all ${
+                className={`flex items-center gap-1.5 rounded-full px-3.5 py-1 font-medium transition-all cursor-pointer ${
                   annual
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-slate-800 text-white shadow-xs"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
                 type="button"
               >
                 <span>{isEn ? "Yearly" : isEs ? "Anual" : "Annuel"}</span>
-                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                  {isEn ? "2 months free" : isEs ? "2 meses gratis" : "2 mois offerts"}
+                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9.5px] font-bold text-emerald-400">
+                  {isEn ? "-20%" : isEs ? "-20%" : "-20%"}
                 </span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid gap-5 p-6 pt-2 sm:grid-cols-2">
-          {/* Pro Plan (Highlighted) */}
-          <div className="relative flex flex-col justify-between rounded-3xl border-2 border-violet-500/60 bg-gradient-to-b from-violet-500/10 via-card/90 to-card p-6 shadow-xl shadow-violet-500/10">
-            <div className="absolute -top-3 right-6 rounded-full bg-gradient-to-r from-violet-600 to-sky-500 px-3.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-white shadow-md">
-              {isEn ? "Most Popular" : isEs ? "Más Popular" : "Le plus populaire"}
-            </div>
-
+        {/* Grille Desktop 4 Colonnes pour tous les plans */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 sm:p-8">
+          {/* 1. PLAN DÉCOUVERTE / STARTER */}
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-800/80 bg-[#0c1017] p-5">
             <div>
-              <div className="flex items-center gap-2">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-violet-500/20 text-violet-400">
-                  <Zap className="size-4" />
-                </div>
-                <h3 className="font-bold text-lg text-foreground">
-                  {`Plan ${wayTiers.pro}`}
-                </h3>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-200">
+                  {wayTiers.free}
+                </span>
+                <span className="rounded-md bg-slate-800/80 border border-slate-700/60 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                  Actuel
+                </span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-slate-400 line-clamp-2">
                 {isEn
-                  ? "Perfect for solo builders and founders building MVPs."
+                  ? "Explore Idealy and build your first full-stack apps."
                   : isEs
-                  ? "Ideal para creadores y fundadores que lanzan sus MVP."
-                  : "Idéal pour concevoir et lancer vos SaaS & MVP en autonomie complète."}
+                  ? "Explora Idealy y crea tus primeras aplicaciones."
+                  : "Explorez Idealy et concevez vos premières applications."}
               </p>
 
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold tracking-tight text-foreground">
-                  {proPrice.toFixed(2)} €
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {isEn ? "/ month" : isEs ? "/ mes" : "/ mois"}
-                </span>
+                <span className="text-3xl font-extrabold text-white">0 €</span>
+                <span className="text-xs text-slate-400">/ mois</span>
               </div>
 
-              <ul className="mt-5 space-y-2.5 text-xs text-foreground/90">
-                {[
-                  `${proTier.power.monthlyAllocation.toLocaleString()} ${wayTiers.resource} Points / mois`,
-                  isEn
-                    ? "Complete five-agent Way squad"
-                    : isEs
-                    ? "Escuadrón completo de cinco agentes"
-                    : "Escouade complète de cinq agents",
-                  isEn
-                    ? "High performance AI models with priority speed"
-                    : isEs
-                    ? "Modelos de IA prioritarios y máxima velocidad"
-                    : "Modèles IA haute performance & vitesse prioritaire",
-                  isEn
-                    ? "Direct GitHub sync & bidirectional commits"
-                    : isEs
-                    ? "Conexión directa con GitHub y sync bidireccional"
-                    : "Intégration directe GitHub & export avec les contrôles et limites du plan",
-                  isEn
-                    ? "Unlimited mission history and context retention"
-                    : isEs
-                    ? "Historial ilimitado y retención de contexto"
-                    : "Historique illimité et rétention avancée",
-                  isEn ? "Priority support within 24h" : isEs ? "Soporte prioritario en 24h" : "Support prioritaire sous 24h",
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <Check className="size-4 shrink-0 text-emerald-500 mt-0.5" />
-                    <span className="leading-snug">{feature}</span>
-                  </li>
-                ))}
+              <div className="my-4 h-px bg-slate-800/80" />
+
+              <ul className="space-y-2.5 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-emerald-400 shrink-0" />
+                  <span>200 pts de {wayTiers.resource} / mois</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-emerald-400 shrink-0" />
+                  <span>3 projets & VFS 50 fichiers</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-emerald-400 shrink-0" />
+                  <span>Accès aux 4 Voies d'agents</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-emerald-400 shrink-0" />
+                  <span>Export PKZip immédiat</span>
+                </li>
               </ul>
             </div>
 
-            <Button
-              className="mt-6 w-full gap-2 cursor-pointer font-semibold bg-gradient-to-r from-violet-600 via-purple-600 to-sky-500 text-white shadow-md shadow-violet-500/25 hover:opacity-95"
-              onClick={() => handleSelectPlan("pro")}
-              disabled={loadingPlan !== null}
-            >
-              {loadingPlan === "pro" ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <>
-                  <span>{isEn ? `Choose ${wayTiers.pro}` : isEs ? `Elegir ${wayTiers.pro}` : `Choisir ${wayTiers.pro}`}</span>
-                  <ArrowRight className="size-4" />
-                </>
-              )}
-            </Button>
+            <div className="mt-6">
+              <button
+                type="button"
+                disabled
+                className="w-full rounded-xl border border-slate-800 bg-slate-900/60 py-2 text-xs font-semibold text-slate-400 cursor-not-allowed text-center"
+              >
+                Plan Actif
+              </button>
+            </div>
           </div>
 
-          {/* Business Plan */}
-          <div className="relative flex flex-col justify-between rounded-3xl border border-border/80 bg-card/60 p-6 backdrop-blur-xl">
+          {/* 2. PLAN PRO (HIGHLIGHTED) */}
+          <div className="relative flex flex-col justify-between rounded-2xl border-2 border-cyan-500/70 bg-gradient-to-b from-cyan-950/20 via-[#0c1017] to-[#0c1017] p-5 shadow-xl shadow-cyan-500/10">
+            <div className="absolute -top-3 right-4 rounded-full bg-cyan-500 px-2.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-black shadow-md">
+              Populaire
+            </div>
+
             <div>
-              <div className="flex items-center gap-2">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-orange-400/20 text-orange-400">
-                  <Shield className="size-4" />
-                </div>
-                <h3 className="font-bold text-lg text-foreground">
-                  {`Plan ${wayTiers.business}`}
-                </h3>
+              <div className="flex items-center gap-1.5">
+                <Zap className="size-4 text-cyan-400" />
+                <span className="text-sm font-bold text-white">
+                  {wayTiers.pro}
+                </span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-slate-400 line-clamp-2">
                 {isEn
-                  ? "For teams, studios, and agencies shipping at highest frequency."
+                  ? "For creators & developers shipping production software."
                   : isEs
-                  ? "Para equipos, agencias y estudios con máxima frecuencia."
-                  : "Pour les équipes, studios et agences exigeant une cadence maximale."}
+                  ? "Para desarrolladores y creadores de software real."
+                  : "Pour les créateurs et développeurs déployant en production."}
               </p>
 
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold tracking-tight text-foreground">
-                  {businessPrice.toFixed(2)} €
+                <span className="text-3xl font-extrabold text-white">
+                  {proPrice.toFixed(0)} €
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {isEn ? "/ month" : isEs ? "/ mes" : "/ mois"}
-                </span>
+                <span className="text-xs text-slate-400">/ mois</span>
               </div>
 
-              <ul className="mt-5 space-y-2.5 text-xs text-foreground/90">
-                {[
-                  `${businessTier.power.monthlyAllocation.toLocaleString()} ${wayTiers.resource} Points / mois`,
-                  isEn
-                    ? "Customizable specialized agents and roles"
-                    : isEs
-                    ? "Agentes especializados personalizables"
-                    : "Agents spécialisés personnalisables",
-                  isEn
-                    ? "Multi-member collaborative shared workspaces"
-                    : isEs
-                    ? "Espacios de trabajo colaborativos multiusuario"
-                    : "Espaces partagés et collaboration multi-utilisateurs",
-                  isEn
-                    ? "Enterprise connectors and private MCP fleet"
-                    : isEs
-                    ? "Flota de conectores MCP de empresa"
-                    : "Gestion de flotte de clés API et connecteurs d'entreprise",
-                  isEn
-                    ? "Early access to upcoming models and engine updates"
-                    : isEs
-                    ? "Acceso prioritario a nuevos modelos y motores"
-                    : "Accès prioritaire aux nouvelles versions & modèles",
-                  isEn
-                    ? "99.9% uptime SLA and 24/7 dedicated support"
-                    : isEs
-                    ? "SLA 99.9% y soporte dedicado 24/7"
-                    : "SLA 99.9% et support dédié 24/7",
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <Check className="size-4 shrink-0 text-orange-400 mt-0.5" />
-                    <span className="leading-snug">{feature}</span>
-                  </li>
-                ))}
+              <div className="my-4 h-px bg-slate-800/80" />
+
+              <ul className="space-y-2.5 text-xs text-slate-200">
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-cyan-400 shrink-0" />
+                  <span className="font-medium text-white">2 500 pts de {wayTiers.resource} / mois</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-cyan-400 shrink-0" />
+                  <span>Projets illimités & VFS 300 fichiers</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-cyan-400 shrink-0" />
+                  <span>Sync bidirectionnelle GitHub</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-cyan-400 shrink-0" />
+                  <span>Modèles IA haute performance</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-cyan-400 shrink-0" />
+                  <span>Support prioritaire</span>
+                </li>
               </ul>
             </div>
 
-            <Button
-              variant="outline"
-              className="mt-6 w-full gap-2 cursor-pointer border-border/80 hover:bg-muted/60"
-              onClick={() => handleSelectPlan("business")}
-              disabled={loadingPlan !== null}
-            >
-              {loadingPlan === "business" ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <>
-                  <span>
-                    {isEn ? `Choose ${wayTiers.business}` : isEs ? `Elegir ${wayTiers.business}` : `Choisir ${wayTiers.business}`}
-                  </span>
-                  <ArrowRight className="size-4" />
-                </>
-              )}
-            </Button>
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => handleNotifyPlan(`Plan ${wayTiers.pro}`)}
+                className="w-full rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black py-2 text-xs font-bold transition-all cursor-pointer shadow-md shadow-cyan-500/20 text-center"
+              >
+                Bientôt disponible
+              </button>
+            </div>
           </div>
+
+          {/* 3. PLAN BUSINESS */}
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-800/80 bg-[#0c1017] p-5">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="size-4 text-violet-400" />
+                <span className="text-sm font-bold text-slate-200">
+                  {wayTiers.business}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-400 line-clamp-2">
+                {isEn
+                  ? "For startups & agencies requiring continuous execution."
+                  : isEs
+                  ? "Para startups y equipos que exigen máxima potencia."
+                  : "Pour les startups & équipes exigeant une puissance continue."}
+              </p>
+
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className="text-3xl font-extrabold text-white">
+                  {businessPrice.toFixed(0)} €
+                </span>
+                <span className="text-xs text-slate-400">/ mois</span>
+              </div>
+
+              <div className="my-4 h-px bg-slate-800/80" />
+
+              <ul className="space-y-2.5 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-violet-400 shrink-0" />
+                  <span className="font-medium text-white">4 000 pts de {wayTiers.resource} / mois</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-violet-400 shrink-0" />
+                  <span>20 missions parallèles en simultané</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-violet-400 shrink-0" />
+                  <span>Connecteurs Cloud & MCP complets</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-violet-400 shrink-0" />
+                  <span>Auto-correction en boucle fermée</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-violet-400 shrink-0" />
+                  <span>SLA 99.9% garanti</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => handleNotifyPlan(`Plan ${wayTiers.business}`)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-white py-2 text-xs font-semibold transition-all cursor-pointer text-center"
+              >
+                Bientôt disponible
+              </button>
+            </div>
+          </div>
+
+          {/* 4. PLAN ENTERPRISE */}
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-800/80 bg-[#0c1017] p-5">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <Building2 className="size-4 text-amber-400" />
+                <span className="text-sm font-bold text-slate-200">
+                  {wayTiers.enterprise}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-400 line-clamp-2">
+                {isEn
+                  ? "Custom multi-agent fleets & bespoke cloud infrastructure."
+                  : isEs
+                  ? "Infraestructura dedicada y flotas de agentes a medida."
+                  : "Flottes d'agents sur-mesure & infrastructure dédiée."}
+              </p>
+
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className="text-2xl font-extrabold text-white">Sur mesure</span>
+              </div>
+
+              <div className="my-4 h-px bg-slate-800/80" />
+
+              <ul className="space-y-2.5 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-amber-400 shrink-0" />
+                  <span className="font-medium text-white">Volume de {wayTiers.resource} sur mesure</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-amber-400 shrink-0" />
+                  <span>Agents d'ingénierie personnalisés</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-amber-400 shrink-0" />
+                  <span>Déploiement On-Premise ou Cloud privé</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="size-3.5 text-amber-400 shrink-0" />
+                  <span>SLA 99.99% & Account Manager dédié</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => handleNotifyPlan(`Plan ${wayTiers.enterprise}`)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-white py-2 text-xs font-semibold transition-all cursor-pointer text-center"
+              >
+                Bientôt disponible
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Note de bas de page rassurante */}
+        <div className="border-t border-slate-800/80 bg-[#090c14] px-6 py-4 sm:px-8 flex items-center justify-between text-xs text-slate-500">
+          <span>Idealy Studio Preview — Aucune carte bancaire requise pour les tests.</span>
+          <span className="font-mono">Chiffrement AES-256</span>
         </div>
       </DialogContent>
     </Dialog>

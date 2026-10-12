@@ -137,3 +137,20 @@ Le workspace ne se contente pas de "réduire les colonnes" sur petit écran.
 3. ❌ **Le faux statut "Connecting..."** : Afficher un indicateur vert sur un connecteur sans handshake cryptographique réel.
 4. ❌ **Le "Loading..." générique** : Tout temps d'attente doit expliciter la phase exacte : `"Architecte structure le plan..."`, `"Reviewer valide le typage..."`.
 5. ❌ **L'infantilisation par la gamification** : Pas de confettis, de sons de trompette ou de badges décoratifs sans valeur technique. Le rang et les Voies récompensent une maîtrise d'ingénierie logicielle.
+6. ❌ **Zéro Émojis comme Icônes d'Interface** : Proscrire tout émoji pour les contrôles, statuts ou boutons d'interface. Utiliser exclusivement des icônes SVG vectorielles précises (Lucide React, Heroicons, logos officiels de marque).
+7. ❌ **Boutons tactiles trop petits** : Pas d'éléments d'action sous le seuil critique de 44×44px sur écrans tactiles.
+
+---
+
+## 9. Intégration UI/UX Pro Max Intelligence
+
+Idealy intègre en natif l'intelligence de conception issue de `ui-ux-pro-max-skill` (119 règles UX, 192 palettes vérifiées, 79 styles et standards d'accessibilité) :
+- **Pré-livraison systématique** :
+  - [x] Pas d'émojis comme icônes (SVG Lucide / Logos de marque officiels uniquement).
+  - [x] Cibles de tap ≥ 44×44px avec espacement minimal de 8px.
+  - [x] `cursor-pointer` sur chaque élément interactif.
+  - [x] Contraste de texte ≥ 4.5:1 (WCAG AA).
+  - [x] Anneaux de focus `focus-visible` discernables sans altération de layout.
+  - [x] Prise en charge stricte de `prefers-reduced-motion`.
+  - [x] Écran compact sur desktop : élimination des scrolls verticaux parasites sur grand écran.
+

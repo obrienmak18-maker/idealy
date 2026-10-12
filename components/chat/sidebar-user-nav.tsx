@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp, Sparkles } from "lucide-react";
+import { ChevronUp, Globe, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
@@ -37,7 +37,7 @@ export function SidebarUserNav({ user }: { user: User }) {
   const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
 
-  const { t } = useTranslation();
+  const { t, language, setLanguage } = useTranslation();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const isGuest = guestRegex.test(data?.user?.email ?? "");
   const handleThemeSelect = useCallback(() => {
@@ -112,6 +112,22 @@ export function SidebarUserNav({ user }: { user: User }) {
                 <span>{t("pricing.upgradeTitle", "Passer à Pro")}</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer text-[13px] flex items-center justify-between"
+                onSelect={() => {
+                  const nextLang = language === "fr" ? "en" : language === "en" ? "es" : "fr";
+                  setLanguage(nextLang);
+                  document.cookie = `NEXT_LOCALE=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <Globe className="size-3.5 text-muted-foreground" />
+                  <span>
+                    {language === "fr" ? "Langue : Français" : language === "en" ? "Language: English" : "Idioma: Español"}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-muted-foreground uppercase">{language}</span>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 className="cursor-pointer text-[13px]"
                 data-testid="user-nav-item-theme"

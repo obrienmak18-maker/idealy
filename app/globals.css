@@ -552,55 +552,15 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
   animation: glow-pulse 2s ease-in-out infinite;
 }
 
-/* Idealy demo treatment: a subtle Google-inspired color orbit around the composer. */
+/* Idealy Composer: clean, unified surface with subtle brand ambient glow on focus */
 .idealy-prompt-shell {
   isolation: isolate;
+  border-radius: 1.25rem;
+  transition: box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.idealy-prompt-shell::before {
-  position: absolute;
-  inset: -2px;
-  z-index: -1;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(
-    90deg,
-    #4285f4 0%,
-    #34a853 25%,
-    #fbbc05 50%,
-    #ea4335 75%,
-    #4285f4 100%
-  );
-  background-size: 220% 100%;
-  border-radius: 1.1rem;
-  opacity: 0.32;
-  filter: blur(7px);
-  animation: idealy-prompt-glow 7s ease-in-out infinite alternate;
-}
-
-.idealy-prompt-shell::after {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  content: "";
-  background: var(--background);
-  border-radius: 1rem;
-}
-
-@keyframes idealy-prompt-glow {
-  from {
-    background-position: 0% 50%;
-  }
-  to {
-    background-position: 100% 50%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .idealy-prompt-shell::before {
-    animation: none;
-  }
+.idealy-prompt-shell:focus-within {
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3), 0 8px 24px -4px rgba(139, 92, 246, 0.12);
 }
 
 .ProseMirror {
@@ -957,7 +917,7 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
 }
 
 .idealy-mark__orbit {
-  transform-origin: 32px 32px;
+  transform-origin: 128px 128px;
 }
 
 .idealy-mark--animated .idealy-mark__orbit--one {
@@ -970,17 +930,17 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
 
 .idealy-mark--animated .idealy-mark__core {
   animation: idealy-core-pulse 3.2s ease-in-out infinite;
-  transform-origin: 32px 32px;
+  transform-origin: 128px 128px;
 }
 
 @keyframes idealy-orbit-one {
-  from { transform: rotate(-28deg); }
-  to { transform: rotate(332deg); }
+  from { transform: rotate(-15deg); }
+  to { transform: rotate(345deg); }
 }
 
 @keyframes idealy-orbit-two {
-  from { transform: rotate(38deg); }
-  to { transform: rotate(-322deg); }
+  from { transform: rotate(30deg); }
+  to { transform: rotate(-330deg); }
 }
 
 @keyframes idealy-core-pulse {

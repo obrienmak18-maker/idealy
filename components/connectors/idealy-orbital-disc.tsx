@@ -1,137 +1,187 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { IdealyLogo } from "@/components/branding/idealy-logo";
-import { PlusIcon, CheckIcon } from "lucide-react";
-import { getConnectorBrandLogo } from "./brand-logos";
+import React from "react";
+import { PlusIcon } from "lucide-react";
+import { IdealyMark } from "@/components/branding/idealy-logo";
+import {
+  GitHubLogo,
+  FigmaLogo,
+  SupabaseLogo,
+  StripeLogo,
+  VercelLogo,
+} from "./brand-logos";
 
-interface OrbitalConnector {
-  id: string;
-  name: string;
-  category: string;
-  status: "available" | "slot";
+interface IdealyOrbitalDiscProps {
+  connectedIds?: readonly string[];
+  activeConnectorId?: string;
+  onSelectConnector?: (id: string) => void;
+  onAddConnector?: () => void;
 }
-
-const ORBITAL_CONNECTORS: OrbitalConnector[] = [
-  // The orbital disc is presentation-only. Live connection state comes from props.
-  { id: "github", name: "GitHub", category: "Code", status: "available" },
-  { id: "supabase", name: "Supabase", category: "Database", status: "available" },
-  { id: "stripe", name: "Stripe", category: "Payments", status: "available" },
-  { id: "vercel", name: "Vercel", category: "Deploy", status: "available" },
-  { id: "canva", name: "Canva", category: "Design", status: "available" },
-  { id: "slack", name: "Slack", category: "Communication", status: "available" },
-
-  // Arc Inférieur : Disques / Slots réservés pour futures intégrations
-  { id: "slot-1", name: "Extension", category: "MCP Server", status: "slot" },
-  { id: "slot-2", name: "Extension", category: "Webhooks", status: "slot" },
-  { id: "slot-3", name: "Extension", category: "Custom API", status: "slot" },
-  { id: "slot-4", name: "Extension", category: "Figma Sync", status: "slot" },
-];
 
 export function IdealyOrbitalDisc({
   connectedIds = [],
+  activeConnectorId,
   onSelectConnector,
-}: {
-  connectedIds?: readonly string[];
-  onSelectConnector?: (id: string) => void;
-}) {
-  const [activeItem, setActiveItem] = useState<string>("github");
+  onAddConnector,
+}: IdealyOrbitalDiscProps) {
+  // 5 top-arc nodes: GitHub, Figma, Supabase, Stripe, Vercel
+  const activeNodes = [
+    {
+      id: "github",
+      label: "GitHub",
+      left: "10%",
+      top: "54%",
+      logo: <GitHubLogo size={22} className="text-white" />,
+    },
+    {
+      id: "figma",
+      label: "Figma",
+      left: "26%",
+      top: "26%",
+      logo: <FigmaLogo size={22} />,
+    },
+    {
+      id: "supabase",
+      label: "Supabase",
+      left: "50%",
+      top: "12%",
+      logo: <SupabaseLogo size={22} />,
+    },
+    {
+      id: "stripe",
+      label: "Stripe",
+      left: "74%",
+      top: "26%",
+      logo: <StripeLogo size={22} className="text-[#635BFF]" />,
+    },
+    {
+      id: "vercel",
+      label: "Vercel",
+      left: "90%",
+      top: "54%",
+      logo: <VercelLogo size={20} className="text-white" />,
+    },
+  ];
+
+  // 4 bottom-arc empty slot nodes
+  const emptySlots = [
+    { id: "slot-1", left: "19%", top: "77%" },
+    { id: "slot-2", left: "38%", top: "90%" },
+    { id: "slot-3", left: "62%", top: "90%" },
+    { id: "slot-4", left: "81%", top: "77%" },
+  ];
 
   return (
-    <div className="relative mx-auto flex flex-col items-center justify-center py-6 select-none overflow-hidden">
-      {/* Rayonnement d'ambiance cosmique adapté light/dark */}
-      <div className="absolute -top-10 size-96 rounded-full bg-gradient-to-tr from-violet-600/10 via-sky-500/10 to-transparent blur-3xl pointer-events-none" />
+    <div className="relative mx-auto w-full max-w-4xl py-6 select-none overflow-visible">
+      {/* Container */}
+      <div className="relative w-full h-[280px] sm:h-[340px] md:h-[380px] flex items-center justify-center">
+        {/* SVG Background: Elliptical orbital tracks */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          viewBox="0 0 900 380"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient id="orbital-grad" x1="0%" y1="50%" x2="100%" y2="50%">
+              <stop offset="0%" stopColor="#14B8A6" />
+              <stop offset="50%" stopColor="#38BDF8" />
+              <stop offset="100%" stopColor="#A855F7" />
+            </linearGradient>
+          </defs>
 
-      {/* Anneau orbital central */}
-      <div className="relative flex items-center justify-center size-[330px] sm:size-[380px]">
-        {/* Anneau externe pointillé avec rotation discrète */}
-        <div className="absolute inset-0 rounded-full border border-dashed border-border/80 dark:border-violet-500/30 animate-[spin_60s_linear_infinite]" />
-        
-        {/* Anneau intérieur solide */}
-        <div className="absolute inset-6 rounded-full border border-border/60 dark:border-violet-400/20 bg-gradient-to-b from-primary/5 via-transparent to-card/40" />
+          {/* Inner dashed elliptical orbit */}
+          <ellipse
+            cx="450" cy="190" rx="320" ry="115"
+            stroke="url(#orbital-grad)"
+            strokeWidth="1"
+            strokeDasharray="4 8"
+            opacity="0.35"
+          />
 
-        {/* Noyau central avec le logo Idealy tournant */}
-        <div className="relative z-10 flex flex-col items-center justify-center size-28 sm:size-32 rounded-full border border-border bg-card/90 shadow-2xl shadow-primary/20 backdrop-blur-xl">
-          <IdealyLogo animated compact={false} size={54} className="drop-shadow-[0_0_15px_rgba(56,189,248,0.35)]" />
-          <span className="mt-1 text-[10px] font-bold tracking-wider uppercase text-foreground/80 font-mono">
-            Idealy Core
-          </span>
-          <div className="absolute -bottom-1 size-2 rounded-full bg-emerald-500 animate-ping" />
+          {/* Main elliptical orbital track */}
+          <ellipse
+            cx="450" cy="190" rx="370" ry="142"
+            stroke="url(#orbital-grad)"
+            strokeWidth="1.2"
+            opacity="0.5"
+          />
+        </svg>
+
+        {/* Center: Real Idealy Logo (large, animated) */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+          <div className="relative">
+            {/* Glow aura behind the logo */}
+            <div className="absolute -inset-6 rounded-full bg-gradient-to-br from-teal-500/20 via-cyan-500/15 to-purple-500/20 blur-2xl animate-pulse" />
+            <IdealyMark
+              size={80}
+              animated
+              className="relative drop-shadow-[0_0_20px_rgba(56,189,248,0.4)]"
+            />
+          </div>
         </div>
 
-        {/* Disposition circulaire des connecteurs */}
-        {ORBITAL_CONNECTORS.map((connector, index) => {
-          const total = ORBITAL_CONNECTORS.length;
-          // Angle de position sur le cercle (commençant par le haut)
-          const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-          const radius = 135; // Rayon orbital
-          const x = Math.round(radius * Math.cos(angle));
-          const y = Math.round(radius * Math.sin(angle));
-
-          const isSlot = connector.status === "slot";
-          const isSelected = activeItem === connector.id;
-          const isConnected = connectedIds.includes(connector.id);
+        {/* TOP ARC: 5 Active Connected Nodes */}
+        {activeNodes.map((node) => {
+          const isSelected = activeConnectorId === node.id;
+          const isConnected = connectedIds.includes(node.id);
 
           return (
             <div
-              key={connector.id}
-              style={{
-                transform: `translate(${x}px, ${y}px)`,
-              }}
-              className="absolute z-20 flex items-center justify-center transition-all duration-300"
+              key={node.id}
+              style={{ left: node.left, top: node.top }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group cursor-pointer z-10"
+              onClick={() => onSelectConnector?.(node.id)}
             >
-              {isSlot ? (
-                // Disque d'extension holographique pour futures intégrations
-                <div
-                  title="Emplacement réservé pour futures intégrations"
-                  className="group flex size-9 items-center justify-center rounded-full border border-dashed border-border bg-card/40 text-muted-foreground/60 transition-all hover:border-primary/60 hover:text-foreground hover:scale-110 cursor-pointer backdrop-blur-md"
-                >
-                  <PlusIcon className="size-3.5 group-hover:rotate-90 transition-transform duration-200" />
-                </div>
-              ) : (
-                // Connecteur actif / disponible avec vrai logo officiel SVG
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveItem(connector.id);
-                    onSelectConnector?.(connector.id);
-                  }}
-                  className={`group relative flex size-11 items-center justify-center rounded-2xl border transition-all duration-300 cursor-pointer backdrop-blur-xl ${
-                    isSelected
-                      ? "border-primary bg-primary/15 scale-110 shadow-lg shadow-primary/20 ring-1 ring-primary/40"
-                      : "border-border/80 bg-card/90 hover:border-primary/50 hover:scale-105"
-                  }`}
-                  title={`${connector.name} (${connector.category})`}
-                >
-                  <div className="flex items-center justify-center">
-                    {getConnectorBrandLogo(connector.id, "size-5 text-foreground")}
-                  </div>
-                  {isConnected && (
-                    <span className="absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xs">
-                      <CheckIcon className="size-2.5 stroke-[3]" />
-                    </span>
-                  )}
-                  {/* Tooltip flottant au survol */}
-                  <span className="absolute -bottom-6 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold whitespace-nowrap bg-background/95 px-2 py-0.5 rounded-md border border-border shadow-xs pointer-events-none z-30">
-                    {connector.name}
-                  </span>
-                </button>
-              )}
+              {/* Soft radial glow aura */}
+              <div
+                className={`absolute -inset-3 rounded-full blur-xl transition-all duration-300 pointer-events-none ${
+                  isSelected
+                    ? "bg-cyan-400/40 scale-125"
+                    : isConnected
+                    ? "bg-cyan-500/25 group-hover:bg-cyan-400/35"
+                    : "bg-slate-700/20 group-hover:bg-cyan-500/20"
+                }`}
+              />
+
+              {/* Dark circular disc node */}
+              <button
+                type="button"
+                className={`relative flex size-12 sm:size-14 items-center justify-center rounded-full bg-[#0b101b] border transition-all duration-300 shadow-xl ${
+                  isSelected
+                    ? "border-cyan-400 scale-110 shadow-cyan-500/30"
+                    : "border-slate-800 hover:border-cyan-500/60 group-hover:scale-105"
+                }`}
+                aria-label={`Sélectionner ${node.label}`}
+              >
+                {node.logo}
+              </button>
+
+              {/* Label */}
+              <span className="mt-2 text-xs font-medium text-slate-300 tracking-wide transition-colors group-hover:text-white">
+                {node.label}
+              </span>
             </div>
           );
         })}
-      </div>
 
-      {/* Légende orbitale */}
-      <div className="mt-4 flex items-center gap-6 text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <span className="size-2 rounded-full bg-emerald-500" />
-          <span>Connecteurs connectés</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="size-2 rounded-full border border-dashed border-foreground/50" />
-          <span>Emplacements d'extension futurs</span>
-        </div>
+        {/* BOTTOM ARC: 4 Empty Slot Nodes */}
+        {emptySlots.map((slot) => (
+          <div
+            key={slot.id}
+            style={{ left: slot.left, top: slot.top }}
+            className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-10"
+          >
+            <button
+              type="button"
+              onClick={() => onAddConnector?.()}
+              title="Ajouter une intégration"
+              className="flex size-7 sm:size-8 items-center justify-center rounded-full border border-dashed border-slate-700 bg-slate-900/60 text-slate-500 hover:border-cyan-500/70 hover:text-cyan-400 hover:scale-110 transition-all duration-200 cursor-pointer"
+            >
+              <PlusIcon className="size-3 sm:size-3.5 stroke-[2]" />
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

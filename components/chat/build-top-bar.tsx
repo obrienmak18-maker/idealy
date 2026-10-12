@@ -7,12 +7,14 @@ import {
   Crosshair,
   Database,
   ExternalLink,
+  FolderDown,
   Globe2,
   History,
   Laptop,
   Maximize2,
   Minimize2,
   MoreHorizontal,
+  PanelLeftClose,
   RefreshCw,
   Share2,
   Smartphone,
@@ -21,13 +23,14 @@ import {
   Tablet,
   TerminalSquare,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import useSWR, { unstable_serialize, useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PowerStatusBadge } from "@/components/chat/power-status";
+import { FreeQuotaBadge } from "@/components/chat/free-quota-badge";
 import { CheckpointModal } from "@/components/chat/checkpoint-modal";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { useArtifact } from "@/hooks/use-artifact";
@@ -35,6 +38,8 @@ import { fetcher } from "@/lib/utils";
 import { downloadZip } from "@/lib/export/zip";
 import { localWorkspaceMetadata } from "@/lib/idealy/local-workspace-demo";
 import { getChatHistoryPaginationKey } from "@/lib/chat-history-key";
+import { extractAvailableRoutes } from "@/lib/idealy/preview-compiler";
+import type { MissionFile } from "@/lib/idealy/mission-files";
 
 type WorkspaceView = "preview" | "code" | "database";
 type Device = "desktop" | "tablet" | "mobile";
@@ -42,12 +47,6 @@ type PreviewPage = { label: string; path: string };
 
 const controlClass =
   "inline-flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground";
-
-const previewPages: PreviewPage[] = [
-  { label: "Home", path: "/" },
-  { label: "Settings", path: "/settings" },
-  { label: "Dashboard", path: "/dashboard" },
-];
 
 /**
  * Derive a precise, truthful status label from the mission squad lifecycle.
@@ -101,6 +100,12 @@ export function BuildTopBar() {
     revalidateOnFocus: false,
   });
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  const missionFiles = useMemo(
+    () => (Array.isArray(metadata?.missionFiles) ? (metadata.missionFiles as MissionFile[]) : []),
+    [metadata?.missionFiles]
+  );
+  const dynamicPages = useMemo(() => extractAvailableRoutes(missionFiles), [missionFiles]);
+
   const [title, setTitle] = useState("Projet Idealy");
   const [renameDraft, setRenameDraft] = useState("");
   const [renameOpen, setRenameOpen] = useState(false);
@@ -108,11 +113,13 @@ export function BuildTopBar() {
   const [favorite, setFavorite] = useState(false);
   const [view, setView] = useState<WorkspaceView>("preview");
   const [device, setDevice] = useState<Device>("desktop");
-  const [page, setPage] = useState<PreviewPage>(previewPages[0]);
+  const [page, setPage] = useState<PreviewPage>({ label: "Accueil", path: "/" });
   const [pageMenuOpen, setPageMenuOpen] = useState(false);
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
+  const projectMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const pageMenuRef = useRef<HTMLDivElement>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -127,6 +134,7 @@ export function BuildTopBar() {
     setFavorite(false);
     setRenameDraft("");
     setRenameOpen(false);
+    setProjectMenuOpen(false);
   }, [chatId]);
 
   useEffect(() => {
@@ -186,9 +194,11 @@ export function BuildTopBar() {
     const handleToggleInspector = () => {
       setIsInspectorActive((prev) => {
         const next = !prev;
-        window.dispatchEvent(
-          new CustomEvent("idealy:toggle-inspector", { detail: String(next) })
-        );
+        window.setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("idealy:toggle-inspector", { detail: String(next) })
+          );
+        }, 0);
         return next;
       });
     };
@@ -203,7 +213,9 @@ export function BuildTopBar() {
       const detail = (e as CustomEvent<string>).detail;
       if (detail === "code" || detail === "database" || detail === "preview") {
         setView(detail as WorkspaceView);
-        window.dispatchEvent(new CustomEvent("idealy:set-view", { detail }));
+        window.setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("idealy:set-view", { detail }));
+        }, 0);
       }
     };
     window.addEventListener("idealy:switch-workspace-view", handleSwitchView);
@@ -212,16 +224,17 @@ export function BuildTopBar() {
   }, []);
 
   const toggleInspector = () => {
-    setIsInspectorActive((prev) => {
-      const next = !prev;
-      dispatch("idealy:toggle-inspector", String(next));
-      return next;
-    });
+    const next = !isInspectorActive;
+    setIsInspectorActive(next);
+    dispatch("idealy:toggle-inspector", String(next));
   };
 
   useEffect(() => {
     const closeMenus = (event: Event) => {
       const target = event.target as Node;
+      if (!projectMenuRef.current?.contains(target)) {
+        setProjectMenuOpen(false);
+      }
       if (!moreMenuRef.current?.contains(target)) {
         setMoreOpen(false);
       }
@@ -234,6 +247,7 @@ export function BuildTopBar() {
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        setProjectMenuOpen(false);
         setMoreOpen(false);
         setPageMenuOpen(false);
         setToolsOpen(false);
@@ -249,7 +263,9 @@ export function BuildTopBar() {
   }, []);
 
   const dispatch = (name: string, detail?: string) => {
-    window.dispatchEvent(new CustomEvent(name, { detail }));
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(name, { detail }));
+    }, 0);
   };
 
   const selectView = (nextView: WorkspaceView) => {
@@ -412,32 +428,105 @@ export function BuildTopBar() {
     <header className="relative z-30 grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-sidebar-border/70 bg-sidebar/95 px-2.5 text-sidebar-foreground shadow-[0_1px_0_oklch(1_0_0_/_0.03)] backdrop-blur-xl md:px-3">
       <div className="flex min-w-0 items-center gap-1.5">
         <button
-          aria-label={favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-          aria-pressed={favorite}
-          className={`${controlClass} size-8 shrink-0 ${favorite ? "text-amber-400" : ""}`}
-          onClick={() => setFavorite((value) => {
-            const next = !value;
-            if (chatId) {
-              try { window.localStorage.setItem(`idealy:favorite:${chatId}`, String(next)); } catch { /* Storage can be unavailable in private contexts. */ }
-            }
-            return next;
-          })}
+          aria-label={isCanvasExpanded ? "Afficher la conversation" : "Masquer la conversation"}
+          className={`${controlClass} size-8 shrink-0`}
+          onClick={toggleCanvasFullscreen}
           type="button"
+          title={isCanvasExpanded ? "Afficher la conversation" : "Masquer la conversation"}
         >
-          <Star className="size-4" fill={favorite ? "currentColor" : "none"} />
+          <PanelLeftClose className={`size-4 transition-transform ${isCanvasExpanded ? "rotate-180" : ""}`} />
         </button>
         <span aria-hidden="true" className="h-4 w-px bg-sidebar-border/70" />
-        <button
-          aria-label="Project menu"
-          className="flex min-w-0 items-center gap-1 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-[-0.01em] hover:bg-sidebar-accent"
-          onClick={rename}
-          type="button"
-        >
-          <span className="truncate">{title}</span>
-          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-        </button>
 
-        {/* Real-time collaboration presence is rendered only when backed by a real presence channel. */}
+        <div className="relative min-w-0" ref={projectMenuRef}>
+          <button
+            aria-expanded={projectMenuOpen}
+            aria-label="Menu du projet"
+            className="flex max-w-[200px] md:max-w-[260px] items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-[-0.01em] hover:bg-sidebar-accent transition-colors"
+            onClick={() => setProjectMenuOpen((prev) => !prev)}
+            type="button"
+          >
+            <span className="truncate">{title}</span>
+            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+          </button>
+
+          {projectMenuOpen ? (
+            <div className="absolute left-0 top-11 z-50 w-56 rounded-2xl border border-border/80 bg-popover/95 p-1.5 text-xs text-popover-foreground shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                Options du projet
+              </div>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground transition-colors"
+                onClick={() => {
+                  setProjectMenuOpen(false);
+                  rename();
+                }}
+                type="button"
+              >
+                <Sparkles className="size-3.5 text-primary" />
+                <span>Renommer le projet</span>
+              </button>
+              <button
+                className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground transition-colors"
+                onClick={() => {
+                  setFavorite((value) => {
+                    const next = !value;
+                    if (chatId) {
+                      try {
+                        window.localStorage.setItem(`idealy:favorite:${chatId}`, String(next));
+                      } catch {
+                        /* Storage can be unavailable in private contexts. */
+                      }
+                    }
+                    toast.success(next ? "Ajouté aux favoris" : "Retiré des favoris");
+                    return next;
+                  });
+                }}
+                type="button"
+              >
+                <div className="flex items-center gap-2">
+                  <Star className={`size-3.5 ${favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+                  <span>{favorite ? "Dans les favoris" : "Ajouter aux favoris"}</span>
+                </div>
+              </button>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground transition-colors"
+                onClick={async () => {
+                  setProjectMenuOpen(false);
+                  if (missionFiles.length > 0) {
+                    const entries = missionFiles
+                      .filter((f) => typeof f.content === "string")
+                      .map((f) => ({ path: f.path, content: f.content! }));
+                    downloadZip(title || "projet-idealy", entries);
+                    toast.success("Archive ZIP du projet téléchargée.");
+                  } else if (artifact.content) {
+                    downloadZip(title || "projet-idealy", [
+                      { path: "index.html", content: artifact.content },
+                    ]);
+                    toast.success("Fichier exporté.");
+                  } else {
+                    toast.info("Aucun fichier à exporter pour l'instant.");
+                  }
+                }}
+                type="button"
+              >
+                <FolderDown className="size-3.5 text-sky-400" />
+                <span>Exporter en ZIP</span>
+              </button>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground transition-colors"
+                onClick={() => {
+                  setProjectMenuOpen(false);
+                  setIsCheckpointModalOpen(true);
+                }}
+                type="button"
+              >
+                <History className="size-3.5 text-violet-400" />
+                <span>Historique & Checkpoints</span>
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <div className="hidden items-center gap-1.5 md:flex">
@@ -548,7 +637,7 @@ export function BuildTopBar() {
           </button>
           {pageMenuOpen ? (
             <div className="absolute left-0 top-11 z-50 w-44 rounded-xl border border-border/70 bg-popover/95 p-1.5 text-xs text-popover-foreground shadow-2xl backdrop-blur-xl">
-              {previewPages.map((previewPage) => (
+              {dynamicPages.map((previewPage) => (
                 <button
                   className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground ${page.path === previewPage.path ? "bg-accent/70" : ""}`}
                   key={previewPage.path}
@@ -620,6 +709,7 @@ export function BuildTopBar() {
 
       <div className="flex min-w-0 items-center justify-end gap-1">
         <PowerStatusBadge compact />
+        <FreeQuotaBadge compact />
         {/* Squad status — derived from real missionSquadStatus, never fabricated */}
         <div
           aria-live="polite"

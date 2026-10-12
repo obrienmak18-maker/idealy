@@ -25,6 +25,16 @@ export async function POST(request: Request) {
     );
   }
 
+  if (process.env.IDEALY_PAYMENTS_ENABLED !== "true") {
+    return Response.json(
+      {
+        code: "PAYMENTS_DISABLED",
+        error: "Les paiements sont actuellement désactivés pour cette phase de démonstration.",
+      },
+      { status: 403 }
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const plan = body?.planId;
   const billingCycle = body?.billingCycle;

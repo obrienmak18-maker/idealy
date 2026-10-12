@@ -1,4 +1,4 @@
-﻿node_modules
+node_modules
 .pnpm-store/
 .pnp
 .pnp.js
@@ -29,3 +29,4 @@ tsconfig.tsbuildinfo
 _quarantine/
 STRIPE_TEST_SETUP.md
 *.patch
+*.zip

@@ -1,5 +1,5 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { ArrowDownIcon, ChevronDownIcon } from "lucide-react";
+import { ArrowDownIcon, ChevronDownIcon, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
@@ -49,7 +49,7 @@ function PureMessages({
   onSuggestionSelect,
 }: MessagesProps) {
   const { t } = useTranslation();
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [activeHomeTab, setActiveHomeTab] = useState<"suggestions" | "templates">("suggestions");
   const {
     containerRef: messagesContainerRef,
     endRef: messagesEndRef,
@@ -79,44 +79,60 @@ function PureMessages({
     <div className="relative flex-1 bg-background overflow-hidden">
       {messages.length === 0 && !isLoading && (
         <div className="absolute inset-0 z-10 overflow-y-auto overscroll-contain">
-          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center justify-center gap-6 px-4 py-7 pb-36 sm:gap-7 sm:py-8 sm:pb-36">
+          <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center justify-center gap-3.5 px-4 py-4 pb-28 sm:gap-4 sm:py-6 sm:pb-32">
             <Greeting />
-            <SuggestedActions
-              chatId={chatId}
-              onSuggestionSelect={onSuggestionSelect}
-              selectedVisibilityType={selectedVisibilityType}
-              sendMessage={sendMessage}
-            />
-            <div className="w-full border-t border-border/50 pt-2">
-              <button
-                aria-expanded={showTemplates}
-                className="group flex min-h-10 w-full items-center justify-between rounded-xl px-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                onClick={() => setShowTemplates((current) => !current)}
-                type="button"
-              >
-                <span>{showTemplates ? "Masquer les modèles" : "Partir d’un modèle"}</span>
-                <ChevronDownIcon
-                  aria-hidden="true"
-                  className={`size-4 transition-transform duration-200 ${showTemplates ? "rotate-180" : ""}`}
-                />
-              </button>
-              {showTemplates ? (
-                <div className="pt-3">
-                  <WorkspaceTemplates
-                    onSelectTemplate={(prompt) => {
-                      if (onSuggestionSelect) {
-                        onSuggestionSelect(prompt);
-                      } else {
-                        sendMessage({
-                          parts: [{ text: prompt, type: "text" }],
-                          role: "user",
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              ) : null}
+
+            <div className="w-full flex items-center justify-between border-b border-border/40 pb-2 px-1">
+              <div className="inline-flex items-center gap-1 rounded-xl bg-muted/50 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setActiveHomeTab("suggestions")}
+                  className={cn(
+                    "rounded-lg px-3 py-1 font-medium transition-all text-xs cursor-pointer",
+                    activeHomeTab === "suggestions"
+                      ? "bg-background text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t("workspace.home.ideas", "Idées suggérées")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveHomeTab("templates")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-3 py-1 font-medium transition-all text-xs cursor-pointer",
+                    activeHomeTab === "templates"
+                      ? "bg-background text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Sparkles className="size-3 text-primary" />
+                  {t("workspace.home.templates", "Modèles prêts à l’emploi")}
+                </button>
+              </div>
             </div>
+
+            {activeHomeTab === "suggestions" ? (
+              <SuggestedActions
+                chatId={chatId}
+                onSuggestionSelect={onSuggestionSelect}
+                selectedVisibilityType={selectedVisibilityType}
+                sendMessage={sendMessage}
+              />
+            ) : (
+              <WorkspaceTemplates
+                onSelectTemplate={(prompt) => {
+                  if (onSuggestionSelect) {
+                    onSuggestionSelect(prompt);
+                  } else {
+                    sendMessage({
+                      parts: [{ text: prompt, type: "text" }],
+                      role: "user",
+                    });
+                  }
+                }}
+              />
+            )}
           </div>
         </div>
       )}

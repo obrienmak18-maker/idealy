@@ -18,6 +18,7 @@ import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { PowerStatusBadge } from "@/components/chat/power-status";
+import { FreeQuotaBadge } from "@/components/chat/free-quota-badge";
 import { voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { cn } from "@/lib/utils";
 import {
@@ -60,6 +61,7 @@ import {
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { LanguageSwitcher } from "@/components/branding/language-switcher";
 
 /** Capitalise first letter of plan name for display. */
 function planDisplayName(plan: string | undefined): string {
@@ -262,6 +264,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   </span>
                   <PowerStatusBadge />
                 </div>
+                <div className="mt-1.5 flex items-center justify-between pt-1 border-t border-sidebar-border/40 text-[9.5px] text-sidebar-foreground/60">
+                  <span className="font-medium text-sidebar-foreground/70">Générations</span>
+                  <FreeQuotaBadge compact />
+                </div>
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -270,30 +276,50 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           <SidebarHistory user={user} />
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border pt-1.5 pb-2">
-          {/* Settings button — placed at bottom where it belongs */}
-          <div className="px-2 mb-1 flex items-center justify-between gap-1">
-            <Link
-              className="flex flex-1 items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
-              href="/settings"
-            >
-              <Settings2Icon className="size-4 shrink-0" />
-              <span className="font-medium">{t("sidebar.settings") || "Paramètres"}</span>
-            </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  aria-label="Options du workspace"
-                  className="rounded-lg p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
-                  type="button"
-                >
-                  <span className="sr-only">Options</span>
-                  <div className="flex flex-col gap-0.5 items-center justify-center size-4">
-                    <span className="size-0.5 rounded-full bg-current" />
-                    <span className="size-0.5 rounded-full bg-current" />
-                    <span className="size-0.5 rounded-full bg-current" />
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
+          {/* Settings button — cleanly responsive and zero overflow */}
+          {state === "collapsed" ? (
+            <div className="flex flex-col items-center justify-center gap-1 px-1 mb-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    aria-label={t("sidebar.settings") || "Paramètres"}
+                    className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
+                    href="/settings"
+                  >
+                    <Settings2Icon className="size-4 shrink-0" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {t("sidebar.settings") || "Paramètres"}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          ) : (
+            <div className="px-2 mb-1 flex items-center justify-between gap-1.5">
+              <Link
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
+                href="/settings"
+              >
+                <Settings2Icon className="size-4 shrink-0" />
+                <span className="truncate font-medium">{t("sidebar.settings") || "Paramètres"}</span>
+              </Link>
+              <div className="flex items-center gap-1 shrink-0">
+                <LanguageSwitcher />
+                <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    aria-label="Options du workspace"
+                    className="shrink-0 rounded-lg p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
+                    type="button"
+                  >
+                    <span className="sr-only">Options</span>
+                    <div className="flex flex-col gap-0.5 items-center justify-center size-4">
+                      <span className="size-0.5 rounded-full bg-current" />
+                      <span className="size-0.5 rounded-full bg-current" />
+                      <span className="size-0.5 rounded-full bg-current" />
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
                 className="w-64 rounded-xl border border-border/60 bg-card/95 p-1.5 shadow-[var(--shadow-float)] backdrop-blur-xl"
@@ -359,7 +385,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+              </div>
+            </div>
+          )}
           {user ? <SidebarUserNav user={user} /> : null}
         </SidebarFooter>
         <SidebarRail />

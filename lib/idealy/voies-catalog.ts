@@ -4,6 +4,7 @@ export type WayAgent = {
   avatarUrl: string;
   specialty: string;
   emoji: string;
+  iconName?: string;
   isChief?: boolean;
 };
 
@@ -14,6 +15,7 @@ export type BugAntagonist = {
   bugType: string;
   description: string;
   emoji: string;
+  iconName?: string;
 };
 
 export type UniversalMessenger = {
@@ -22,13 +24,15 @@ export type UniversalMessenger = {
   avatarUrl: string;
   description: string;
   emoji: string;
+  iconName?: string;
 };
 
 export const alvinMessenger: UniversalMessenger = {
   name: "Alvin",
   role: "Messager & Dispatcher Universel",
   avatarUrl: "/images/agents/Alvin.jpg",
-  emoji: "📡",
+  emoji: "",
+  iconName: "Radio",
   description:
     "Premier point de contact. Alvin réceptionne le prompt utilisateur, analyse l'intention et transmet les ordres de mission au chef d'escouade de la Voie active.",
 };
@@ -72,7 +76,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Minato",
         role: "Chef d'Escouade & Hokage",
-        emoji: "⚡",
+        emoji: "", iconName: "Zap",
         avatarUrl: "/images/agents/Minato.jpg",
         specialty:
           "L'Éclair Jaune. Reçoit les ordres d'Alvin, orchestre le plan de bataille et déploie instantanément la stratégie.",
@@ -81,7 +85,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Naruto",
         role: "Full-stack Builder",
-        emoji: "🦊",
+        emoji: "", iconName: "Flame",
         avatarUrl: "/images/agents/Naruto.jpg",
         specialty:
           "Énergie inépuisable. Multi-clonage de composants React, assemblage Next.js et passage à l'acte immédiat.",
@@ -89,7 +93,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Sasuke",
         role: "Architecte Système & Ombre",
-        emoji: "👁️",
+        emoji: "", iconName: "Eye",
         avatarUrl: "/images/agents/Sasuke.jpg",
         specialty:
           "Vision perçante. Découpage modulaire, contrats d'API stricts et structure de données sans compromis.",
@@ -97,7 +101,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Sakura",
         role: "UI/UX & Précision Chirurgicale",
-        emoji: "🌸",
+        emoji: "", iconName: "Sparkles",
         avatarUrl: "/images/agents/Sakura.jpg",
         specialty:
           "Maîtrise du Chakra esthétique. Finitions Tailwind, accessibilité, micro-animations et design soigné.",
@@ -105,7 +109,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Shikamaru",
         role: "Génie Tactique & QA",
-        emoji: "🧠",
+        emoji: "", iconName: "Brain",
         avatarUrl: "/images/agents/Shikamaru.jpg",
         specialty:
           "Stratège hors-pair. Anticipe chaque faille, traque les régressions et protège le code contre les imprévus.",
@@ -118,7 +122,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Madara.jpg",
         bugType: "Régression Majeure & Crash de Branche",
         description: "Invoque des météores d'erreurs fatales détruisant le build.",
-        emoji: "☄️",
+        emoji: "", iconName: "AlertTriangle",
       },
       {
         name: "Obito",
@@ -126,7 +130,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Obito.jpg",
         bugType: "Désynchronisation d'État & Éléments Fantômes",
         description: "Passe à travers les contrôles d'état et provoque des re-renders incohérents.",
-        emoji: "🌀",
+        emoji: "", iconName: "Activity",
       },
       {
         name: "Kaguya",
@@ -134,7 +138,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Kaguya.jpg",
         bugType: "Fuite Mémoire & Dimensions Infinies",
         description: "Engorge la RAM et fige l'exécution dans des boucles infinies.",
-        emoji: "🌌",
+        emoji: "", iconName: "Cpu",
       },
       {
         name: "Zabuza",
@@ -142,7 +146,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Zabuza.jpg",
         bugType: "Brumes CSS & Collisions Visuelles",
         description: "Masque les composants UI sous un brouillard de styles conflictuels.",
-        emoji: "🌫️",
+        emoji: "", iconName: "Layers",
       },
       {
         name: "Zetsu",
@@ -150,7 +154,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Zetsu.jpg",
         bugType: "Infiltration Silencieuse & Données Corrompues",
         description: "S'infiltre dans les payloads d'API pour modifier discrètement les valeurs.",
-        emoji: "🌱",
+        emoji: "", iconName: "Bug",
       },
     ],
   },
@@ -169,7 +173,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Erza",
         role: "Chef de Guilde & Reine des Armures",
-        emoji: "⚔️",
+        emoji: "", iconName: "Shield",
         avatarUrl: "/images/agents/Erza.jpg",
         specialty:
           "Discipline et commandement. Reçoit les missions d'Alvin, sélectionne l'armure technique adaptée et mène l'équipe.",
@@ -178,7 +182,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Natsu",
         role: "Full-stack Builder",
-        emoji: "🔥",
+        emoji: "", iconName: "Flame",
         avatarUrl: "/images/agents/Natsu.jpg",
         specialty:
           "Flammes du Dragon. Propulse le code avec une intensité volcanique, pulvérise les blocages et livre à grande vitesse.",
@@ -186,7 +190,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Lucie",
         role: "UI/UX & Clés Stellaires",
-        emoji: "✨",
+        emoji: "", iconName: "Sparkles",
         avatarUrl: "/images/agents/Lucie.jpg",
         specialty:
           "Invocatrice d'interfaces. Relie les constellations de composants pour créer des expériences visuelles féeriques.",
@@ -194,7 +198,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Luxus",
         role: "Performance & Haute Tension",
-        emoji: "⚡",
+        emoji: "", iconName: "Zap",
         avatarUrl: "/images/agents/Luxus.jpg",
         specialty:
           "Foudre pure. Éradique toute latence réseau, optimise le bundle et assure une cadence de 60fps constante.",
@@ -202,7 +206,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Mirajane",
         role: "Sécurité & Audit Démoniaque",
-        emoji: "👿",
+        emoji: "", iconName: "ShieldAlert",
         avatarUrl: "/images/agents/Mirajane.jpg",
         specialty:
           "Satan Soul. Douce en apparence, implacable face aux failles XSS, CSRF et vulnérabilités de requêtes.",
@@ -215,7 +219,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Acnologia.jpg",
         bugType: "Apocalypse Serveur & Panne Totale",
         description: "Le Dragon Noir dévore le Mana et fait tomber les micro-services en 503.",
-        emoji: "🐉",
+        emoji: "", iconName: "Flame",
       },
       {
         name: "Zelef",
@@ -223,7 +227,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Zelef.jpg",
         bugType: "Malédiction & Boucle Récursive",
         description: "Provoque des dépassements de pile (Stack Overflow) mortels.",
-        emoji: "🖤",
+        emoji: "", iconName: "Skull",
       },
       {
         name: "Mardy geer",
@@ -231,7 +235,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Mardy_geer.jpg",
         bugType: "Corrupteur de Données Démoniaque",
         description: "Altère les schémas JSON et corrompt la validation des formulaires.",
-        emoji: "📖",
+        emoji: "", iconName: "FileCode",
       },
       {
         name: "August",
@@ -239,7 +243,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/August.jpg",
         bugType: "Incompatibilité de Sorts & Conflit de Types",
         description: "Maîtrise toutes les magies pour opposer des types incompatibles dans TypeScript.",
-        emoji: "📜",
+        emoji: "", iconName: "FileText",
       },
       {
         name: "Hermes",
@@ -247,7 +251,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Hermes.jpg",
         bugType: "Fuite Réseau & Requêtes Fantômes",
         description: "Détourne les appels HTTP dans des gouffres de timeout.",
-        emoji: "🕊️",
+        emoji: "", iconName: "Radio",
       },
     ],
   },
@@ -266,7 +270,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Netero",
         role: "Chef de l'Association & Grand Maître",
-        emoji: "🧘",
+        emoji: "", iconName: "Award",
         avatarUrl: "/images/agents/Netero.jpg",
         specialty:
           "Sagesse centenaire et réflexes divins. Accueille la mission transmise par Alvin et active l'escouade Hunter.",
@@ -275,7 +279,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Gon",
         role: "Full-stack Builder",
-        emoji: "🎣",
+        emoji: "", iconName: "Target",
         avatarUrl: "/images/agents/Gon.jpg",
         specialty:
           "Jajanken code. Détermination inébranlable, prototypage franc et force brute pour concrétiser toute idée.",
@@ -283,7 +287,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Killua",
         role: "Performance & Vitesse Divine",
-        emoji: "⚡",
+        emoji: "", iconName: "Zap",
         avatarUrl: "/images/agents/Killua.jpg",
         specialty:
           "Godspeed. Vitesse de rendu foudroyante, exécution asynchrone ultra-fine et fluidité sans précédent.",
@@ -291,7 +295,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Kurapika",
         role: "Architecte & Rigueur Analytique",
-        emoji: "⛓️",
+        emoji: "", iconName: "Key",
         avatarUrl: "/images/agents/Kurapika.jpg",
         specialty:
           "Chaîne du Jugement. Règle absolue sur les types TypeScript, architecture Clean et respect strict des normes.",
@@ -299,7 +303,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Leolio",
         role: "UI/UX & Empathie Utilisateur",
-        emoji: "🩺",
+        emoji: "", iconName: "HeartPulse",
         avatarUrl: "/images/agents/Leolio.jpg",
         specialty:
           "Sensibilité humaine. Diagnostic ergonomique, clarté des interfaces et expérience utilisateur chaleureuse.",
@@ -312,7 +316,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Hisoka.jpg",
         bugType: "Bug Imprévisible & Comportement Chaotique",
         description: "Bungee Gum : colle des effets de bord aléatoires qui trompent les tests unitaires.",
-        emoji: "🃏",
+        emoji: "", iconName: "Target",
       },
       {
         name: "Chrollo",
@@ -320,7 +324,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Chrollo.jpg",
         bugType: "Vol de Dépendances & Conflit de Modules",
         description: "Siphonne les exports de librairies et crée des conflits d'arbres de dépendances.",
-        emoji: "📕",
+        emoji: "", iconName: "Key",
       },
       {
         name: "Feitan",
@@ -328,7 +332,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Feitan.jpg",
         bugType: "Rising Sun : Exception Fatale Non Gérée",
         description: "Accumule les warnings non corrigés pour relâcher une explosion d'erreur 500.",
-        emoji: "☀️",
+        emoji: "", iconName: "Flame",
       },
       {
         name: "Meruem",
@@ -336,7 +340,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/Meruem.jpg",
         bugType: "Complexité Algorithmique Infranchissable",
         description: "Bloque le CPU sous une avalanche de calculs O(n^3).",
-        emoji: "👑",
+        emoji: "", iconName: "Crown",
       },
       {
         name: "Neferpitou",
@@ -344,7 +348,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/neferpitou.jpg",
         bugType: "Marionnettiste : Mutation d'État Hors Contrôle",
         description: "Tire les ficelles du DOM virtuel pour forcer des cascades de re-renders infinis.",
-        emoji: "🐱",
+        emoji: "", iconName: "Eye",
       },
       {
         name: "Illumi",
@@ -352,7 +356,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
         avatarUrl: "/images/agents/illumi.jpg",
         bugType: "Deadlock & Aiguilles Bloquantes",
         description: "Paralyse les threads d'exécution dans des attentes mutuelles perpétuelles.",
-        emoji: "📍",
+        emoji: "", iconName: "ShieldAlert",
       },
     ],
   },
@@ -371,7 +375,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Daniel",
         role: "Lead Architect & Head of Engineering",
-        emoji: "🏛️",
+        emoji: "", iconName: "Terminal",
         avatarUrl: "/images/agents/Daniel.jpg",
         specialty:
           "Reçoit les spécifications d'Alvin, conçoit l'architecture d'entreprise hexagonale et garantit les SLAs.",
@@ -380,7 +384,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Kevin",
         role: "Senior Full-stack Engineer",
-        emoji: "💻",
+        emoji: "", iconName: "Code2",
         avatarUrl: "/images/agents/Kevin.jpg",
         specialty:
           "Typage strict TypeScript, code modulaire, refactoring SOLID et vélocité sans dette technique.",
@@ -388,7 +392,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Leslie",
         role: "Product & UI/UX Designer",
-        emoji: "🎨",
+        emoji: "", iconName: "Palette",
         avatarUrl: "/images/agents/Leslie.jpg",
         specialty:
           "Design System de pointe, tokens sémantiques, composants accessibles et cohérence visuelle SaaS premium.",
@@ -396,7 +400,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Maya",
         role: "QA & Compliance Officer",
-        emoji: "🛡️",
+        emoji: "", iconName: "CheckCheck",
         avatarUrl: "/images/agents/Maya.jpg",
         specialty:
           "Couverture de tests E2E, audit OWASP, conformité RGPD et validation automatisée des contrats d'API.",
@@ -404,7 +408,7 @@ export const voiesCatalog: Record<string, WayDetailed> = {
       {
         name: "Bill",
         role: "Cloud Infrastructure & SRE",
-        emoji: "☁️",
+        emoji: "", iconName: "Cloud",
         avatarUrl: "/images/agents/Bill.jpg",
         specialty:
           "Haute disponibilité 99.99%, monitoring, scalabilité globale, pipelines CI/CD et gestion des incidents.",

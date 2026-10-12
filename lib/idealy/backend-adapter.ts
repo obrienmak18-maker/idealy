@@ -15,6 +15,8 @@ import {
 } from "./design-engine";
 import type { OnboardingInput, OnboardingStatus } from "./onboarding-contract";
 import { type IdealyWay, isIdealyWay } from "./product-contract";
+import { getUserById } from "@/lib/db/queries";
+import { signInFirebaseUserThroughSupabase } from "./supabase-auth";
 
 export type IdealyIntentCategory = "CONVERSATION" | "IDEATION" | "EXECUTION";
 
@@ -160,7 +162,15 @@ function parseMissionPlan(
   };
 }
 
-async function getSupabaseServerContext(request: Request) {
+export type SupabaseServerContextOverride = {
+  accessToken?: string | null;
+  userId?: string | null;
+};
+
+async function getSupabaseServerContext(
+  request: Request,
+  override?: SupabaseServerContextOverride
+) {
   let token = null;
   try {
     token = await getToken({
@@ -176,14 +186,48 @@ async function getSupabaseServerContext(request: Request) {
   const anonKey =
     process.env.SUPABASE_ANON_KEY?.trim() ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  const accessToken =
-    typeof token?.supabaseAccessToken === "string"
+  let accessToken =
+    override?.accessToken?.trim() ||
+    (typeof token?.supabaseAccessToken === "string"
       ? token.supabaseAccessToken.trim()
-      : null;
-  const userId =
-    typeof token?.supabaseUserId === "string"
+      : null);
+  let userId =
+    override?.userId?.trim() ||
+    (typeof token?.supabaseUserId === "string"
       ? token.supabaseUserId.trim()
-      : null;
+      : null);
+
+  if ((!accessToken || !userId) && token) {
+    let email =
+      typeof token.email === "string" && token.email.trim()
+        ? token.email.trim().toLowerCase()
+        : null;
+    if (!email && token.id) {
+      const localUser = await getUserById(token.id).catch(() => null);
+      if (localUser?.email) {
+        email = localUser.email.trim().toLowerCase();
+      }
+    }
+    if (
+      email &&
+      !email.endsWith("@idealy.local") &&
+      !email.startsWith("guest-")
+    ) {
+      try {
+        const bridge = await signInFirebaseUserThroughSupabase(email);
+        if (
+          bridge.status === "authenticated" &&
+          bridge.accessToken &&
+          bridge.userId
+        ) {
+          accessToken = bridge.accessToken;
+          userId = bridge.userId;
+        }
+      } catch (err) {
+        console.error("Auto-bridge failed in getSupabaseServerContext:", err);
+      }
+    }
+  }
 
   if (!accessToken || !userId || !url || !anonKey) {
     throw new Error(
@@ -232,9 +276,10 @@ async function callProcessAIRequest<T>(
 async function callSupabaseRest<T>(
   request: Request,
   path: string,
-  init: RequestInit
+  init: RequestInit,
+  override?: SupabaseServerContextOverride
 ): Promise<T> {
-  const { accessToken, anonKey, url } = await getSupabaseServerContext(request);
+  const { accessToken, anonKey, url } = await getSupabaseServerContext(request, override);
   const response = await fetch(`${url}/rest/v1/${path}`, {
     ...init,
     headers: {
@@ -261,14 +306,17 @@ async function callSupabaseRest<T>(
 
 export async function getMyIdealyOnboardingStatus({
   request,
+  contextOverride,
 }: {
   request: Request;
+  contextOverride?: SupabaseServerContextOverride;
 }): Promise<OnboardingStatus> {
-  const { userId } = await getSupabaseServerContext(request);
+  const { userId } = await getSupabaseServerContext(request, contextOverride);
   const profiles = await callSupabaseRest<IdealyProfileResponse[]>(
     request,
     `profiles?select=id,first_name,way,onboarding_completed,experience_level,primary_goal,project_type&id=eq.${encodeURIComponent(userId)}&limit=1`,
-    { cache: "no-store", method: "GET" }
+    { cache: "no-store", method: "GET" },
+    contextOverride
   );
   const profile = Array.isArray(profiles) ? profiles[0] : null;
 
@@ -298,9 +346,11 @@ export async function getMyIdealyOnboardingStatus({
 export async function completeMyIdealyOnboarding({
   input,
   request,
+  contextOverride,
 }: {
   input: OnboardingInput;
   request: Request;
+  contextOverride?: SupabaseServerContextOverride;
 }): Promise<{
   displayName: string | null;
   onboardingCompleted: boolean;
@@ -322,7 +372,8 @@ export async function completeMyIdealyOnboarding({
         p_way: input.way,
       }),
       method: "POST",
-    }
+    },
+    contextOverride
   );
   const profile = Array.isArray(records) ? records[0] : null;
 

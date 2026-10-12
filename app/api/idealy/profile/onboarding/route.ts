@@ -5,6 +5,8 @@ import {
 } from "@/lib/idealy/backend-adapter";
 import { onboardingInputSchema } from "@/lib/idealy/onboarding-contract";
 import { isDevelopmentEnvironment } from "@/lib/constants";
+import { getUserById } from "@/lib/db/queries";
+import { signInFirebaseUserThroughSupabase } from "@/lib/idealy/supabase-auth";
 
 function response(
   body: Record<string, unknown>,
@@ -26,6 +28,50 @@ async function getAuthToken(request: Request) {
     secret: process.env.AUTH_SECRET,
     secureCookie: !isDevelopmentEnvironment,
   });
+}
+
+async function resolveSupabaseToken(
+  token: Record<string, unknown>,
+): Promise<{ accessToken: string; userId: string } | null> {
+  const accessToken =
+    typeof token.supabaseAccessToken === "string" && token.supabaseAccessToken
+      ? token.supabaseAccessToken.trim()
+      : null;
+  const userId =
+    typeof token.supabaseUserId === "string" && token.supabaseUserId
+      ? token.supabaseUserId.trim()
+      : null;
+
+  if (accessToken && userId) {
+    return { accessToken, userId };
+  }
+
+  let email =
+    typeof token.email === "string" && token.email.trim()
+      ? token.email.trim().toLowerCase()
+      : null;
+
+  if (!email && typeof token.id === "string" && token.id) {
+    const localUser = await getUserById(token.id).catch(() => null);
+    if (localUser?.email) {
+      email = localUser.email.trim().toLowerCase();
+    }
+  }
+
+  if (email && !email.endsWith("@idealy.local") && !email.startsWith("guest-")) {
+    try {
+      const bridge = await signInFirebaseUserThroughSupabase(email);
+      if (bridge.status === "authenticated" && bridge.accessToken && bridge.userId) {
+        token.supabaseAccessToken = bridge.accessToken;
+        token.supabaseUserId = bridge.userId;
+        return { accessToken: bridge.accessToken, userId: bridge.userId };
+      }
+    } catch (err) {
+      console.error("Auto-bridge failed in resolveSupabaseToken:", err);
+    }
+  }
+
+  return null;
 }
 
 function hasTrustedOrigin(request: Request) {
@@ -54,7 +100,8 @@ export async function GET(request: Request) {
     return response({ error: "Une session Idealy authentifiée est requise." }, 401);
   }
 
-  if (typeof token.supabaseAccessToken !== "string" || !token.supabaseAccessToken) {
+  const supabaseContext = await resolveSupabaseToken(token);
+  if (!supabaseContext) {
     return response(
       { error: "La session Supabase active est requise pour vérifier le profil." },
       503,
@@ -62,7 +109,12 @@ export async function GET(request: Request) {
   }
 
   try {
-    return response(await getMyIdealyOnboardingStatus({ request }));
+    return response(
+      await getMyIdealyOnboardingStatus({
+        contextOverride: supabaseContext,
+        request,
+      }),
+    );
   } catch (error) {
     console.error("Idealy onboarding profile check failed", error);
     return response(
@@ -102,7 +154,8 @@ export async function POST(request: Request) {
     return response({ error: "Une session Idealy authentifiée est requise." }, 401);
   }
 
-  if (typeof token.supabaseAccessToken !== "string" || !token.supabaseAccessToken) {
+  const supabaseContext = await resolveSupabaseToken(token);
+  if (!supabaseContext) {
     return response(
       { error: "La session Supabase active est requise pour enregistrer le profil." },
       503,
@@ -129,6 +182,7 @@ export async function POST(request: Request) {
 
   try {
     const profile = await completeMyIdealyOnboarding({
+      contextOverride: supabaseContext,
       input: parsed.data,
       request,
     });

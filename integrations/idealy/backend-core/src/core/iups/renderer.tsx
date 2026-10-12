@@ -50,7 +50,7 @@ function MobilePreview({ schema }: { schema: IdealyUniversalProjectSchema }) {
         {/* App content */}
         <div className="flex flex-col items-center justify-center h-64 px-4 text-center">
           <div className="mb-3 h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl">
-            📱
+            <Smartphone className="size-6 text-white" />
           </div>
           <p className="text-sm font-semibold text-white">{appName}</p>
           <p className="mt-1 text-[10px] text-white/40">Expo · React Native</p>

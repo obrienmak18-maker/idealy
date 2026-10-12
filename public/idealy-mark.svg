@@ -1,20 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
   <defs>
-    <linearGradient id="idealy-spectrum" x1="8" y1="10" x2="56" y2="54" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#38BDF8"/>
-      <stop offset=".35" stop-color="#14B8A6"/>
-      <stop offset=".68" stop-color="#8B5CF6"/>
-      <stop offset="1" stop-color="#FB923C"/>
+    <!-- Teal-to-cyan gradient for top-left branch and left orbital -->
+    <linearGradient id="grad-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14B8A6"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
     </linearGradient>
-    <filter id="idealy-glow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="2.2" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <!-- Purple gradient for bottom-right branch and right orbital -->
+    <linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="50%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+    <!-- Full spectrum for orbital ring -->
+    <linearGradient id="grad-orbit" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#14B8A6"/>
+      <stop offset="50%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="star-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="glow"/>
+      <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <ellipse cx="32" cy="32" rx="25" ry="12" transform="rotate(-28 32 32)" stroke="url(#idealy-spectrum)" stroke-width="1.5" stroke-linecap="round"/>
-  <ellipse cx="32" cy="32" rx="22" ry="10" transform="rotate(38 32 32)" stroke="url(#idealy-spectrum)" stroke-width="1" stroke-linecap="round" stroke-dasharray="4 7" stroke-opacity=".55"/>
-  <path d="M32 5.5 37.3 26.7 58.5 32 37.3 37.3 32 58.5 26.7 37.3 5.5 32 26.7 26.7 32 5.5Z" fill="url(#idealy-spectrum)" filter="url(#idealy-glow)"/>
-  <circle cx="32" cy="32" r="8.5" fill="#fff"/>
-  <path d="M32 26.2v13M27.8 30.2h8.4" stroke="#0F172A" stroke-width="2.8" stroke-linecap="round"/>
-  <circle cx="32" cy="22.6" r="2.4" fill="#fff"/>
+
+  <!-- Orbital ring (main ellipse, inclined) -->
+  <ellipse cx="128" cy="128" rx="110" ry="52" transform="rotate(-15 128 128)"
+    stroke="url(#grad-orbit)" stroke-width="8" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Dashed motion arcs (small decorative dashes around the star) -->
+  <path d="M62 68 Q56 58 52 64" stroke="#7DD3C8" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M88 48 Q82 40 78 47" stroke="#7DD3C8" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M164 56 Q172 48 168 44" stroke="#C4B5FD" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M196 192 Q202 200 198 204" stroke="#C4B5FD" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M168 208 Q174 216 170 220" stroke="#C4B5FD" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.5"/>
+
+  <!-- 4-pointed compass star -->
+  <!-- Top branch (teal/green) with human silhouette cutout -->
+  <path d="M128 32 L144 108 Q128 100 112 108 Z" fill="url(#grad-teal)" filter="url(#star-glow)"/>
+  <!-- Human silhouette cutout on top branch (head) -->
+  <circle cx="128" cy="80" r="8" fill="white"/>
+  <!-- Human silhouette cutout on top branch (body arc) -->
+  <path d="M121 88 Q128 96 135 88" fill="white"/>
+
+  <!-- Left branch (cyan) -->
+  <path d="M32 128 L108 112 Q100 128 108 144 Z" fill="url(#grad-teal)"/>
+
+  <!-- Right branch (purple) -->
+  <path d="M224 128 L148 112 Q156 128 148 144 Z" fill="url(#grad-purple)"/>
+
+  <!-- Bottom branch (purple/violet) -->
+  <path d="M128 224 L112 148 Q128 156 144 148 Z" fill="url(#grad-purple)"/>
+
+  <!-- White oval center -->
+  <ellipse cx="128" cy="128" rx="24" ry="22" fill="white"/>
+
+  <!-- Black cross (+) in center -->
+  <path d="M128 110 V146" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+  <path d="M110 128 H146" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
 </svg>

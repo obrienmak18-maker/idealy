@@ -1,4 +1,5 @@
 import type { ArtifactKind } from "@/components/chat/artifact";
+import { getUiUxProMaxSystemPromptExtension } from "@/lib/idealy/design-intelligence";
 
 /** Geo hint extracted from the request — replaces the @vercel/functions Geo type. */
 export type Geo = {
@@ -275,7 +276,8 @@ export const systemPrompt = ({
     ? `\n[UTILISATEUR]\nL'utilisateur s'appelle "${userDisplayName}". Adresse-toi à lui naturellement et chaleureusement.`
     : "";
 
-  const base = `${corePrompt}${userGreetingPrompt}${wayPrompt ? `\n\n${wayPrompt}` : ""}${tonePrompt ? `\n\n${tonePrompt}` : ""}\n\n${requestPrompt}`;
+  const uiUxPrompt = getUiUxProMaxSystemPromptExtension();
+  const base = `${corePrompt}${userGreetingPrompt}${wayPrompt ? `\n\n${wayPrompt}` : ""}${tonePrompt ? `\n\n${tonePrompt}` : ""}\n\n${requestPrompt}\n\n${uiUxPrompt}`;
 
   if (!supportsTools) {
     return base;

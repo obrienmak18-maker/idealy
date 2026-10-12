@@ -88,31 +88,40 @@ function resolveGeminiModelName(modelId: string): string {
     .replace(/^gemini\//, "")
     .toLowerCase();
 
-  if (clean.includes("2.0")) {
-    return "gemini-2.0-flash";
-  }
-  if (clean.includes("1.5-flash")) {
-    return "gemini-1.5-flash";
-  }
   if (clean.includes("pro")) {
-    return "gemini-1.5-pro";
+    return "gemini-3.8-flash";
   }
-  return "gemini-2.0-flash";
+  return "gemini-3.8-flash";
 }
 
 function getAnyAvailableDirectModel() {
+  if (groq) return groq.chat("openai/gpt-oss-120b");
+  if (openrouter) return openrouter.chat("meta-llama/llama-3.3-70b-instruct");
+  if (google) return google("gemini-3.8-flash");
+  if (openai) return openai.chat("gpt-4o-mini");
   if (deepseek) return deepseek.chat("deepseek-chat");
-  if (openai) return openai.chat("gpt-4o");
-  if (groq) return groq.chat("llama-3.3-70b-versatile");
-  if (google) return google(resolveGeminiModelName("gemini-2.0-flash"));
-  if (openrouter) return openrouter.chat("auto");
-  if (mistral) return mistral.chat("mistral-large-latest");
   return null;
 }
 
 export function getLanguageModel(modelId: string) {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel(modelId);
+  }
+
+  // Groq (ultra-rapide, quota actif vérifié)
+  if (groq && (modelId.includes("groq") || modelId.includes("gpt-oss") || modelId.includes("llama"))) {
+    return groq.chat("openai/gpt-oss-120b");
+  }
+
+  // OpenRouter (quota actif vérifié)
+  if (openrouter && modelId.includes("openrouter")) {
+    const cleanId = modelId.replace(/^openrouter\//, "");
+    return openrouter.chat(cleanId === "auto" ? "meta-llama/llama-3.3-70b-instruct" : cleanId);
+  }
+
+  // Google / Gemini
+  if (google && (modelId.startsWith("google/") || modelId.includes("gemini"))) {
+    return google(resolveGeminiModelName(modelId));
   }
 
   // DeepSeek
@@ -125,33 +134,15 @@ export function getLanguageModel(modelId: string) {
     return openai.chat(modelId.includes("mini") ? "gpt-4o-mini" : "gpt-4o");
   }
 
-  // Groq
-  if (groq && (modelId.includes("groq") || modelId.includes("llama"))) {
-    return groq.chat("llama-3.3-70b-versatile");
-  }
-
-  // Google / Gemini
-  if (google && (modelId.startsWith("google/") || modelId.includes("gemini"))) {
-    return google(resolveGeminiModelName(modelId));
-  }
-
   // Mistral
   if (mistral && modelId.includes("mistral")) {
     return mistral.chat("mistral-large-latest");
   }
 
-  // OpenRouter
-  if (openrouter && modelId.includes("openrouter")) {
-    return openrouter.chat(modelId.replace(/^openrouter\//, ""));
-  }
-
-  // Si on est en environnement local sans Vercel AI Gateway configurée,
-  // on utilise le premier provider IA disponible pour garantir que l'IA répond toujours !
-  if (!process.env.AI_GATEWAY_API_KEY) {
-    const fallback = getAnyAvailableDirectModel();
-    if (fallback) {
-      return fallback;
-    }
+  // En local ou si Gateway non configuré, toujours utiliser le modèle direct qui fonctionne
+  const fallback = getAnyAvailableDirectModel();
+  if (fallback) {
+    return fallback;
   }
 
   return gateway.languageModel(modelId);
@@ -162,10 +153,11 @@ export function getTitleModel() {
     return myProvider.languageModel("title-model");
   }
 
-  // Modèle rapide pour les titres
-  if (groq) return groq.chat("llama-3.3-70b-versatile");
+  // Modèle ultra-rapide pour les titres
+  if (groq) return groq.chat("openai/gpt-oss-120b");
+  if (openrouter) return openrouter.chat("meta-llama/llama-3.3-70b-instruct");
+  if (google) return google("gemini-3.8-flash");
   if (deepseek) return deepseek.chat("deepseek-chat");
-  if (google) return google(resolveGeminiModelName("gemini-2.0-flash"));
   if (openai) return openai.chat("gpt-4o-mini");
 
   const direct = getAnyAvailableDirectModel();

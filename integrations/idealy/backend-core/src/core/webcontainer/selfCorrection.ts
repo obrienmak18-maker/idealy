@@ -105,8 +105,8 @@ async function ensureDependencies(
     await instance.fs.readdir('node_modules');
     return;
   } catch {
-    emitTerminalEvent('status', '📦 Installation des dépendances avant le preflight...\\r\\n');
-    onLog?.('📦 Installation des dépendances avant le preflight...\\n');
+    emitTerminalEvent('status', '[PACKAGES] Installation des dépendances avant le preflight...\\r\\n');
+    onLog?.('[PACKAGES] Installation des dépendances avant le preflight...\\n');
     const result = await runTerminalCommand(
       instance,
       { bin: 'npm', args: ['install', '--no-audit', '--no-fund'], label: 'npm install' },
@@ -129,8 +129,8 @@ async function mountAndValidate(
   const instance = await getWebContainerInstance();
   const files = schema.project.files;
 
-  emitTerminalEvent('status', '🧪 Montage de la version générée dans WebContainer...\\r\\n');
-  onLog?.('🧪 Montage de la version générée dans WebContainer...\\n');
+  emitTerminalEvent('status', '[TEST] Montage de la version générée dans WebContainer...\\r\\n');
+  onLog?.('[TEST] Montage de la version générée dans WebContainer...\\n');
   for (const [path, contents] of Object.entries(files)) {
     if (signal?.aborted) throw new DOMException('Mission interrompue.', 'AbortError');
     const directory = path.split('/').slice(0, -1).join('/');
@@ -172,8 +172,8 @@ export async function buildWithSelfCorrection(
 
   for (let iteration = 1; iteration <= MAX_SELF_CORRECTION_ITERATIONS; iteration += 1) {
     if (options.signal?.aborted) throw new DOMException('Mission interrompue.', 'AbortError');
-    emitTerminalEvent('status', `🤖 Bâtisseur — génération ${iteration}/${MAX_SELF_CORRECTION_ITERATIONS}\\r\\n`);
-    options.onLog?.(`🤖 Bâtisseur — génération ${iteration}/${MAX_SELF_CORRECTION_ITERATIONS}\\n`);
+    emitTerminalEvent('status', `[BUILDER] Bâtisseur — génération ${iteration}/${MAX_SELF_CORRECTION_ITERATIONS}\\r\\n`);
+    options.onLog?.(`[BUILDER] Bâtisseur — génération ${iteration}/${MAX_SELF_CORRECTION_ITERATIONS}\\n`);
     schema = await buildIUPS(context, correction, options.onProgress);
     if (!schema) {
       return { schema: null, attempts, status: 'unavailable', terminalAvailable: attempts.length > 0 };
@@ -208,33 +208,33 @@ export async function buildWithSelfCorrection(
         context.prompt,
         correction?.issues.map((issue) => issue.file).filter((file): file is string => Boolean(file)) ?? [],
       );
-      options.onLog?.('🧠 Mémoire architecture chargée dans le VFS (.idealy/architecture.md).\n');
+      options.onLog?.('[ARCHITECTURE] Mémoire architecture chargée dans le VFS (.idealy/architecture.md).\n');
       const validation = await mountAndValidate(schema, options.onLog, options.onFileCreated, options.signal);
       const attempt: SelfCorrectionAttempt = { iteration, validation, feedback: correction };
       attempts.push(attempt);
 
       if (validation.ok) {
-        emitTerminalEvent('status', `✅ ${validation.command} réussi — version prête.\\r\\n`);
-        options.onLog?.(`✅ ${validation.command} réussi — version prête.\\n`);
+        emitTerminalEvent('status', `[OK] ${validation.command} réussi — version prête.\\r\\n`);
+        options.onLog?.(`[OK] ${validation.command} réussi — version prête.\\n`);
         return { schema, attempts, status: 'passed', terminalAvailable: true };
       }
 
       correction = buildCorrectionFeedback(validation, iteration);
-      emitTerminalEvent('error', `❌ ${validation.command} a trouvé ${correction.issues.length} problème(s).\\r\\n`);
-      options.onLog?.(`❌ ${validation.command} a trouvé ${correction.issues.length} problème(s).\\n`);
+      emitTerminalEvent('error', `[FAIL] ${validation.command} a trouvé ${correction.issues.length} problème(s).\\r\\n`);
+      options.onLog?.(`[FAIL] ${validation.command} a trouvé ${correction.issues.length} problème(s).\\n`);
       if (iteration < MAX_SELF_CORRECTION_ITERATIONS) {
-        emitTerminalEvent('status', '↻ Injection ciblée des erreurs dans le prochain prompt système.\\r\\n');
-        options.onLog?.('↻ Injection ciblée des erreurs dans le prochain prompt système.\\n');
+        emitTerminalEvent('status', '[RETRY] Injection ciblée des erreurs dans le prochain prompt système.\\r\\n');
+        options.onLog?.('[RETRY] Injection ciblée des erreurs dans le prochain prompt système.\\n');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      emitTerminalEvent('error', `⚠️ WebContainer indisponible : ${message}\\r\\n`);
-      options.onLog?.(`⚠️ WebContainer indisponible : ${message}\\n`);
+      emitTerminalEvent('error', `[WARN] WebContainer indisponible : ${message}\\r\\n`);
+      options.onLog?.(`[WARN] WebContainer indisponible : ${message}\\n`);
       return { schema, attempts, status: 'unavailable', terminalAvailable: false };
     }
   }
 
-  emitTerminalEvent('error', `⛔ Limite de ${MAX_SELF_CORRECTION_ITERATIONS} corrections atteinte.\\r\\n`);
-  options.onLog?.(`⛔ Limite de ${MAX_SELF_CORRECTION_ITERATIONS} corrections atteinte.\\n`);
+  emitTerminalEvent('error', `[LIMIT] Limite de ${MAX_SELF_CORRECTION_ITERATIONS} corrections atteinte.\\r\\n`);
+  options.onLog?.(`[LIMIT] Limite de ${MAX_SELF_CORRECTION_ITERATIONS} corrections atteinte.\\n`);
   return { schema, attempts, status: 'needs-fix', terminalAvailable: true };
 }

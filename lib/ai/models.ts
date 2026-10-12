@@ -2,22 +2,23 @@ function getDefaultModelId(): string {
   const getEnv = (name: string) =>
     process.env[name]?.trim() || process.env[`VITE_${name}`]?.trim() || "";
 
+  if (getEnv("GROQ_API_KEY")) return "groq/openai/gpt-oss-120b";
+  if (getEnv("OPENROUTER_API_KEY")) return "openrouter/meta-llama/llama-3.3-70b-instruct";
+  if (getEnv("GOOGLE_GENERATIVE_AI_API_KEY") || getEnv("GEMINI_API_KEY"))
+    return "google/gemini-3.8-flash";
   if (getEnv("DEEPSEEK_API_KEY")) return "deepseek/deepseek-v3.2";
   if (getEnv("OPENAI_API_KEY")) return "openai/gpt-oss-120b";
-  if (getEnv("GROQ_API_KEY")) return "groq/llama-3.3-70b-versatile";
-  if (getEnv("GOOGLE_GENERATIVE_AI_API_KEY") || getEnv("GEMINI_API_KEY"))
-    return "google/gemini-2.0-flash";
-  return "deepseek/deepseek-v3.2";
+  return "groq/openai/gpt-oss-120b";
 }
 
 export const DEFAULT_CHAT_MODEL = getDefaultModelId();
 
 export const titleModel = {
   description: "Fast model for title generation",
-  gatewayOrder: ["fireworks", "bedrock"],
+  gatewayOrder: ["groq", "bedrock"],
   id: DEFAULT_CHAT_MODEL,
-  name: "DeepSeek / AI Model",
-  provider: "deepseek",
+  name: "Groq / GPT OSS 120B",
+  provider: "groq",
 };
 
 export type ModelCapabilities = {
@@ -39,6 +40,27 @@ export type ChatModel = {
 };
 
 const gatewayChatModels: ChatModel[] = [
+  {
+    capabilities: { reasoning: false, tools: true, vision: false },
+    description: "Modèle ultra-rapide 120B inféré sur Groq",
+    id: "groq/openai/gpt-oss-120b",
+    name: "Groq GPT OSS 120B",
+    provider: "groq",
+  },
+  {
+    capabilities: { reasoning: false, tools: true, vision: false },
+    description: "Modèle open-source polyvalent sur OpenRouter",
+    id: "openrouter/meta-llama/llama-3.3-70b-instruct",
+    name: "Llama 3.3 70B (OpenRouter)",
+    provider: "openrouter",
+  },
+  {
+    capabilities: { reasoning: false, tools: true, vision: true },
+    description: "Modèle Google Gemini 3.8 rapide et multimodal",
+    id: "google/gemini-3.8-flash",
+    name: "Gemini 3.8 Flash",
+    provider: "google",
+  },
   {
     capabilities: { reasoning: false, tools: true, vision: true },
     description: "Modèle Google Gemini 2.0 rapide et multimodal",

@@ -43,6 +43,7 @@ export default function AppearancePage() {
 
   const changeLanguage = (nextLanguage: SupportedLanguage) => {
     setLanguage(nextLanguage);
+    document.cookie = `NEXT_LOCALE=${nextLanguage}; path=/; max-age=31536000; SameSite=Lax`;
     router.refresh();
   };
 
