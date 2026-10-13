@@ -202,7 +202,7 @@ export default function WelcomePage() {
             {t.nav.signIn}
           </Link>
           <Link
-            className="shrink-0 rounded-xl bg-gradient-to-r from-sky-400 via-violet-500 to-orange-400 px-3 py-2 text-[11px] font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:opacity-90 active:scale-95 sm:px-4 sm:text-xs"
+            className="shrink-0 rounded-xl bg-gradient-to-r from-sky-400 via-violet-500 to-orange-400 px-3 py-2 text-[11px] font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:opacity-90 active:scale-95 sm:px-4 sm:text-xs wave-button"
             href="/register"
           >
             {t.nav.getStarted}

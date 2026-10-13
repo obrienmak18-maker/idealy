@@ -842,17 +842,54 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
 
 @keyframes welcome-clash-gold {
   0% {
-    transform: translate3d(0, 0, 0) scale(0.9) rotate(0deg);
-    opacity: 0.15;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: hue-rotate(0deg) brightness(1);
+  }
+  30% {
+    transform: translate3d(16vw, -8vh, 0) scale(1.2);
+    filter: hue-rotate(20deg) brightness(1.2);
   }
   50% {
-    transform: translate3d(6vw, -8vh, 0) scale(1.35) rotate(180deg);
-    opacity: 0.28;
+    transform: translate3d(28vw, -15vh, 0) scale(1.35);
+    filter: hue-rotate(35deg) brightness(1.5);
+  }
+  75% {
+    transform: translate3d(8vw, -25vh, 0) scale(0.9);
+    filter: hue-rotate(-15deg) brightness(1.05);
   }
   100% {
-    transform: translate3d(-8vw, 10vh, 0) scale(1.1) rotate(360deg);
-    opacity: 0.18;
+    transform: translate3d(-8vw, 0vh, 0) scale(1);
+    filter: hue-rotate(0deg) brightness(1);
   }
+}
+
+@keyframes wave-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.wave-button {
+  background-size: 200% 100%;
+  animation: wave-animation 3s ease-in-out infinite;
+}
+
+.welcome-grid {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  opacity: 0.4;
 }
 
 @keyframes pen-bob {
