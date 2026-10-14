@@ -149,7 +149,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       <div className="mx-auto max-w-5xl px-6 py-10 sm:px-10">
         <div className="mb-8">
           <Link
-            className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="mb-6 inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-container-low hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             href="/"
           >
             <ArrowLeftIcon className="size-4" /> {copy.backToWorkspace}
@@ -181,13 +181,13 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           {billingError ? <p className="mt-4 text-sm text-destructive">{billingError}</p> : null}
           <div className="mt-5 flex flex-wrap gap-2">
             <Link
-              className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-85"
+              className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               href="/welcome#tarifs"
             >
               {copy.viewPlans}
             </Link>
             <button
-              className="rounded-lg border border-border/60 px-3 py-2 text-sm text-muted-foreground hover:bg-muted disabled:opacity-50 cursor-pointer"
+              className="rounded-full border border-outline-variant bg-surface-container-low px-4 py-2 text-sm text-on-surface-variant transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               disabled={openingPortal}
               onClick={openBillingPortal}
               type="button"
@@ -206,17 +206,18 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-3.5 rounded-2xl border p-3.5 transition-all ${
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-3.5 rounded-2xl border p-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                     active
-                      ? "border-primary/60 bg-primary/10 shadow-xs"
-                      : "border-border/60 bg-card/40 hover:bg-card/70"
+                      ? "border-primary-container bg-primary-container/80 shadow-xs"
+                      : "border-outline-variant/70 bg-surface-container-low hover:bg-surface-container-high"
                   }`}
                 >
                   <div
                     className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${
                       active
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-primary-container text-on-primary-container"
+                        : "bg-surface-container-high text-on-surface-variant"
                     }`}
                   >
                     <Icon className="size-4" />
@@ -229,7 +230,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               );
             })}
           </nav>
-          <div className="rounded-2xl border border-border/60 bg-card/50 p-6">{children}</div>
+          <div className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-6">{children}</div>
         </div>
       </div>
     </main>

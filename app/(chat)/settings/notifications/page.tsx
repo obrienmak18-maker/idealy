@@ -139,7 +139,7 @@ export default function NotificationsPage() {
       <section aria-labelledby="idealy-notifications-heading" className="space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-[.12em] text-muted-foreground" id="idealy-notifications-heading">{text.inApp}</h2>
         {rows.map(({ id, title, description }) => (
-          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-border/50 px-4 py-4 transition-colors hover:bg-muted/30 sm:px-5" key={id}>
+          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-outline-variant/70 bg-surface-container-low px-4 py-4 transition-colors hover:bg-surface-container-high sm:px-5" key={id}>
             <span className="min-w-0">
               <span className="block text-sm font-medium">{title}</span>
               <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>
@@ -154,14 +154,14 @@ export default function NotificationsPage() {
                 role="switch"
                 type="checkbox"
               />
-              <span aria-hidden="true" className="h-6 w-11 rounded-full bg-muted transition-colors peer-checked:bg-primary peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-disabled:opacity-50" />
+              <span aria-hidden="true" className="h-6 w-11 rounded-full border border-outline-variant bg-surface-container-high transition-colors peer-checked:border-primary peer-checked:bg-primary peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-disabled:opacity-50" />
               <span aria-hidden="true" className="pointer-events-none absolute left-0.5 size-5 rounded-full bg-background shadow-sm transition-transform peer-checked:translate-x-5" />
             </span>
           </label>
         ))}
       </section>
 
-      <section aria-labelledby="idealy-desktop-notifications-heading" className="rounded-2xl border border-border/50 bg-card/35 p-4 sm:p-5">
+      <section aria-labelledby="idealy-desktop-notifications-heading" className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
             {preferences.desktop ? <Bell aria-hidden="true" className="size-4" /> : <BellOff aria-hidden="true" className="size-4" />}
@@ -176,7 +176,7 @@ export default function NotificationsPage() {
             <span aria-label={text.enabled} className="mt-1 text-emerald-600 dark:text-emerald-400"><Check aria-hidden="true" className="size-4" /></span>
           ) : (
             <button
-              className="min-h-10 shrink-0 rounded-full border border-border/60 px-3 text-xs font-medium transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-10 shrink-0 rounded-full border border-outline-variant bg-surface-container px-4 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!ready || requesting || permission === "denied" || permission === "unsupported"}
               onClick={enableDesktopNotifications}
               type="button"

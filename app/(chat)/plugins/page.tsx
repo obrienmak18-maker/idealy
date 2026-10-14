@@ -183,11 +183,11 @@ export default function PluginsPage() {
   };
 
   return (
-    <main className="min-h-dvh bg-[#07090e] text-slate-100 pb-20 select-none">
+    <main className="min-h-dvh bg-background text-foreground pb-20 select-none">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
         {/* Navigation retour */}
         <Link
-          className="mb-6 inline-flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-white transition-colors"
+          className="mb-6 inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           href="/"
         >
           <ArrowLeftIcon className="size-3.5" /> Retour au workspace
@@ -195,10 +195,10 @@ export default function PluginsPage() {
 
         {/* Header exact de l'Image 1 */}
         <header className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             Connecteurs & Intégrations
           </h1>
-          <p className="mt-1.5 text-xs sm:text-sm text-slate-400">
+          <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground">
             Reliez vos outils pour que l'agent lise, construise et déploie dans votre écosystème.
           </p>
         </header>
@@ -207,16 +207,16 @@ export default function PluginsPage() {
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start">
           {/* Input de recherche */}
           <div className="relative w-full sm:w-72">
-            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Rechercher un connecteur"
-              className="w-full rounded-xl border border-slate-800 bg-[#0d121d] pl-10 pr-12 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500/80 transition-colors"
+              className="w-full rounded-xl border border-outline-variant bg-surface-container-low py-2 pr-12 pl-10 text-xs text-foreground outline-none placeholder:text-muted-foreground transition-colors focus:border-ring/70 focus-visible:ring-2 focus-visible:ring-ring/35"
             />
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-slate-700/80 bg-slate-800/80 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 pointer-events-none">
+            <kbd className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rounded-md border border-outline-variant bg-surface-container-high px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
               ⌘K
             </kbd>
           </div>
@@ -228,12 +228,13 @@ export default function PluginsPage() {
               return (
                 <button
                   key={tab.id}
+                  aria-pressed={isActive}
                   onClick={() => setSelectedCategory(tab.id)}
                   type="button"
                   className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer ${
                     isActive
-                      ? "border border-cyan-500/70 bg-cyan-950/40 text-cyan-300 shadow-xs shadow-cyan-500/20"
-                      : "border border-slate-800/90 bg-[#0d121d]/70 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                      ? "border border-primary-container bg-primary-container text-on-primary-container shadow-sm"
+                      : "border border-outline-variant bg-surface-container-low text-on-surface-variant hover:border-ring/50 hover:bg-surface-container-high hover:text-foreground"
                   }`}
                 >
                   {tab.label}
@@ -270,30 +271,30 @@ export default function PluginsPage() {
             return (
               <div
                 key={connector.id}
-                className="group relative flex items-center justify-between rounded-2xl border border-slate-800/80 bg-[#0c1017] p-4 transition-all duration-200 hover:border-slate-700 hover:bg-[#0e131f]"
+                className="group relative flex items-center justify-between rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4 transition-all duration-200 hover:border-primary/40 hover:bg-surface-container-high hover:shadow-md"
               >
                 {/* Côté gauche : Logo + Titre avec Catégorie + Description -> Lien vers la page dédiée */}
                 <Link
                   href={`/connectors/${connector.id}`}
-                  className="flex items-center gap-3.5 min-w-0 pr-3 flex-1 group/item hover:opacity-90 transition-opacity"
+                  className="group/item flex min-w-0 flex-1 items-center gap-3.5 rounded-lg pr-3 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   title={`Voir la documentation et les capacités de ${connector.label}`}
                 >
                   {/* Icône de la marque officielle SVG dans container sombre */}
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#090d16] border border-slate-800/90 shadow-inner group-hover/item:border-cyan-500/50 transition-colors">
-                    {getConnectorBrandLogo(connector.id, "size-5 text-white", 22)}
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-outline-variant bg-surface-container-high shadow-sm transition-colors group-hover/item:border-primary/50">
+                    {getConnectorBrandLogo(connector.id, "size-5 text-foreground", 22)}
                   </div>
 
                   {/* Textes */}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-white tracking-tight group-hover/item:text-cyan-300 transition-colors">
+                      <span className="text-sm font-semibold tracking-tight text-foreground transition-colors group-hover/item:text-primary">
                         {connector.label}
                       </span>
-                      <span className="rounded border border-slate-800 bg-slate-900/90 px-1.5 py-0.5 text-[9px] font-mono font-medium tracking-wider text-slate-400 uppercase">
+                      <span className="rounded-md border border-outline-variant bg-surface-container px-1.5 py-0.5 font-mono text-[9px] font-medium tracking-wider text-muted-foreground uppercase">
                         {categoryBadge}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-400 line-clamp-1">
+                    <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
                       {description}
                     </p>
                   </div>
@@ -305,17 +306,17 @@ export default function PluginsPage() {
                     <button
                       type="button"
                       onClick={() => toggleConnector(connector.id)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-900/40 bg-emerald-950/30 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-950/60 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-idealy-success/30 bg-idealy-success/10 px-3 py-1.5 text-xs font-medium text-idealy-success transition-colors hover:bg-idealy-success/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
                       title="Cliquer pour déconnecter"
                     >
-                      <span className="size-1.5 rounded-full bg-emerald-400" />
+                      <span className="size-1.5 rounded-full bg-idealy-success" />
                       <span>Connecté</span>
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => toggleConnector(connector.id)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-cyan-500/60 hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-surface-container px-3 py-1.5 text-xs font-medium text-on-surface-variant transition-colors hover:border-primary/50 hover:bg-surface-container-high hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
                     >
                       <PlusIcon className="size-3.5" />
                       <span>Connecter</span>

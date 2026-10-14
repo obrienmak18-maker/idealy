@@ -451,7 +451,7 @@ export function BuildTopBar() {
           </button>
 
           {projectMenuOpen ? (
-            <div className="absolute left-0 top-11 z-50 w-56 rounded-2xl border border-border/80 bg-popover/95 p-1.5 text-xs text-popover-foreground shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute left-0 top-11 z-50 w-56 rounded-2xl border border-outline-variant/70 bg-surface-container-high p-1.5 text-xs text-popover-foreground shadow-lg animate-in fade-in zoom-in-95 duration-100">
               <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                 Options du projet
               </div>
@@ -564,7 +564,7 @@ export function BuildTopBar() {
               <MoreHorizontal className="size-3.5" />
             </button>
             {toolsOpen ? (
-              <div className="absolute left-0 top-11 z-50 w-52 rounded-2xl border border-border/80 bg-popover/95 p-1.5 text-xs text-popover-foreground shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute left-0 top-11 z-50 w-52 rounded-2xl border border-outline-variant/70 bg-surface-container-high p-1.5 text-xs text-popover-foreground shadow-lg animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                   Outils du Canvas
                 </div>
@@ -636,7 +636,7 @@ export function BuildTopBar() {
             <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
           </button>
           {pageMenuOpen ? (
-            <div className="absolute left-0 top-11 z-50 w-44 rounded-xl border border-border/70 bg-popover/95 p-1.5 text-xs text-popover-foreground shadow-2xl backdrop-blur-xl">
+            <div className="absolute left-0 top-11 z-50 w-44 rounded-xl border border-outline-variant/70 bg-surface-container-high p-1.5 text-xs text-popover-foreground shadow-lg">
               {dynamicPages.map((previewPage) => (
                 <button
                   className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground ${page.path === previewPage.path ? "bg-accent/70" : ""}`}
@@ -731,7 +731,7 @@ export function BuildTopBar() {
             <MoreHorizontal className="size-[17px]" />
           </button>
           {moreOpen ? (
-            <div className="absolute right-0 top-10 z-50 max-h-[calc(100dvh-5rem)] w-60 overflow-y-auto overscroll-contain rounded-2xl border border-border/70 bg-popover/95 p-2 text-xs text-popover-foreground shadow-2xl backdrop-blur-xl">
+            <div className="absolute right-0 top-10 z-50 max-h-[calc(100dvh-5rem)] w-60 overflow-y-auto overscroll-contain rounded-2xl border border-outline-variant/70 bg-surface-container-high p-2 text-xs text-popover-foreground shadow-lg">
               <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Vue du workspace</p>
               {([
                 ["preview", "Aperçu"],

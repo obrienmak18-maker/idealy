@@ -107,14 +107,14 @@ export function ConnectorCatalog({
           className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
         />
         <Input
-          className="h-10 rounded-xl bg-card/60 pl-9"
+          className="h-10 rounded-xl border-outline-variant bg-surface-container-low pl-9"
           id="connector-search"
           onChange={handleSearchChange}
           placeholder="Rechercher un connecteur…"
           value={query}
         />
       </div>
-      <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card/55">
+      <div className="divide-y divide-outline-variant/60 overflow-hidden rounded-2xl border border-outline-variant/70 bg-surface-container-low">
         {visible.map((connector) => {
           const status = statusByProvider.get(connector.provider);
           return (

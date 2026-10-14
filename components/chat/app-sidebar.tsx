@@ -182,7 +182,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    className="h-9 rounded-xl border border-sidebar-border bg-sidebar-accent/25 text-[13px] text-sidebar-foreground transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                     onClick={handleNewChat}
                     tooltip={t("sidebar.newChat") || "Nouvelle discussion"}
                   >
@@ -322,7 +322,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                 </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-64 rounded-xl border border-border/60 bg-card/95 p-1.5 shadow-[var(--shadow-float)] backdrop-blur-xl"
+                className="w-64 rounded-xl border border-outline-variant/70 bg-surface-container-high p-1.5 shadow-lg"
                 side="top"
               >
                 {/* Dynamic plan card — reads real Power status, no hardcoded strings */}

@@ -118,7 +118,7 @@ export default function DataPage() {
       </div>
 
       {/* Storage Gauge */}
-      <section className="rounded-2xl border border-border/60 bg-muted/20 p-5 space-y-3">
+      <section className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-5 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <HardDriveIcon className="size-4 text-violet-400" />
@@ -136,7 +136,7 @@ export default function DataPage() {
       </section>
 
       {/* VFS Card */}
-      <section className="rounded-2xl border border-border/60 p-4 space-y-2">
+      <section className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4 space-y-2">
         <div className="flex items-center gap-2 text-foreground font-semibold text-sm">
           <DatabaseIcon className="size-4 text-primary" />
           <span>{copy.vfsTitle}</span>
@@ -145,13 +145,13 @@ export default function DataPage() {
       </section>
 
       {/* Export Data */}
-      <section className="rounded-2xl border border-border/60 p-4 space-y-3">
+      <section className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4 space-y-3">
         <h4 className="text-sm font-semibold">{copy.exportTitle}</h4>
         <p className="text-xs text-muted-foreground">{copy.exportDesc}</p>
         <button
           onClick={handleExportData}
           type="button"
-          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2 text-xs font-medium text-background hover:opacity-90 transition-opacity cursor-pointer"
+          className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
         >
           <DownloadIcon className="size-3.5" />
           {copy.exportBtn}
@@ -159,13 +159,13 @@ export default function DataPage() {
       </section>
 
       {/* Reset Squad Memory */}
-      <section className="rounded-2xl border border-border/60 p-4 space-y-3">
+      <section className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4 space-y-3">
         <h4 className="text-sm font-semibold">{copy.resetMemoryTitle}</h4>
         <p className="text-xs text-muted-foreground">{copy.resetMemoryDesc}</p>
         <button
           onClick={handleResetMemory}
           type="button"
-          className="inline-flex items-center gap-2 rounded-xl border border-border/80 px-4 py-2 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-2 rounded-full border border-outline-variant bg-surface-container px-4 py-2 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
         >
           <RefreshCwIcon className="size-3.5" />
           {copy.resetMemoryBtn}

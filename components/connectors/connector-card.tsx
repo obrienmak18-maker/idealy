@@ -36,13 +36,13 @@ export function ConnectorCard({
 
   return (
     <>
-      <article className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:bg-card hover:shadow-[0_8px_30px_rgba(56,189,248,0.12)] dark:hover:shadow-[0_8px_30px_rgba(139,92,246,0.15)]">
+      <article className="group relative overflow-hidden rounded-2xl border border-outline-variant/70 bg-surface-container-low p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface-container-high hover:shadow-md focus-within:border-ring/70">
         <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary/0 via-primary/60 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
-              <div className="flex size-6 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/40 p-0.5">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-high p-0.5">
                 {getConnectorBrandLogo(connector.id || connector.provider, "size-4 text-foreground")}
               </div>
               <h3 className="font-semibold text-[15px] text-foreground tracking-tight">
@@ -64,7 +64,7 @@ export function ConnectorCard({
                   <LockKeyholeIcon className="size-3" /> Géré par Idealy
                 </span>
               ) : (
-                <span className="rounded-full border border-border/70 px-2.5 py-0.5 text-[11px] text-muted-foreground font-medium">
+                <span className="rounded-full border border-outline-variant px-2.5 py-0.5 text-[11px] text-muted-foreground font-medium">
                   À configurer
                 </span>
               )}
@@ -81,7 +81,7 @@ export function ConnectorCard({
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground/80">
-              <span className="rounded-md bg-muted/50 px-2 py-0.5 font-medium">
+              <span className="rounded-md bg-surface-container px-2 py-0.5 font-medium">
                 {connector.category.toUpperCase()}
               </span>
               <span>·</span>
@@ -124,10 +124,10 @@ export function ConnectorCard({
         </div>
 
         {connector.operations.length > 0 && (
-          <div className="mt-4 pt-3.5 border-t border-border/40 flex flex-wrap gap-1.5">
+          <div className="mt-4 pt-3.5 border-t border-outline-variant/60 flex flex-wrap gap-1.5">
             {connector.operations.slice(0, 4).map((op) => (
               <span
-                className="inline-flex items-center gap-1 rounded-md bg-muted/40 px-2 py-0.5 text-[10.5px] text-muted-foreground"
+                className="inline-flex items-center gap-1 rounded-md bg-surface-container px-2 py-0.5 text-[10.5px] text-muted-foreground"
                 key={op.id}
               >
                 <Sparkles className="size-2.5 text-primary/70" />

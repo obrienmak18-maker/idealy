@@ -45,7 +45,7 @@ export const ModelSelectorContent = ({
   <PopoverContent
     align="start"
     className={cn(
-      "w-[280px] p-0 rounded-xl border border-border/60 bg-card/95 backdrop-blur-xl shadow-[var(--shadow-float)]",
+      "w-[280px] rounded-xl border border-outline-variant/70 bg-surface-container-high p-0 shadow-lg",
       className
     )}
     side="top"

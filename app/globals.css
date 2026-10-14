@@ -32,6 +32,14 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-outline-variant: var(--outline-variant);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-on-surface-variant: var(--on-surface-variant);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -53,6 +61,15 @@
 
 :root {
   --radius: 0.625rem;
+  /* Material 3-inspired semantic surfaces, tuned to Idealy's green brand. */
+  --surface-container-low: #f0f4f0;
+  --surface-container: #ebf0eb;
+  --surface-container-high: #e5ebe5;
+  --surface-container-highest: #dfe6df;
+  --outline-variant: #c6d2c8;
+  --primary-container: #d1e8de;
+  --on-primary-container: #103b32;
+  --on-surface-variant: #475850;
   --idealy-success: oklch(0.68 0.16 150);
   --idealy-warning: oklch(0.75 0.16 75);
   --idealy-error: oklch(0.62 0.20 25);
@@ -130,6 +147,14 @@
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.08);
   --ring: #38bdf8;
+  --surface-container-low: #101821;
+  --surface-container: #141e29;
+  --surface-container-high: #1a2633;
+  --surface-container-highest: #233140;
+  --outline-variant: rgba(255, 255, 255, 0.14);
+  --primary-container: #245448;
+  --on-primary-container: #d1e8de;
+  --on-surface-variant: #bdcbc4;
   --chart-1: #38bdf8;
   --chart-2: #2dd4bf;
   --chart-3: #a78bfa;

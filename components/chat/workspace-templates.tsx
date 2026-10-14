@@ -98,7 +98,7 @@ export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps
               transition={{ delay: i * 0.05, duration: 0.3 }}
               onClick={() => onSelectTemplate(tpl.prompt)}
               type="button"
-              className="group relative flex flex-col justify-between rounded-xl border border-border/60 bg-card/60 p-3.5 text-left backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card hover:shadow-md cursor-pointer"
+              className="group relative flex flex-col justify-between rounded-2xl border border-outline-variant/70 bg-surface-container-low p-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface-container-high hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
             >
               <div className="flex items-start gap-3">
                 <div

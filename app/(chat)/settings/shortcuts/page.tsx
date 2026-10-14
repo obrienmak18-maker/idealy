@@ -198,7 +198,7 @@ export default function ShortcutsPage() {
             </span>
           )}
         </div>
-        <div className="flex items-center justify-between rounded-xl border border-border/70 bg-background/80 px-4 py-3">
+        <div className="flex items-center justify-between rounded-xl border border-outline-variant/70 bg-surface-container-low px-4 py-3">
           <span className="text-xs font-mono text-foreground font-semibold">
             {pressedCombo || copy.testPlaceholder}
           </span>
@@ -215,7 +215,7 @@ export default function ShortcutsPage() {
         {shortcutsList.map((item, index) => (
           <div
             key={index}
-            className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/15 p-3.5 transition-colors hover:bg-muted/30"
+            className="flex items-center justify-between gap-4 rounded-xl border border-outline-variant/70 bg-surface-container-low p-3.5 transition-colors hover:bg-surface-container-high"
           >
             <div>
               <p className="text-sm font-medium text-foreground">{item.title}</p>
@@ -226,7 +226,7 @@ export default function ShortcutsPage() {
                 {item.keys.map((k, i) => (
                   <kbd
                     key={i}
-                    className="inline-flex min-w-[24px] items-center justify-center rounded-md border border-border/80 bg-background px-1.5 py-1 text-[11px] font-mono font-semibold text-foreground shadow-xs"
+                    className="inline-flex min-w-[24px] items-center justify-center rounded-md border border-outline-variant bg-surface-container-high px-1.5 py-1 text-[11px] font-mono font-semibold text-foreground shadow-xs"
                   >
                     {k}
                   </kbd>
@@ -236,7 +236,7 @@ export default function ShortcutsPage() {
                 <button
                   type="button"
                   onClick={item.action}
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                  className="rounded-full p-2 text-muted-foreground hover:bg-surface-container-high hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
                   title={copy.testBtn}
                 >
                   <PlayIcon className="size-3.5" />

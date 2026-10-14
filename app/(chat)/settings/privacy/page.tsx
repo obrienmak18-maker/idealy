@@ -114,7 +114,7 @@ export default function PrivacyPage() {
       </div>
 
       {/* BYOK Section */}
-      <section className="rounded-2xl border border-border/60 bg-muted/20 p-5 space-y-4">
+      <section className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-5 space-y-4">
         <div className="flex items-center gap-2.5 text-primary">
           <KeyRoundIcon className="size-4" />
           <h4 className="text-sm font-semibold text-foreground">{copy.byokTitle}</h4>
@@ -132,7 +132,7 @@ export default function PrivacyPage() {
                 value={geminiKey}
                 onChange={(e) => setGeminiKey(e.target.value)}
                 placeholder="AIzaSy..."
-                className="w-full rounded-xl border border-border/70 bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary pr-9"
+                className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2 pr-9 font-mono text-xs outline-none focus:border-ring/70 focus-visible:ring-2 focus-visible:ring-ring/35"
               />
               <button
                 type="button"
@@ -154,7 +154,7 @@ export default function PrivacyPage() {
                 value={openaiKey}
                 onChange={(e) => setOpenaiKey(e.target.value)}
                 placeholder="sk-proj-..."
-                className="w-full rounded-xl border border-border/70 bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary pr-9"
+                className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2 pr-9 font-mono text-xs outline-none focus:border-ring/70 focus-visible:ring-2 focus-visible:ring-ring/35"
               />
               <button
                 type="button"
@@ -168,7 +168,7 @@ export default function PrivacyPage() {
 
           <button
             type="submit"
-            className="rounded-xl bg-foreground px-4 py-2 text-xs font-medium text-background hover:opacity-90 transition-opacity cursor-pointer"
+            className="rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
           >
             {copy.saveKeys}
           </button>
@@ -176,7 +176,7 @@ export default function PrivacyPage() {
       </section>
 
       {/* Secret Shield */}
-      <section className="rounded-2xl border border-border/60 p-4 flex items-center justify-between gap-4">
+      <section className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4 flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <ShieldCheckIcon className="size-4 text-emerald-500" />
@@ -186,14 +186,15 @@ export default function PrivacyPage() {
         </div>
         <button
           type="button"
+          aria-pressed={shieldActive}
           onClick={() => {
             const next = !shieldActive;
             setShieldActive(next);
             localStorage.setItem("idealy_secret_shield", String(next));
             toast.success(next ? "Bouclier activé" : "Bouclier désactivé");
           }}
-          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-            shieldActive ? "bg-emerald-500" : "bg-muted"
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+            shieldActive ? "bg-idealy-success" : "bg-surface-container-high"
           }`}
         >
           <span
@@ -205,7 +206,7 @@ export default function PrivacyPage() {
       </section>
 
       {/* Retention */}
-      <section className="rounded-2xl border border-border/60 p-4 space-y-3">
+      <section className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-4 space-y-3">
         <h4 className="text-sm font-semibold">{copy.retentionTitle}</h4>
         <p className="text-xs text-muted-foreground">{copy.retentionDesc}</p>
         <div className="flex gap-2">
@@ -217,15 +218,16 @@ export default function PrivacyPage() {
             <button
               key={item.id}
               type="button"
+              aria-pressed={retention === item.id}
               onClick={() => {
                 setRetention(item.id);
                 localStorage.setItem("idealy_retention", item.id);
                 toast.success("Rétention mise à jour");
               }}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-full border px-4 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                 retention === item.id
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border/60 hover:bg-muted/50"
+                  ? "border-primary-container bg-primary-container text-on-primary-container"
+                  : "border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
               }`}
             >
               {item.label}
@@ -237,7 +239,7 @@ export default function PrivacyPage() {
       {/* Clear Cache */}
       <div className="pt-2">
         <button
-          className="inline-flex items-center gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 cursor-pointer"
+          className="inline-flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 cursor-pointer"
           onClick={clearLocalData}
           type="button"
         >

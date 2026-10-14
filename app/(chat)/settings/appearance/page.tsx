@@ -63,10 +63,11 @@ export default function AppearancePage() {
         ].map(({ value, label, Icon }) => (
           <button
             key={value}
-            className={`flex flex-col items-center gap-2 rounded-xl border p-4 text-xs font-medium transition-colors ${
+            aria-pressed={theme === value}
+            className={`flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border p-4 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
               theme === value
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border/60 hover:bg-muted/50"
+                ? "border-primary-container bg-primary-container text-on-primary-container shadow-sm"
+                : "border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
             }`}
             onClick={() => setTheme(value)}
             type="button"
@@ -90,10 +91,10 @@ export default function AppearancePage() {
           ] as const).map(([value, label]) => (
             <button
               aria-pressed={language === value}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                 language === value
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border/60 hover:bg-muted/50"
+                  ? "border-primary-container bg-primary-container text-on-primary-container"
+                  : "border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
               }`}
               key={value}
               onClick={() => changeLanguage(value)}
