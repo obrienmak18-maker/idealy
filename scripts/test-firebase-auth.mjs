@@ -11,6 +11,8 @@ const files = {
   ),
   register: await readFile("app/(auth)/register/page.tsx", "utf8"),
   supabase: await readFile("lib/idealy/supabase-auth.ts", "utf8"),
+  workspace: await readFile("pnpm-workspace.yaml", "utf8"),
+  lockfile: await readFile("pnpm-lock.yaml", "utf8"),
 };
 
 assert.match(files.client, /initializeApp/);
@@ -25,6 +27,9 @@ assert.match(files.providerActions, /Continuer avec Google/);
 assert.match(files.providerActions, /signInWithGoogleFirebase/);
 assert.match(files.providerActions, /await completeAuth\(idToken\)/);
 assert.doesNotMatch(files.providerActions, /\.catch\(\(\) => \{\}\)/);
+assert.ok(files.workspace.includes("'jwks-rsa>jose': '4.15.9'"));
+assert.ok(files.lockfile.includes("jwks-rsa>jose: 4.15.9"));
+assert.ok(files.lockfile.includes("jose: 4.15.9"));
 assert.match(files.auth, /id: "firebase"/);
 assert.match(files.auth, /credentials: \{/);
 assert.match(files.auth, /id: "guest"/);
