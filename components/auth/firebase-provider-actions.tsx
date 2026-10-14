@@ -70,26 +70,41 @@ export function FirebaseProviderActions({
         redirect: false,
       });
 
-      if (result?.error) {
+      if (!result || result.error) {
         throw new Error("firebase_session_rejected");
       }
 
-      await updateSession();
+      // The sign-in response has already set the session cookie. Refresh client
+      // session state when possible, but do not let a failed refresh strand the user.
+      await updateSession().catch((error) => {
+        console.error("Session refresh after Google sign-in failed:", error);
+      });
       window.location.assign(nextPath);
     },
     [nextPath, updateSession]
   );
 
-  // Check for redirect return (in case popup was blocked or auto-redirected)
+  // Complete a sign-in after Firebase returns from its full-page Google redirect.
   useEffect(() => {
-    checkGoogleRedirectResult()
-      .then((idToken) => {
-        if (idToken) {
-          completeAuth(idToken);
+    let isActive = true;
+
+    void checkGoogleRedirectResult()
+      .then(async (idToken) => {
+        if (isActive && idToken) {
+          await completeAuth(idToken);
         }
       })
-      .catch(() => {});
-  }, [completeAuth]);
+      .catch((err: unknown) => {
+        console.error("Google redirect sign-in could not be completed:", err);
+        toast.error(
+          t("auth.googleFailed", "Google sign-in failed. Try again or use your email address.")
+        );
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [completeAuth, t]);
 
   const handleGoogleSignIn = useCallback(() => {
     if (requireTerms && !termsAccepted) {
@@ -106,8 +121,11 @@ export function FirebaseProviderActions({
       }
 
       try {
-        const { idToken } = await signInWithGoogleFirebase();
-        await completeAuth(idToken);
+        const authResult = await signInWithGoogleFirebase();
+        if (authResult.redirecting || !authResult.idToken) {
+          return;
+        }
+        await completeAuth(authResult.idToken);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "";
         const code =

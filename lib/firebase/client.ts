@@ -141,13 +141,15 @@ export async function checkGoogleRedirectResult(): Promise<string | null> {
     }
   } catch (err) {
     console.error("[Firebase Redirect Result]", err);
+    throw err;
   }
   return null;
 }
 
 export async function signInWithGoogleFirebase(): Promise<{
   credential?: UserCredential;
-  idToken: string;
+  idToken?: string;
+  redirecting?: boolean;
 }> {
   const auth = getFirebaseAuth();
   await setPersistence(auth, browserLocalPersistence);
@@ -168,16 +170,14 @@ export async function signInWithGoogleFirebase(): Promise<{
         ? String((popupError as { code: unknown }).code)
         : "";
 
-    // If popup is blocked by browser, or user's browser fails popup isolation, fall back to redirect
+    // A full-page redirect is the real fallback when the popup cannot be opened.
     if (
       errorCode === "auth/popup-blocked" ||
       errorCode === "auth/cancelled-popup-request" ||
       errorCode === "auth/internal-error"
     ) {
-      return new Promise((resolve) => {
-        // Execution will pause and redirect
-        resolve(undefined as any);
-      });
+      await signInWithRedirect(auth, provider);
+      return { redirecting: true };
     }
 
     throw popupError;

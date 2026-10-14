@@ -3,6 +3,8 @@ lockfileVersion: '9.0'
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
+  overrides:
+    jwks-rsa>jose: 5.10.0
 
 importers:
 
@@ -9680,7 +9682,7 @@ snapshots:
     dependencies:
       '@types/jsonwebtoken': 9.0.10
       debug: 4.4.3
-      jose: 6.2.10
+      jose: 5.10.0
       limiter: 1.1.5
       lru-cache: 11.2.4
       lru-memoizer: 3.0.0
