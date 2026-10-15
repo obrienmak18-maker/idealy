@@ -56,6 +56,7 @@ export function FirebaseProviderActions({
   const [internalTermsAccepted, setInternalTermsAccepted] = useState(!requireTerms);
   const termsAccepted = controlledTermsAccepted !== undefined ? controlledTermsAccepted : internalTermsAccepted;
   const firebaseConfigured = isFirebaseConfigured();
+  const [providerError, setProviderError] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [confirmationResult, setConfirmationResult] =
@@ -96,8 +97,17 @@ export function FirebaseProviderActions({
       })
       .catch((err: unknown) => {
         console.error("Google redirect sign-in could not be completed:", err);
+        const code =
+          typeof err === "object" && err !== null && "code" in err
+            ? String((err as { code: unknown }).code)
+            : "";
+        setProviderError(
+          code === "auth/unauthorized-domain"
+            ? "Ce domaine n’est pas autorisé dans Firebase. Ajoutez localhost et le domaine publié dans Firebase Authentication > Paramètres > Domaines autorisés."
+            : t("auth.googleFailed", "La connexion Google n’a pas abouti. Réessayez ou utilisez votre adresse e-mail.")
+        );
         toast.error(
-          t("auth.googleFailed", "Google sign-in failed. Try again or use your email address.")
+          t("auth.googleFailed", "La connexion Google n’a pas abouti. Réessayez ou utilisez votre adresse e-mail.")
         );
       });
 
@@ -107,16 +117,23 @@ export function FirebaseProviderActions({
   }, [completeAuth, t]);
 
   const handleGoogleSignIn = useCallback(() => {
+    setProviderError(null);
     if (requireTerms && !termsAccepted) {
-      toast.error(
-        "Veuillez accepter les conditions d'utilisation et la politique de confidentialité avant de continuer."
-      );
+      const message =
+        "Veuillez accepter les conditions d'utilisation et la politique de confidentialité avant de continuer.";
+      setProviderError(message);
+      toast.error(message);
       return;
     }
 
     startTransition(async () => {
       if (!firebaseConfigured) {
-        toast.error(t("auth.firebaseUnavailable", "Google n’est pas encore configuré pour cet environnement."));
+        const message = t(
+          "auth.firebaseUnavailable",
+          "Google n’est pas encore configuré pour cet environnement."
+        );
+        setProviderError(message);
+        toast.error(message);
         return;
       }
 
@@ -142,16 +159,20 @@ export function FirebaseProviderActions({
           return;
         }
 
-        if (code === "auth/unauthorized-domain") {
-          toast.error(
-            "Domaine non autorisé dans Firebase Console. Ajoutez 'localhost' dans Authentification > Paramètres > Domaines autorisés."
-          );
-          return;
-        }
+        const errorMessage =
+          code === "auth/unauthorized-domain"
+            ? "Ce domaine n’est pas autorisé dans Firebase. Ajoutez localhost et le domaine publié dans Firebase Authentication > Paramètres > Domaines autorisés."
+            : code === "auth/network-request-failed"
+              ? "Connexion réseau impossible pendant l’authentification. Vérifiez Internet puis réessayez."
+              : message === "firebase_session_rejected"
+                ? "Google a répondu, mais Idealy n’a pas pu créer votre session. Le serveur a refusé la connexion."
+                : t(
+                    "auth.googleFailed",
+                    "La connexion Google n’a pas abouti. Réessayez ou utilisez votre adresse e-mail."
+                  );
 
-          toast.error(
-            t("auth.googleFailed", "Google sign-in failed. Try again or use your email address.")
-          );
+        setProviderError(errorMessage);
+        toast.error(errorMessage);
       }
     });
   }, [completeAuth, firebaseConfigured, nextPath, requireTerms, t, termsAccepted]);
@@ -266,6 +287,16 @@ export function FirebaseProviderActions({
         )}
         {t("auth.googleButton", "Continuer avec Google")}
       </button>
+
+      {providerError ? (
+        <p
+          aria-live="assertive"
+          className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          {providerError}
+        </p>
+      ) : null}
 
       {!firebaseConfigured ? (
         <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
