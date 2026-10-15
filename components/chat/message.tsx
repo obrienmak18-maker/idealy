@@ -196,7 +196,18 @@ const PurePreviewMessage = ({
           data-testid="message-content"
           key={key}
         >
-          <MessageResponse>{sanitizeText(part.text)}</MessageResponse>
+          <MessageResponse
+            animated={{
+              animation: "fadeIn",
+              duration: 130,
+              easing: "ease-out",
+              sep: "word",
+            }}
+            caret={isAssistant && isLoading ? "circle" : undefined}
+            isAnimating={isAssistant && isLoading}
+          >
+            {sanitizeText(part.text)}
+          </MessageResponse>
         </MessageContent>
       );
     }
