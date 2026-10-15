@@ -189,7 +189,7 @@ const PurePreviewMessage = ({
     if (type === "text") {
       return (
         <MessageContent
-          className={cn("text-[13px] leading-[1.65]", {
+          className={cn("text-[14px] leading-[1.75] md:text-[15px]", {
             "idealy-bubble-user w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm":
               message.role === "user",
           })}
@@ -404,7 +404,7 @@ const PurePreviewMessage = ({
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             {/* Affichage agent : avatar officiel et nom de la Voie active */}
             <div className="flex items-center gap-2 pt-0.5">
-              <div className="relative flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30">
+              <div className="relative flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30">
                 {agentAvatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -416,17 +416,12 @@ const PurePreviewMessage = ({
                   <IdealyMark className="size-3.5" size={14} />
                 )}
               </div>
-              <span className="text-[12.5px] font-semibold tracking-tight text-foreground/90">
+              <span className="text-[13px] font-semibold tracking-tight text-foreground/90">
                 {agentName}
               </span>
-              <span className="text-[10px] text-muted-foreground font-mono">
+              <span className="text-[11px] text-muted-foreground font-mono">
                 • {agentRole}
               </span>
-              {activeWayData?.label ? (
-                <span className="hidden sm:inline-block rounded-full bg-sidebar-accent/80 border border-sidebar-border/60 px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground">
-                  {activeWayData.label}
-                </span>
-              ) : null}
             </div>
             {/* Le texte coule directement sur le fond de l'interface, sans bulle fermée ni bordure artificielle */}
             <div className="min-w-0 flex-1 text-foreground/95">{content}</div>
