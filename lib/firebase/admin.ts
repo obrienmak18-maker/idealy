@@ -1,23 +1,32 @@
-﻿/**
+/**
  * lib/firebase/admin.ts
  *
  * Firebase Admin SDK - SERVER ONLY.
  * Never import this from any "use client" component.
  *
- * Required env vars (never prefixed NEXT_PUBLIC_):
+ * Optional privileged Admin env vars:
  *   FIREBASE_PROJECT_ID
  *   FIREBASE_CLIENT_EMAIL
- *   FIREBASE_PRIVATE_KEY   (full PEM, newlines as \n in env)
+ *   FIREBASE_PRIVATE_KEY (full PEM, newlines as \\n in env)
+ *
+ * ID-token verification can use Google's public signing certificates when a
+ * service-account credential is not available. This is sufficient to validate
+ * a Firebase ID token's signature, issuer, audience and expiry; privileged
+ * operations such as setting custom claims still require Admin credentials.
  */
 import "server-only";
 
 import { type App, cert, getApp, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
+const VERIFIER_APP_NAME = "idealy-firebase-token-verifier";
+
 function getAdminConfig() {
-  const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+  const projectId =
+    process.env.FIREBASE_PROJECT_ID?.trim() ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\\\n/g, "\\n");
 
   if (!projectId || !clientEmail || !privateKey) return null;
   return { clientEmail, privateKey, projectId };
@@ -28,15 +37,31 @@ export function isFirebaseAdminConfigured(): boolean {
 }
 
 function getAdminApp(): App {
-  if (getApps().length > 0) return getApp();
+  const existingDefaultApp = getApps().find((app) => app.name === "[DEFAULT]");
+  if (existingDefaultApp) return existingDefaultApp;
+
   const config = getAdminConfig();
-  if (!config) throw new Error("Firebase Admin not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.");
-  return initializeApp({ credential: cert(config) });
+  if (!config) {
+    throw new Error(
+      "Firebase Admin not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY."
+    );
+  }
+
+  return initializeApp({ credential: cert(config), projectId: config.projectId });
+}
+
+function getVerificationApp(projectId: string): App {
+  const existing = getApps().find((app) => app.name === VERIFIER_APP_NAME);
+  if (existing) return existing;
+
+  // Verification uses public Google signing certificates and does not need a
+  // service-account private key. Keep this app separate from privileged Admin.
+  return initializeApp({ projectId }, VERIFIER_APP_NAME);
 }
 
 /**
  * Set role:"authenticated" custom claim on a Firebase user.
- * Required for Supabase Third-Party Auth to grant postgres "authenticated" role.
+ * Requires Firebase Admin credentials.
  */
 export async function setAuthenticatedClaim(uid: string): Promise<void> {
   const auth = getAuth(getAdminApp());
@@ -46,12 +71,36 @@ export async function setAuthenticatedClaim(uid: string): Promise<void> {
 }
 
 /**
- * Verify a Firebase ID token. Returns decoded payload or null if invalid.
+ * Verify a Firebase ID token. Use full Admin verification with revocation
+ * checks when service-account credentials exist; otherwise verify the token
+ * cryptographically against Google's public certificates and the configured
+ * Firebase project ID. Never trust unverified token claims.
  */
 export async function verifyFirebaseToken(idToken: string) {
+  const config = getAdminConfig();
+
+  if (config) {
+    try {
+      return await getAuth(getAdminApp()).verifyIdToken(idToken, true);
+    } catch (error) {
+      console.error("[Firebase Admin token verification]", error);
+      return null;
+    }
+  }
+
+  const projectId =
+    process.env.FIREBASE_PROJECT_ID?.trim() ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
+
+  if (!projectId) {
+    console.error("[Firebase token verification] Firebase project ID is not configured.");
+    return null;
+  }
+
   try {
-    return await getAuth(getAdminApp()).verifyIdToken(idToken, true);
-  } catch {
+    return await getAuth(getVerificationApp(projectId)).verifyIdToken(idToken, false);
+  } catch (error) {
+    console.error("[Firebase public-certificate token verification]", error);
     return null;
   }
 }
