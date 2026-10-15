@@ -285,6 +285,15 @@ export const {
 
             supabaseAuth = await signInFirebaseUserThroughSupabase(email);
             if (supabaseAuth.status !== "authenticated" || !supabaseAuth.accessToken) {
+              console.error("[Firebase sign-in] Supabase bridge did not establish a session.", {
+                status: supabaseAuth.status,
+                configured: supabaseAuth.configured,
+                hasAccessToken: Boolean(supabaseAuth.accessToken),
+                hasUserId: Boolean(supabaseAuth.userId),
+                hasSupabaseUrl: Boolean(process.env.SUPABASE_URL?.trim()),
+                hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
+                hasAuthSecret: Boolean(process.env.AUTH_SECRET?.trim()),
+              });
               throw new IdealyCredentialsSignin("service_unavailable");
             }
           }
