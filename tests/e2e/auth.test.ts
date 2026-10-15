@@ -34,4 +34,21 @@ test.describe("Authentication Pages", () => {
     await page.getByRole("link", { name: "Sign in" }).click();
     await expect(page).toHaveURL("/login");
   });
+
+  test("shows a visible error when Google redirects back without a credential", async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        window.sessionStorage.setItem("idealy:google-redirect-pending", "1");
+      } catch {
+        // The test still exercises the page even if browser storage is blocked.
+      }
+    });
+
+    await page.goto("/login");
+
+    await expect(page.getByRole("alert")).toContainText(
+      "Google n’a pas terminé la connexion.",
+      { timeout: 10_000 }
+    );
+  });
 });
