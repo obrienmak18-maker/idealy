@@ -114,16 +114,12 @@ export function BuildTopBar() {
   const [view, setView] = useState<WorkspaceView>("preview");
   const [device, setDevice] = useState<Device>("desktop");
   const [page, setPage] = useState<PreviewPage>({ label: "Accueil", path: "/" });
-  const [pageMenuOpen, setPageMenuOpen] = useState(false);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const projectMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
-  const pageMenuRef = useRef<HTMLDivElement>(null);
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const toolsMenuRef = useRef<HTMLDivElement>(null);
   const missionId =
     typeof metadata?.missionId === "string" ? metadata.missionId : null;
   const [isSquadRunning, setIsSquadRunning] = useState(false);
@@ -238,19 +234,11 @@ export function BuildTopBar() {
       if (!moreMenuRef.current?.contains(target)) {
         setMoreOpen(false);
       }
-      if (!pageMenuRef.current?.contains(target)) {
-        setPageMenuOpen(false);
-      }
-      if (!toolsMenuRef.current?.contains(target)) {
-        setToolsOpen(false);
-      }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setProjectMenuOpen(false);
         setMoreOpen(false);
-        setPageMenuOpen(false);
-        setToolsOpen(false);
       }
     };
 
@@ -270,7 +258,6 @@ export function BuildTopBar() {
 
   const selectView = (nextView: WorkspaceView) => {
     setView(nextView);
-    setToolsOpen(false);
     dispatch("idealy:set-view", nextView);
   };
 
@@ -281,7 +268,7 @@ export function BuildTopBar() {
 
   const selectPage = (nextPage: PreviewPage) => {
     setPage(nextPage);
-    setPageMenuOpen(false);
+    setMoreOpen(false);
     dispatch("idealy:set-preview-page", nextPage.path);
   };
 
@@ -529,181 +516,33 @@ export function BuildTopBar() {
         </div>
       </div>
 
-      <div className="hidden items-center gap-1.5 md:flex">
-        <div className="flex items-center gap-0.5 rounded-xl border border-sidebar-border/70 bg-background/20 p-1 shadow-sm">
-          <button
-            aria-label="Preview"
-            aria-pressed={view === "preview"}
-            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${view === "preview" ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : "text-muted-foreground hover:text-sidebar-foreground"}`}
-            onClick={() => selectView("preview")}
-            type="button"
-          >
-            Preview
-          </button>
-          <button
-            aria-label="Database"
-            aria-pressed={view === "database"}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${view === "database" ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : "text-muted-foreground hover:text-sidebar-foreground"}`}
-            onClick={() => selectView("database")}
-            type="button"
-          >
-            <Database className="size-3.5" />
-            <span>Database</span>
-          </button>
-
-          {/* Menu dropdown regroupant Console, Logs, Code et slots futurs */}
-          <div className="relative" ref={toolsMenuRef}>
+      <div className="hidden items-center justify-center md:flex">
+        <div
+          aria-label="Vues du workspace"
+          className="flex items-center gap-0.5 rounded-xl border border-sidebar-border/70 bg-background/20 p-1 shadow-sm"
+          role="group"
+        >
+          {([
+            ["preview", "Aperçu", Globe2],
+            ["code", "Code", Code2],
+            ["database", "Données", Database],
+          ] as const).map(([nextView, label, Icon]) => (
             <button
-              aria-expanded={toolsOpen}
-              aria-label="Outils supplémentaires du canvas"
-              className={`flex items-center justify-center rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors ${toolsOpen ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : "text-muted-foreground hover:text-sidebar-foreground"}`}
-              onClick={() => setToolsOpen((prev) => !prev)}
-              type="button"
-              title="Outils supplémentaires (Console, Logs, Code, Slots futurs...)"
-            >
-              <MoreHorizontal className="size-3.5" />
-            </button>
-            {toolsOpen ? (
-              <div className="absolute left-0 top-11 z-50 w-52 rounded-2xl border border-outline-variant/70 bg-surface-container-high p-1.5 text-xs text-popover-foreground shadow-lg animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                  Outils du Canvas
-                </div>
-                <button
-                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground ${view === "code" ? "bg-accent/70 font-semibold" : ""}`}
-                  onClick={() => selectView("code")}
-                  type="button"
-                >
-                  <div className="flex items-center gap-2">
-                    <Code2 className="size-3.5 text-primary" />
-                    <span>Code source</span>
-                  </div>
-                  {view === "code" && <span className="text-[10px] text-muted-foreground font-mono">Actif</span>}
-                </button>
-                <button
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => {
-                    selectView("preview");
-                    dispatch("idealy:set-view", "console");
-                    setToolsOpen(false);
-                  }}
-                  type="button"
-                >
-                  <div className="flex items-center gap-2">
-                    <TerminalSquare className="size-3.5 text-sky-400" />
-                    <span>Console</span>
-                  </div>
-                </button>
-                <button
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => {
-                    selectView("preview");
-                    dispatch("idealy:set-view", "console");
-                    setToolsOpen(false);
-                  }}
-                  type="button"
-                >
-                  <div className="flex items-center gap-2">
-                    <History className="size-3.5 text-violet-400" />
-                    <span>Logs & Pipeline</span>
-                  </div>
-                </button>
-                <div className="my-1 border-t border-border/50" />
-                <div className="px-2.5 py-1 text-[10px] font-mono text-muted-foreground/60">
-                  Slots outils futurs (SQL, API)
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="relative" ref={pageMenuRef}>
-          <button
-            aria-expanded={pageMenuOpen}
-            aria-label="Preview page"
-            className="inline-flex h-10 min-w-[112px] items-center gap-2 rounded-xl border border-sidebar-border/70 bg-background/20 px-2.5 text-left shadow-sm transition-colors hover:bg-sidebar-accent"
-            onClick={() => setPageMenuOpen((value) => !value)}
-            type="button"
-          >
-            <Globe2 className="size-3.5 shrink-0 text-sky-300" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[11px] font-semibold leading-4 text-sidebar-foreground">
-                {page.label}
-              </span>
-              <span className="block truncate font-mono text-[9px] leading-3 text-muted-foreground">
-                {page.path}
-              </span>
-            </span>
-            <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
-          </button>
-          {pageMenuOpen ? (
-            <div className="absolute left-0 top-11 z-50 w-44 rounded-xl border border-outline-variant/70 bg-surface-container-high p-1.5 text-xs text-popover-foreground shadow-lg">
-              {dynamicPages.map((previewPage) => (
-                <button
-                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground ${page.path === previewPage.path ? "bg-accent/70" : ""}`}
-                  key={previewPage.path}
-                  onClick={() => selectPage(previewPage)}
-                  type="button"
-                >
-                  <span>{previewPage.label}</span>
-                  <span className="font-mono text-[10px] text-muted-foreground">
-                    {previewPage.path}
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex items-center gap-0.5 rounded-xl border border-sidebar-border/70 bg-background/20 p-1 shadow-sm">
-          <button
-            aria-label="Desktop"
-            aria-pressed={device === "desktop"}
-            className={`${controlClass} size-8 ${device === "desktop" ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : ""}`}
-            onClick={() => selectDevice("desktop")}
-            type="button"
-          >
-            <Laptop className="size-4" />
-          </button>
-          <button
-            aria-label="Tablet"
-            aria-pressed={device === "tablet"}
-            className={`${controlClass} size-8 ${device === "tablet" ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : ""}`}
-            onClick={() => selectDevice("tablet")}
-            type="button"
-          >
-            <Tablet className="size-4" />
-          </button>
-          <button
-            aria-label="Mobile"
-            aria-pressed={device === "mobile"}
-            className={`${controlClass} size-8 ${device === "mobile" ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" : ""}`}
-            onClick={() => selectDevice("mobile")}
-            type="button"
-          >
-            <Smartphone className="size-4" />
-          </button>
-          <button
-            aria-label="Refresh"
-            className={`${controlClass} size-8 ${refreshing ? "text-sky-300" : ""}`}
-            onClick={refresh}
-            type="button"
-          >
-            <RefreshCw
-              className={`size-4 ${refreshing ? "animate-spin" : ""}`}
-            />
-          </button>
-          {view === "preview" && (
-            <button
-              aria-label="Inspecteur visuel"
-              aria-pressed={isInspectorActive}
-              className={`${controlClass} size-8 ${isInspectorActive ? "bg-sky-400/20 text-sky-300" : ""}`}
-              onClick={toggleInspector}
-              title="Inspecter un élément visuel"
+              aria-label={label}
+              aria-pressed={view === nextView}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                view === nextView
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+              }`}
+              key={nextView}
+              onClick={() => selectView(nextView)}
               type="button"
             >
-              <Crosshair className="size-4" />
+              <Icon aria-hidden="true" className="size-3.5" />
+              <span>{label}</span>
             </button>
-          )}
+          ))}
         </div>
       </div>
 
@@ -732,27 +571,50 @@ export function BuildTopBar() {
           </button>
           {moreOpen ? (
             <div className="absolute right-0 top-10 z-50 max-h-[calc(100dvh-5rem)] w-60 overflow-y-auto overscroll-contain rounded-2xl border border-outline-variant/70 bg-surface-container-high p-2 text-xs text-popover-foreground shadow-lg">
-              <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Vue du workspace</p>
-              {([
-                ["preview", "Aperçu"],
-                ["code", "Code"],
-                ["database", "Données"],
-              ] as const).map(([nextView, frenchLabel]) => (
-                <button
-                  aria-pressed={view === nextView}
-                  className={`flex min-h-9 w-full items-center justify-between rounded-lg px-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground ${view === nextView ? "bg-accent/70 font-medium" : ""}`}
-                  key={nextView}
-                  onClick={() => {
-                    setMoreOpen(false);
-                    selectView(nextView);
-                  }}
-                  type="button"
-                >
-                  <span>{frenchLabel}</span>
-                  {view === nextView ? <span className="text-[10px] text-muted-foreground">Actif</span> : null}
-                </button>
-              ))}
-              <div className="my-2 border-t border-border/60" />
+              <div className="md:hidden">
+                <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Vue du workspace</p>
+                {([
+                  ["preview", "Aperçu"],
+                  ["code", "Code"],
+                  ["database", "Données"],
+                ] as const).map(([nextView, frenchLabel]) => (
+                  <button
+                    aria-pressed={view === nextView}
+                    className={`flex min-h-9 w-full items-center justify-between rounded-lg px-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground ${view === nextView ? "bg-accent/70 font-medium" : ""}`}
+                    key={nextView}
+                    onClick={() => {
+                      setMoreOpen(false);
+                      selectView(nextView);
+                    }}
+                    type="button"
+                  >
+                    <span>{frenchLabel}</span>
+                    {view === nextView ? <span className="text-[10px] text-muted-foreground">Actif</span> : null}
+                  </button>
+                ))}
+                <div className="my-2 border-t border-border/60" />
+              </div>
+              {view === "preview" && dynamicPages.length > 1 ? (
+                <>
+                  <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">
+                    <Globe2 aria-hidden="true" className="mr-1 inline size-3.5" />
+                    Page de l’aperçu
+                  </p>
+                  {dynamicPages.map((previewPage) => (
+                    <button
+                      aria-pressed={page.path === previewPage.path}
+                      className={`flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground ${page.path === previewPage.path ? "bg-accent/70 font-medium" : ""}`}
+                      key={previewPage.path}
+                      onClick={() => selectPage(previewPage)}
+                      type="button"
+                    >
+                      <span className="truncate">{previewPage.label}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{previewPage.path}</span>
+                    </button>
+                  ))}
+                  <div className="my-2 border-t border-border/60" />
+                </>
+              ) : null}
               <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Taille de l’aperçu</p>
               <div className="grid grid-cols-3 gap-1">
                 {([
@@ -776,6 +638,17 @@ export function BuildTopBar() {
                   </button>
                 ))}
               </div>
+              <button
+                className="mt-1 flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  setMoreOpen(false);
+                  refresh();
+                }}
+                type="button"
+              >
+                <RefreshCw aria-hidden="true" className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                {refreshing ? "Actualisation…" : "Actualiser l’aperçu"}
+              </button>
               {view === "preview" ? (
                 <button
                   aria-pressed={isInspectorActive}
@@ -790,10 +663,53 @@ export function BuildTopBar() {
                   Inspecter l’aperçu
                 </button>
               ) : null}
+              <button
+                className="mt-1 flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  setMoreOpen(false);
+                  dispatch("idealy:open-preview");
+                }}
+                type="button"
+              >
+                <ExternalLink aria-hidden="true" className="size-3.5" />
+                Ouvrir l’aperçu dans un nouvel onglet
+              </button>
+              <button
+                className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  setMoreOpen(false);
+                  toggleCanvasFullscreen();
+                }}
+                type="button"
+              >
+                {isCanvasExpanded ? (
+                  <Minimize2 aria-hidden="true" className="size-3.5" />
+                ) : (
+                  <Maximize2 aria-hidden="true" className="size-3.5" />
+                )}
+                {isCanvasExpanded ? "Réduire l’aperçu" : "Agrandir l’aperçu"}
+              </button>
+              <button
+                className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                onClick={async () => {
+                  setMoreOpen(false);
+                  try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    toast.success("Lien de cette discussion copié.");
+                  } catch {
+                    toast.info("Le navigateur n’autorise pas la copie du lien.");
+                  }
+                }}
+                type="button"
+              >
+                <Share2 aria-hidden="true" className="size-3.5" />
+                Copier le lien de la discussion
+              </button>
+              <div className="my-2 border-t border-border/60" />
               {missionId ? (
                 <button
                   aria-busy={isSquadRunning}
-                  className="mt-1 flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sky-300 transition-colors hover:bg-accent disabled:opacity-50"
+                  className="mt-1 flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sky-300 transition-colors hover:bg-accent disabled:opacity-50 lg:hidden"
                   disabled={isSquadRunning}
                   onClick={() => {
                     setMoreOpen(false);
@@ -871,14 +787,15 @@ export function BuildTopBar() {
                 Télécharger le ZIP
               </button>
               <button
-                className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground"
+                className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground"
                 onClick={() => {
                   setMoreOpen(false);
                   dispatch("idealy:show-console");
                 }}
                 type="button"
               >
-                Ouvrir la console
+                <TerminalSquare aria-hidden="true" className="size-3.5" />
+                Ouvrir la console et les journaux
               </button>
               <button
                 className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-accent hover:text-accent-foreground"
@@ -904,42 +821,6 @@ export function BuildTopBar() {
             </div>
           ) : null}
         </div>
-        <button
-          aria-label="Open preview in new window"
-          className={`${controlClass} hidden size-8 md:inline-flex`}
-          onClick={() => dispatch("idealy:open-preview")}
-          type="button"
-        >
-          <ExternalLink className="size-4" />
-        </button>
-        <button
-          aria-label={isCanvasExpanded ? "Exit fullscreen" : "Expand preview"}
-          aria-pressed={isCanvasExpanded}
-          className={`${controlClass} hidden size-8 md:inline-flex`}
-          onClick={toggleCanvasFullscreen}
-          type="button"
-        >
-          {isCanvasExpanded ? (
-            <Minimize2 className="size-4" />
-          ) : (
-            <Maximize2 className="size-4" />
-          )}
-        </button>
-        <button
-          aria-label="Copier le lien de cette discussion"
-          className={`${controlClass} hidden size-8 md:inline-flex`}
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(window.location.href);
-              toast.success("Lien de cette discussion copié.");
-            } catch {
-              toast.info("Le navigateur n’autorise pas la copie du lien.");
-            }
-          }}
-          type="button"
-        >
-          <Share2 className="size-4" />
-        </button>
         {missionId ? (
           <button
             aria-busy={isSquadRunning}
