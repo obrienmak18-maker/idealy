@@ -18,6 +18,8 @@ import {
   type UserCredential,
 } from "firebase/auth";
 
+const GOOGLE_REDIRECT_PENDING_KEY = "idealy:google-redirect-pending";
+
 function getFirebaseConfig() {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim();
   const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim();
@@ -45,6 +47,31 @@ function getFirebaseConfig() {
 
 export function isFirebaseConfigured(): boolean {
   return getFirebaseConfig() !== null;
+}
+
+/** Track the full-page OAuth fallback so a missing redirect result is not silent. */
+function markGoogleRedirectPending(): void {
+  try {
+    window.sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, "1");
+  } catch {
+    // Storage can be unavailable; the visible sign-in error path still remains.
+  }
+}
+
+export function wasGoogleRedirectPending(): boolean {
+  try {
+    return window.sessionStorage.getItem(GOOGLE_REDIRECT_PENDING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function clearGoogleRedirectPending(): void {
+  try {
+    window.sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+  } catch {
+    // Ignore storage failures; they must not block authentication.
+  }
 }
 
 export function getFirebaseAuth() {
@@ -176,8 +203,14 @@ export async function signInWithGoogleFirebase(): Promise<{
       errorCode === "auth/cancelled-popup-request" ||
       errorCode === "auth/internal-error"
     ) {
-      await signInWithRedirect(auth, provider);
-      return { redirecting: true };
+      markGoogleRedirectPending();
+      try {
+        await signInWithRedirect(auth, provider);
+        return { redirecting: true };
+      } catch (redirectError) {
+        clearGoogleRedirectPending();
+        throw redirectError;
+      }
     }
 
     throw popupError;
