@@ -8,6 +8,8 @@ import { toast } from "sonner";
 
 import {
   checkGoogleRedirectResult,
+  clearGoogleRedirectPending,
+  wasGoogleRedirectPending,
   confirmPhoneCodeFirebase,
   getFirebaseAuth,
   isFirebaseConfigured,
@@ -86,29 +88,50 @@ export function FirebaseProviderActions({
   );
 
   // Complete a sign-in after Firebase returns from its full-page Google redirect.
+  // A redirect that returns without a credential must show an error instead of
+  // leaving the user on the login page with no explanation.
   useEffect(() => {
     let isActive = true;
+    const redirectWasPending = wasGoogleRedirectPending();
 
     void checkGoogleRedirectResult()
       .then(async (idToken) => {
-        if (isActive && idToken) {
+        if (!isActive) return;
+
+        if (idToken) {
+          clearGoogleRedirectPending();
           await completeAuth(idToken);
+          return;
+        }
+
+        if (redirectWasPending) {
+          clearGoogleRedirectPending();
+          const message = t(
+            "auth.googleRedirectMissing",
+            "Google n’a pas terminé la connexion. Réessayez ou utilisez votre adresse e-mail."
+          );
+          setProviderError(message);
+          toast.error(message);
         }
       })
       .catch((err: unknown) => {
+        clearGoogleRedirectPending();
+        if (!isActive) return;
+
         console.error("Google redirect sign-in could not be completed:", err);
         const code =
           typeof err === "object" && err !== null && "code" in err
             ? String((err as { code: unknown }).code)
             : "";
-        setProviderError(
+        const message =
           code === "auth/unauthorized-domain"
             ? "Ce domaine n’est pas autorisé dans Firebase. Ajoutez localhost et le domaine publié dans Firebase Authentication > Paramètres > Domaines autorisés."
-            : t("auth.googleFailed", "La connexion Google n’a pas abouti. Réessayez ou utilisez votre adresse e-mail.")
-        );
-        toast.error(
-          t("auth.googleFailed", "La connexion Google n’a pas abouti. Réessayez ou utilisez votre adresse e-mail.")
-        );
+            : t(
+                "auth.googleFailed",
+                "La connexion Google n’a pas abouti. Réessayez ou utilisez votre adresse e-mail."
+              );
+        setProviderError(message);
+        toast.error(message);
       });
 
     return () => {
