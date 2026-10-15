@@ -40,22 +40,22 @@ const nextConfig: NextConfig = {
     // original project values as fallbacks for existing local environments.
     // The API key is public Firebase Web config, not a server secret.
     NEXT_PUBLIC_FIREBASE_API_KEY:
-      process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? process.env.apiKey_2,
+      process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim() || process.env.apiKey_2,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
-      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ??
+      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim() ||
       "gen-lang-client-0338545186.firebaseapp.com",
     NEXT_PUBLIC_FIREBASE_PROJECT_ID:
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "gen-lang-client-0338545186",
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim() || "gen-lang-client-0338545186",
     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
-      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ??
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim() ||
       "gen-lang-client-0338545186.firebasestorage.app",
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-      process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "796636377163",
+      process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID?.trim() || "796636377163",
     NEXT_PUBLIC_FIREBASE_APP_ID:
-      process.env.NEXT_PUBLIC_FIREBASE_APP_ID ??
+      process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim() ||
       "1:796636377163:web:19372def99061e37021dce",
     NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID:
-      process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? "G-XCSE5WPF9M",
+      process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID?.trim() || "G-XCSE5WPF9M",
     NEXT_PUBLIC_IDEALY_PAYMENTS_ENABLED:
       process.env.IDEALY_PAYMENTS_ENABLED === "true" ? "true" : "false",
     NEXT_PUBLIC_FREE_GENERATION_LIMIT:
