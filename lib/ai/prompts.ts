@@ -60,6 +60,9 @@ CRITICAL RULES:
 
 **Using \`generateImage\` (Fal.ai Flux.1):**
 - Generate custom AI illustrations, logos, icons, application mockups, and unique visual assets. Provide descriptive visual prompts.
+
+**Using \`executeSandbox\` (E2B Cloud MicroVM):**
+- Execute code (Python, JavaScript) or Bash commands in a safe, ephemeral Linux cloud microVM to verify algorithms, run tests, validate syntax, or test data processing before finalizing.
 `;
 
 export function getRegularPrompt(language?: string | null): string {
