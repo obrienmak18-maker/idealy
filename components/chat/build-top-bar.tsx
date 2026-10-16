@@ -14,6 +14,7 @@ import {
   Maximize2,
   Minimize2,
   MoreHorizontal,
+  MessageSquareText,
   PanelLeftClose,
   RefreshCw,
   Share2,
@@ -573,6 +574,17 @@ export function BuildTopBar() {
             <div className="absolute right-0 top-10 z-50 max-h-[calc(100dvh-5rem)] w-60 overflow-y-auto overscroll-contain rounded-2xl border border-outline-variant/70 bg-surface-container-high p-2 text-xs text-popover-foreground shadow-lg">
               <div className="md:hidden">
                 <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Vue du workspace</p>
+                <button
+                  className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    dispatch("idealy:show-chat");
+                  }}
+                  type="button"
+                >
+                  <MessageSquareText aria-hidden="true" className="size-3.5" />
+                  Conversation
+                </button>
                 {([
                   ["preview", "Aperçu"],
                   ["code", "Code"],
