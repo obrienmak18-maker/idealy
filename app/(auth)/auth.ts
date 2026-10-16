@@ -193,6 +193,31 @@ export const {
           }
 
           if (supabaseAuth.status === "invalid_credentials") {
+            let foundUser = null;
+            try {
+              const [found] = await getUser(email);
+              foundUser = found ?? null;
+            } catch {
+              throw new IdealyCredentialsSignin("invalid_credentials");
+            }
+
+            if (foundUser?.password && foundUser.password !== "auto-provisioned") {
+              const matches = await compare(password, foundUser.password);
+              if (matches) {
+                const bridge = await signInFirebaseUserThroughSupabase(email).catch(() => null);
+                return {
+                  ...foundUser,
+                  email,
+                  id: foundUser.id,
+                  supabaseAccessToken: bridge?.accessToken ?? undefined,
+                  supabaseAccessTokenExpiresAt: bridge?.expiresAt ?? undefined,
+                  supabaseRefreshToken: bridge?.refreshToken ?? undefined,
+                  supabaseUserId: bridge?.userId ?? foundUser.supabaseUserId,
+                  type: "regular",
+                };
+              }
+            }
+
             throw new IdealyCredentialsSignin("invalid_credentials");
           }
 

@@ -26,7 +26,13 @@ function getAdminConfig() {
     process.env.FIREBASE_PROJECT_ID?.trim() ||
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const rawKey = process.env.FIREBASE_PRIVATE_KEY?.trim();
+  const privateKey = rawKey
+    ? rawKey
+        .replace(/^["']|["']$/g, "")
+        .replace(/\\n/g, "\n")
+        .replace(/\r\n/g, "\n")
+    : undefined;
 
   if (!projectId || !clientEmail || !privateKey) return null;
   return { clientEmail, privateKey, projectId };

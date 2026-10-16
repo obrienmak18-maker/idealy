@@ -206,6 +206,51 @@ export async function getUserById(id: string): Promise<User | null> {
   return rows[0] ? mapUser(rows[0]) : null;
 }
 
+export async function getUserOnboardingStatus({
+  userId,
+  email,
+}: {
+  userId: string;
+  email?: string | null;
+}): Promise<{ completed: boolean; found: boolean }> {
+  try {
+    const rows = await requestSupabase<JsonObject[]>("profiles", {
+      query: {
+        select: "id,onboarding_completed",
+        id: `eq.${encodeURIComponent(userId)}`,
+        limit: "1",
+      },
+    });
+    if (rows[0]) {
+      return {
+        completed: Boolean(rows[0].onboarding_completed),
+        found: true,
+      };
+    }
+
+    if (email) {
+      const emailRows = await requestSupabase<JsonObject[]>("profiles", {
+        query: {
+          select: "id,onboarding_completed",
+          email: `eq.${encodeURIComponent(email.toLowerCase())}`,
+          limit: "1",
+        },
+      });
+      if (emailRows[0]) {
+        return {
+          completed: Boolean(emailRows[0].onboarding_completed),
+          found: true,
+        };
+      }
+    }
+
+    return { completed: false, found: false };
+  } catch (error) {
+    console.warn("[getUserOnboardingStatus] profile lookup bypassed:", error);
+    return { completed: true, found: false };
+  }
+}
+
 export async function createUser(
   email: string,
   password: string

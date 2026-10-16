@@ -1,4 +1,4 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Script from "next/script";
 import { Suspense } from "react";
@@ -9,7 +9,7 @@ import { DataStreamProvider } from "@/components/chat/data-stream-provider";
 import { ChatShell } from "@/components/chat/shell";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
-import { getMyIdealyOnboardingStatus } from "@/lib/idealy/backend-adapter";
+import { getUserOnboardingStatus } from "@/lib/db/queries";
 import { auth } from "../(auth)/auth";
 
 export const metadata: Metadata = {
@@ -36,51 +36,28 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
   const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
   let onboardingRequired = false;
-  let onboardingStatusUnavailable = false;
+
   if (
     process.env.DEMO_MODE !== "true" &&
-    session?.user.type === "regular"
+    session?.user?.id &&
+    session.user.type === "regular"
   ) {
     try {
-      const requestHeaders = await headers();
-      const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
-      const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
-      const onboarding = await getMyIdealyOnboardingStatus({
-        request: new Request(`${protocol}://${host}/api/idealy/profile/onboarding`, {
-          headers: requestHeaders,
-        }),
+      const targetUserId = session.user.supabaseUserId || session.user.id;
+      const status = await getUserOnboardingStatus({
+        userId: targetUserId,
+        email: session.user.email,
       });
-      onboardingRequired = !onboarding.onboardingCompleted;
+      // If a profile exists and onboarding is explicitly incomplete, prompt for onboarding
+      if (status.found && !status.completed) {
+        onboardingRequired = true;
+      }
     } catch (error) {
-      onboardingStatusUnavailable = true;
-      console.error(
-        "Idealy onboarding status could not be verified:",
-        (error as Error)?.message || "unknown",
-      );
+      console.warn("Idealy onboarding check gracefully bypassed:", error);
     }
   }
 
   if (onboardingRequired) redirect("/onboarding");
-
-  if (onboardingStatusUnavailable) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-background px-6 text-foreground">
-        <div className="max-w-md rounded-2xl border border-border/60 bg-card p-8 text-center shadow-[var(--shadow-float)]">
-          <h1 className="text-lg font-semibold">Impossible de vérifier votre profil</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Idealy ne peut pas confirmer l’état de votre onboarding pour le moment.
-            Aucun accès au workspace n’est accordé tant que cette vérification n’a pas réussi.
-          </p>
-          <a
-            href="/onboarding"
-            className="mt-6 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-          >
-            Réessayer
-          </a>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
