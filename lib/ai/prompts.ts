@@ -57,6 +57,9 @@ CRITICAL RULES:
 
 **Using \`searchImages\`:**
 - Search for real stock photos from Pexels to embed verified image URLs in landing pages and dashboards.
+
+**Using \`generateImage\` (Fal.ai Flux.1):**
+- Generate custom AI illustrations, logos, icons, application mockups, and unique visual assets. Provide descriptive visual prompts.
 `;
 
 export function getRegularPrompt(language?: string | null): string {

@@ -281,6 +281,28 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
       "Ne modifie aucune donnée utilisateur.",
     ],
   },
+  {
+    id: "fal",
+    provider: "fal",
+    label: "Fal.ai Flux.1",
+    description: "Génération d’images ultra-rapide et haute fidélité via Flux.1 [schnell].",
+    category: "design",
+    auth: "api-key",
+    runtime: "idealy-server",
+    availability: "configured",
+    docsUrl: "https://fal.ai/models/fal-ai/flux/schnell",
+    authorizationUrl: "https://fal.ai/dashboard/keys",
+    scopes: ["image:generate"],
+    operations: [
+      writeOperation("generate-image", "Générer une image via Flux.1", "design-generation"),
+    ],
+    dataBoundary: "metadata-only",
+    secretEnvNames: ["FAL_KEY", "FAL_AI_API_KEY"],
+    notes: [
+      "Génération d'images haute fidélité pour wireframes, héros et maquettes.",
+      "Gère automatiquement la détection de solde à recharger (TOP_UP) sans bloquer l'orchestration.",
+    ],
+  },
 ];
 
 export function listConnectorDefinitions() {

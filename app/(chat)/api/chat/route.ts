@@ -65,6 +65,7 @@ import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { searchImages } from "@/lib/ai/tools/search-images";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { webSearch } from "@/lib/ai/tools/web-search";
+import { generateImage } from "@/lib/ai/tools/generate-image";
 import {
   isDevelopmentEnvironment,
   isProductionEnvironment,
@@ -856,6 +857,7 @@ export async function POST(request: Request) {
                     "updateDocument",
                     "requestSuggestions",
                     "searchImages",
+                    "generateImage",
                     "webSearch",
                   ],
             instructions: systemPrompt({
@@ -909,6 +911,7 @@ export async function POST(request: Request) {
                 session: effectiveSession,
               }),
               searchImages: searchImages(),
+              generateImage: generateImage(),
               updateDocument: updateDocument({
                 dataStream,
                 modelId: chatModel,
