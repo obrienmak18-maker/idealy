@@ -98,19 +98,19 @@ function providerConfig(provider: string) {
 
 async function identityFor(provider: string, token: TokenResult, accessToken: string) {
   if (provider === "github") {
-    const response = await fetch("https://api.github.com/user", {
+    const userResponse = await fetch("https://api.github.com/user", {
       headers: {
         Authorization: "Bearer " + accessToken,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
       },
     });
-    const profile = await response.json().catch(() => null) as { id?: number; login?: string; name?: string; email?: string } | null;
-    if (!response.ok || !profile?.id) throw new Error("github_identity_failed");
+    const githubUser = await userResponse.json().catch(() => null) as { id?: number; login?: string; name?: string; email?: string } | null;
+    if (!userResponse.ok || typeof githubUser?.id !== "number" || !githubUser.login) throw new Error("github_identity_failed");
     return {
-      externalAccountId: String(profile.id),
-      displayName: profile.name || profile.login || "GitHub",
-      metadata: { login: profile.login ?? null, email: profile.email ?? null },
+      externalAccountId: String(githubUser.id),
+      displayName: githubUser.name || githubUser.login || "GitHub",
+      metadata: { login: githubUser.login ?? null, email: githubUser.email ?? null },
     };
   }
 
@@ -343,7 +343,10 @@ Deno.serve(async (request) => {
         rotated_at: now.toISOString(),
       }, { onConflict: "integration_id" });
 
-    if (credentialError) return redirect("error=credential_storage_failed");
+    if (credentialError) {
+      await admin.from("user_integrations").update({ status: "error" }).eq("id", integration.id);
+      return redirect("error=credential_storage_failed");
+    }
 
     // A successful OAuth consent also activates the matching connector plugin
     // with the permissions required by its declared tools. Provider-level writes

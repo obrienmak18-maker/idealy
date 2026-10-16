@@ -74,10 +74,11 @@ export async function POST(
       );
     }
 
+    // Calls Edge function at functions/v1/github-sync
     const response = await fetch(getIdealySupabaseFunctionUrl("github-sync"), {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + accessToken,
+        Authorization: `Bearer ${accessToken}`,
         apikey: anonKey,
         "Content-Type": "application/json",
       },

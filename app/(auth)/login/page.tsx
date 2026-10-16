@@ -27,6 +27,20 @@ const loginMessages = {
     "Le service de connexion est momentanément indisponible. Réessayez dans un instant.",
 } as const;
 
+function extractErrorCode(error: unknown): string {
+  if (typeof error === "object" && error !== null) {
+    if ("code" in error && typeof (error as { code: unknown }).code === "string") {
+      const { code } = error as { code: string };
+      return code;
+    }
+    if ("message" in error && typeof (error as { message: unknown }).message === "string") {
+      const { message } = error as { message: string };
+      return message;
+    }
+  }
+  return "";
+}
+
 import { useTranslation } from "@/lib/i18n/provider";
 
 export default function Page() {
@@ -158,35 +172,17 @@ export default function Page() {
       await updateSession();
       window.location.assign(getOnboardingUrl());
     } catch (error) {
-      let code = "";
-      if (typeof error === "object" && error !== null) {
-        if ("code" in error && typeof (error as { code: unknown }).code === "string") {
-          code = (error as { code: string }).code;
-        } else if ("message" in error && typeof (error as { message: unknown }).message === "string") {
-          code = (error as { message: string }).message;
-        }
-      }
-      if (
-        code === "firebase_not_configured" ||
-        code === "firebase_backend_unavailable" ||
-        code === "auth/user-not-found" ||
-        code === "auth/invalid-credential"
-      ) {
-        // Fall back to NextAuth credentials provider for local/development accounts
-        formAction(formData);
-        return;
-      }
-      if (code === "auth/wrong-password") {
-        setFirebaseError("Le mot de passe saisi est incorrect.");
+      const code = extractErrorCode(error);
+      if (code === "auth/too-many-requests") {
+        setFirebaseError("Trop de tentatives infructueuses. Veuillez patienter avant de réessayer.");
         return;
       }
       if (code === "auth/invalid-email") {
         setFirebaseError("Saisissez une adresse e-mail valide.");
         return;
       }
-      setFirebaseError(
-        "La connexion est indisponible. Vérifiez vos identifiants ou utilisez Google."
-      );
+      // Seamlessly fall back to NextAuth / Supabase credentials provider
+      formAction(formData);
     }
   };
 

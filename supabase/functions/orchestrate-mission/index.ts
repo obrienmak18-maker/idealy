@@ -505,7 +505,7 @@ Deno.serve(async (request) => {
       const correctionInputs = [...(currentValidation?.errors ?? []), ...(reviewerDecision.diagnostics ?? [])].slice(0, 8);
       const diagnosticGuidance =
         correctionInputs.length > 0
-          ? `\\nDIAGNOSTICS DE VALIDATION (Itération précédente) :\\n${JSON.stringify(correctionInputs)}\\nCorrige impérativement ces problèmes sans introduire de régression.`
+          ? `\nDIAGNOSTIC DU REVIEWER ET DE VALIDATION (Itération précédente) :\n${JSON.stringify(correctionInputs)}\nCorrige impérativement ces problèmes sans introduire de régression.`
           : "";
 
       await runAgent(

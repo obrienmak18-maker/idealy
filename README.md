@@ -31,9 +31,9 @@ Chaque utilisateur dispose d'un portefeuille Power rattaché à sa Voie :
 ### Plans et Allocations :
 | Niveau | Tarif mensuel | Allocation mensuelle | Plafond portefeuille |
 |---|---:|---:|---:|
-| **Free** | 0 € | 200 Power Points | 250 |
-| **Pro** | 19 € | 2 500 Power Points | 3 500 |
-| **Business / Team** | 49 € | 4 000 Power Points | 7 000 |
+| **Découverte (Free)** | 0 € | 200 Power Points | 250 |
+| **Pro** | 19 € / mois | 2 500 Power Points | 3 500 |
+| **Business / Team** | 49 € / mois | 4 000 Power Points | 7 000 |
 | **Enterprise** | Sur devis | Sur mesure | Sur mesure |
 
 Les coûts d’une mission sont déterminés par sa complexité et son exécution réelle. Ils ne doivent pas être présentés comme un prix fixe tant que la politique de calcul n’est pas finalisée.

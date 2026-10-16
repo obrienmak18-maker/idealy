@@ -43,7 +43,7 @@ function getProviderConfig(provider: string): ProviderConfig | null {
         clientId: env("GITHUB_OAUTH_CLIENT_ID") || env("GITHUB_CLIENT_ID"),
         clientSecret: env("GITHUB_OAUTH_CLIENT_SECRET") || env("GITHUB_CLIENT_SECRET"),
         authorizationUrl: "https://github.com/login/oauth/authorize",
-        scopes: "repo read:user",
+        scopes: "repo read:user", // scope: "repo read:user"
         usePkce: false,
       };
     case "canva":

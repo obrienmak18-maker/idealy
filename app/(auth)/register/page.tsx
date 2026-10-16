@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn as signInWithAuthJs, useSession } from "next-auth/react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useCallback, useEffect, useState } from "react";
 
 import { FirebaseProviderActions } from "@/components/auth/firebase-provider-actions";
 import { AuthForm } from "@/components/chat/auth-form";
@@ -52,6 +52,13 @@ export default function Page() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
+
+  const handleTermsChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setTermsAccepted(e.target.checked);
+    },
+    []
+  );
 
   const [state, formAction] = useActionState<RegisterActionState, FormData>(
     register,
@@ -165,7 +172,7 @@ export default function Page() {
       window.location.assign(getOnboardingUrl());
     } catch (error) {
       const code = firebaseErrorCode(error);
-      if (code === "firebase_not_configured") {
+      if (code === "firebase_not_configured" || code === "firebase_session_rejected") {
         formAction(formData);
         return;
       }
@@ -218,7 +225,7 @@ export default function Page() {
             checked={termsAccepted}
             className="mt-0.5 size-4 shrink-0 accent-foreground cursor-pointer"
             name="terms"
-            onChange={(e) => setTermsAccepted(e.target.checked)}
+            onChange={handleTermsChange}
             required
             type="checkbox"
           />

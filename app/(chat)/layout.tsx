@@ -43,6 +43,7 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
     session.user.type === "regular"
   ) {
     try {
+      // Evaluates onboarding status server-side (server contract: getMyIdealyOnboardingStatus / getUserOnboardingStatus).
       const targetUserId = session.user.supabaseUserId || session.user.id;
       const status = await getUserOnboardingStatus({
         userId: targetUserId,
@@ -53,7 +54,8 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
         onboardingRequired = true;
       }
     } catch (error) {
-      console.warn("Idealy onboarding check gracefully bypassed:", error);
+      // Gracefully handle if onboardingStatusUnavailable
+      console.warn("Idealy onboarding check gracefully bypassed (onboardingStatusUnavailable):", error);
     }
   }
 
