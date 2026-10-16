@@ -259,6 +259,28 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
     secretEnvNames: ["DATABASE_URL"],
     notes: ["Accès sécurisé à une base relationnelle PostgreSQL."],
   },
+  {
+    id: "exa",
+    provider: "exa",
+    label: "Exa Semantic Search",
+    description: "Recherche web temps réel, récupération de documentation et extraction de faits sourcés.",
+    category: "data",
+    auth: "api-key",
+    runtime: "idealy-server",
+    availability: "configured",
+    docsUrl: "https://exa.ai/docs",
+    authorizationUrl: "https://dashboard.exa.ai/api-keys",
+    scopes: ["search:read"],
+    operations: [
+      readOperation("web-search", "Rechercher sur le web sémantique", "web-search"),
+    ],
+    dataBoundary: "metadata-only",
+    secretEnvNames: ["EXA_API_KEY"],
+    notes: [
+      "Recherche web sémantique avec extraction automatique d'extraits textuels pertinents.",
+      "Ne modifie aucune donnée utilisateur.",
+    ],
+  },
 ];
 
 export function listConnectorDefinitions() {

@@ -50,6 +50,13 @@ CRITICAL RULES:
 
 **Using \`requestSuggestions\`:**
 - ONLY when the user explicitly asks for suggestions on an existing document
+
+**Using \`webSearch\` (Exa Semantic Search):**
+- Use when the user asks for fresh live facts, recent documentation, real-world API references, or live web research.
+- Formulate explicit, natural queries with subject, constraints, and context.
+
+**Using \`searchImages\`:**
+- Search for real stock photos from Pexels to embed verified image URLs in landing pages and dashboards.
 `;
 
 export function getRegularPrompt(language?: string | null): string {

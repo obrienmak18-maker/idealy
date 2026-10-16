@@ -64,6 +64,7 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { searchImages } from "@/lib/ai/tools/search-images";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { webSearch } from "@/lib/ai/tools/web-search";
 import {
   isDevelopmentEnvironment,
   isProductionEnvironment,
@@ -854,6 +855,8 @@ export async function POST(request: Request) {
                     "editDocument",
                     "updateDocument",
                     "requestSuggestions",
+                    "searchImages",
+                    "webSearch",
                   ],
             instructions: systemPrompt({
               language: userLanguage,
@@ -911,6 +914,7 @@ export async function POST(request: Request) {
                 modelId: chatModel,
                 session: effectiveSession,
               }),
+              webSearch: webSearch(),
             },
           });
 

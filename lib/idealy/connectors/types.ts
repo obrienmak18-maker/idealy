@@ -37,7 +37,8 @@ export type ConnectorCapability =
   | "document-write"
   | "message-send"
   | "billing-read"
-  | "billing-write";
+  | "billing-write"
+  | "web-search";
 
 export type ConnectorOperation = {
   id: string;
