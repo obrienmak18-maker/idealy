@@ -870,7 +870,7 @@ function PureArtifact({
 
   return (
     <div
-      className={`${isExpanded ? "fixed inset-x-0 bottom-0 top-12 z-20 w-full border-l-0" : "min-w-0 flex-1 border-l"} idealy-preview-surface flex h-dvh shrink-0 flex-col overflow-hidden border-sidebar-border text-sidebar-foreground transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]`}
+      className={`${isExpanded ? "fixed inset-x-0 bottom-0 top-12 z-20 w-full border-l-0" : "min-w-0 flex-1 border-l"} idealy-preview-surface flex h-full shrink-0 flex-col overflow-hidden border-sidebar-border text-sidebar-foreground transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:h-dvh`}
       data-testid="artifact"
     >
       {artifactPanel}

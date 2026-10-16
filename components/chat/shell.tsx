@@ -1,7 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
 import type {
+  CSSProperties,
   ErrorInfo,
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
@@ -117,9 +118,10 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   const { setArtifact } = useArtifact();
-  const [chatPaneWidth, setChatPaneWidth] = useState(33);
+  const [chatPaneWidth, setChatPaneWidth] = useState(42);
   const [isResizing, setIsResizing] = useState(false);
-  const resizeStartRef = useRef({ startWidth: 33, x: 0 });
+  const [isMobileCanvasOpen, setIsMobileCanvasOpen] = useState(false);
+  const resizeStartRef = useRef({ startWidth: 42, x: 0 });
 
   const stopRef = useRef(stop);
   stopRef.current = stop;
@@ -139,10 +141,26 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
       prevChatIdRef.current = chatId;
       stopRef.current();
       setArtifact(initialArtifactData);
+      setIsMobileCanvasOpen(false);
       setEditingMessage(null);
       setAttachments([]);
     }
   }, [chatId, setArtifact]);
+
+  useEffect(() => {
+    const handleWorkspaceViewChange = (event: Event) => {
+      const view = (event as CustomEvent<string>).detail;
+      setIsMobileCanvasOpen(["preview", "code", "data", "database"].includes(view));
+    };
+    const handleShowChat = () => setIsMobileCanvasOpen(false);
+
+    window.addEventListener("idealy:set-view", handleWorkspaceViewChange);
+    window.addEventListener("idealy:show-chat", handleShowChat);
+    return () => {
+      window.removeEventListener("idealy:set-view", handleWorkspaceViewChange);
+      window.removeEventListener("idealy:show-chat", handleShowChat);
+    };
+  }, []);
 
   const handleEditMessage = useCallback(
     (msg: ChatMessage) => {
@@ -238,55 +256,11 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
       <div className="idealy-app-background relative flex h-dvh w-full flex-col overflow-hidden">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-45"
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
         >
-          <motion.div
-            animate={{
-              scale: [1, 1.08, 0.96, 1],
-              x: [0, 30, -15, 0],
-              y: [0, 20, 35, 0],
-            }}
-            className="absolute -left-20 -top-24 size-[28rem] rounded-full bg-sky-400/10 dark:bg-sky-500/10 blur-3xl"
-            transition={{
-              duration: 18,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
-          <motion.div
-            animate={{ x: [0, -20, 25, 0], y: [0, 30, -15, 0] }}
-            className="absolute left-[35%] top-[15%] size-72 rounded-full bg-teal-400/8 dark:bg-teal-500/8 blur-3xl"
-            transition={{
-              delay: -4,
-              duration: 21,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
-          <motion.div
-            animate={{
-              scale: [1, 0.95, 1.05, 1],
-              x: [0, 25, -20, 0],
-              y: [0, -20, 30, 0],
-            }}
-            className="absolute right-[10%] top-[6%] size-80 rounded-full bg-violet-400/8 dark:bg-violet-500/10 blur-3xl"
-            transition={{
-              delay: -8,
-              duration: 20,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
-          <motion.div
-            animate={{ x: [0, 30, -25, 0], y: [0, -25, 15, 0] }}
-            className="absolute -bottom-20 right-[25%] size-80 rounded-full bg-sky-400/8 dark:bg-sky-500/8 blur-3xl"
-            transition={{
-              delay: -12,
-              duration: 22,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
+          <div className="absolute -left-24 -top-28 size-[28rem] rounded-full bg-sky-500/[0.055] blur-[100px]" />
+          <div className="absolute right-[8%] top-[8%] size-80 rounded-full bg-violet-500/[0.06] blur-[105px]" />
+          <div className="absolute -bottom-24 right-[25%] size-80 rounded-full bg-fuchsia-500/[0.035] blur-[110px]" />
         </div>
         {isArtifactVisible && <BuildTopBar />}
         <main
@@ -296,12 +270,16 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
         >
           <div
             className={cn(
-              "relative z-10 flex min-w-0 flex-col bg-background",
+              "relative z-10 min-w-0 flex-col bg-background",
+              isMobileCanvasOpen ? "hidden md:flex" : "flex",
               !isResizing &&
-                "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+              "w-full md:w-[var(--idealy-chat-pane-width)]"
             )}
             data-idealy-chat-pane="true"
-            style={{ width: isArtifactVisible ? `${chatPaneWidth}%` : "100%" }}
+            style={{
+              "--idealy-chat-pane-width": isArtifactVisible ? `${chatPaneWidth}%` : "100%",
+            } as CSSProperties}
           >
             {!isArtifactVisible && (
               <ChatHeader
@@ -377,26 +355,52 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
             </div>
           ) : null}
 
-          <ArtifactErrorBoundary key={chatId}>
-            <Artifact
-              addToolApprovalResponse={addToolApprovalResponse}
-              attachments={attachments}
-              chatId={chatId}
-              input={input}
-              isReadonly={isReadonly}
-              messages={messages}
-              regenerate={regenerate}
-              selectedModelId={currentModelId}
-              selectedVisibilityType={visibilityType}
-              sendMessage={sendMessage}
-              setAttachments={setAttachments}
-              setInput={setInput}
-              setMessages={setMessages}
-              status={status}
-              stop={stop}
-              votes={votes}
-            />
-          </ArtifactErrorBoundary>
+          <div
+            className={cn(
+              "relative min-h-0 min-w-0 flex-1",
+              isArtifactVisible
+                ? isMobileCanvasOpen
+                  ? "fixed inset-0 z-40 flex flex-col bg-background md:relative md:inset-auto md:z-auto md:flex-1 md:bg-transparent"
+                  : "hidden md:flex"
+                : "contents"
+            )}
+          >
+            {isArtifactVisible && isMobileCanvasOpen ? (
+              <div className="flex min-h-12 shrink-0 items-center border-b border-border bg-sidebar px-3 md:hidden">
+                <button
+                  aria-label="Retour à la conversation"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-foreground transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => setIsMobileCanvasOpen(false)}
+                  type="button"
+                >
+                  <ArrowLeft aria-hidden="true" className="size-4" />
+                  Retour à la conversation
+                </button>
+              </div>
+            ) : null}
+            <div className={isArtifactVisible ? "min-h-0 flex-1 overflow-hidden" : "contents"}>
+              <ArtifactErrorBoundary key={chatId}>
+                <Artifact
+                  addToolApprovalResponse={addToolApprovalResponse}
+                  attachments={attachments}
+                  chatId={chatId}
+                  input={input}
+                  isReadonly={isReadonly}
+                  messages={messages}
+                  regenerate={regenerate}
+                  selectedModelId={currentModelId}
+                  selectedVisibilityType={visibilityType}
+                  sendMessage={sendMessage}
+                  setAttachments={setAttachments}
+                  setInput={setInput}
+                  setMessages={setMessages}
+                  status={status}
+                  stop={stop}
+                  votes={votes}
+                />
+              </ArtifactErrorBoundary>
+            </div>
+          </div>
         </main>
       </div>
 
