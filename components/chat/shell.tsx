@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import type {
   ErrorInfo,
   KeyboardEvent as ReactKeyboardEvent,
@@ -238,55 +237,11 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
       <div className="idealy-app-background relative flex h-dvh w-full flex-col overflow-hidden">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-45"
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
         >
-          <motion.div
-            animate={{
-              scale: [1, 1.08, 0.96, 1],
-              x: [0, 30, -15, 0],
-              y: [0, 20, 35, 0],
-            }}
-            className="absolute -left-20 -top-24 size-[28rem] rounded-full bg-sky-400/10 dark:bg-sky-500/10 blur-3xl"
-            transition={{
-              duration: 18,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
-          <motion.div
-            animate={{ x: [0, -20, 25, 0], y: [0, 30, -15, 0] }}
-            className="absolute left-[35%] top-[15%] size-72 rounded-full bg-teal-400/8 dark:bg-teal-500/8 blur-3xl"
-            transition={{
-              delay: -4,
-              duration: 21,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
-          <motion.div
-            animate={{
-              scale: [1, 0.95, 1.05, 1],
-              x: [0, 25, -20, 0],
-              y: [0, -20, 30, 0],
-            }}
-            className="absolute right-[10%] top-[6%] size-80 rounded-full bg-violet-400/8 dark:bg-violet-500/10 blur-3xl"
-            transition={{
-              delay: -8,
-              duration: 20,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
-          <motion.div
-            animate={{ x: [0, 30, -25, 0], y: [0, -25, 15, 0] }}
-            className="absolute -bottom-20 right-[25%] size-80 rounded-full bg-sky-400/8 dark:bg-sky-500/8 blur-3xl"
-            transition={{
-              delay: -12,
-              duration: 22,
-              ease: "easeInOut",
-              repeat: Number.POSITIVE_INFINITY,
-            }}
-          />
+          <div className="absolute -left-24 -top-28 size-[28rem] rounded-full bg-sky-500/[0.055] blur-[100px]" />
+          <div className="absolute right-[8%] top-[8%] size-80 rounded-full bg-violet-500/[0.06] blur-[105px]" />
+          <div className="absolute -bottom-24 right-[25%] size-80 rounded-full bg-fuchsia-500/[0.035] blur-[110px]" />
         </div>
         {isArtifactVisible && <BuildTopBar />}
         <main
