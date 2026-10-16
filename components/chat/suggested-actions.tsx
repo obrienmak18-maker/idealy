@@ -2,7 +2,16 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Code2, Lightbulb, ListChecks, PanelsTopLeft, Rocket, WandSparkles, RefreshCwIcon } from "lucide-react";
+import {
+  ArrowUpRight,
+  Code2,
+  Lightbulb,
+  ListChecks,
+  PanelsTopLeft,
+  RefreshCwIcon,
+  Rocket,
+  WandSparkles,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { ChatMessage } from "@/lib/types";
@@ -108,7 +117,7 @@ function getSuggestedEntries(profile: ProfileContext, generation: number) {
   const pool = scored.map((item) => item.entry);
   const offset = (generation * 3) % pool.length;
   const picked: SuggestionEntry[] = [];
-  for (let index = 0; index < 4; index += 1) {
+  for (let index = 0; index < 3; index += 1) {
     picked.push(pool[(offset + index) % pool.length]);
   }
   return picked;
