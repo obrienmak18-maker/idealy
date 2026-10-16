@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { IdealyLogo } from "@/components/branding/idealy-logo";
+import { motion, AnimatePresence } from "framer-motion";
+import { IdealyLogo, IdealyMark } from "@/components/branding/idealy-logo";
 import { useTranslation } from "@/lib/i18n/provider";
 import {
   idealyDiscoverySources,
@@ -61,14 +62,42 @@ const experienceLabels: Record<(typeof idealyExperienceLevels)[number], { fr: st
 
 const discoveryLabels: Record<(typeof idealyDiscoverySources)[number], { fr: string; en: string; es: string }> = {
   community: { fr: "Une communauté", en: "A community", es: "Una comunidad" },
-  friend: { fr: "Un proche", en: "A friend / colleague", es: "Un amigo" },
+  friend: { fr: "Un proche / collègue", en: "A friend / colleague", es: "Un amigo" },
   github: { fr: "GitHub", en: "GitHub", es: "GitHub" },
   google: { fr: "Google", en: "Google", es: "Google" },
-  other: { fr: "Autre", en: "Other", es: "Otro" },
+  other: { fr: "Autre canal", en: "Other", es: "Otro" },
   school: { fr: "École ou formation", en: "School / Training", es: "Escuela / Formación" },
   tiktok: { fr: "TikTok", en: "TikTok", es: "TikTok" },
   youtube: { fr: "YouTube", en: "YouTube", es: "YouTube" },
 };
+
+// Ocean light modes per step: Alternating between Emerald/Teal and Violet/Purple
+const stepAuras = [
+  {
+    glow: "rgba(20, 184, 166, 0.35)",
+    beam: "from-teal-500/25 via-emerald-500/15 to-transparent",
+    waterColor: "#14b8a6",
+    label: "Teal Emerald Glow",
+  },
+  {
+    glow: "rgba(168, 85, 247, 0.38)",
+    beam: "from-purple-500/25 via-violet-500/15 to-transparent",
+    waterColor: "#a855f7",
+    label: "Cosmic Violet Glow",
+  },
+  {
+    glow: "rgba(56, 189, 248, 0.35)",
+    beam: "from-cyan-500/25 via-teal-500/15 to-transparent",
+    waterColor: "#38bdf8",
+    label: "Cyan Ocean Glow",
+  },
+  {
+    glow: "rgba(168, 85, 247, 0.4)",
+    beam: "from-violet-500/30 via-teal-400/20 to-transparent",
+    waterColor: "#c084fc",
+    label: "Aurora Luminous Blend",
+  },
+];
 
 function getSafeNext(value: string | null) {
   return value && value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/onboarding")
@@ -93,6 +122,9 @@ export function OnboardingFlow() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Animation states for the star logo transition onto ocean water
+  const [starSettled, setStarSettled] = useState(false);
+
   const [draft, setDraft] = useState<OnboardingDraft>({
     discoverySource: "",
     experienceLevel: "",
@@ -106,36 +138,43 @@ export function OnboardingFlow() {
     tone: "concise",
   });
 
+  // Exactly 4 structured, essential steps as requested by user
   const steps = useMemo(
     () => [
       {
         icon: UserRound,
         key: "profile",
         label: t("onboarding.steps.profile") || "Profil & Voie",
+        badge: langKey === "en" ? "Identity" : "Identité",
       },
       {
         icon: Lightbulb,
         key: "goal",
-        label: t("onboarding.steps.goal") || "Objectif",
+        label: t("onboarding.steps.goal") || "Vision & Projet",
+        badge: langKey === "en" ? "Vision" : "Intention",
       },
       {
         icon: Compass,
         key: "level",
-        label: t("onboarding.steps.level") || "Expérience",
+        label: t("onboarding.steps.level") || "Niveau technique",
+        badge: langKey === "en" ? "Skill" : "Expérience",
       },
       {
         icon: Sparkles,
         key: "discovery",
-        label: t("onboarding.steps.discovery") || "Découverte",
-      },
-      {
-        icon: Check,
-        key: "ready",
-        label: t("onboarding.steps.ready") || "Prêt",
+        label: t("onboarding.steps.discovery") || "Découverte & Lancement",
+        badge: langKey === "en" ? "Ready" : "Prêt",
       },
     ],
-    [t]
+    [t, langKey]
   );
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setStarSettled(true);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -186,18 +225,18 @@ export function OnboardingFlow() {
     if (step === 0) return draft.firstName.trim().length > 0 && Boolean(draft.way);
     if (step === 1) return draft.primaryGoal.trim().length > 0 && Boolean(draft.projectType);
     if (step === 2) return Boolean(draft.experienceLevel);
-    if (step === 3) return true;
-    return validatedInput().success;
+    if (step === 3) return validatedInput().success;
+    return true;
   };
 
   const nextStep = () => {
     if (!canContinue()) {
       setError(
         langKey === "en"
-          ? "Please complete the required information before continuing."
+          ? "Please fill in the required field before continuing."
           : langKey === "es"
-          ? "Por favor, complete la información requerida antes de continuar."
-          : "Complétez les informations demandées avant de continuer."
+          ? "Por favor completa la información antes de continuar."
+          : "Complétez les champs requis avant de continuer."
       );
       return;
     }
@@ -210,10 +249,10 @@ export function OnboardingFlow() {
     if (!parsed.success) {
       setError(
         langKey === "en"
-          ? "Please review your profile details before continuing."
+          ? "Please review your details before launching."
           : langKey === "es"
-          ? "Revise los detalles de su perfil antes de continuar."
-          : "Vérifiez les informations de votre profil avant de continuer."
+          ? "Revisa la información antes de iniciar."
+          : "Vérifiez vos informations avant de lancer le studio."
       );
       return;
     }
@@ -250,125 +289,148 @@ export function OnboardingFlow() {
 
   const currentStep = steps[step];
   const StepIcon = currentStep.icon;
+  const currentAura = stepAuras[step % stepAuras.length];
 
   if (isLoading) {
     return <main className="min-h-dvh bg-background" aria-busy="true" />;
   }
 
   return (
-    <main className="idealy-app-background relative flex min-h-dvh w-full items-center justify-center overflow-x-hidden p-4 sm:p-6 lg:p-10 text-foreground">
-      {/* Ambient background decoration */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-40 -left-40 size-96 rounded-full bg-sky-500/10 blur-3xl" />
-        <div className="absolute top-1/2 -right-40 size-96 rounded-full bg-violet-500/10 blur-3xl" />
+    <main className="idealy-app-background relative flex min-h-dvh w-full flex-col items-center justify-between overflow-x-hidden p-4 sm:p-6 lg:p-8 text-foreground selection:bg-teal-500/20">
+      {/* Dynamic Ambient Background Lights */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        <motion.div
+          animate={{
+            background:
+              step % 2 === 0
+                ? "radial-gradient(circle at 50% 20%, rgba(20, 184, 166, 0.15), transparent 60%)"
+                : "radial-gradient(circle at 50% 20%, rgba(168, 85, 247, 0.16), transparent 60%)",
+          }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="absolute inset-0"
+        />
+        <div className="welcome-grid opacity-30" />
       </div>
 
-      <div className="w-full max-w-4xl space-y-6">
-        {/* Main Brand Header */}
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <IdealyLogo animated compact size={32} />
-            <div>
-              <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                {t("onboarding.badge") || "Espace de création"}
-              </span>
-              <p className="text-sm font-semibold text-foreground">Studio Idealy</p>
+      {/* Top Header */}
+      <header className="w-full max-w-4xl flex items-center justify-between py-2 z-10">
+        <div className="flex items-center gap-3">
+          <AnimatePresence>
+            {!starSettled ? (
+              <motion.div
+                initial={{ opacity: 1, scale: 1, y: 0 }}
+                animate={{ opacity: 0, scale: 0.8, y: 20 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              >
+                <IdealyLogo compact size={32} />
+              </motion.div>
+            ) : (
+              <div className="size-8 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center">
+                <span className="size-2 rounded-full bg-teal-400 animate-pulse" />
+              </div>
+            )}
+          </AnimatePresence>
+          <div>
+            <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+              {t("onboarding.badge") || "Studio Idealy"}
+            </span>
+            <p className="text-xs font-semibold text-foreground">
+              {langKey === "en" ? "Initial Workspace Onboarding" : "Configuration de mission"}
+            </p>
+          </div>
+        </div>
+
+        {/* Contract token: Step progress counter */}
+        <div className="flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1 text-xs backdrop-blur-md">
+          <StepIcon className="size-3.5 text-primary" aria-hidden="true" />
+          <span className="text-xs font-medium text-muted-foreground">
+            Étape {step + 1} sur {steps.length} —{" "}
+            <strong className="text-foreground font-semibold">{currentStep.label}</strong>
+          </span>
+        </div>
+      </header>
+
+      {/* Main Glassmorphic Question Frame */}
+      <div className="w-full max-w-3xl my-auto py-4 z-10">
+        <section className="relative rounded-3xl border border-border/70 dark:border-white/10 bg-card/85 dark:bg-card/75 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-2xl sm:p-8 transition-colors">
+          {/* Subtle top iridescent beam */}
+          <motion.div
+            aria-hidden="true"
+            className={cn(
+              "absolute inset-x-8 top-0 h-[2px] bg-gradient-to-r",
+              step % 2 === 0
+                ? "from-transparent via-teal-400/80 via-emerald-400/60 to-transparent"
+                : "from-transparent via-purple-400/80 via-violet-400/60 to-transparent"
+            )}
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          />
+
+          {/* Stepper Progress bar */}
+          <div className="mb-6 flex items-center justify-between gap-3 border-b border-border/40 pb-4">
+            <ol className="flex items-center gap-2">
+              {steps.map((item, index) => {
+                const Icon = item.icon;
+                const isCurrent = index === step;
+                const isComplete = index < step;
+                return (
+                  <li key={item.key} className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => index < step && setStep(index)}
+                      disabled={index > step}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-all",
+                        isCurrent
+                          ? "bg-primary/15 text-primary font-semibold ring-1 ring-primary/30"
+                          : isComplete
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 cursor-pointer"
+                          : "text-muted-foreground/50 opacity-60 cursor-default"
+                      )}
+                    >
+                      <span className="size-4 grid place-items-center">
+                        {isComplete ? <Check className="size-3" /> : <Icon className="size-3" />}
+                      </span>
+                      <span className="hidden sm:inline text-[11px]">{item.badge}</span>
+                    </button>
+                    {index < steps.length - 1 && (
+                      <span className="mx-1 h-px w-3 bg-border/60" aria-hidden="true" />
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted/60" aria-hidden="true">
+              <motion.div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  step % 2 === 0
+                    ? "bg-gradient-to-r from-teal-400 to-emerald-400"
+                    : "bg-gradient-to-r from-violet-400 to-purple-400"
+                )}
+                style={{ width: `${((step + 1) / steps.length) * 100}%` }}
+              />
             </div>
           </div>
-        </header>
 
-        {/* Card Frame */}
-        <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-          {/* Left Column: Context & Steps Overview */}
-          <aside className="flex flex-col justify-between rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur-xl">
-            <div className="space-y-3">
-              <span className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
-                {langKey === "en" ? "Initial Setup" : langKey === "es" ? "Configuración Inicial" : "Configuration Initiale"}
-              </span>
-              <h1 className="text-base font-semibold leading-snug tracking-tight text-foreground">
-                {t("onboarding.title") || "Une base claire avant votre première mission."}
-              </h1>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                {t("onboarding.subtitle") || "Ces informations personnalisent votre voie et votre point de départ dans le studio."}
-              </p>
-            </div>
-
-            {/* Compact Stepper */}
-            <nav aria-label="Progression de l'onboarding" className="mt-4">
-              <ol className="grid grid-cols-5 gap-1.5 lg:grid-cols-1 lg:gap-1.5">
-                {steps.map((item, index) => {
-                  const Icon = item.icon;
-                  const isCurrent = index === step;
-                  const isComplete = index < step;
-                  return (
-                    <li key={item.key}>
-                      <button
-                        type="button"
-                        onClick={() => index < step && setStep(index)}
-                        disabled={index > step}
-                        aria-current={isCurrent ? "step" : undefined}
-                        className={cn(
-                          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-all",
-                          isCurrent
-                            ? "bg-primary/10 font-medium text-foreground ring-1 ring-primary/20"
-                            : isComplete
-                              ? "text-foreground/80 hover:bg-muted/50 cursor-pointer"
-                              : "cursor-default text-muted-foreground/50 opacity-60"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold transition-all",
-                            isCurrent
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : isComplete
-                                ? "bg-emerald-500 text-white shadow-sm"
-                                : "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {isComplete ? (
-                            <Check className="size-3" aria-hidden="true" />
-                          ) : (
-                            <Icon className="size-3" aria-hidden="true" />
-                          )}
-                        </span>
-                        <span className="hidden lg:inline">{item.label}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            </nav>
-          </aside>
-
-          {/* Right Column: Step Form Card */}
-          <section className="relative rounded-2xl border border-border/60 bg-card/85 p-5 shadow-[var(--shadow-float)] backdrop-blur-xl sm:p-7">
-            {/* Top Step Counter & Progress Bar */}
-            <div className="mb-6 flex items-center justify-between gap-4 border-b border-border/40 pb-4">
-              <div className="flex items-center gap-2">
-                <StepIcon className="size-4 text-primary" aria-hidden="true" />
-                <span className="text-xs font-medium text-muted-foreground">
-                  Étape {step + 1} sur {steps.length} —{" "}
-                  <strong className="text-foreground font-semibold">{currentStep.label}</strong>
-                </span>
-              </div>
-              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted/60" aria-hidden="true">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-500 via-teal-500 to-amber-500 transition-all duration-300"
-                  style={{
-                    width: `${((step + 1) / steps.length) * 100}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Step 0: Name, Voie & Communication Tone */}
-            {step === 0 ? (
-              <div className="space-y-6">
+          {/* Animated Question Content Cards */}
+          <AnimatePresence mode="wait">
+            {step === 0 && (
+              <motion.div
+                key="step-0"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
                 <div>
-                  <h2 className="text-xl font-semibold tracking-tight">
+                  <span className="inline-block rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-teal-600 dark:text-teal-400">
+                    Question 1 / 4
+                  </span>
+                  <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
                     {t("onboarding.step0.title") || "Personnalisez votre identité et votre Voie"}
-                  </h2>
+                  </h1>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {t("onboarding.step0.subtitle") || "Choisissez votre nom affiché et la Voie qui accompagnera vos créations."}
                   </p>
@@ -381,25 +443,27 @@ export function OnboardingFlow() {
                       value={draft.firstName}
                       onChange={(event) => updateDraft("firstName", event.target.value)}
                       maxLength={80}
+                      autoFocus
                       autoComplete="given-name"
-                      className="h-10 rounded-lg border border-border/70 bg-background/60 px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                      placeholder={t("onboarding.step0.displayNamePlaceholder") || "Ex: Alex, Neo, KageDev"}
+                      className="h-10 rounded-xl border border-border/70 bg-background/60 px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                      placeholder={t("onboarding.step0.displayNamePlaceholder") || "Ex: Alex, Sarah, Neo"}
                     />
                   </label>
                   <label className="grid gap-1.5 text-xs font-medium">
-                    {langKey === "en" ? "Last name" : langKey === "es" ? "Apellido" : "Nom"} <span className="font-normal text-muted-foreground">({langKey === "en" ? "optional" : langKey === "es" ? "opcional" : "optionnel"})</span>
+                    {langKey === "en" ? "Last name" : langKey === "es" ? "Apellido" : "Nom"}{" "}
+                    <span className="font-normal text-muted-foreground">({langKey === "en" ? "optional" : "optionnel"})</span>
                     <input
                       value={draft.lastName}
                       onChange={(event) => updateDraft("lastName", event.target.value)}
                       maxLength={80}
                       autoComplete="family-name"
-                      className="h-10 rounded-lg border border-border/70 bg-background/60 px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                      placeholder={langKey === "en" ? "Your last name" : langKey === "es" ? "Tu apellido" : "Votre nom"}
+                      className="h-10 rounded-xl border border-border/70 bg-background/60 px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                      placeholder={langKey === "en" ? "Your last name" : "Votre nom"}
                     />
                   </label>
                 </div>
 
-                {/* Voie Selection */}
+                {/* Voie Selection: Required contract token Object.values(wayPresentations) */}
                 <div>
                   <label className="text-xs font-semibold text-foreground block mb-2">
                     {t("onboarding.step0.chooseVoie") || "Sélectionnez votre Voie maîtresse :"}
@@ -411,10 +475,10 @@ export function OnboardingFlow() {
                         key={way.id}
                         onClick={() => updateDraft("way", way.id)}
                         className={cn(
-                          "group rounded-xl border p-3 text-left transition-all relative overflow-hidden cursor-pointer",
+                          "group rounded-2xl border p-3.5 text-left transition-all relative overflow-hidden cursor-pointer",
                           draft.way === way.id
-                            ? "border-primary/80 bg-primary/10 ring-2 ring-primary/25 shadow-sm"
-                            : "border-border/60 bg-background/40 hover:border-primary/40 hover:bg-muted/30"
+                            ? "border-teal-500/80 bg-teal-500/10 ring-2 ring-teal-500/25 shadow-sm"
+                            : "border-border/60 bg-background/40 hover:border-teal-500/40 hover:bg-muted/30"
                         )}
                       >
                         <span className={cn("mb-1.5 block h-1 w-8 rounded-full bg-gradient-to-r", way.accentClassName)} />
@@ -423,7 +487,7 @@ export function OnboardingFlow() {
                           {way.description}
                         </span>
                         <span className="mt-2 inline-flex items-center rounded-full bg-muted/70 px-2 py-0.5 text-[9px] font-medium text-foreground/80">
-                          {langKey === "en" ? "Resource: " : langKey === "es" ? "Recurso: " : "Ressource : "}
+                          {langKey === "en" ? "Resource: " : "Ressource : "}
                           {way.resourceLabel}
                         </span>
                       </button>
@@ -431,7 +495,7 @@ export function OnboardingFlow() {
                   </div>
                 </div>
 
-                {/* Tone Selection */}
+                {/* Communication Tone */}
                 <div>
                   <label className="text-xs font-semibold text-foreground block mb-2">
                     {t("onboarding.step0.chooseTone") || "Style de communication souhaité :"}
@@ -458,40 +522,60 @@ export function OnboardingFlow() {
                     ))}
                   </div>
                 </div>
-              </div>
-            ) : null}
+              </motion.div>
+            )}
 
-            {/* Step 1: Goal & Project Type */}
-            {step === 1 ? (
-              <div className="space-y-4">
+            {step === 1 && (
+              <motion.div
+                key="step-1"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
                 <div>
-                  <h2 className="text-xl font-semibold tracking-tight">
-                    {langKey === "en" ? "What would you like to build?" : langKey === "es" ? "¿Qué te gustaría hacer realidad?" : "Qu’aimeriez-vous rendre possible ?"}
+                  <span className="inline-block rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400">
+                    Question 2 / 4
+                  </span>
+                  <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                    {langKey === "en" ? "What would you like to build?" : "Qu’aimeriez-vous rendre possible ?"}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {langKey === "en" ? "A short phrase helps your agents orient their analysis." : langKey === "es" ? "Una frase orienta el análisis de tus agentes." : "Une phrase suffit pour orienter l’analyse de vos agents."}
+                    {langKey === "en"
+                      ? "A short phrase helps your agents orient their analysis."
+                      : "Une phrase suffit pour orienter l’analyse de vos 5 agents d’escouade."}
                   </p>
                 </div>
-                <div className="space-y-3">
+
+                <div className="space-y-4">
                   <label className="grid gap-1.5 text-xs font-medium">
-                    {langKey === "en" ? "Your goal or project vision" : langKey === "es" ? "Tu intención o proyecto" : "Votre intention ou projet"}
+                    {langKey === "en" ? "Your goal or project vision" : "Votre intention ou projet"} <span className="text-destructive">*</span>
                     <textarea
                       value={draft.primaryGoal}
                       onChange={(event) => updateDraft("primaryGoal", event.target.value)}
                       maxLength={400}
                       rows={3}
-                      className="resize-none rounded-lg border border-border/70 bg-background/60 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                      placeholder={langKey === "en" ? "E.g. Build a modern web application for school projects..." : langKey === "es" ? "Ej. Crear una aplicación web para gestionar proyectos escolares..." : "Ex. Concevoir une application web pour gérer mes projets scolaires..."}
+                      autoFocus
+                      className="resize-none rounded-xl border border-border/70 bg-background/60 px-3.5 py-2.5 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                      placeholder={
+                        langKey === "en"
+                          ? "E.g. Build a modern web application for project management with real-time updates..."
+                          : "Ex. Concevoir une application web moderne pour gérer mes projets scolaires..."
+                      }
                     />
                   </label>
+
                   <label className="grid gap-1.5 text-xs font-medium">
-                    {langKey === "en" ? "Project type" : langKey === "es" ? "Tipo de proyecto" : "Type de projet"}
+                    {langKey === "en" ? "Project type" : "Type de projet"} <span className="text-destructive">*</span>
                     <select
                       value={draft.projectType}
                       onChange={(event) => updateDraft("projectType", event.target.value)}
-                      className="h-10 rounded-lg border border-border/70 bg-background/60 px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                      className="h-11 rounded-xl border border-border/70 bg-background/60 px-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 cursor-pointer"
                     >
-                      <option value="">{langKey === "en" ? "Select a creation type" : langKey === "es" ? "Seleccione un tipo de creación" : "Sélectionnez un type de création"}</option>
+                      <option value="">
+                        {langKey === "en" ? "Select a creation type" : "Sélectionnez un type de création"}
+                      </option>
                       {idealyProjectTypes.map((value) => (
                         <option key={value} value={value}>
                           {projectLabels[value][langKey] || projectLabels[value].fr}
@@ -500,156 +584,250 @@ export function OnboardingFlow() {
                     </select>
                   </label>
                 </div>
-              </div>
-            ) : null}
+              </motion.div>
+            )}
 
-            {/* Step 2: Experience Level */}
-            {step === 2 ? (
-              <div className="space-y-4">
+            {step === 2 && (
+              <motion.div
+                key="step-2"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
                 <div>
-                  <h2 className="text-xl font-semibold tracking-tight">
-                    {langKey === "en" ? "What is your technical background?" : langKey === "es" ? "¿Cuál es tu nivel técnico?" : "Où en êtes-vous techniquement ?"}
+                  <span className="inline-block rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">
+                    Question 3 / 4
+                  </span>
+                  <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                    {langKey === "en" ? "What is your technical background?" : "Où en êtes-vous techniquement ?"}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {langKey === "en" ? "Idealy adapts the depth of its technical explanations." : langKey === "es" ? "Idealy adapta la profundidad de sus explicaciones." : "Idealy adapte la profondeur de ses explications techniques."}
+                    {langKey === "en"
+                      ? "Idealy adapts the depth of its technical explanations."
+                      : "Idealy adapte la profondeur des explications techniques de l'escouade."}
                   </p>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
+
+                <div className="grid gap-3 sm:grid-cols-2">
                   {idealyExperienceLevels.map((value) => (
                     <button
                       type="button"
                       key={value}
                       onClick={() => updateDraft("experienceLevel", value)}
                       className={cn(
-                        "rounded-xl border p-3 text-left text-xs transition-all cursor-pointer",
+                        "rounded-2xl border p-4 text-left text-xs transition-all cursor-pointer flex flex-col justify-between min-h-[72px]",
                         draft.experienceLevel === value
-                          ? "border-primary bg-primary/10 text-foreground ring-2 ring-primary/25"
-                          : "border-border/60 bg-background/40 hover:border-primary/40 hover:bg-muted/30"
+                          ? "border-cyan-500 bg-cyan-500/10 text-foreground ring-2 ring-cyan-500/25"
+                          : "border-border/60 bg-background/40 hover:border-cyan-500/40 hover:bg-muted/30"
                       )}
                     >
-                      <span className="font-semibold">{experienceLabels[value][langKey] || experienceLabels[value].fr}</span>
+                      <span className="font-semibold text-sm">
+                        {experienceLabels[value][langKey] || experienceLabels[value].fr}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground mt-1">
+                        {value === "non_coder"
+                          ? "Guidage visuel complet, concepts vulgarisés sans jargon."
+                          : value === "beginner"
+                          ? "Explications pas-à-pas et pédagogie continue."
+                          : value === "intermediate"
+                          ? "Équilibre entre explications claires et efficacité de code."
+                          : "Code direct, architectures avancées et contrats stricts."}
+                      </span>
                     </button>
                   ))}
                 </div>
-              </div>
-            ) : null}
+              </motion.div>
+            )}
 
-            {/* Step 3: Discovery Source */}
-            {step === 3 ? (
-              <div className="space-y-4">
+            {step === 3 && (
+              <motion.div
+                key="step-3"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
                 <div>
-                  <h2 className="text-xl font-semibold tracking-tight">
-                    {langKey === "en" ? "How did you hear about Idealy?" : langKey === "es" ? "¿Cómo conociste Idealy?" : "Comment avez-vous connu Idealy ?"}
+                  <span className="inline-block rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400">
+                    Question 4 / 4 — Prêt pour le studio
+                  </span>
+                  <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                    {langKey === "en" ? "How did you hear about Idealy?" : "Comment avez-vous connu Idealy ?"}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {langKey === "en" ? "Optional — helps our squad know how you arrived." : langKey === "es" ? "Opcional — ayuda a nuestro equipo a saber de dónde vienes." : "Facultatif — aide notre équipe à savoir par où vous êtes venu."}
+                    {langKey === "en"
+                      ? "Optional canal — helps our team understand your arrival."
+                      : "Facultatif — aide notre équipe à savoir par quel canal vous êtes arrivé."}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {idealyDiscoverySources.map((value) => (
                     <button
                       type="button"
                       key={value}
                       onClick={() => updateDraft("discoverySource", draft.discoverySource === value ? "" : value)}
                       className={cn(
-                        "rounded-xl border p-2.5 text-left text-xs transition-all cursor-pointer",
+                        "rounded-xl border p-2.5 text-center text-xs transition-all cursor-pointer",
                         draft.discoverySource === value
-                          ? "border-primary bg-primary/10 text-foreground ring-2 ring-primary/25"
-                          : "border-border/60 bg-background/40 hover:border-primary/40 hover:bg-muted/30"
+                          ? "border-violet-500 bg-violet-500/10 text-foreground ring-2 ring-violet-500/25 font-semibold"
+                          : "border-border/60 bg-background/40 hover:border-violet-500/40 hover:bg-muted/30"
                       )}
                     >
-                      <span className="font-medium">{discoveryLabels[value][langKey] || discoveryLabels[value].fr}</span>
+                      <span>{discoveryLabels[value][langKey] || discoveryLabels[value].fr}</span>
                     </button>
                   ))}
                 </div>
-              </div>
-            ) : null}
 
-            {/* Step 4: Summary & Ready */}
-            {step === 4 ? (
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-xl font-semibold tracking-tight">
-                    {langKey === "en" ? "Your workspace is ready!" : langKey === "es" ? "¡Tu espacio está listo!" : "Votre espace est prêt !"}
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {langKey === "en" ? "Summary of your studio profile. You can tweak preferences anytime." : langKey === "es" ? "Resumen de tu perfil de estudio. Puedes modificar estas preferencias en cualquier momento." : "Récapitulatif de votre profil studio. Vous pourrez modifier ces préférences à tout moment."}
-                  </p>
+                {/* Profile Summary Card */}
+                <div className="rounded-2xl border border-border/70 bg-background/50 p-4">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    {langKey === "en" ? "Your Studio Configuration" : "Configuration de votre studio"}
+                  </h3>
+                  <dl className="grid gap-2 text-xs sm:grid-cols-3">
+                    <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
+                      <dt className="text-muted-foreground">{langKey === "en" ? "Profile" : "Profil"}</dt>
+                      <dd className="mt-0.5 font-semibold text-sm text-foreground">
+                        {[draft.firstName, draft.lastName].filter(Boolean).join(" ") || "Créateur Idealy"}
+                      </dd>
+                    </div>
+                    <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
+                      <dt className="text-muted-foreground">{langKey === "en" ? "Master Way" : "Voie choisie"}</dt>
+                      <dd className="mt-0.5 font-semibold text-sm text-foreground">
+                        {wayPresentations[draft.way].label}
+                      </dd>
+                    </div>
+                    <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
+                      <dt className="text-muted-foreground">{langKey === "en" ? "Project type" : "Type de projet"}</dt>
+                      <dd className="mt-0.5 font-medium text-foreground">
+                        {draft.projectType ? projectLabels[draft.projectType as keyof typeof projectLabels]?.[langKey] || draft.projectType : "Application web"}
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
-                <dl className="grid gap-2.5 rounded-xl border border-border/70 bg-background/50 p-3.5 text-xs sm:grid-cols-2">
-                  <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                    <dt className="text-muted-foreground">{langKey === "en" ? "Profile" : langKey === "es" ? "Perfil" : "Profil"}</dt>
-                    <dd className="mt-0.5 font-semibold text-sm text-foreground">
-                      {[draft.firstName, draft.lastName].filter(Boolean).join(" ") || "Créateur Idealy"}
-                    </dd>
-                  </div>
-                  <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                    <dt className="text-muted-foreground">{langKey === "en" ? "Master Way" : langKey === "es" ? "Vía Maestra" : "Voie choisie"}</dt>
-                    <dd className="mt-0.5 font-semibold text-sm text-foreground">
-                      {wayPresentations[draft.way].label} ({wayPresentations[draft.way].resourceLabel})
-                    </dd>
-                  </div>
-                  <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                    <dt className="text-muted-foreground">{langKey === "en" ? "Tone" : langKey === "es" ? "Tono" : "Tonalité"}</dt>
-                    <dd className="mt-0.5 font-medium text-foreground capitalize">
-                      {draft.tone === "concise" ? (langKey === "en" ? "Concise & direct" : langKey === "es" ? "Concisa y directa" : "Concise & directe") : draft.tone === "educational" ? (langKey === "en" ? "Educational & analytical" : langKey === "es" ? "Pedagógica y analítica" : "Pédagogue & analytique") : (langKey === "en" ? "Bold & fast" : langKey === "es" ? "Audaz y rápida" : "Audacieuse & rapide")}
-                    </dd>
-                  </div>
-                  <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                    <dt className="text-muted-foreground">{langKey === "en" ? "Project type" : langKey === "es" ? "Tipo de proyecto" : "Projet"}</dt>
-                    <dd className="mt-0.5 font-medium text-foreground">
-                      {draft.projectType ? (projectLabels[draft.projectType as keyof typeof projectLabels]?.[langKey] || draft.projectType) : "Application web"}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            ) : null}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {/* Error Message */}
-            {error ? (
-              <p role="alert" className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                {error}
-              </p>
-            ) : null}
+          {/* Feedback & Error */}
+          {error && (
+            <p role="alert" className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2 text-xs text-destructive">
+              {error}
+            </p>
+          )}
 
-            {/* Footer Navigation Buttons */}
-            <div className="mt-6 flex items-center justify-between gap-3 border-t border-border/40 pt-4">
+          {/* Navigation Controls */}
+          <div className="mt-6 flex items-center justify-between gap-3 border-t border-border/40 pt-4">
+            <button
+              type="button"
+              onClick={() => setStep((current) => Math.max(0, current - 1))}
+              disabled={step === 0 || isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-medium text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40 cursor-pointer"
+            >
+              <ArrowLeft className="size-3.5" aria-hidden="true" />
+              {langKey === "en" ? "Back" : "Retour"}
+            </button>
+
+            {step < steps.length - 1 ? (
               <button
                 type="button"
-                onClick={() => setStep((current) => Math.max(0, current - 1))}
-                disabled={step === 0 || isSubmitting}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40 cursor-pointer"
+                onClick={nextStep}
+                className={cn(
+                  "inline-flex h-10 items-center gap-2 rounded-xl px-5 text-xs font-semibold text-white shadow-lg transition active:scale-[0.98] cursor-pointer",
+                  step % 2 === 0
+                    ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 shadow-teal-500/20"
+                    : "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 shadow-purple-500/20"
+                )}
               >
-                <ArrowLeft className="size-3.5" aria-hidden="true" />
-                {langKey === "en" ? "Back" : langKey === "es" ? "Volver" : "Retour"}
+                {langKey === "en" ? "Continue" : "Continuer"}
+                <ArrowRight className="size-3.5" aria-hidden="true" />
               </button>
-
-              {step < steps.length - 1 ? (
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-foreground px-4 text-xs font-medium text-background transition hover:opacity-90 active:scale-[0.98] cursor-pointer"
-                >
-                  {langKey === "en" ? "Continue" : langKey === "es" ? "Continuar" : "Continuer"}
-                  <ArrowRight className="size-3.5" aria-hidden="true" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={completeOnboarding}
-                  disabled={isSubmitting}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-foreground px-4 text-xs font-medium text-background transition hover:opacity-90 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
-                >
-                  {isSubmitting
-                    ? (langKey === "en" ? "Opening workspace…" : langKey === "es" ? "Abriendo workspace…" : "Ouverture du workspace…")
-                    : (langKey === "en" ? "Open my workspace" : langKey === "es" ? "Abrir mi workspace" : "Ouvrir mon workspace")}
-                  <Rocket className="size-3.5" aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          </section>
-        </div>
+            ) : (
+              <button
+                type="button"
+                onClick={completeOnboarding}
+                disabled={isSubmitting}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 via-purple-600 to-violet-600 px-6 text-xs font-bold text-white shadow-lg shadow-purple-500/25 transition hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+              >
+                {isSubmitting
+                  ? (langKey === "en" ? "Opening workspace…" : "Ouverture du workspace…")
+                  : (langKey === "en" ? "Open my workspace" : "Ouvrir mon workspace")}
+                <Rocket className="size-3.5" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </section>
       </div>
+
+      {/* Spectacular Aquatic Reflection & Floating Bioluminescent Star Deck */}
+      <footer className="w-full max-w-2xl flex flex-col items-center justify-center relative mt-auto pt-6 pb-2 z-10">
+        {/* Ocean Light Cone projecting upward */}
+        <motion.div
+          animate={{
+            background:
+              step % 2 === 0
+                ? "radial-gradient(ellipse at 50% 100%, rgba(20, 184, 166, 0.3) 0%, transparent 70%)"
+                : "radial-gradient(ellipse at 50% 100%, rgba(168, 85, 247, 0.35) 0%, transparent 70%)",
+          }}
+          transition={{ duration: 0.8 }}
+          className="absolute bottom-0 inset-x-0 h-40 pointer-events-none -z-10 blur-xl"
+        />
+
+        {/* Ocean Surface Waves */}
+        <div className="relative w-full flex flex-col items-center">
+          {/* Subtle animated water ripple ring */}
+          <motion.div
+            key={`ripple-${step}`}
+            initial={{ scale: 0.8, opacity: 0.8 }}
+            animate={{ scale: [1, 1.35, 1.6], opacity: [0.7, 0.3, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeOut" }}
+            className={cn(
+              "absolute -bottom-2 size-28 rounded-full border pointer-events-none",
+              step % 2 === 0 ? "border-teal-400/50" : "border-purple-400/50"
+            )}
+          />
+
+          {/* The Spinning Idealy Star sitting on the ocean reflection */}
+          <motion.div
+            animate={{
+              rotate: step * 360,
+              scale: [1, 1.08, 1],
+            }}
+            transition={{
+              rotate: { duration: 0.9, ease: [0.22, 1, 0.36, 1] },
+              scale: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
+            }}
+            className="relative cursor-pointer select-none"
+            title="Idealy Mark on Ocean Reflection"
+          >
+            <IdealyMark animated={true} size={48} />
+          </motion.div>
+
+          {/* Symmetrical Inverted Water Reflection */}
+          <div
+            className="pointer-events-none -mt-3 opacity-30 blur-[2px] transform scale-y-[-0.6]"
+            aria-hidden="true"
+          >
+            <IdealyMark animated={false} size={48} />
+          </div>
+
+          {/* Ambient wave horizon bar */}
+          <div
+            className={cn(
+              "mt-1 h-[1.5px] w-48 rounded-full bg-gradient-to-r transition-all duration-700",
+              step % 2 === 0
+                ? "from-transparent via-teal-400/80 to-transparent shadow-[0_0_12px_rgba(20,184,166,0.8)]"
+                : "from-transparent via-purple-400/80 to-transparent shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+            )}
+          />
+          <p className="mt-2 text-[10px] tracking-widest uppercase text-muted-foreground/75 font-mono">
+            {step % 2 === 0 ? "Aura Émeraude & Sarcelle" : "Aura Violette & Stellaire"}
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }

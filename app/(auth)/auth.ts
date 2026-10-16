@@ -238,11 +238,21 @@ export const {
           }
 
           if (!localUser) {
-            try {
-              const [created] = await createUser(email, password);
-              localUser = created ?? null;
-            } catch {
-              throw new IdealyCredentialsSignin("service_unavailable");
+            if (credentials.intent === "register") {
+              try {
+                await createUser(email, password);
+                const [created] = await getUser(email);
+                localUser = created ?? null;
+              } catch {
+                throw new IdealyCredentialsSignin("service_unavailable");
+              }
+            } else {
+              try {
+                const [created] = await createUser(email, password);
+                localUser = created ?? null;
+              } catch {
+                throw new IdealyCredentialsSignin("service_unavailable");
+              }
             }
           }
 
@@ -279,6 +289,7 @@ export const {
       },
       credentials: {
         email: { label: "Email", type: "email" },
+        intent: { label: "Intent", type: "text" },
         password: { label: "Password", type: "password" },
       },
     }),

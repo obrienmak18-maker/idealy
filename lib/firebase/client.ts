@@ -122,14 +122,13 @@ export async function prepareFirebaseIdTokenForSupabase(
       body: JSON.stringify({ idToken }),
     });
     // If set-claims worked, refresh the token to pick up the new claim
-    if (response.ok) {
-      const { currentUser } = getFirebaseAuth();
-      if (currentUser) {
-        return currentUser.getIdToken(true);
-      }
+    if (!response.ok) {
+      throw new Error("firebase_backend_unavailable");
     }
-    // set-claims unavailable (no Firebase Admin config) → use original token
-    // NextAuth's Firebase provider has a JWT fallback that will still extract email + uid
+    const { currentUser } = getFirebaseAuth();
+    if (currentUser) {
+      return currentUser.getIdToken(true);
+    }
     return idToken;
   } catch {
     // Network error or unconfigured admin — fall back to original token

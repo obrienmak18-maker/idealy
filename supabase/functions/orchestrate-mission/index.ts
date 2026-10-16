@@ -511,7 +511,7 @@ Deno.serve(async (request) => {
       await runAgent(
         builder,
         iteration,
-        `Agis comme ${builder.name}, builder réel de la Way active. Construis uniquement le livrable borné et rends les fichiers vérifiables. ${iteration > 1 ? `Applique la correction ciblée (itération ${iteration}/${MAX_REVIEW_ITERATIONS}).` : "Construis la première version."} Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. ${missionVoice} Plan du chef : ${JSON.stringify(plan).slice(0, 12_000)}. Préparation UI/UX de ${designer.name} : ${JSON.stringify(designerReport).slice(0, 8_000)}. Préparation technique de ${specialist.name} : ${JSON.stringify(specialistReport).slice(0, 8_000)}. Contexte : ${missionContext}${diagnosticGuidance}`,
+        `Agis comme ${builder.name}, builder réel de la Way active. Construis uniquement le livrable borné et rends les fichiers vérifiables. CONTINUITÉ ET INTÉGRITÉ DU PROJET : Ne jamais supprimer ni réinitialiser de fichiers existants créés par d'autres agents. Construis de manière incrémentale et préserve l'architecture. ${iteration > 1 ? `Applique la correction ciblée (itération ${iteration}/${MAX_REVIEW_ITERATIONS}).` : "Construis la première version."} Ne publie rien, n’appelle aucun connecteur et ne crée aucun secret. ${missionVoice} Plan du chef : ${JSON.stringify(plan).slice(0, 12_000)}. Préparation UI/UX de ${designer.name} : ${JSON.stringify(designerReport).slice(0, 8_000)}. Préparation technique de ${specialist.name} : ${JSON.stringify(specialistReport).slice(0, 8_000)}. Contexte : ${missionContext}${diagnosticGuidance}`,
         { workspaceStream: true },
       );
 

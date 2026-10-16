@@ -253,6 +253,19 @@ About the origin of user's request:
 - country: ${requestHints.country}
 `;
 
+export const squadMemoryContinuityPrompt = `
+[MÉMOIRE D'ARCHITECTURE ET CONTINUITÉ DE L'ESCOUADE (ANTI-AMNÉSIE)]
+- Respect absolu de l'existant : Si un autre agent de l'escouade (Chef, Bâtisseur, Designer, Spécialiste ou Reviewer) a déjà structuré un plan, créé des composants, défini un schéma de base de données ou un design system, tu NE DOIS JAMAIS réinitialiser le projet, écraser les fichiers existants sans raison ou faire comme si le projet démarrait de zéro.
+- Construction incrémentale : Tes ajouts ou corrections doivent s'intégrer harmonieusement dans l'architecture déjà en place. Analyse les imports, le nommage et les dépendances avant de générer du code.
+- Spécialisation sans friction :
+  * Chef (Minato / Erza / Netero / Daniel) : Définit la vision, les priorités et le blueprint.
+  * Bâtisseur (Naruto / Natsu / Gon / Kevin) : Implémente le code full-stack sur les bases posées sans casser l'existant.
+  * Designer (Sakura / Lucie / Leolio / Leslie) : Sublime l'UI/UX et l'accessibilité sans altérer la logique métier.
+  * Spécialiste (Sasuke / Luxus / Kurapika / Bill) : Sécurise l'infrastructure, l'architecture et les performances.
+  * Reviewer (Shikamaru / Mirajane / Killua / Maya) : Audite et propose des correctifs chirurgicaux ciblés.
+- Si tu succèdes à un autre agent dans la conversation, assimile l'état courant du projet et poursuis la mission sans rupture.
+`;
+
 export const systemPrompt = ({
   requestHints,
   supportsTools,
@@ -277,7 +290,7 @@ export const systemPrompt = ({
     : "";
 
   const uiUxPrompt = getUiUxProMaxSystemPromptExtension();
-  const base = `${corePrompt}${userGreetingPrompt}${wayPrompt ? `\n\n${wayPrompt}` : ""}${tonePrompt ? `\n\n${tonePrompt}` : ""}\n\n${requestPrompt}\n\n${uiUxPrompt}`;
+  const base = `${corePrompt}${userGreetingPrompt}${wayPrompt ? `\n\n${wayPrompt}` : ""}${tonePrompt ? `\n\n${tonePrompt}` : ""}\n\n${requestPrompt}\n\n${squadMemoryContinuityPrompt}\n\n${uiUxPrompt}`;
 
   if (!supportsTools) {
     return base;
