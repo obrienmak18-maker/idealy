@@ -2,7 +2,8 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
-import { RefreshCwIcon } from "lucide-react";
+import { ArrowUpRight, Code2, Lightbulb, ListChecks, PanelsTopLeft, Rocket, WandSparkles, RefreshCwIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { ChatMessage } from "@/lib/types";
 import { Button } from "../ui/button";
@@ -24,6 +25,7 @@ type ProfileContext = {
 };
 
 type SuggestionEntry = {
+  icon: LucideIcon;
   description: string;
   label: string;
   prompt: string;
@@ -32,6 +34,7 @@ type SuggestionEntry = {
 
 const suggestionCatalog: SuggestionEntry[] = [
   {
+    icon: PanelsTopLeft,
     description:
       "Concevoir une application claire et accessible pour élèves, enseignants et parents.",
     label: "Créer une application scolaire",
@@ -40,6 +43,7 @@ const suggestionCatalog: SuggestionEntry[] = [
     tags: ["mobile", "web", "prototype", "beginner", "intermediate"],
   },
   {
+    icon: Lightbulb,
     description:
       "Clarifier l’objectif, le public cible et établir un plan de mission concret avant le code.",
     label: "Structurer mon idée de produit",
@@ -48,6 +52,7 @@ const suggestionCatalog: SuggestionEntry[] = [
     tags: ["startup", "saas", "other", "beginner", "non_coder"],
   },
   {
+    icon: Code2,
     description:
       "Définir l’architecture des écrans, le parcours interactif et les composants réutilisables.",
     label: "Construire une première interface",
@@ -56,6 +61,7 @@ const suggestionCatalog: SuggestionEntry[] = [
     tags: ["web", "site", "prototype", "intermediate", "advanced"],
   },
   {
+    icon: WandSparkles,
     description:
       "Analyser le parcours, identifier les points de friction et prioriser les optimisations.",
     label: "Améliorer une expérience existante",
@@ -64,6 +70,7 @@ const suggestionCatalog: SuggestionEntry[] = [
     tags: ["internal_tool", "saas", "other", "advanced", "expert"],
   },
   {
+    icon: Rocket,
     description:
       "Cadrer la proposition de valeur, les sections clés et générer un prototype de démonstration.",
     label: "Préparer un prototype de lancement",
@@ -72,6 +79,7 @@ const suggestionCatalog: SuggestionEntry[] = [
     tags: ["site", "prototype", "startup", "beginner", "intermediate"],
   },
   {
+    icon: ListChecks,
     description:
       "Distinguer planification, exécution et validation avec des jalons d’avancement précis.",
     label: "Transformer mon objectif en étapes",
@@ -98,7 +106,7 @@ function getSuggestedEntries(profile: ProfileContext, generation: number) {
     .sort((left, right) => right.score - left.score);
 
   const pool = scored.map((item) => item.entry);
-  const offset = (generation * 4) % pool.length;
+  const offset = (generation * 3) % pool.length;
   const picked: SuggestionEntry[] = [];
   for (let index = 0; index < 4; index += 1) {
     picked.push(pool[(offset + index) % pool.length]);
@@ -208,7 +216,7 @@ function PureSuggestedActions({
         </Button>
       ) : null}
       <div
-        className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2"
+        className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
         data-testid="suggested-actions"
         style={{
           msOverflowStyle: "none",
@@ -216,39 +224,48 @@ function PureSuggestedActions({
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {suggestedActions.map((entry, index) => (
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="group relative min-w-0"
-            exit={{ opacity: 0, y: 12 }}
-            initial={{ opacity: 0, y: 12 }}
-            key={entry.label}
-            transition={{
-              delay: 0.04 * index,
-              duration: 0.35,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-          >
-              <button
-              className="group/card relative flex min-h-[64px] sm:min-h-[72px] w-full flex-col justify-between rounded-xl border border-border/70 bg-card/75 p-3 text-left transition-all duration-150 hover:border-primary/40 hover:bg-card hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer sm:p-3.5"
-              onClick={() => handleSuggestionClick(entry)}
-              type="button"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-medium text-xs sm:text-[13px] tracking-tight text-foreground transition-colors group-hover/card:text-primary">
-                  {entry.label}
-                </span>
-                <span className="shrink-0 rounded-full border border-border/70 bg-muted/60 px-1.5 py-0.5 text-[9.5px] font-medium text-muted-foreground">
-                  Mission
-                </span>
-              </div>
+        {suggestedActions.map((entry, index) => {
+          const Icon = entry.icon;
 
-              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
-                {entry.description}
-              </p>
-            </button>
-          </motion.div>
-        ))}
+          return (
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="group relative min-w-0"
+              exit={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 10 }}
+              key={entry.label}
+              transition={{
+                delay: 0.04 * index,
+                duration: 0.28,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            >
+              <button
+                className="group/card relative flex min-h-[92px] w-full items-start gap-3 rounded-2xl border border-border/70 bg-card/60 p-3.5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-card/90 hover:shadow-[var(--shadow-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4"
+                onClick={() => handleSuggestionClick(entry)}
+                type="button"
+              >
+                <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary transition-colors group-hover/card:bg-primary/15">
+                  <Icon aria-hidden="true" className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="text-xs font-semibold tracking-tight text-foreground transition-colors group-hover/card:text-primary sm:text-[13px]">
+                      {entry.label}
+                    </span>
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform group-hover/card:-translate-y-0.5 group-hover/card:translate-x-0.5 group-hover/card:text-primary"
+                    />
+                  </span>
+                  <span className="mt-1.5 block line-clamp-2 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
+                    {entry.description}
+                  </span>
+                </span>
+              </button>
+            </motion.div>
+          );
+        })}
       </div>
     </section>
   );
