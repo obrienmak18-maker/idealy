@@ -36,6 +36,7 @@ import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
 import { RealtimePresence } from "./realtime-presence";
+import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 
 class ArtifactErrorBoundary extends Component<
   { children: ReactNode },
@@ -254,14 +255,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
   return (
     <>
       <div className="idealy-app-background relative flex h-dvh w-full flex-col overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
-        >
-          <div className="absolute -left-24 -top-28 size-[28rem] rounded-full bg-sky-500/[0.055] blur-[100px]" />
-          <div className="absolute right-[8%] top-[8%] size-80 rounded-full bg-violet-500/[0.06] blur-[105px]" />
-          <div className="absolute -bottom-24 right-[25%] size-80 rounded-full bg-fuchsia-500/[0.035] blur-[110px]" />
-        </div>
+        <CosmicHorizon />
         {isArtifactVisible && <BuildTopBar />}
         <main
           className="relative flex min-h-0 flex-1 flex-row overflow-hidden focus:outline-none"

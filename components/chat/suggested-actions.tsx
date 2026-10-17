@@ -3,6 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
 import {
+  ArrowRight,
   ArrowUpRight,
   Code2,
   Lightbulb,
@@ -39,9 +40,40 @@ type SuggestionEntry = {
   label: string;
   prompt: string;
   tags: string[];
+  gradient?: string;
 };
 
 const suggestionCatalog: SuggestionEntry[] = [
+  {
+    icon: Rocket,
+    description:
+      "Cadrer la proposition de valeur, les sections clés et générer un prototype complet avec landing page.",
+    label: "Prototype de lancement",
+    prompt:
+      "Prépare un prototype de lancement pour mon idée. Clarifie le message principal, le public cible, la preuve de valeur, les sections de la page et les actions attendues. Génère ensuite une structure de contenu précise avant de passer à la preview.",
+    tags: ["site", "prototype", "startup", "beginner", "intermediate"],
+    gradient: "from-sky-500/20 to-blue-600/10 border-sky-500/20 text-sky-400",
+  },
+  {
+    icon: Code2,
+    description:
+      "Concevoir une application complète et responsive prête pour la production (UI, logique et données).",
+    label: "Créer une application",
+    prompt:
+      "Je veux construire une application complète et fonctionnelle. Aide-moi à choisir la structure des écrans, le parcours principal, les états vides et de chargement, les données de démonstration et les composants réutilisables. Commence par vérifier que le périmètre est suffisamment clair.",
+    tags: ["web", "site", "prototype", "intermediate", "advanced"],
+    gradient: "from-violet-500/20 to-indigo-600/10 border-violet-500/20 text-violet-400",
+  },
+  {
+    icon: WandSparkles,
+    description:
+      "Identité de marque, logo vectoriel, tokens de design et bannières visuelles coordonnées.",
+    label: "Design Studio",
+    prompt:
+      "Conçois une identité de marque complète et son Design Studio pour mon projet. Définis la palette de couleurs, la typographie, le logo vectoriel SVG, les tokens de design et les bannières visuelles coordonnées avant de lancer les maquettes.",
+    tags: ["startup", "saas", "other", "beginner", "non_coder"],
+    gradient: "from-fuchsia-500/20 to-purple-600/10 border-fuchsia-500/20 text-fuchsia-400",
+  },
   {
     icon: PanelsTopLeft,
     description:
@@ -50,6 +82,7 @@ const suggestionCatalog: SuggestionEntry[] = [
     prompt:
       "Aide-moi à concevoir une application scolaire claire et accessible. Commence par comprendre les utilisateurs (élèves, enseignants et parents), le problème prioritaire, les fonctionnalités essentielles, les données à prévoir et le style d’interface. Propose d’abord une spécification courte avant toute construction.",
     tags: ["mobile", "web", "prototype", "beginner", "intermediate"],
+    gradient: "from-emerald-500/20 to-teal-600/10 border-emerald-500/20 text-emerald-400",
   },
   {
     icon: Lightbulb,
@@ -59,33 +92,7 @@ const suggestionCatalog: SuggestionEntry[] = [
     prompt:
       "Aide-moi à clarifier mon idée de produit. Pose les questions utiles sur l’objectif, le public, la proposition de valeur, les contraintes et le résultat attendu, puis transforme les réponses en plan de mission concret avant de construire quoi que ce soit.",
     tags: ["startup", "saas", "other", "beginner", "non_coder"],
-  },
-  {
-    icon: Code2,
-    description:
-      "Définir l’architecture des écrans, le parcours interactif et les composants réutilisables.",
-    label: "Construire une première interface",
-    prompt:
-      "Je veux construire une première interface fonctionnelle. Aide-moi à choisir la structure des écrans, le parcours principal, les états vides et de chargement, les données de démonstration et les composants réutilisables. Commence par vérifier que le périmètre est suffisamment clair.",
-    tags: ["web", "site", "prototype", "intermediate", "advanced"],
-  },
-  {
-    icon: WandSparkles,
-    description:
-      "Analyser le parcours, identifier les points de friction et prioriser les optimisations.",
-    label: "Améliorer une expérience existante",
-    prompt:
-      "Aide-moi à améliorer une expérience existante. Analyse d’abord le parcours utilisateur, les points de friction, la hiérarchie visuelle, l’accessibilité et les contraintes techniques. Propose une série de corrections priorisées et attends ma validation avant la construction.",
-    tags: ["internal_tool", "saas", "other", "advanced", "expert"],
-  },
-  {
-    icon: Rocket,
-    description:
-      "Cadrer la proposition de valeur, les sections clés et générer un prototype de démonstration.",
-    label: "Préparer un prototype de lancement",
-    prompt:
-      "Prépare un prototype de lancement pour mon idée. Clarifie le message principal, le public cible, la preuve de valeur, les sections de la page et les actions attendues. Génère ensuite une structure de contenu précise avant de passer à la preview.",
-    tags: ["site", "prototype", "startup", "beginner", "intermediate"],
+    gradient: "from-amber-500/20 to-orange-600/10 border-amber-500/20 text-amber-400",
   },
   {
     icon: ListChecks,
@@ -95,10 +102,14 @@ const suggestionCatalog: SuggestionEntry[] = [
     prompt:
       "Transforme mon objectif en étapes de réalisation réalistes. Distingue ce qui doit être compris, planifié, construit et vérifié. Signale les décisions manquantes et propose une première mission courte plutôt qu’un périmètre trop large.",
     tags: ["mobile", "web", "internal_tool", "non_coder", "beginner"],
+    gradient: "from-cyan-500/20 to-blue-600/10 border-cyan-500/20 text-cyan-400",
   },
 ];
 
 function getSuggestedEntries(profile: ProfileContext, generation: number) {
+  if (generation === 0) {
+    return suggestionCatalog.slice(0, 3);
+  }
   const contextTags = [profile.projectType, profile.experienceLevel].filter(
     (value): value is string => Boolean(value)
   );
@@ -163,20 +174,23 @@ function PureSuggestedActions({
   );
 
   const handleSuggestionClick = useCallback(
-    (entry: SuggestionEntry) => {
+    (suggestion: SuggestionEntry) => {
       if (onSuggestionSelect) {
-        onSuggestionSelect(entry.prompt);
+        onSuggestionSelect(suggestion.prompt);
         return;
       }
 
-      window.history.replaceState({}, "", `/chat/${chatId}`);
-
       sendMessage({
-        parts: [{ text: entry.prompt, type: "text" }],
+        parts: [
+          {
+            text: suggestion.prompt,
+            type: "text",
+          },
+        ],
         role: "user",
       });
     },
-    [chatId, onSuggestionSelect, sendMessage]
+    [onSuggestionSelect, sendMessage]
   );
 
   const startLocalWorkspaceDemo = useCallback(() => {
@@ -192,15 +206,12 @@ function PureSuggestedActions({
   }, [sendMessage]);
 
   return (
-    <section aria-labelledby="mission-start-title" className="flex w-full flex-col gap-3">
+    <section aria-labelledby="mission-start-title" className="flex w-full flex-col gap-3.5">
       <div className="flex items-end justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-semibold tracking-tight text-foreground" id="mission-start-title">
-            Pour commencer
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70" id="mission-start-title">
+            Point de départ
           </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Choisissez un point de départ ou écrivez votre idée.
-          </p>
         </div>
         <Button
           className="shrink-0 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
@@ -213,6 +224,7 @@ function PureSuggestedActions({
           Autres idées
         </Button>
       </div>
+
       {isDemoMode ? (
         <Button
           className="w-full rounded-xl border border-sky-400/30 bg-sky-400/10 px-4 py-5 text-sm font-semibold text-sky-900 shadow-[var(--shadow-card)] hover:bg-sky-400/20 dark:text-sky-100"
@@ -224,8 +236,9 @@ function PureSuggestedActions({
           Ouvrir la démonstration complète
         </Button>
       ) : null}
+
       <div
-        className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid w-full grid-cols-1 gap-3.5 sm:grid-cols-3"
         data-testid="suggested-actions"
         style={{
           msOverflowStyle: "none",
@@ -250,27 +263,35 @@ function PureSuggestedActions({
               }}
             >
               <button
-                className="group/card relative flex min-h-[92px] w-full items-start gap-3 rounded-2xl border border-border/70 bg-card/60 p-3.5 text-left transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-card/90 hover:shadow-[var(--shadow-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4"
+                className="group/card relative flex min-h-[148px] w-full flex-col justify-between rounded-2xl border border-white/10 bg-card/30 p-4 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-violet-500/50 hover:bg-card/50 hover:shadow-[0_12px_36px_rgba(139,92,246,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4.5"
                 onClick={() => handleSuggestionClick(entry)}
                 type="button"
               >
-                <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary transition-colors group-hover/card:bg-primary/15">
-                  <Icon aria-hidden="true" className="size-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-start justify-between gap-2">
-                    <span className="text-xs font-semibold tracking-tight text-foreground transition-colors group-hover/card:text-primary sm:text-[13px]">
-                      {entry.label}
-                    </span>
-                    <ArrowUpRight
-                      aria-hidden="true"
-                      className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform group-hover/card:-translate-y-0.5 group-hover/card:translate-x-0.5 group-hover/card:text-primary"
-                    />
+                {/* Top: Icon in squircle badge */}
+                <div className="flex items-center justify-between w-full">
+                  <span
+                    className={`flex size-9 items-center justify-center rounded-xl border bg-gradient-to-br transition-transform group-hover/card:scale-105 ${
+                      entry.gradient || "from-violet-500/20 to-indigo-600/10 border-violet-500/20 text-violet-400"
+                    }`}
+                  >
+                    <Icon aria-hidden="true" className="size-4" />
                   </span>
-                  <span className="mt-1.5 block line-clamp-2 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
+                </div>
+
+                {/* Middle: Title & Description */}
+                <div className="mt-3">
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground transition-colors group-hover/card:text-violet-300">
+                    {entry.label}
+                  </h3>
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground/80">
                     {entry.description}
-                  </span>
-                </span>
+                  </p>
+                </div>
+
+                {/* Bottom: Subtle arrow */}
+                <div className="mt-2.5 flex items-center justify-end text-xs text-muted-foreground/60 transition-colors group-hover/card:text-violet-300">
+                  <ArrowRight aria-hidden="true" className="size-3.5 transition-transform group-hover/card:translate-x-1" />
+                </div>
               </button>
             </motion.div>
           );
