@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n/provider";
+import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 
 type BillingStatus = {
   active: boolean;
@@ -145,8 +146,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       : `${billing.creditsBalance} ${copy.creditsAvailable}`;
 
   return (
-    <main className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto max-w-5xl px-6 py-10 sm:px-10">
+    <main className="relative min-h-dvh bg-background text-foreground overflow-hidden">
+      <CosmicHorizon />
+      <div className="relative z-10 mx-auto max-w-5xl px-6 py-10 sm:px-10">
         <div className="mb-8">
           <Link
             className="mb-6 inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-container-low hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"

@@ -13,6 +13,7 @@ import { IdealyOrbitalDisc } from "@/components/connectors/idealy-orbital-disc";
 import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import { listConnectorDefinitions } from "@/lib/idealy/connectors";
 import { useTranslation } from "@/lib/i18n/provider";
+import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 
 const CONNECTOR_CATEGORY_BADGES: Record<string, string> = {
   github: "VERSION CONTROL",
@@ -183,8 +184,9 @@ export default function PluginsPage() {
   };
 
   return (
-    <main className="min-h-dvh bg-background text-foreground pb-20 select-none">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
+    <main className="relative min-h-dvh bg-background text-foreground pb-20 select-none overflow-hidden">
+      <CosmicHorizon />
+      <div className="relative z-10 mx-auto max-w-5xl px-4 py-8 sm:px-8">
         {/* Navigation retour */}
         <Link
           className="mb-6 inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
