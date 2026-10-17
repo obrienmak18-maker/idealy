@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn as signInWithAuthJs, useSession } from "next-auth/react";
-import { useActionState, useCallback, useEffect, useState } from "react";
+import { startTransition, useActionState, useCallback, useEffect, useState } from "react";
 
 import { FirebaseProviderActions } from "@/components/auth/firebase-provider-actions";
 import { AuthForm } from "@/components/chat/auth-form";
@@ -144,7 +144,9 @@ export default function Page() {
     }
 
     if (!isFirebaseConfigured()) {
-      formAction(formData);
+      startTransition(() => {
+        formAction(formData);
+      });
       return;
     }
 
@@ -174,7 +176,9 @@ export default function Page() {
     } catch (error) {
       const code = firebaseErrorCode(error);
       if (code === "firebase_not_configured" || code === "firebase_session_rejected") {
-        formAction(formData);
+        startTransition(() => {
+          formAction(formData);
+        });
         return;
       }
       if (code === "firebase_backend_unavailable") {

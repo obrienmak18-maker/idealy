@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn as signInWithAuthJs, useSession } from "next-auth/react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 
 import { FirebaseProviderActions } from "@/components/auth/firebase-provider-actions";
 import { AuthForm } from "@/components/chat/auth-form";
@@ -147,7 +147,9 @@ export default function Page() {
     setFirebaseError(null);
 
     if (!isFirebaseConfigured()) {
-      formAction(formData);
+      startTransition(() => {
+        formAction(formData);
+      });
       return;
     }
 
@@ -182,7 +184,9 @@ export default function Page() {
         return;
       }
       // Seamlessly fall back to NextAuth / Supabase credentials provider
-      formAction(formData);
+      startTransition(() => {
+        formAction(formData);
+      });
     }
   };
 
