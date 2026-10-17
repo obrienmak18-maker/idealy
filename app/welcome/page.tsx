@@ -173,21 +173,8 @@ export default function WelcomePage() {
   const { language: lang, setLanguage: handleLangChange } = useTranslation();
   const [step, setStep] = useState(0);
   const [selectedWay, setSelectedWay] = useState<IdealyWay>("ninja");
-  const [transitionTarget, setTransitionTarget] = useState<string | null>(null);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-
-  const navigateWithTransition = useCallback(
-    (e: React.MouseEvent, href: string) => {
-      e.preventDefault();
-      if (transitionTarget) return;
-      setTransitionTarget(href);
-      setTimeout(() => {
-        router.push(href);
-      }, 1200);
-    },
-    [router, transitionTarget]
-  );
 
   useEffect(() => {
     setMounted(true);
@@ -201,6 +188,14 @@ export default function WelcomePage() {
   return (
     <main className="relative min-h-dvh overflow-hidden bg-[#0A0D14] text-white selection:bg-violet-500 selection:text-white">
       <CosmicHorizon />
+
+      {/* High-Energy Colliding Orbs bringing vibrant life to the screen */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="welcome-orb welcome-orb-sky" />
+        <div className="welcome-orb welcome-orb-sunset" />
+        <div className="welcome-orb welcome-orb-gold" />
+        <div className="welcome-grid" />
+      </div>
 
       {/* Navigation Bar */}
       <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-4 sm:px-10 sm:py-5">
@@ -288,14 +283,12 @@ export default function WelcomePage() {
           <Link
             className="hidden rounded-xl px-3 py-2 text-xs text-white/75 transition hover:bg-white/10 hover:text-white sm:inline-flex"
             href="/login"
-            onClick={(e) => navigateWithTransition(e, "/login")}
           >
             {t.nav.signIn}
           </Link>
           <Link
             className="shrink-0 rounded-xl bg-gradient-to-r from-sky-400 via-violet-500 to-orange-400 px-3 py-2 text-[11px] font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:opacity-90 active:scale-95 sm:px-4 sm:text-xs"
             href="/register"
-            onClick={(e) => navigateWithTransition(e, "/register")}
           >
             {t.nav.getStarted}
           </Link>
@@ -349,7 +342,6 @@ export default function WelcomePage() {
           <Link
             className="group inline-flex items-center justify-center gap-2.5 rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-black shadow-xl shadow-white/10 transition hover:bg-white/90 active:scale-95 cursor-pointer"
             href="/register"
-            onClick={(e) => navigateWithTransition(e, "/register")}
           >
             {t.hero.ctaPrimary}
             <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-1" />
@@ -836,56 +828,18 @@ export default function WelcomePage() {
                     <Link
                       className="rounded-2xl bg-gradient-to-r from-sky-400 via-violet-500 to-orange-400 px-4 py-3.5 text-center text-xs font-semibold text-white shadow-lg shadow-violet-500/20 hover:opacity-95 transition cursor-pointer"
                       href={`/register?way=${selectedWay}`}
-                      onClick={(e) => navigateWithTransition(e, `/register?way=${selectedWay}`)}
                     >
                       {t.modal.createAccount}
                     </Link>
                     <Link
                       className="rounded-2xl border border-white/15 px-4 py-3.5 text-center text-xs font-medium text-white/80 hover:bg-white/5 transition cursor-pointer"
                       href="/login"
-                      onClick={(e) => navigateWithTransition(e, "/login")}
                     >
                       {t.modal.alreadyHaveAccount}
                     </Link>
                   </div>
                 </>
               )}
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-
-      {/* Cinematic Transition Overlay towards Register/Login */}
-      <AnimatePresence>
-        {transitionTarget ? (
-          <motion.div
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#09090f]/95 px-6 text-center backdrop-blur-2xl"
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <motion.div
-              animate={{ scale: [0.92, 1.05, 1], opacity: 1 }}
-              className="relative flex flex-col items-center"
-              initial={{ scale: 0.85, opacity: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            >
-              <div className="relative mb-6 flex size-24 items-center justify-center rounded-3xl border border-white/15 bg-white/5 shadow-[0_0_80px_rgba(139,92,246,0.35)] backdrop-blur-xl">
-                <IdealyLogo animated size={56} />
-                <span className="absolute -inset-1 animate-pulse rounded-3xl border border-violet-400/30" />
-              </div>
-              <h3 className="welcome-gradient-text text-xl font-bold tracking-tight sm:text-2xl">
-                {lang === "en" ? "Initializing your Idealy studio…" : lang === "es" ? "Iniciando tu estudio Idealy…" : "Initialisation de votre studio Idealy…"}
-              </h3>
-              <p className="mt-2 text-xs text-white/60">
-                {lang === "en" ? "Preparing workspace and agents…" : lang === "es" ? "Preparando espacio y agentes…" : "Préparation du workspace et des agents…"}
-              </p>
-              <div className="mt-6 flex items-center gap-2">
-                <span className="size-2 animate-ping rounded-full bg-sky-400" />
-                <span className="size-2 animate-ping rounded-full bg-violet-400 [animation-delay:200ms]" />
-                <span className="size-2 animate-ping rounded-full bg-orange-400 [animation-delay:400ms]" />
-              </div>
             </motion.div>
           </motion.div>
         ) : null}

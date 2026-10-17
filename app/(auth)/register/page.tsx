@@ -12,6 +12,7 @@ import { toast } from "@/components/chat/toast";
 import {
   isFirebaseConfigured,
   prepareFirebaseIdTokenForSupabase,
+  signInWithEmailFirebase,
   signUpWithEmailFirebase,
 } from "@/lib/firebase/client";
 import { isIdealyWay } from "@/lib/idealy/product-contract";
@@ -49,7 +50,7 @@ export default function Page() {
   const router = useRouter();
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(true);
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
 
@@ -183,7 +184,26 @@ export default function Page() {
         return;
       }
       if (code === "auth/email-already-in-use") {
-        setFirebaseError("Un compte existe déjà avec cette adresse e-mail.");
+        try {
+          const idToken = await signInWithEmailFirebase(emailValue, passwordValue);
+          const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
+          const result = await signInWithAuthJs("firebase", {
+            idToken: supabaseIdToken,
+            redirect: false,
+          });
+
+          if (!result?.error) {
+            setIsSuccessful(true);
+            await updateSession();
+            window.location.assign(getOnboardingUrl());
+            return;
+          }
+        } catch {
+          // Password didn't match or other error
+        }
+        setFirebaseError(
+          "Un compte existe déjà avec cette adresse e-mail. Vérifiez votre mot de passe habituel ou connectez-vous sur la page de connexion."
+        );
         return;
       }
       if (code === "auth/invalid-email" || code === "auth/weak-password") {
