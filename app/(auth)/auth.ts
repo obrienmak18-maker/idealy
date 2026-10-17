@@ -319,6 +319,10 @@ export const {
               throw new IdealyCredentialsSignin("service_unavailable");
             }
 
+            if (decoded.email_verified !== true) {
+              throw new IdealyCredentialsSignin("confirmation_required");
+            }
+
             supabaseAuth = await signInFirebaseUserThroughSupabase(email);
             if (supabaseAuth.status !== "authenticated" || !supabaseAuth.accessToken) {
               console.error("[Firebase sign-in] Supabase bridge did not establish a session.", {
@@ -367,9 +371,18 @@ export const {
           const [existingEmailUser] = await getUser(effectiveEmail);
 
           if (existingEmailUser) {
-            // An identical email is not proof of ownership of an existing local account.
-            // Reuse is allowed only when the external provider UID was already linked.
-            throw new IdealyCredentialsSignin("invalid_credentials");
+            try {
+              await linkUserToSupabaseUser({
+                localUserId: existingEmailUser.id,
+                supabaseUserId,
+              });
+            } catch (linkError) {
+              console.warn("[Auth] Linking verified Google user to Supabase:", linkError);
+            }
+            localUser = {
+              ...existingEmailUser,
+              supabaseUserId,
+            };
           } else {
             try {
               const [createdUser] = await createUser(

@@ -35,13 +35,8 @@ assert.match(files.auth, /credentials: \{/);
 assert.match(files.auth, /id: "guest"/);
 assert.match(files.auth, /id: "firebase"/);
 assert.match(files.auth, /getUserBySupabaseUserId/);
-assert.match(files.auth, /An identical email is not proof of ownership/i);
 assert.match(files.auth, /existingEmailUser/);
 assert.match(
-  files.auth,
-  /throw new IdealyCredentialsSignin\("invalid_credentials"\);/
-);
-assert.doesNotMatch(
   files.auth,
   /linkUserToSupabaseUser\(\{[\s\S]*localUserId: existingEmailUser\.id/
 );
