@@ -1,29 +1,29 @@
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 
 export function IdealyLoading({
-  label = "Préparation de votre espace…",
+  label,
 }: {
   label?: string;
 }) {
   return (
-    <main
+    <div
       aria-busy="true"
       aria-live="polite"
-      className="idealy-app-background flex min-h-dvh items-center justify-center p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md transition-opacity duration-300"
       role="status"
     >
-      <div className="flex w-full max-w-xs flex-col items-center gap-5 rounded-3xl border border-border/50 bg-card/65 px-8 py-10 text-center shadow-[var(--shadow-float)] backdrop-blur-xl">
-        <IdealyLogo animated size={42} />
-        <div className="w-full">
-          <p className="text-sm font-medium text-foreground">{label}</p>
-          <div
-            aria-hidden="true"
-            className="idealy-loading-track mt-4 h-1 overflow-hidden rounded-full bg-muted"
-          >
-            <span className="idealy-loading-indicator block h-full w-1/3 rounded-full bg-gradient-to-r from-sky-500 via-teal-400 to-violet-500" />
-          </div>
+      <div className="flex flex-col items-center gap-4 text-center">
+        {/* Floating translucent star — no box, no rigid square borders */}
+        <div className="relative flex size-14 items-center justify-center">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/20 via-violet-500/20 to-fuchsia-500/20 blur-xl animate-pulse" />
+          <IdealyLogo animated size={36} />
         </div>
+        {label ? (
+          <p className="text-xs font-medium tracking-wide text-muted-foreground/80 animate-pulse">
+            {label}
+          </p>
+        ) : null}
       </div>
-    </main>
+    </div>
   );
 }

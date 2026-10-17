@@ -468,26 +468,29 @@ export function OnboardingFlow() {
                   <label className="text-xs font-semibold text-foreground block mb-2">
                     {t("onboarding.step0.chooseVoie") || "Sélectionnez votre Voie maîtresse :"}
                   </label>
-                  <div className="grid gap-2.5 sm:grid-cols-2">
+                  <div className="grid gap-2 sm:grid-cols-2">
                     {Object.values(wayPresentations).map((way) => (
                       <button
                         type="button"
                         key={way.id}
                         onClick={() => updateDraft("way", way.id)}
                         className={cn(
-                          "group rounded-2xl border p-3.5 text-left transition-all relative overflow-hidden cursor-pointer",
+                          "group flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-left transition-all cursor-pointer relative overflow-hidden",
                           draft.way === way.id
-                            ? "border-teal-500/80 bg-teal-500/10 ring-2 ring-teal-500/25 shadow-sm"
+                            ? "border-teal-500/80 bg-teal-500/10 ring-1 ring-teal-500/30 shadow-sm"
                             : "border-border/60 bg-background/40 hover:border-teal-500/40 hover:bg-muted/30"
                         )}
                       >
-                        <span className={cn("mb-1.5 block h-1 w-8 rounded-full bg-gradient-to-r", way.accentClassName)} />
-                        <span className="block text-xs font-bold text-foreground">{way.label}</span>
-                        <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground line-clamp-2">
-                          {way.description}
-                        </span>
-                        <span className="mt-2 inline-flex items-center rounded-full bg-muted/70 px-2 py-0.5 text-[9px] font-medium text-foreground/80">
-                          {langKey === "en" ? "Resource: " : "Ressource : "}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className={cn("size-2.5 shrink-0 rounded-full", way.accentClassName || "bg-teal-400")} />
+                          <div className="min-w-0">
+                            <span className="block text-xs font-semibold text-foreground truncate">{way.label}</span>
+                            <span className="block text-[11px] text-muted-foreground truncate max-w-[200px]">
+                              {way.description}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[10px] font-medium text-muted-foreground/80 rounded-md bg-muted/60 px-1.5 py-0.5 ml-2">
                           {way.resourceLabel}
                         </span>
                       </button>
@@ -511,9 +514,9 @@ export function OnboardingFlow() {
                         key={toneItem.id}
                         onClick={() => updateDraft("tone", toneItem.id)}
                         className={cn(
-                          "rounded-xl border p-2.5 text-left text-xs transition-all cursor-pointer",
+                          "flex items-center justify-center rounded-xl border h-10 px-3 text-center text-xs transition-all cursor-pointer",
                           draft.tone === toneItem.id
-                            ? "border-primary bg-primary/10 text-foreground ring-2 ring-primary/25 font-semibold"
+                            ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30 font-semibold"
                             : "border-border/60 bg-background/40 hover:border-primary/40 hover:bg-muted/30"
                         )}
                       >
@@ -610,31 +613,50 @@ export function OnboardingFlow() {
                   </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {idealyExperienceLevels.map((value) => (
                     <button
                       type="button"
                       key={value}
                       onClick={() => updateDraft("experienceLevel", value)}
                       className={cn(
-                        "rounded-2xl border p-4 text-left text-xs transition-all cursor-pointer flex flex-col justify-between min-h-[72px]",
+                        "group flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-left text-xs transition-all cursor-pointer",
                         draft.experienceLevel === value
-                          ? "border-cyan-500 bg-cyan-500/10 text-foreground ring-2 ring-cyan-500/25"
+                          ? "border-cyan-500 bg-cyan-500/10 text-foreground ring-1 ring-cyan-500/30"
                           : "border-border/60 bg-background/40 hover:border-cyan-500/40 hover:bg-muted/30"
                       )}
                     >
-                      <span className="font-semibold text-sm">
-                        {experienceLabels[value][langKey] || experienceLabels[value].fr}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground mt-1">
-                        {value === "non_coder"
-                          ? "Guidage visuel complet, concepts vulgarisés sans jargon."
-                          : value === "beginner"
-                          ? "Explications pas-à-pas et pédagogie continue."
-                          : value === "intermediate"
-                          ? "Équilibre entre explications claires et efficacité de code."
-                          : "Code direct, architectures avancées et contrats stricts."}
-                      </span>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={cn(
+                            "size-3.5 shrink-0 rounded-full border flex items-center justify-center transition-all",
+                            draft.experienceLevel === value
+                              ? "border-cyan-400 bg-cyan-500"
+                              : "border-muted-foreground/40"
+                          )}
+                        >
+                          {draft.experienceLevel === value && (
+                            <span className="size-1.5 rounded-full bg-black dark:bg-white" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-semibold text-xs text-foreground block truncate">
+                            {experienceLabels[value][langKey] || experienceLabels[value].fr}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground block truncate max-w-[190px]">
+                            {value === "non_coder"
+                              ? "Guidage visuel complet"
+                              : value === "beginner"
+                              ? "Explications pas-à-pas"
+                              : value === "intermediate"
+                              ? "Équilibre et efficacité"
+                              : "Code direct & architectures"}
+                          </span>
+                        </div>
+                      </div>
+                      {draft.experienceLevel === value && (
+                        <Check className="size-3.5 shrink-0 text-cyan-400 ml-1" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -671,13 +693,14 @@ export function OnboardingFlow() {
                       key={value}
                       onClick={() => updateDraft("discoverySource", draft.discoverySource === value ? "" : value)}
                       className={cn(
-                        "rounded-xl border p-2.5 text-center text-xs transition-all cursor-pointer",
+                        "flex items-center justify-center gap-1.5 rounded-xl border h-10 px-2 text-center text-xs transition-all cursor-pointer",
                         draft.discoverySource === value
-                          ? "border-violet-500 bg-violet-500/10 text-foreground ring-2 ring-violet-500/25 font-semibold"
+                          ? "border-violet-500 bg-violet-500/10 text-foreground ring-1 ring-violet-500/30 font-semibold"
                           : "border-border/60 bg-background/40 hover:border-violet-500/40 hover:bg-muted/30"
                       )}
                     >
-                      <span>{discoveryLabels[value][langKey] || discoveryLabels[value].fr}</span>
+                      {draft.discoverySource === value && <Check className="size-3 text-violet-400" />}
+                      <span className="truncate">{discoveryLabels[value][langKey] || discoveryLabels[value].fr}</span>
                     </button>
                   ))}
                 </div>

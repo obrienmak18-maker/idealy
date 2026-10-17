@@ -25,6 +25,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { TypewriterHero } from "@/components/branding/typewriter-hero";
 import {
@@ -80,17 +81,99 @@ const wayWorkspaceCopy = {
   },
 } as const;
 
+const betaPolicyCopy = {
+  fr: {
+    tag: "Phase Bêta Pionnière • 100% Offerte",
+    title: "Pourquoi les paiements ne sont pas activés ?",
+    subtitle:
+      "Nous croyons que vous devez tester la puissance réelle d'Idealy et constater la fiabilité de nos escouades d'agents avant de dépenser le moindre centime. Pendant toute cette phase d'évaluation, tous les créateurs reçoivent des Power Points offerts.",
+    pillars: [
+      {
+        icon: Zap,
+        title: "Calcul & MicroVMs offerts",
+        description:
+          "Chaque compte dispose de crédits Power offerts sans carte bancaire requise. Nos microVMs Linux sécurisées et nos agents s'exécutent gratuitement pour tester l'intégralité du studio.",
+      },
+      {
+        icon: Gauge,
+        title: "Transparence du modèle Power",
+        description:
+          "Le Power mesure la consommation d'énergie de calcul : une requête d'assistance simple consomme ~10 pts, une mission multi-agents avec génération et sandbox consomme ~50 pts.",
+      },
+      {
+        icon: ShieldCheck,
+        title: "Aucun paywall précipité",
+        description:
+          "Nous optimisons continuellement l'orchestration de nos agents et la vitesse de déploiement. Les abonnements payants ne seront lancés que lorsque l'expérience sera irréprochable.",
+      },
+    ],
+    betaNotice:
+      "Paiements volontairement suspendus en phase Bêta — Choisissez une formule pour réserver votre accès Pionnier gratuit",
+  },
+  en: {
+    tag: "Pioneer Beta Phase • 100% Free",
+    title: "Why are payments disabled right now?",
+    subtitle:
+      "We believe you should experience the true capabilities and autonomous speed of our AI squad before spending a single dollar. During our initial evaluation phase, every creator receives free Power Points.",
+    pillars: [
+      {
+        icon: Zap,
+        title: "Free Compute & MicroVMs",
+        description:
+          "Every account gets free Power allocations without entering a credit card. Run real code in secure Linux sandboxes and build projects end-to-end completely free.",
+      },
+      {
+        icon: Gauge,
+        title: "Transparent Power Consumption",
+        description:
+          "Power strictly measures computing intensity: a single assistance prompt costs ~10 pts, while a full multi-agent sprint with code validation costs ~50 pts.",
+      },
+      {
+        icon: ShieldCheck,
+        title: "Zero Rushed Paywalls",
+        description:
+          "We are actively tuning agent orchestration and sandbox performance. Billing will only go live once the platform delivers an unbeatable experience.",
+      },
+    ],
+    betaNotice:
+      "Billing paused in private beta — Select a plan to claim your free Pioneer Access",
+  },
+  es: {
+    tag: "Fase Beta Pionera • 100% Gratuita",
+    title: "¿Por qué los pagos no están activados?",
+    subtitle:
+      "Creemos que debes comprobar la potencia y fiabilidad de nuestros agentes de IA antes de pagar nada. Durante nuestra fase de evaluación, todos los creadores reciben Power Points gratuitos.",
+    pillars: [
+      {
+        icon: Zap,
+        title: "Cómputo y MicroVMs Gratuitos",
+        description:
+          "Cada cuenta recibe créditos Power sin requerir tarjeta de crédito. Ejecuta código real en microVMs Linux seguras y prueba el estudio de forma gratuita.",
+      },
+      {
+        icon: Gauge,
+        title: "Transparencia en el modelo Power",
+        description:
+          "El Power mide el consumo computacional real: una tarea simple cuesta ~10 pts, una misión completa de escuadra multi-agente cuesta ~50 pts.",
+      },
+      {
+        icon: ShieldCheck,
+        title: "Sin barreras de pago apresuradas",
+        description:
+          "Optimizamos continuamente la orquestación y el rendimiento de los sandbox. Los pagos solo se abrirán cuando la experiencia sea impecable.",
+      },
+    ],
+    betaNotice:
+      "Pagos suspendidos en fase Beta — Elige un plan para reclamar tu acceso Pionero gratuito",
+  },
+} as const;
+
 export default function WelcomePage() {
   const router = useRouter();
   const { language: lang, setLanguage: handleLangChange } = useTranslation();
   const [step, setStep] = useState(0);
   const [selectedWay, setSelectedWay] = useState<IdealyWay>("ninja");
   const [transitionTarget, setTransitionTarget] = useState<string | null>(null);
-  
-  // Power estimator states (intuitive dual dials)
-  const [simpleCount, setSimpleCount] = useState(20);
-  const [squadCount, setSquadCount] = useState(8);
-
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -113,19 +196,11 @@ export default function WelcomePage() {
   const t = welcomeTranslations[lang] || welcomeTranslations.fr;
   const activeWayData: WayDetailed = voiesCatalog[selectedWay] || voiesCatalog.ninja;
   const wayCopy = wayWorkspaceCopy[lang];
-
-  // Calculated points from estimator
-  const calculatedPoints = simpleCount * 10 + squadCount * 50;
+  const betaCopy = betaPolicyCopy[lang === "en" ? "en" : lang === "es" ? "es" : "fr"];
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-[#09090f] text-white selection:bg-violet-500 selection:text-white">
-      {/* High-Energy Colliding Orbs */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="welcome-orb welcome-orb-sky" />
-        <div className="welcome-orb welcome-orb-sunset" />
-        <div className="welcome-orb welcome-orb-gold" />
-        <div className="welcome-grid" />
-      </div>
+    <main className="relative min-h-dvh overflow-hidden bg-[#0A0D14] text-white selection:bg-violet-500 selection:text-white">
+      <CosmicHorizon />
 
       {/* Navigation Bar */}
       <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-4 sm:px-10 sm:py-5">
@@ -465,78 +540,56 @@ export default function WelcomePage() {
         </AnimatePresence>
       </section>
 
-      {/* Estimator Section (Limpide & Intuitif) */}
+      {/* Closed Beta & Power Transparency Section */}
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-16 sm:px-10">
-        <div className="overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-violet-500/10 via-white/[0.04] to-sky-500/10 p-5 backdrop-blur-2xl sm:p-8">
+        <div className="overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-violet-500/10 via-white/[0.04] to-sky-500/10 p-6 backdrop-blur-2xl sm:p-10">
           <div className="text-center">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-300">
-              <Sliders className="size-3.5" />
-              {t.estimator.tag}
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/10 px-3.5 py-1 text-xs font-medium text-violet-300">
+              <Sparkles className="size-3.5" />
+              {betaCopy.tag}
             </div>
             <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-              {t.estimator.title}
+              {betaCopy.title}
             </h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm text-white/60">
-              {t.estimator.subtitle}
+            <p className="mx-auto mt-2.5 max-w-2xl text-sm leading-relaxed text-white/70">
+              {betaCopy.subtitle}
             </p>
           </div>
 
-          <div className="mt-8 grid gap-8 md:grid-cols-2 md:items-center">
-            <div className="space-y-6">
-              {/* Dial 1: Missions simples */}
-              <div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-white/70">{t.estimator.simpleLabel}</span>
-                  <span className="font-bold text-sky-300">{simpleCount} / {t.estimator.simpleUnit} (={simpleCount * 10} pts)</span>
-                </div>
-                <input
-                  aria-label={t.estimator.simpleLabel}
-                  className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/20 accent-sky-400"
-                  max={200}
-                  min={0}
-                  onChange={(e) => setSimpleCount(Number(e.target.value))}
-                  step={5}
-                  type="range"
-                  value={simpleCount}
-                />
-              </div>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {betaCopy.pillars.map((pillar, idx) => {
+              const Icon = pillar.icon;
+              return (
+                <motion.div
+                  key={idx}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="size-9 rounded-xl bg-violet-500/15 border border-violet-400/20 flex items-center justify-center text-violet-300 mb-3.5">
+                      <Icon className="size-4.5" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-white">
+                      {pillar.title}
+                    </h3>
+                    <p className="mt-2 text-xs leading-relaxed text-white/60">
+                      {pillar.description}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
+                    <CheckIcon className="size-3.5" />
+                    <span>Inclus sans carte bancaire</span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
 
-              {/* Dial 2: Missions escouade */}
-              <div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-white/70">{t.estimator.squadLabel}</span>
-                  <span className="font-bold text-violet-300">{squadCount} / {t.estimator.squadUnit} (={squadCount * 50} pts)</span>
-                </div>
-                <input
-                  aria-label={t.estimator.squadLabel}
-                  className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/20 accent-violet-400"
-                  max={100}
-                  min={0}
-                  onChange={(e) => setSquadCount(Number(e.target.value))}
-                  step={1}
-                  type="range"
-                  value={squadCount}
-                />
-              </div>
-            </div>
-
-            {/* Output Card */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
-              <span className="text-xs text-white/60">{t.estimator.estimatedNeed}</span>
-              <p className="mt-1 text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-violet-400 to-orange-400">
-                {formatPoints(calculatedPoints)} {t.estimator.perMonth}
-              </p>
-              <div className="mt-4 rounded-xl bg-white/10 border border-white/10 p-3 text-xs">
-                <span className="text-white/60">{t.estimator.recommendedFormula}</span>
-                <span className="font-bold text-white">
-                  {calculatedPoints <= powerPlanPolicy.free.monthlyAllocation
-                    ? t.estimator.freePlan
-                    : calculatedPoints <= powerPlanPolicy.pro.monthlyAllocation
-                    ? t.estimator.proStandardPlan
-                    : t.estimator.businessPlan}
-                </span>
-              </div>
-            </div>
+          {/* Banner notification */}
+          <div className="mt-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
+            <p className="text-xs font-medium text-emerald-300">
+              {betaCopy.betaNotice}
+            </p>
           </div>
         </div>
       </section>
@@ -558,6 +611,10 @@ export default function WelcomePage() {
           <p className="mx-auto mt-3 max-w-xl text-sm text-white/60 sm:text-base">
             {t.pricingSection.subtitle}
           </p>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-xs font-medium text-violet-300 backdrop-blur-md">
+            <Sparkles className="size-3.5 text-violet-400" />
+            <span>{betaCopy.betaNotice}</span>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { connection } from "next/server";
+import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { Preview } from "@/components/chat/preview";
 
@@ -54,11 +55,8 @@ async function AuthShell({ children }: { children: React.ReactNode }) {
     authShellCopy[locale === "en" || locale === "es" ? locale : "fr"];
 
   return (
-    <div className="idealy-app-background relative flex min-h-dvh w-full overflow-hidden">
-      <div aria-hidden="true" className="welcome-orb welcome-orb-sky" />
-      <div aria-hidden="true" className="welcome-orb welcome-orb-sunset" />
-      <div aria-hidden="true" className="welcome-orb welcome-orb-gold" />
-      <div aria-hidden="true" className="welcome-grid" />
+    <div className="relative flex min-h-dvh w-full overflow-hidden bg-[#0A0D14]">
+      <CosmicHorizon />
 
       <div className="idealy-surface relative z-10 flex w-full flex-col border-border/40 bg-background/85 p-7 backdrop-blur-xl xl:w-[620px] xl:shrink-0 xl:rounded-r-3xl xl:border-r md:p-14">
         <Link
