@@ -1,6 +1,7 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
@@ -19,6 +20,8 @@ import { DocumentPreview } from "./document-preview";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
+import { PlanChoices, extractPlanOptionsFromText } from "./plan-choices";
+import { MultiAgentRelay } from "./multi-agent-relay";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
@@ -83,6 +86,185 @@ function ToolApprovalActions({
   );
 }
 
+function parseProgressiveSections(text: string): {
+  conclusion: string | null;
+  status: { fait?: string; reste?: string; attention?: string } | null;
+  lineCount: number;
+  isLong: boolean;
+} {
+  const lines = text.split("\n");
+  const lineCount = lines.length;
+  const isLong = text.length > 220 || lineCount > 4;
+
+  let fait: string | undefined;
+  let reste: string | undefined;
+  let attention: string | undefined;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const faitMatch = line.match(
+      /^(?:[-*•]\s*)?(?:✓\s*|\[x\]\s*)?(?:Fait|Ce qui a été fait)\s*:\s*(.+)$/i
+    );
+    if (faitMatch?.[1]) {
+      fait = faitMatch[1].trim();
+    }
+
+    const resteMatch = line.match(
+      /^(?:[-*•]\s*)?(?:⏳\s*|\[\s*\]\s*)?(?:Reste|Ce qui reste)\s*:\s*(.+)$/i
+    );
+    if (resteMatch?.[1]) {
+      reste = resteMatch[1].trim();
+    }
+
+    const attentionMatch = line.match(
+      /^(?:[-*•]\s*)?(?:⚠️\s*|!\s*)?(?:Attention|Point d'attention|Points d'attention)\s*:\s*(.+)$/i
+    );
+    if (attentionMatch?.[1]) {
+      attention = attentionMatch[1].trim();
+    }
+  }
+
+  const hasStatus = Boolean(fait || reste || attention);
+
+  let conclusion: string | null = null;
+  const firstNonEmpty = lines.find((l) => l.trim().length > 0)?.trim();
+  if (firstNonEmpty && isLong) {
+    const cleanFirst = firstNonEmpty.replace(/^#+\s*/, "");
+    conclusion =
+      cleanFirst.length > 140 ? `${cleanFirst.slice(0, 137)}…` : cleanFirst;
+  }
+
+  return {
+    conclusion,
+    status: hasStatus ? { fait, reste, attention } : null,
+    lineCount,
+    isLong,
+  };
+}
+
+function ProgressiveTextMessage({
+  text,
+  isAssistant,
+  isLoading,
+}: {
+  text: string;
+  isAssistant: boolean;
+  isLoading: boolean;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const { conclusion, status, lineCount, isLong } = parseProgressiveSections(text);
+  const planOptions = isAssistant ? extractPlanOptionsFromText(text) : null;
+
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((prev) => !prev);
+  }, []);
+
+  const shouldCollapse = isAssistant && isLong && !isLoading && !isExpanded;
+
+  return (
+    <div className="w-full space-y-2">
+      {/* ① Conclusion en une phrase visible immédiatement */}
+      {isAssistant && conclusion && isLong && !isLoading && (
+        <div className="rounded-lg bg-surface-container-lowest/80 border border-border/50 px-3 py-2 text-[13px] font-medium text-foreground/90 shadow-xs">
+          <span className="text-primary font-semibold mr-1.5">En résumé :</span>
+          {conclusion}
+        </div>
+      )}
+
+      {/* ③ Détails et contenu principal (repliés par défaut à 180px si long) */}
+      <div
+        className={cn("relative transition-[max-height] duration-200", {
+          "max-h-[180px] overflow-hidden": shouldCollapse,
+        })}
+      >
+        <MessageContent
+          className={cn("text-[14px] leading-[1.75] md:text-[15px]", {
+            "idealy-bubble-user w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm":
+              !isAssistant,
+          })}
+          data-testid="message-content"
+        >
+          <MessageResponse
+            caret={isAssistant && isLoading ? "circle" : undefined}
+            isAnimating={isAssistant && isLoading}
+          >
+            {sanitizeText(text)}
+          </MessageResponse>
+        </MessageContent>
+
+        {shouldCollapse && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+        )}
+      </div>
+
+      {isAssistant && isLong && !isLoading && (
+        <button
+          aria-expanded={isExpanded}
+          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
+          onClick={handleToggleExpand}
+          type="button"
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="size-3.5" />
+              <span>Replier les détails</span>
+            </>
+          ) : (
+            <>
+              <ChevronDown className="size-3.5" />
+              <span>Afficher les détails ({lineCount} lignes)</span>
+            </>
+          )}
+        </button>
+      )}
+
+      {/* ④ Statut structuré (Fait / Reste / Attention) */}
+      {isAssistant && status && (
+        <div className="mt-2.5 rounded-lg border border-border/60 bg-muted/20 p-2.5 text-xs space-y-1.5">
+          {status.fait && (
+            <div className="flex items-start gap-2 text-foreground/90">
+              <CheckCircle2 className="size-3.5 text-emerald-500 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  Fait :{" "}
+                </span>
+                {status.fait}
+              </div>
+            </div>
+          )}
+          {status.reste && (
+            <div className="flex items-start gap-2 text-foreground/90">
+              <Clock className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                  Reste :{" "}
+                </span>
+                {status.reste}
+              </div>
+            </div>
+          )}
+          {status.attention && (
+            <div className="flex items-start gap-2 text-foreground/90">
+              <AlertTriangle className="size-3.5 text-rose-500 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-semibold text-rose-600 dark:text-rose-400">
+                  Attention :{" "}
+                </span>
+                {status.attention}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ② Résultat / Plan d'action */}
+      {planOptions && planOptions.length >= 2 && (
+        <PlanChoices options={planOptions} />
+      )}
+    </div>
+  );
+}
+
 const PurePreviewMessage = ({
   addToolApprovalResponse,
   chatId,
@@ -90,7 +272,7 @@ const PurePreviewMessage = ({
   vote,
   isLoading,
   setMessages: _setMessages,
-  regenerate: _regenerate,
+  regenerate,
   isReadonly,
   requiresScrollPadding: _requiresScrollPadding,
   onEdit,
@@ -113,11 +295,50 @@ const PurePreviewMessage = ({
   useDataStream();
 
   const { currentWay } = useGamificationStore();
-  const activeWayData = voiesCatalog[currentWay];
+  const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const chiefAgent = activeWayData?.agents?.find((a) => a.isChief) ?? activeWayData?.agents?.[0];
-  const agentName = chiefAgent?.name || alvinMessenger.name;
-  const agentRole = chiefAgent?.role || alvinMessenger.role;
-  const agentAvatar = chiefAgent?.avatarUrl || alvinMessenger.avatarUrl;
+  const builderAgent =
+    activeWayData?.agents?.find(
+      (a) =>
+        a.role.toLowerCase().includes("builder") ||
+        a.name === "Naruto" ||
+        a.name === "Natsu" ||
+        a.name === "Gon" ||
+        a.name === "Elena"
+    ) ?? activeWayData?.agents?.[1];
+  const qaAgent =
+    activeWayData?.agents?.find(
+      (a) =>
+        a.role.toLowerCase().includes("qa") ||
+        a.name === "Shikamaru" ||
+        a.name === "Thomas"
+    ) ?? activeWayData?.agents?.[activeWayData.agents.length - 1];
+
+  // Detect tool calls or build/relay execution
+  const hasToolOrBuild = message.parts?.some(
+    (p) =>
+      p.type.startsWith("tool-") ||
+      (p.type === "text" &&
+        (p.text.includes("Plan enregistré") ||
+          p.text.includes("Chef d'escouade") ||
+          p.text.includes("Build complete") ||
+          p.text.includes("l'escouade prend le relais") ||
+          p.text.includes("relais au Chef") ||
+          p.text.includes("Naruto")))
+  );
+
+  // Relay handoff:
+  // - While building/coding: Builder (Naruto) is actively on the front line!
+  // - When finished building: QA (Shikamaru) delivers final validation!
+  // - In conversation & plan definition: Alvin (Messenger) frames the mission.
+  const activeAgent = hasToolOrBuild
+    ? isLoading
+      ? (builderAgent ?? chiefAgent ?? alvinMessenger)
+      : (qaAgent ?? chiefAgent ?? alvinMessenger)
+    : alvinMessenger;
+  const agentName = activeAgent.name;
+  const agentRole = activeAgent.role;
+  const agentAvatar = activeAgent.avatarUrl;
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
@@ -188,27 +409,12 @@ const PurePreviewMessage = ({
 
     if (type === "text") {
       return (
-        <MessageContent
-          className={cn("text-[14px] leading-[1.75] md:text-[15px]", {
-            "idealy-bubble-user w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm":
-              message.role === "user",
-          })}
-          data-testid="message-content"
+        <ProgressiveTextMessage
+          isAssistant={isAssistant}
+          isLoading={isLoading}
           key={key}
-        >
-          <MessageResponse
-            animated={{
-              animation: "fadeIn",
-              duration: 130,
-              easing: "ease-out",
-              sep: "word",
-            }}
-            caret={isAssistant && isLoading ? "circle" : undefined}
-            isAnimating={isAssistant && isLoading}
-          >
-            {sanitizeText(part.text)}
-          </MessageResponse>
-        </MessageContent>
+          text={part.text}
+        />
       );
     }
 
@@ -365,13 +571,22 @@ const PurePreviewMessage = ({
     return null;
   });
 
+  const handleEdit = useCallback(() => {
+    onEdit?.(message);
+  }, [onEdit, message]);
+
+  const handleRetry = useCallback(() => {
+    regenerate?.();
+  }, [regenerate]);
+
   const actions = !isReadonly && (
     <MessageActions
       chatId={chatId}
       isLoading={isLoading}
       key={`action-${message.id}`}
       message={message}
-      onEdit={onEdit ? () => onEdit(message) : undefined}
+      onEdit={onEdit ? handleEdit : undefined}
+      onRetry={isAssistant ? handleRetry : undefined}
       vote={vote}
     />
   );
@@ -381,6 +596,15 @@ const PurePreviewMessage = ({
   ) : (
     <>
       {attachments}
+      {hasToolOrBuild && isAssistant && (
+        <MultiAgentRelay
+          currentAgentName={agentName}
+          currentWay={currentWay}
+          hasToolExecution={true}
+          isFinished={!isLoading}
+          isLoading={isLoading}
+        />
+      )}
       {parts}
       {actions}
     </>
@@ -403,7 +627,7 @@ const PurePreviewMessage = ({
         {isAssistant ? (
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             {/* Affichage agent : avatar officiel et nom de la Voie active */}
-            <div className="flex items-center gap-2 pt-0.5">
+            <div className="flex items-center gap-2 pt-0.5 flex-wrap">
               <div className="relative flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-sky-500/20 to-violet-500/20 ring-1 ring-sky-400/30">
                 {agentAvatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -440,7 +664,8 @@ export const ThinkingMessage = () => {
   const { currentWay } = useGamificationStore();
   const activeWayData = voiesCatalog[currentWay];
   const chiefAgent = activeWayData?.agents?.find((a) => a.isChief) ?? activeWayData?.agents?.[0];
-  const agentAvatar = chiefAgent?.avatarUrl || alvinMessenger.avatarUrl;
+  // Alvin receives the incoming mission prompt
+  const agentAvatar = alvinMessenger.avatarUrl;
 
   return (
     <div
@@ -454,7 +679,7 @@ export const ThinkingMessage = () => {
             {agentAvatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                alt="Agent actif"
+                alt="Alvin - Messager actif"
                 className="size-full object-cover"
                 src={agentAvatar}
               />

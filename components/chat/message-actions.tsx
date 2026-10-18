@@ -3,6 +3,7 @@ import { memo, useCallback } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { useCopyToClipboard } from "usehooks-ts";
+import { RotateCcw } from "lucide-react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import {
@@ -17,12 +18,14 @@ export function PureMessageActions({
   vote,
   isLoading,
   onEdit,
+  onRetry,
 }: {
   chatId: string;
   message: ChatMessage;
   vote: Vote | undefined;
   isLoading: boolean;
   onEdit?: () => void;
+  onRetry?: () => void;
 }) {
   const { mutate } = useSWRConfig();
   const [_, copyToClipboard] = useCopyToClipboard();
@@ -192,6 +195,17 @@ export function PureMessageActions({
       >
         <ThumbDownIcon />
       </Action>
+
+      {onRetry ? (
+        <Action
+          className="text-muted-foreground/50 hover:text-foreground"
+          data-testid="message-retry"
+          onClick={onRetry}
+          tooltip="Relancer"
+        >
+          <RotateCcw className="size-3.5" />
+        </Action>
+      ) : null}
     </Actions>
   );
 }
@@ -203,6 +217,9 @@ export const MessageActions = memo(
       return false;
     }
     if (prevProps.isLoading !== nextProps.isLoading) {
+      return false;
+    }
+    if (prevProps.onRetry !== nextProps.onRetry) {
       return false;
     }
 
