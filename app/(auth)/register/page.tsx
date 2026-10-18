@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signIn as signInWithAuthJs, useSession } from "next-auth/react";
+import { signIn as signInWithAuthJs } from "next-auth/react";
 import { startTransition, useActionState, useCallback, useEffect, useState } from "react";
 
 import { FirebaseProviderActions } from "@/components/auth/firebase-provider-actions";
@@ -47,7 +46,6 @@ function firebaseErrorCode(error: unknown) {
 import { useTranslation } from "@/lib/i18n/provider";
 
 export default function Page() {
-  const router = useRouter();
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(true);
@@ -66,7 +64,6 @@ export default function Page() {
     { status: "idle" }
   );
 
-  const { update: updateSession } = useSession();
   const legacyFeedback =
     state.status in registerMessages
       ? registerMessages[state.status as keyof typeof registerMessages]
@@ -92,7 +89,6 @@ export default function Page() {
     return query ? `/onboarding?${query}` : "/onboarding";
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
     if (state.status === "user_exists") {
       toast({
@@ -126,9 +122,7 @@ export default function Page() {
     } else if (state.status === "success") {
       toast({ description: "Compte Idealy créé.", type: "success" });
       setIsSuccessful(true);
-      updateSession();
-      router.push(getOnboardingUrl());
-      router.refresh();
+      window.location.replace(getOnboardingUrl());
     }
   }, [state.status]);
 
@@ -166,19 +160,24 @@ export default function Page() {
         redirect: false,
       });
 
-      if (result?.error) {
+      if (!result || result.error || result.ok === false) {
         throw new Error("firebase_session_rejected");
       }
 
       setIsSuccessful(true);
-      await updateSession();
       window.location.assign(getOnboardingUrl());
     } catch (error) {
       const code = firebaseErrorCode(error);
-      if (code === "firebase_not_configured" || code === "firebase_session_rejected") {
+      if (code === "firebase_not_configured") {
         startTransition(() => {
           formAction(formData);
         });
+        return;
+      }
+      if (code === "firebase_session_rejected") {
+        setFirebaseError(
+          "Le compte Firebase a été créé, mais Idealy n’a pas pu ouvrir la session. Réessayez de vous connecter dans quelques secondes."
+        );
         return;
       }
       if (code === "firebase_backend_unavailable") {
@@ -196,10 +195,11 @@ export default function Page() {
             redirect: false,
           });
 
-          if (!result?.error) {
+          if (result && !result.error && result.ok !== false) {
             setIsSuccessful(true);
-            await updateSession();
-            window.location.assign(getOnboardingUrl());
+            // Auth.js already set the session cookie. Navigate immediately;
+            // the destination will read the cookie on the server.
+            window.location.replace(getOnboardingUrl());
             return;
           }
         } catch {

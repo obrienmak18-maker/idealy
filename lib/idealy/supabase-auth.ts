@@ -51,6 +51,9 @@ async function postSupabaseAuth(
     return { ok: false, payload: {}, status: 0 };
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+
   try {
     const response = await fetch(`${config.url}/auth/v1/${path}`, {
       body: JSON.stringify(body),
@@ -60,6 +63,7 @@ async function postSupabaseAuth(
         "Content-Type": "application/json",
       },
       method: "POST",
+      signal: controller.signal,
     });
     const payload = (await response
       .json()
@@ -67,6 +71,8 @@ async function postSupabaseAuth(
     return { ok: response.ok, payload, status: response.status };
   } catch {
     return { ok: false, payload: {}, status: 0 };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -177,7 +183,7 @@ export async function signInFirebaseUserThroughSupabase(
         page: 1,
         perPage: 1000,
       });
-      const existing = listed.data.users.find(
+      const existing = (listed.data?.users ?? []).find(
         (candidate) => candidate.email?.toLowerCase() === normalizedEmail,
       );
 
@@ -252,11 +258,38 @@ export async function signUpWithSupabasePassword(
   email: string,
   password: string
 ): Promise<SupabasePasswordAuthResult> {
-  if (!getSupabaseAuthConfig()) {
+  const config = getSupabaseAuthConfig();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  if (!config) {
     return emptyResult("not_configured", false);
   }
 
-  const result = await postSupabaseAuth("signup", { email, password });
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (serviceRoleKey) {
+    try {
+      const admin = createClient(config.url, serviceRoleKey);
+      const { data, error } = await admin.auth.admin.createUser({
+        email: normalizedEmail,
+        password,
+        email_confirm: true,
+      });
+
+      if (error) {
+        const errorMsg = error.message.toLowerCase();
+        if (errorMsg.includes("already") || error.status === 422) {
+          return emptyResult("already_registered", true);
+        }
+      } else if (data?.user?.id) {
+        return signInWithSupabasePassword(normalizedEmail, password);
+      }
+    } catch (adminErr) {
+      console.warn("[Supabase Auth] Admin createUser fallback:", adminErr);
+    }
+  }
+
+  const result = await postSupabaseAuth("signup", { email: normalizedEmail, password });
   const errorText = [
     result.payload.error,
     result.payload.error_code,

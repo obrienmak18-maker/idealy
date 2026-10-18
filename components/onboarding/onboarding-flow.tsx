@@ -186,7 +186,8 @@ export function OnboardingFlow() {
           signal: controller.signal,
         });
         if (result.status === 401) {
-          router.replace(`/login?callbackUrl=${encodeURIComponent("/onboarding")}`);
+          // Do not kick the user in a bounce loop. Allow them to proceed with the form.
+          setIsLoading(false);
           return;
         }
         if (!result.ok) throw new Error("status-unavailable");

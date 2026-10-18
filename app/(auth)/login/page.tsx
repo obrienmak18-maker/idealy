@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signIn as signInWithAuthJs, useSession } from "next-auth/react";
+import { signIn as signInWithAuthJs } from "next-auth/react";
 import { startTransition, useActionState, useEffect, useState } from "react";
 
 import { FirebaseProviderActions } from "@/components/auth/firebase-provider-actions";
@@ -44,7 +43,6 @@ function extractErrorCode(error: unknown): string {
 import { useTranslation } from "@/lib/i18n/provider";
 
 export default function Page() {
-  const router = useRouter();
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
@@ -56,7 +54,6 @@ export default function Page() {
     { status: "idle" }
   );
 
-  const { update: updateSession } = useSession();
   const feedback =
     firebaseError ??
     (state.status in loginMessages
@@ -82,11 +79,11 @@ export default function Page() {
     }
   };
 
-  const getOnboardingUrl = () => {
+  const getDestinationUrl = () => {
     const callbackUrl = getSafeCallbackUrl();
-    if (callbackUrl.startsWith("/onboarding?")) return callbackUrl;
-    return `/onboarding?next=${encodeURIComponent(callbackUrl)}`;
+    return callbackUrl || "/";
   };
+  const getOnboardingUrl = () => getDestinationUrl();
 
   const handlePasswordReset = async () => {
     const normalizedEmail = email.trim();
@@ -109,7 +106,6 @@ export default function Page() {
     }
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
     if (state.status === "invalid_credentials") {
       toast({
@@ -136,9 +132,7 @@ export default function Page() {
       });
     } else if (state.status === "success") {
       setIsSuccessful(true);
-      updateSession();
-      router.push(getOnboardingUrl());
-      router.refresh();
+      window.location.replace(getDestinationUrl());
     }
   }, [state.status]);
 
@@ -166,13 +160,14 @@ export default function Page() {
         redirect: false,
       });
 
-      if (result?.error) {
+      if (!result || result.error || result.ok === false) {
         throw new Error("firebase_session_rejected");
       }
 
       setIsSuccessful(true);
-      await updateSession();
-      window.location.assign(getOnboardingUrl());
+      // Auth.js already set the session cookie. A full navigation reloads it;
+      // do not wait for a potentially hanging /api/auth/session request.
+      window.location.replace(getOnboardingUrl());
     } catch (error) {
       const code = extractErrorCode(error);
       if (code === "auth/too-many-requests") {
@@ -232,7 +227,7 @@ export default function Page() {
           </Link>
         </p>
       </AuthForm>
-      <FirebaseProviderActions nextPath={getOnboardingUrl()} />
+      <FirebaseProviderActions nextPath={getDestinationUrl()} />
     </>
   );
 }

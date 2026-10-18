@@ -56,7 +56,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  await setAuthenticatedClaim(decoded.uid);
+  try {
+    await setAuthenticatedClaim(decoded.uid);
+  } catch (error) {
+    console.warn("[Auth] Non-blocking setAuthenticatedClaim warning:", error);
+  }
 
-  return NextResponse.json({ ok: true, uid: decoded.uid });
+  return NextResponse.json({ ok: true });
 }

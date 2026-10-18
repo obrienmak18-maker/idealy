@@ -2,7 +2,7 @@
 
 import { type ConfirmationResult, RecaptchaVerifier } from "firebase/auth";
 import { Loader2, Phone } from "lucide-react";
-import { signIn as signInWithAuthJs, useSession } from "next-auth/react";
+import { signIn as signInWithAuthJs } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -53,7 +53,6 @@ export function FirebaseProviderActions({
   termsAccepted?: boolean;
 }) {
   const { t } = useTranslation();
-  const { update: updateSession } = useSession();
   const [isPending, startTransition] = useTransition();
   const [internalTermsAccepted, setInternalTermsAccepted] = useState(!requireTerms);
   const termsAccepted = controlledTermsAccepted !== undefined ? controlledTermsAccepted : internalTermsAccepted;
@@ -64,27 +63,30 @@ export function FirebaseProviderActions({
   const [confirmationResult, setConfirmationResult] =
     useState<ConfirmationResult | null>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const phoneAuthEnabled = false;
 
   const completeAuth = useCallback(
     async (idToken: string) => {
-      const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
-      const result = await signInWithAuthJs("firebase", {
-        idToken: supabaseIdToken,
-        redirect: false,
-      });
+      try {
+        const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
+        const result = await signInWithAuthJs("firebase", {
+          idToken: supabaseIdToken,
+          redirect: false,
+        });
 
-      if (!result || result.error) {
-        throw new Error("firebase_session_rejected");
+        if (!result || result.error) {
+          console.error("[Firebase sign-in error]:", result?.error);
+          throw new Error("firebase_session_rejected");
+        }
+
+        toast.success(t("auth.loginSuccess", "Connexion réussie ! Chargement de votre espace…"));
+        window.location.href = nextPath;
+      } catch (err: unknown) {
+        console.error("[Firebase completeAuth error]:", err);
+        throw err;
       }
-
-      // The sign-in response has already set the session cookie. Refresh client
-      // session state when possible, but do not let a failed refresh strand the user.
-      await updateSession().catch((error) => {
-        console.error("Session refresh after Google sign-in failed:", error);
-      });
-      window.location.assign(nextPath);
     },
-    [nextPath, updateSession]
+    [nextPath, t]
   );
 
   // Complete a sign-in after Firebase returns from its full-page Google redirect.
@@ -327,6 +329,7 @@ export function FirebaseProviderActions({
         </p>
       ) : null}
 
+      {phoneAuthEnabled ? (
       <div className="rounded-xl border border-border/45 bg-muted/20 p-3">
         <div className="mb-2 flex items-center gap-2 text-sm font-medium">
           <Phone className="size-4 text-muted-foreground" />
@@ -383,6 +386,7 @@ export function FirebaseProviderActions({
             : t("auth.phoneUnavailable", "La connexion par SMS n’est pas encore configurée. Utilisez votre adresse e-mail.")}
         </p>
       </div>
+      ) : null}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute h-px w-px overflow-hidden"

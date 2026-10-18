@@ -115,8 +115,11 @@ export async function signUpWithEmailFirebase(
 export async function prepareFirebaseIdTokenForSupabase(
   idToken: string
 ): Promise<string> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 8_000);
   try {
     const response = await fetch("/api/auth/set-claims", {
+      signal: controller.signal,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ idToken }),
@@ -133,6 +136,8 @@ export async function prepareFirebaseIdTokenForSupabase(
   } catch {
     // Network error or unconfigured admin — fall back to original token
     return idToken;
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
 

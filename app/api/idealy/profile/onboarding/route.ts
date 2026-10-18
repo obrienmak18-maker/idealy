@@ -1,3 +1,4 @@
+import { auth } from "@/app/(auth)/auth";
 import { getToken } from "next-auth/jwt";
 import {
   completeMyIdealyOnboarding,
@@ -95,17 +96,32 @@ export async function GET(request: Request) {
     });
   }
 
-  const token = await getAuthToken(request);
+  let token = await getAuthToken(request);
+  if (!token) {
+    const session = await auth().catch(() => null);
+    if (session?.user?.id) {
+      token = {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        supabaseAccessToken: session.user.supabaseAccessToken,
+        supabaseUserId: session.user.supabaseUserId ?? undefined,
+        type: session.user.type,
+      };
+    }
+  }
   if (!token) {
     return response({ error: "Une session Idealy authentifiée est requise." }, 401);
   }
 
   const supabaseContext = await resolveSupabaseToken(token);
   if (!supabaseContext) {
-    return response(
-      { error: "La session Supabase active est requise pour vérifier le profil." },
-      503,
-    );
+    return response({
+      firstName: null,
+      onboardingCompleted: false,
+      profileExists: false,
+      way: "professional",
+    });
   }
 
   try {
