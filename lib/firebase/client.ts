@@ -220,3 +220,19 @@ export async function signInWithGoogleFirebase(): Promise<{
     throw popupError;
   }
 }
+
+export async function signInWithGoogleRedirectFirebase(): Promise<void> {
+  const auth = getFirebaseAuth();
+  await setPersistence(auth, browserLocalPersistence);
+
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+
+  markGoogleRedirectPending();
+  try {
+    await signInWithRedirect(auth, provider);
+  } catch (redirectError) {
+    clearGoogleRedirectPending();
+    throw redirectError;
+  }
+}

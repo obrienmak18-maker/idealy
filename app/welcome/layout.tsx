@@ -23,7 +23,7 @@ const structuredData = {
   inLanguage: "fr",
   name: "Idealy",
   operatingSystem: "Web",
-  url: "https://idealy-ai.netlify.app/welcome",
+  url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://idealy.app"}/welcome`,
 };
 
 export default function WelcomeLayout({ children }: { children: ReactNode }) {

@@ -10,7 +10,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Local visual demo only: keep the full UI navigable without Auth.js/Postgres.
-  if (process.env.DEMO_MODE === "true") {
+  if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return NextResponse.next();
   }
 

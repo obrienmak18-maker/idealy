@@ -21,7 +21,6 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'https://idealy.app',
-  'https://idealy-ai.netlify.app',
 ];
 
 type LLMRequest = {
@@ -618,7 +617,7 @@ serve(async (req) => {
         Authorization: `Bearer ${resolution.apiKey}`,
         'Content-Type': 'application/json',
         ...(resolution.provider === 'openrouter' ? {
-          'HTTP-Referer': 'https://idealy-ai.netlify.app',
+          'HTTP-Referer': Deno.env.get('APP_ORIGIN') ?? 'https://idealy.app',
           'X-Title': 'Idealy',
         } : {}),
       },
