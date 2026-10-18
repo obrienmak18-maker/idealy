@@ -41,6 +41,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
+  interactiveWidget: "resizes-content",
   maximumScale: 1,
 };
 
@@ -64,8 +65,8 @@ const THEME_COLOR_SCRIPT = `\
   updateThemeColor();
 })();`;
 
-import { LanguageProvider } from "@/lib/i18n/provider";
 import { Toaster } from "sonner";
+import { LanguageProvider } from "@/lib/i18n/provider";
 
 export default function RootLayout({
   children,
