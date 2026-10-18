@@ -593,7 +593,7 @@ Deno.serve(async (request) => {
       );
     const isPassed = structuralPassed && reviewerPassed;
     const finalValidationStatus = isPassed ? "passed" : "needs-user-input";
-    const missionStatus = isPassed ? "ready" : "needs-fix";
+    const missionStatus = isPassed ? "ready" : iteration > MAX_REVIEW_ITERATIONS ? "blocked" : "needs-fix";
 
     const finalValidationPayload = {
       ...(currentValidation ?? {

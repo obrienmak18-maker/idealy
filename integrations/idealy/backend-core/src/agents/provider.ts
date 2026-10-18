@@ -226,8 +226,44 @@ export async function streamAIProxy(options: ProxyCallOptions): Promise<AsyncIte
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let pending = '';
+  let totalYielded = 0;
 
   async function* readEvents(): AsyncGenerator<string> {
+    const processDataLine = (data: string): string | null => {
+      try {
+        const parsed = JSON.parse(data) as Record<string, unknown>;
+
+        // 1. OpenAI-compatible choices[0].delta.content
+        if (Array.isArray(parsed.choices)) {
+          const firstChoice = parsed.choices[0] as { delta?: { content?: string } } | undefined;
+          if (typeof firstChoice?.delta?.content === 'string') {
+            return firstChoice.delta.content;
+          }
+        }
+
+        // 2. data-* envelopes from process-ai-request (e.g. { type: 'text-delta', delta: '...' })
+        if (typeof parsed.delta === 'string') {
+          return parsed.delta;
+        }
+
+        if (typeof parsed.text === 'string') {
+          return parsed.text;
+        }
+
+        // Timeline or telemetry data frames: valid protocol events that don't yield direct message text
+        if (typeof parsed.type === 'string' && (parsed.type.startsWith('data-') || parsed.type === 'data-agent-timeline')) {
+          return null;
+        }
+
+        // Unrecognized structured payload
+        console.warn('[streamAIProxy] Unrecognized SSE frame structure:', data);
+        return null;
+      } catch (err) {
+        console.warn('[streamAIProxy] Malformed SSE frame JSON:', data, err);
+        return null;
+      }
+    };
+
     try {
       while (true) {
         const { done, value } = await reader.read();
@@ -241,13 +277,16 @@ export async function streamAIProxy(options: ProxyCallOptions): Promise<AsyncIte
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6).trim();
           if (!data) continue;
-          if (data === '[DONE]') return;
-          try {
-            const parsed = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
-            const text = parsed.choices?.[0]?.delta?.content;
-            if (text) yield text;
-          } catch {
-            // Ignore incomplete or provider-specific SSE events.
+          if (data === '[DONE]') {
+            if (totalYielded === 0) {
+              throw new Error("Le flux SSE s'est terminé sans produire aucun texte.");
+            }
+            return;
+          }
+          const text = processDataLine(data);
+          if (text) {
+            totalYielded += text.length;
+            yield text;
           }
         }
       }
@@ -257,14 +296,16 @@ export async function streamAIProxy(options: ProxyCallOptions): Promise<AsyncIte
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6).trim();
           if (!data || data === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
-            const text = parsed.choices?.[0]?.delta?.content;
-            if (text) yield text;
-          } catch {
-            // Ignore malformed final SSE event.
+          const text = processDataLine(data);
+          if (text) {
+            totalYielded += text.length;
+            yield text;
           }
         }
+      }
+
+      if (totalYielded === 0) {
+        throw new Error("Le flux SSE s'est terminé sans produire aucun texte.");
       }
     } finally {
       await reader.cancel().catch(() => undefined);

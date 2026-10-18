@@ -22,6 +22,8 @@ export interface MissionContext {
   relevantFiles?: RelevantVFSFile[];
   /** Stable mission identity used for idempotent managed-credit debits. */
   missionId?: string;
+  /** Optional cancellation signal to abort code generation */
+  signal?: AbortSignal;
 }
 
 export interface TerminalCorrectionIssue {
@@ -157,6 +159,7 @@ export async function buildIUPS(
   context: MissionContext,
   correction?: TerminalCorrectionFeedback,
   onProgress: MissionContext['onProgress'] = context.onProgress,
+  signal: AbortSignal | undefined = context.signal,
 ): Promise<IdealyUniversalProjectSchema | null> {
   const mobileKeywords = /mobile|android|ios|expo|react.native|app.store|téléphone|smartphone|apk/i;
   const isMobile = mobileKeywords.test(context.prompt);
@@ -270,6 +273,7 @@ ${correction.issues.map((issue) => {
         ? `${context.missionId}:build:${correction ? `fix-${correction.iteration ?? 1}` : 'initial'}`
         : undefined,
       intentCategory: 'EXECUTION',
+      signal: signal ?? context.signal,
     });
 
     for await (const delta of textStream) {
@@ -337,12 +341,12 @@ export async function streamAgentMessage(
   signal?: AbortSignal,
 ) {
   const architectureBlock = architecture || relevantFiles.length > 0 ? buildArchitectureContext(architecture, relevantFiles) : '';
-  const systemPrompt = `Tu es ${agent.name} (${agent.role}), un membre incontournable de la voie "${way.name}".
-Ta personnalité profonde (agis EXACTEMENT comme ce personnage sans briser le 4ème mur) : ${agent.personality}.
-Ta spécialité : ${agent.specialty}.
-Ton expression fétiche que tu utilises naturellement : "${agent.catchphrase}".
+  const systemPrompt = `Tu es ${agent.name} (${agent.role}) au sein de l'escouade Idealy pour la voie "${way.name}".
+Rôle : expert technique ${agent.role}.
+Spécialité : ${agent.specialty}.
+Ton professionnel, rigoureux, concis et direct. Tu ne fais référence à aucun personnage de fiction ou franchise existante.
 
-L'utilisateur a demandé : "${missionPrompt}".
+Demande de la mission : "${missionPrompt}".
 Contexte actuel :
 ${contextText}
 ${architectureBlock}
@@ -350,16 +354,14 @@ ${architectureBlock}
 Instructions spécifiques pour cette étape :
 ${instruction}
 
-RÈGLE ABSOLUE : Tu dois TOUJOURS structurer ta réponse ainsi :
-1. Commence par tes pensées détaillées, ton raisonnement, tes doutes, ou ce que tu fais techniquement, encadré EXACTEMENT par <think> et </think>.
-2. Ensuite, écris ton message final (résumé clair, direct, dans le ton de ta personnalité) qui sera lu par l'utilisateur et l'agent suivant. Tu es un expert technique, mais tu t'exprimes avec le fort caractère de ton personnage.`;
+RÈGLE : Rédige une réponse technique claire et directement exploitable. Ne génère aucune balise <think>. Fournis directement le résumé d'action, les décisions techniques prises et les éléments transmis à l'étape suivante.`;
 
   return {
     textStream: await streamAIProxy({
       systemPrompt,
       prompt: 'À toi de jouer.',
       complexity: 'fast',
-      maxTokens: 900,
+      maxTokens: 4000,
       idempotencyKey,
       intentCategory,
       signal,
