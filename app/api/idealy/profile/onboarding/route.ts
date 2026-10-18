@@ -165,7 +165,20 @@ export async function POST(request: Request) {
     });
   }
 
-  const token = await getAuthToken(request);
+  let token = await getAuthToken(request);
+  if (!token) {
+    const session = await auth().catch(() => null);
+    if (session?.user?.id) {
+      token = {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        supabaseAccessToken: session.user.supabaseAccessToken,
+        supabaseUserId: session.user.supabaseUserId ?? undefined,
+        type: session.user.type,
+      };
+    }
+  }
   if (!token) {
     return response({ error: "Une session Idealy authentifiée est requise." }, 401);
   }

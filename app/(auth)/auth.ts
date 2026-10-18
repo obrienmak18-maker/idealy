@@ -9,6 +9,7 @@ import {
   getUserById,
   getUserBySupabaseUserId,
   linkUserToSupabaseUser,
+  updateUserPassword,
 } from "@/lib/db/queries";
 import {
   getSupabaseUserWithAccessToken,
@@ -215,6 +216,35 @@ export const {
                   supabaseUserId: bridge?.userId ?? foundUser.supabaseUserId,
                   type: "regular",
                 };
+              }
+            }
+
+            if (foundUser?.password === "auto-provisioned" && foundUser.id) {
+              try {
+                const supabaseAdminKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+                const supabaseUrl = process.env.SUPABASE_URL?.trim();
+                if (supabaseAdminKey && supabaseUrl && foundUser.supabaseUserId) {
+                  const { createClient } = await import("@supabase/supabase-js");
+                  const admin = createClient(supabaseUrl, supabaseAdminKey);
+                  await admin.auth.admin.updateUserById(foundUser.supabaseUserId, {
+                    password,
+                    email_confirm: true,
+                  });
+                }
+                await updateUserPassword({ userId: foundUser.id, password });
+                const bridge = await signInFirebaseUserThroughSupabase(email).catch(() => null);
+                return {
+                  ...foundUser,
+                  email,
+                  id: foundUser.id,
+                  supabaseAccessToken: bridge?.accessToken ?? undefined,
+                  supabaseAccessTokenExpiresAt: bridge?.expiresAt ?? undefined,
+                  supabaseRefreshToken: bridge?.refreshToken ?? undefined,
+                  supabaseUserId: bridge?.userId ?? foundUser.supabaseUserId,
+                  type: "regular",
+                };
+              } catch (updateError) {
+                console.warn("[Auth] Updating auto-provisioned user password failed:", updateError);
               }
             }
 

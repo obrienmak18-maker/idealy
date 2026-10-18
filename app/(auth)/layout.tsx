@@ -58,6 +58,14 @@ async function AuthShell({ children }: { children: React.ReactNode }) {
     <div className="relative flex min-h-dvh w-full overflow-hidden bg-[#0A0D14]">
       <CosmicHorizon />
 
+      {/* High-Energy Colliding Orbs bringing vibrant life to the auth screen */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="welcome-orb welcome-orb-sky" />
+        <div className="welcome-orb welcome-orb-sunset" />
+        <div className="welcome-orb welcome-orb-gold" />
+        <div className="welcome-grid" />
+      </div>
+
       <div className="idealy-surface relative z-10 flex w-full flex-col border-border/40 bg-background/85 p-7 backdrop-blur-xl xl:w-[620px] xl:shrink-0 xl:rounded-r-3xl xl:border-r md:p-14">
         <Link
           className="flex w-fit items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-ring"

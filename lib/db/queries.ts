@@ -306,6 +306,26 @@ export async function linkUserToSupabaseUser({
   };
 }
 
+export async function updateUserPassword({
+  userId,
+  password,
+}: {
+  userId: string;
+  password: string;
+}): Promise<void> {
+  const hashedPassword = generateHashedPassword(password);
+  await requestSupabase<JsonObject[]>("User", {
+    method: "PATCH",
+    query: {
+      id: `eq.${userId}`,
+    },
+    body: {
+      password: hashedPassword,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+}
+
 export async function createGuestUser(): Promise<User[]> {
   const email = `guest-${Date.now()}@${"idealy.local"}`;
   const password = generateHashedPassword(generateUUID());

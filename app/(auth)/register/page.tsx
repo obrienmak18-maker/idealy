@@ -231,17 +231,37 @@ export default function Page() {
         {t("auth.registerSubtitle") || "Donnez une forme concrète à votre prochaine idée."}
       </p>
       {feedback ? (
-        <p
+        <div
           aria-live="polite"
           className={
             isPositiveFeedback
-              ? "rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300"
-              : "rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              ? "rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3.5 text-sm text-emerald-700 dark:text-emerald-300 flex flex-col gap-1 shadow-sm"
+              : "rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 text-sm text-destructive flex flex-col gap-1.5 shadow-sm"
           }
           role={isPositiveFeedback ? "status" : "alert"}
         >
-          {feedback}
-        </p>
+          <div className="flex items-center gap-2 font-medium">
+            <span
+              className={
+                isPositiveFeedback
+                  ? "size-2 rounded-full bg-emerald-500 animate-pulse shrink-0"
+                  : "size-2 rounded-full bg-destructive animate-pulse shrink-0"
+              }
+            />
+            <span>{feedback}</span>
+          </div>
+          {feedback.includes("existe déjà") ? (
+            <div className="flex items-center gap-2 text-xs pt-1 pl-4">
+              <Link
+                className="font-semibold text-foreground underline underline-offset-2 hover:opacity-80"
+                href="/login"
+                prefetch={true}
+              >
+                Aller sur la page de connexion &rarr;
+              </Link>
+            </div>
+          ) : null}
+        </div>
       ) : null}
       <AuthForm action={handleSubmit} defaultEmail={email} passwordAutoComplete="new-password">
         <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground cursor-pointer select-none">

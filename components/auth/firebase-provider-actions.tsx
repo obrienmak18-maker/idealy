@@ -80,7 +80,7 @@ export function FirebaseProviderActions({
         }
 
         toast.success(t("auth.loginSuccess", "Connexion réussie ! Chargement de votre espace…"));
-        window.location.href = nextPath;
+        window.location.replace(nextPath);
       } catch (err: unknown) {
         console.error("[Firebase completeAuth error]:", err);
         throw err;
@@ -306,21 +306,24 @@ export function FirebaseProviderActions({
         type="button"
       >
         {isPending && !confirmationResult ? (
-          <Loader2 className="size-4 animate-spin" />
+          <Loader2 className="size-4 animate-spin text-primary" />
         ) : (
           <GoogleIcon />
         )}
-        {t("auth.googleButton", "Continuer avec Google")}
+        {isPending && !confirmationResult
+          ? "Connexion avec Google en cours…"
+          : (t("auth.googleButton") || "Continuer avec Google")}
       </button>
 
       {providerError ? (
-        <p
+        <div
           aria-live="assertive"
-          className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive flex items-start gap-2 shadow-sm"
           role="alert"
         >
-          {providerError}
-        </p>
+          <span className="size-2 rounded-full bg-destructive shrink-0 mt-1 animate-pulse" />
+          <span className="leading-relaxed">{providerError}</span>
+        </div>
       ) : null}
 
       {!firebaseConfigured ? (

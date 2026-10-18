@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.webmanifest",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://idealy-ai.netlify.app"
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://idealy.app"
   ),
   openGraph: {
     description:
@@ -65,6 +65,7 @@ const THEME_COLOR_SCRIPT = `\
 })();`;
 
 import { LanguageProvider } from "@/lib/i18n/provider";
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -93,6 +94,15 @@ export default function RootLayout({
           >
             <LanguageProvider>
               <TooltipProvider>
+                <Toaster
+                  closeButton
+                  position="top-center"
+                  richColors
+                  toastOptions={{
+                    className:
+                      "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
+                  }}
+                />
                 <Suspense>{children}</Suspense>
               </TooltipProvider>
             </LanguageProvider>

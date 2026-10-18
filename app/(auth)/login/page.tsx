@@ -194,13 +194,21 @@ export default function Page() {
         {t("auth.loginSubtitle") || "Connectez-vous pour reprendre votre mission."}
       </p>
       {feedback ? (
-        <p
+        <div
           aria-live="polite"
-          className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 text-sm text-destructive flex flex-col gap-1.5 shadow-sm"
           role="alert"
         >
-          {feedback}
-        </p>
+          <div className="flex items-center gap-2 font-medium">
+            <span className="size-2 rounded-full bg-destructive animate-pulse shrink-0" />
+            <span>{feedback}</span>
+          </div>
+          {feedback.includes("incorrect") ? (
+            <p className="text-xs text-muted-foreground/90 pl-4">
+              Si votre compte a été créé avec Google, vous pouvez cliquer directement sur &laquo;&nbsp;Continuer avec Google&nbsp;&raquo; ci-dessous.
+            </p>
+          ) : null}
+        </div>
       ) : null}
       <AuthForm action={handleSubmit} defaultEmail={email} onEmailChange={setEmail}>
         <div className="-mt-2 flex justify-end">
