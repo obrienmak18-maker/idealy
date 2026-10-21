@@ -263,7 +263,7 @@ function PureSuggestedActions({
               }}
             >
               <button
-                className="group/card relative flex min-h-[148px] w-full flex-col justify-between rounded-2xl border border-white/10 bg-card/30 p-4 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-violet-500/50 hover:bg-card/50 hover:shadow-[0_12px_36px_rgba(139,92,246,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4.5"
+                className="group/card relative flex min-h-[104px] w-full flex-col justify-between rounded-xl border border-white/10 bg-card/20 p-3 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-violet-500/50 hover:bg-card/50 hover:shadow-[0_12px_36px_rgba(139,92,246,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4.5"
                 onClick={() => handleSuggestionClick(entry)}
                 type="button"
               >
@@ -279,17 +279,17 @@ function PureSuggestedActions({
                 </div>
 
                 {/* Middle: Title & Description */}
-                <div className="mt-3">
-                  <h3 className="text-sm font-semibold tracking-tight text-foreground transition-colors group-hover/card:text-violet-300">
+                <div className="mt-2">
+                  <h3 className="text-xs font-semibold tracking-tight text-foreground transition-colors group-hover/card:text-violet-300">
                     {entry.label}
                   </h3>
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground/80">
+                  <p className="mt-1 line-clamp-1 text-[11px] leading-relaxed text-muted-foreground/75">
                     {entry.description}
                   </p>
                 </div>
 
                 {/* Bottom: Subtle arrow */}
-                <div className="mt-2.5 flex items-center justify-end text-xs text-muted-foreground/60 transition-colors group-hover/card:text-violet-300">
+                <div className="mt-1.5 flex items-center justify-end text-[10px] text-muted-foreground/50 transition-colors group-hover/card:text-violet-300">
                   <ArrowRight aria-hidden="true" className="size-3.5 transition-transform group-hover/card:translate-x-1" />
                 </div>
               </button>
