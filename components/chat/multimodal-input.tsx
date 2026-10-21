@@ -185,8 +185,6 @@ function PureMultimodalInput({
     return () => window.clearInterval(timer);
   }, [input, promptPlaceholders.length]);
   const { currentWay } = useGamificationStore();
-  const activeWayAgents = (voiesCatalog[currentWay] ?? voiesCatalog.ninja).agents;
-  const filteredAgents = activeWayAgents.filter((agent) => agent.name.toLowerCase().includes(agentMentionQuery.toLowerCase()));
   const freeQuota = useFreeQuota();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
@@ -199,6 +197,8 @@ function PureMultimodalInput({
   const [agentMentionOpen, setAgentMentionOpen] = useState(false);
   const [agentMentionQuery, setAgentMentionQuery] = useState("");
   const [agentMentionIndex, setAgentMentionIndex] = useState(0);
+  const activeWayAgents = (voiesCatalog[currentWay] ?? voiesCatalog.ninja).agents;
+  const filteredAgents = activeWayAgents.filter((agent) => agent.name.toLowerCase().includes(agentMentionQuery.toLowerCase()));
 
   const toggleConnector = useCallback((id: string) => {
     if (!connectedConnectorIds.includes(id)) {
