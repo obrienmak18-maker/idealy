@@ -91,7 +91,8 @@ export function MissionPlanCard() {
     }
   }, [isActive, isValidated, requestAlreadyQueued, status]);
 
-  if (!missionId || !plan) return null;
+  const missionPlan = plan;
+  if (!missionId || !missionPlan) return null;
 
   function openWorkspace() {
     setArtifact((current) => ({
@@ -99,7 +100,7 @@ export function MissionPlanCard() {
       isVisible: true,
       kind: "code",
       status: "idle",
-      title: plan.projectKind || current.title || "Mission workspace",
+      title: missionPlan.projectKind || current.title || "Mission workspace",
     }));
     setMetadata((current: Record<string, unknown> | null) => ({
       ...(current ?? {}),
@@ -150,7 +151,7 @@ export function MissionPlanCard() {
               Plan de mission
             </p>
             <h3 className="mt-1 text-sm font-semibold leading-5 text-foreground">
-              {plan.projectKind}
+              {missionPlan.projectKind}
             </h3>
           </div>
         </div>
@@ -181,23 +182,23 @@ export function MissionPlanCard() {
       <div className="space-y-4 px-4 py-4">
         <div>
           <p className="text-xs font-semibold text-foreground">Objectif</p>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">{plan.intention}</p>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">{missionPlan.intention}</p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-background/60 p-3">
           <p className="text-xs font-semibold text-foreground">Périmètre de la première version</p>
-          <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{plan.v1Scope}</p>
+          <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{missionPlan.v1Scope}</p>
         </div>
 
         <div>
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-xs font-semibold text-foreground">Escouade assignée</p>
             <span className="text-[10px] text-muted-foreground">
-              {plan.agents.length} agents
+              {missionPlan.agents.length} agents
             </span>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            {plan.agents.map((agent) => (
+            {missionPlan.agents.map((agent) => (
               <div
                 className="rounded-xl border border-border/60 bg-background/50 p-3"
                 key={agent.name}
@@ -216,7 +217,7 @@ export function MissionPlanCard() {
 
         <div>
           <p className="text-xs font-semibold text-foreground">Prochaine étape</p>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">{plan.nextStep}</p>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">{missionPlan.nextStep}</p>
         </div>
 
         {failed && typeof metadata?.missionSquadError === "string" ? (
