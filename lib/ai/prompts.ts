@@ -321,7 +321,7 @@ export const systemPrompt = ({
     : "";
 
   const uiUxPrompt = getUiUxProMaxSystemPromptExtension();
-  const base = `${corePrompt}${userGreetingPrompt}${wayPrompt ? `\n\n${wayPrompt}` : ""}${tonePrompt ? `\n\n${tonePrompt}` : ""}\n\n${requestPrompt}\n\n${idealyConversationExperiencePrompt}\\n\\n${squadMemoryContinuityPrompt}\n\n${uiUxPrompt}`;
+  const base = `${corePrompt}${userGreetingPrompt}${wayPrompt ? `\n\n${wayPrompt}` : ""}${tonePrompt ? `\n\n${tonePrompt}` : ""}\n\n${requestPrompt}\n\n${idealyConversationExperiencePrompt}\n\n${squadMemoryContinuityPrompt}\n\n${uiUxPrompt}`;
 
   if (!supportsTools) {
     return base;
