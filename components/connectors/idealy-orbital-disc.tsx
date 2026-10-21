@@ -38,7 +38,6 @@ export function IdealyOrbitalDisc({
       <div className="relative mx-auto min-h-[230px] max-w-[760px] sm:min-h-[290px]">
         {orbiting.length > 0 ? (
           <motion.div
-            aria-hidden="true"
             className="pointer-events-none absolute inset-0"
             initial={{ rotate: 0 }}
             animate={prefersReducedMotion ? { rotate: 0 } : { rotate: 360 }}
