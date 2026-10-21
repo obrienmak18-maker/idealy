@@ -93,6 +93,7 @@ export function FirebaseProviderActions({
         const result = await signInWithAuthJs("firebase", {
           idToken: supabaseIdToken,
           turnstileToken: challengeToken,
+          turnstileAction: requireTerms ? "register" : "login",
           redirect: false,
         });
 
@@ -108,7 +109,7 @@ export function FirebaseProviderActions({
         throw err;
       }
     },
-    [nextPath, t]
+    [nextPath, requireTerms, t]
   );
 
   // Complete a sign-in after Firebase returns from its full-page Google redirect.
