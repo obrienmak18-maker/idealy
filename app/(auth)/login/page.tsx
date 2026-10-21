@@ -233,7 +233,7 @@ export default function Page() {
       const response = await fetch("/api/auth/turnstile/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: turnstileToken }),
+        body: JSON.stringify({ token: turnstileToken, action: "login" }),
       });
       if (!response.ok) {
         setFirebaseError("La vérification anti-robot a expiré. Recommencez-la puis réessayez.");
