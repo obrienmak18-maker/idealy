@@ -17,6 +17,8 @@ assert.match(files.widget, /NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY/);
 assert.match(files.widget, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js/);
 assert.match(files.utility, /challenges\.cloudflare\.com\/turnstile\/v0\/siteverify/);
 assert.match(files.utility, /CLOUDFLARE_TURNSTILE_SECRET_KEY/);
+assert.match(files.utility, /result\.action !== expectedAction/);
+assert.match(files.preflight, /"register"/);
 assert.doesNotMatch(files.widget, /CLOUDFLARE_TURNSTILE_SECRET_KEY/);
 assert.match(files.actions, /verifyTurnstileToken/);
 assert.match(files.actions, /createTurnstileProof/);
