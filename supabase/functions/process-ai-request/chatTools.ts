@@ -103,7 +103,7 @@ async function searchWeb(args: JsonRecord) {
   const query = text(args.query, 500);
   const apiKey = Deno.env.get("EXA_API_KEY")?.trim()
     || Deno.env.get("EXA_AI_API_KEY")?.trim()
-    || Deno.env.get("EXA_AI_API_kEY")?.trim();
+
 
   if (!apiKey) return configuredError("La recherche Web n’est pas configurée côté serveur (EXA_API_KEY).");
   if (query.length < 2) return { status: "error", message: "La requête de recherche est trop courte.", results: [] };
@@ -324,7 +324,10 @@ export async function executeIdealyChatTool(input: {
   arguments: JsonRecord;
   language: "fr" | "en" | "es";
 }) {
-  let output: Record<string, unknown>;
+  let output: Record<string, unknown> = {
+    status: "error",
+    message: localized(input.language, "Outil non disponible.", "Tool unavailable.", "Herramienta no disponible."),
+  };
   switch (input.name) {
     case "webSearch":
       output = await searchWeb(input.arguments);
