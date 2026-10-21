@@ -2,6 +2,7 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import { ArrowDownIcon, FileText, Sparkles } from "lucide-react";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useMessages } from "@/hooks/use-messages";
+import { useArtifact } from "@/hooks/use-artifact";
 import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
 import { AnimatePresence, motion } from "framer-motion";
@@ -18,6 +19,7 @@ import { WorkspaceTemplates } from "./workspace-templates";
 import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import type { PlanOption } from "./plan-choices";
+import { MultiAgentRelay } from "./multi-agent-relay";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -56,9 +58,34 @@ function PureMessages({
 }: MessagesProps) {
   const { t } = useTranslation();
   const { currentWay } = useGamificationStore();
+  const { metadata } = useArtifact();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const chiefAgent =
     activeWayData.agents.find((agent) => agent.isChief) ?? activeWayData.agents[0];
+
+  const missionId = typeof metadata?.missionId === "string" ? metadata.missionId : null;
+  const missionSquadStatus = typeof metadata?.missionSquadStatus === "string" ? metadata.missionSquadStatus : null;
+  const missionIsActive =
+    missionSquadStatus === "building" ||
+    missionSquadStatus === "reviewing" ||
+    missionSquadStatus === "auto_correction_started";
+  const missionAgentName =
+    typeof metadata?.missionActiveAgentName === "string" && metadata.missionActiveAgentName.trim()
+      ? metadata.missionActiveAgentName.trim()
+      : chiefAgent.name;
+  const missionActiveAgent =
+    activeWayData.agents.find((agent) => agent.name.toLowerCase() === missionAgentName.toLowerCase()) ??
+    chiefAgent;
+  const missionAgentRole =
+    typeof metadata?.missionActiveAgentRole === "string" && metadata.missionActiveAgentRole.trim()
+      ? metadata.missionActiveAgentRole.trim()
+      : missionActiveAgent.role;
+  const missionFileCount = Array.isArray(metadata?.missionFiles)
+    ? metadata.missionFiles.filter((file) =>
+        Boolean(file && typeof file === "object" &&
+          "status" in file && (file.status === "saved" || file.status === "validated"))
+      ).length
+    : 0;
   const [activeHomeTab, setActiveHomeTab] = useState<
     "suggestions" | "templates" | "specification"
   >("suggestions");
@@ -320,6 +347,23 @@ function PureMessages({
                 </Fragment>
               );
             })}
+
+            {missionId && missionIsActive ? (
+              <MultiAgentRelay
+                activityState={
+                  missionSquadStatus === "reviewing"
+                    ? "reviewing"
+                    : missionSquadStatus === "auto_correction_started"
+                      ? "correcting"
+                      : "building"
+                }
+                currentAgentAvatar={missionActiveAgent.avatarUrl}
+                currentAgentName={missionActiveAgent.name}
+                currentAgentRole={missionAgentRole}
+                currentWay={currentWay}
+                filesCount={missionFileCount}
+              />
+            ) : null}
 
             {status === "submitted" &&
               messages.at(-1)?.role !== "assistant" && (
