@@ -63,7 +63,7 @@ function ToolApprovalActions({
     addToolApprovalResponse({
       approved: false,
       id: approvalId,
-      reason: "User denied weather lookup",
+      reason: "Utilisateur a refusé la recherche météo.",
     });
   }, [addToolApprovalResponse, approvalId]);
 
@@ -653,8 +653,8 @@ const PurePreviewMessage = ({
               <span className="text-[13px] font-semibold tracking-tight text-foreground/90">
                 {agentName}
               </span>
-              <span className="text-[11px] text-muted-foreground font-mono">
-                • {agentRole}
+              <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {agentRole}
               </span>
             </div>
             {/* Le texte coule directement sur le fond de l'interface, sans bulle fermée ni bordure artificielle */}
