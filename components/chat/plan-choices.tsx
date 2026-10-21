@@ -51,6 +51,14 @@ function parseOptionTitle(line: string): {
  * introduced it as a set of alternatives. Ordinary numbered instructions are
  * left as normal conversation text.
  */
+export function textBeforePlanOptions(text: string): string {
+  const lines = text.split(/\r?\n/);
+  const sectionIndex = lines.findIndex((line) =>
+    CHOICE_SECTION.test(cleanMarkdown(line))
+  );
+  return sectionIndex < 0 ? text : lines.slice(0, sectionIndex).join("\n").trim();
+}
+
 export function extractPlanOptionsFromText(text: string): PlanOption[] | null {
   const lines = text.split(/\r?\n/);
   const sectionIndex = lines.findIndex((line) => CHOICE_SECTION.test(cleanMarkdown(line)));
@@ -119,7 +127,9 @@ export function extractPlanOptionsFromText(text: string): PlanOption[] | null {
 
 export function PlanChoices({ options, onSelectOption }: PlanChoicesProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [confirmedIndex, setConfirmedIndex] = useState<number | null>(null);
   const selected = selectedIndex === null ? null : options[selectedIndex];
+  const isConfirmed = confirmedIndex !== null;
 
   if (options.length < 2) return null;
 
@@ -194,15 +204,23 @@ export function PlanChoices({ options, onSelectOption }: PlanChoicesProps) {
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
         <span className="text-xs text-muted-foreground">
-          {selected ? `${selectedIndex! + 1} sur ${options.length} sélectionnée` : `${options.length} propositions`}
+          {isConfirmed
+            ? "Ce choix a été envoyé une seule fois."
+            : selected
+              ? `${selectedIndex! + 1} sur ${options.length} sélectionnée`
+              : `${options.length} propositions`}
         </span>
         <button
           className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          disabled={!selected}
-          onClick={() => selected && onSelectOption(selected)}
+          disabled={!selected || isConfirmed}
+          onClick={() => {
+            if (!selected || isConfirmed) return;
+            setConfirmedIndex(selectedIndex);
+            onSelectOption(selected);
+          }}
           type="button"
         >
-          Valider ce choix
+          {isConfirmed ? "Choix envoyé" : "Valider ce choix"}
           <Check aria-hidden="true" className="size-4" />
         </button>
       </div>
