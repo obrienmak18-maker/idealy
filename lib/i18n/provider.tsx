@@ -52,6 +52,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const currentLang = mounted ? language : "fr";
   const dict = translations[currentLang] || fr;
 
+  useEffect(() => {
+    document.documentElement.lang = currentLang;
+  }, [currentLang]);
+
   const t = (
     path: string,
     paramsOrFallback?: Record<string, string | number> | string,
