@@ -161,7 +161,6 @@ async function streamFinalAnswer(input: {
   model: string;
   messages: InputMessage[];
   maxTokens: number;
-  headers: Record<string, string>;
   signal: AbortSignal;
   controller: ReadableStreamDefaultController<Uint8Array>;
   encoder: TextEncoder;
@@ -179,7 +178,7 @@ async function streamFinalAnswer(input: {
         : {}),
     },
     body: JSON.stringify(requestBody(input.model, input.provider, input.messages, input.maxTokens, true, false)),
-    signal: input.signal,
+    signal: AbortSignal.any([input.signal, AbortSignal.timeout(50_000)]),
   });
 
   if (!response.ok || !response.body) {
@@ -322,7 +321,7 @@ export function createToolEnabledChatResponse(input: {
             if (!toolCalls.length) {
               const answer = stringField(assistant.content).trim();
               emitText(controller, encoder, answer || "Je n’ai pas obtenu de réponse textuelle exploitable.");
-              sse(controller, encoder, "[DONE]");
+              emitDone(controller, encoder);
               return;
             }
 
@@ -341,37 +340,40 @@ export function createToolEnabledChatResponse(input: {
             for (const call of toolCalls) {
               if (controllerAbort.signal.aborted) return;
               const args = parseToolArguments(call.function.arguments);
-              const kind: ChatToolName = isChatToolName(call.function.name)
-                ? call.function.name
-                : "webSearch";
               let output: Record<string, unknown>;
-              if (!isChatToolName(call.function.name)) {
+              const knownTool = isChatToolName(call.function.name);
+              if (!knownTool) {
                 output = toolFailure(call.function.name, "Cette action n’est pas disponible dans le chat.");
-              } else if (totalToolCalls >= MAX_TOOL_EXECUTIONS) {
-                output = toolFailure(call.function.name, "Limite d’outils par réponse atteinte. Les autres actions n’ont pas été exécutées.");
-              } else if (call.function.name === "generateImage" && generatedImageCalls > 0) {
-                output = { status: "error", message: "Une seule génération d’image est autorisée par réponse.", images: [] };
               } else {
-                totalToolCalls += 1;
-                if (call.function.name === "generateImage") generatedImageCalls += 1;
-                const activityInput: ChatToolActivity = {
+                const kind = call.function.name;
+                emitToolActivity(controller, encoder, {
                   toolCallId: call.id,
                   kind,
                   state: "input-available",
                   input: args,
-                };
-                emitToolActivity(controller, encoder, activityInput);
-                try {
-                  output = await executeIdealyChatTool({
-                    name: call.function.name,
-                    arguments: args,
-                    language: input.language,
-                  });
-                } catch (error) {
-                  console.error("Idealy chat tool failed", { tool: call.function.name, error });
-                  output = toolFailure(call.function.name, "L’outil est momentanément indisponible. Aucun résultat n’a été inventé.");
+                });
+                if (totalToolCalls >= MAX_TOOL_EXECUTIONS) {
+                  output = toolFailure(call.function.name, "Limite d’outils par réponse atteinte. Cette action n’a pas été exécutée.");
+                } else if (call.function.name === "generateImage" && generatedImageCalls > 0) {
+                  output = { status: "error", message: "Une seule génération d’image est autorisée par réponse.", images: [] };
+                } else {
+                  totalToolCalls += 1;
+                  if (call.function.name === "generateImage") generatedImageCalls += 1;
+                  try {
+                    output = await executeIdealyChatTool({
+                      name: call.function.name,
+                      arguments: args,
+                      language: input.language,
+                    });
+                  } catch (error) {
+                    console.error("Idealy chat tool failed", { tool: call.function.name, error });
+                    output = toolFailure(call.function.name, "L’outil est momentanément indisponible. Aucun résultat n’a été inventé.");
+                  }
                 }
-                const finalState = output.status === "error" ? "output-error" : "output-available";
+                const finalState =
+                  output.status === "error" || output.status === "unconfigured"
+                    ? "output-error"
+                    : "output-available";
                 emitToolActivity(controller, encoder, {
                   toolCallId: call.id,
                   kind,
