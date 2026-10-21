@@ -50,7 +50,7 @@ assert.match(files.auth, /signInFirebaseUserThroughSupabase\(email\)/);
 assert.match(files.auth, /supabaseAccessToken: supabaseAuth\.accessToken/);
 assert.doesNotMatch(files.client, /FIREBASE_PRIVATE_KEY|FIREBASE_CLIENT_EMAIL/);
 const firebaseAdmin = await readFile("lib/firebase/admin.ts", "utf8");
-assert.match(firebaseAdmin, /verifyIdToken\(idToken, false\)/);
+assert.match(firebaseAdmin, /verifyIdToken\(idToken, true\)/);
 assert.doesNotMatch(firebaseAdmin, /Buffer\.from\(parts\[1\], "base64url"\)/);
 assert.doesNotMatch(
   files.client,
