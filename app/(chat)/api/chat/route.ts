@@ -44,7 +44,7 @@ import {
   createIdealyMissionPlan,
   updateIdealyMission,
 } from "@/lib/idealy/backend-adapter";
-import { normalizeMissionWay } from "@/lib/idealy/agent-personas";
+import { getMissionAgentRoster, normalizeMissionWay } from "@/lib/idealy/agent-personas";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
 import { getIdealyDirectProviderModel } from "@/lib/idealy/provider-registry";
 import {
@@ -430,7 +430,12 @@ export async function POST(request: Request) {
 
     const lastUserPrompt =
       message?.role === "user" ? getTextFromMessageParts(message).trim() : "";
-    const requestedAgent = lastUserPrompt.match(/(?:^|\s)@([A-Za-z0-9_-]{2,40})/)?.[1] ?? null;
+    const requestedAgentCandidate = lastUserPrompt.match(/(?:^|\s)@([A-Za-z0-9_-]{2,40})/)?.[1] ?? null;
+    const requestedAgent = requestedAgentCandidate
+      ? getMissionAgentRoster(userWay).find(
+          (agent) => agent.name.toLowerCase() === requestedAgentCandidate.toLowerCase(),
+        )?.name ?? null
+      : null;
 
     // Fast, resilient interceptor for conversational greetings across all environments
     if (lastUserPrompt && isSimpleGreeting(lastUserPrompt)) {
