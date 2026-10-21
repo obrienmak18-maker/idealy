@@ -601,7 +601,7 @@ function PureMultimodalInput({
     } else {
       toast.error(language.startsWith("en") ? "Wait for the current response to finish." : language.startsWith("es") ? "Espera a que termine la respuesta actual." : "Attendez la fin de la réponse en cours.");
     }
-  }, [attachments.length, handleSlashSelect, input, status, submitForm]);
+  }, [attachments.length, handleSlashSelect, input, language, status, submitForm]);
 
   const handleTextareaKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
