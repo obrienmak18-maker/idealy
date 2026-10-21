@@ -704,9 +704,13 @@ const PurePreviewMessage = ({
 
 export const PreviewMessage = PurePreviewMessage;
 
-export const ThinkingMessage = () => {
-  // Alvin receives the incoming mission prompt
-  const agentAvatar = alvinMessenger.avatarUrl;
+export const ThinkingMessage = ({
+  agentName = alvinMessenger.name,
+  agentAvatar = alvinMessenger.avatarUrl,
+}: {
+  agentName?: string;
+  agentAvatar?: string;
+} = {}) => {
 
   return (
     <div
@@ -720,7 +724,7 @@ export const ThinkingMessage = () => {
             {agentAvatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                alt="Alvin - Messager actif"
+                alt={agentName}
                 className="size-full object-cover"
                 src={agentAvatar}
               />
