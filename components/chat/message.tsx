@@ -31,7 +31,7 @@ import { DocumentPreview } from "./document-preview";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { MultiAgentRelay } from "./multi-agent-relay";
-import { extractPlanOptionsFromText, PlanChoices, type PlanOption } from "./plan-choices";
+import { extractPlanOptionsFromText, PlanChoices, textBeforePlanOptions, type PlanOption } from "./plan-choices";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
 
@@ -164,9 +164,10 @@ function ProgressiveTextMessage({
   onSelectPlanOption?: (option: PlanOption) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { conclusion, status, lineCount, isLong } =
-    parseProgressiveSections(text);
   const planOptions = isAssistant ? extractPlanOptionsFromText(text) : null;
+  const displayText = planOptions ? textBeforePlanOptions(text) : text;
+  const { conclusion, status, lineCount, isLong } =
+    parseProgressiveSections(displayText);
 
   const handleToggleExpand = useCallback(() => {
     setIsExpanded((prev) => !prev);
@@ -191,90 +192,100 @@ function ProgressiveTextMessage({
         </div>
       )}
 
-      {/* ③ Détails et contenu principal (repliés par défaut à 180px si long) */}
-      <div
-        className={cn("relative transition-[max-height] duration-200", {
-          "max-h-[180px] overflow-hidden": shouldCollapse,
-        })}
-      >
-        <MessageContent
-          className={cn("text-[14px] leading-[1.75] md:text-[15px]", {
-            "idealy-bubble-user w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm":
-              !isAssistant,
-          })}
-          data-testid="message-content"
-        >
-          <MessageResponse
-            caret={isAssistant && isLoading ? "circle" : undefined}
-            isAnimating={isAssistant && isLoading}
+      {displayText.trim().length > 0 && (
+        <>
+          {/* Le corps d'une réponse proposant des choix ne répète pas la liste qui est devenue interactive. */}
+          {isAssistant && conclusion && isLong && !isLoading && (
+            <div className="rounded-lg bg-surface-container-lowest/80 border border-border/50 px-3 py-2 text-[13px] font-medium text-foreground/90 shadow-xs">
+              <span className="text-primary font-semibold mr-1.5">En résumé :</span>
+              {conclusion}
+            </div>
+          )}
+
+          <div
+            className={cn("relative transition-[max-height] duration-200", {
+              "max-h-[180px] overflow-hidden": shouldCollapse,
+            })}
           >
-            {sanitizeText(text)}
-          </MessageResponse>
-        </MessageContent>
+            <MessageContent
+              className={cn("text-[14px] leading-[1.75] md:text-[15px]", {
+                "idealy-bubble-user w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm":
+                  !isAssistant,
+              })}
+              data-testid="message-content"
+            >
+              <MessageResponse
+                caret={isAssistant && isLoading ? "circle" : undefined}
+                isAnimating={isAssistant && isLoading}
+              >
+                {sanitizeText(displayText)}
+              </MessageResponse>
+            </MessageContent>
 
-        {shouldCollapse && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
-        )}
-      </div>
+            {shouldCollapse && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+            )}
+          </div>
 
-      {isAssistant && isLong && !isLoading && (
-        <button
-          aria-expanded={isExpanded}
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
-          onClick={handleToggleExpand}
-          type="button"
-        >
-          {isExpanded ? (
-            <>
-              <ChevronUp className="size-3.5" />
-              <span>Replier les détails</span>
-            </>
-          ) : (
-            <>
-              <ChevronDown className="size-3.5" />
-              <span>Afficher les détails ({lineCount} lignes)</span>
-            </>
+          {isAssistant && isLong && !isLoading && (
+            <button
+              aria-expanded={isExpanded}
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
+              onClick={handleToggleExpand}
+              type="button"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="size-3.5" />
+                  <span>Replier les détails</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="size-3.5" />
+                  <span>Afficher les détails ({lineCount} lignes)</span>
+                </>
+              )}
+            </button>
           )}
-        </button>
-      )}
 
-      {/* ④ Statut structuré (Fait / Reste / Attention) */}
-      {isAssistant && status && (
-        <div className="mt-2.5 rounded-lg border border-border/60 bg-muted/20 p-2.5 text-xs space-y-1.5">
-          {status.fait && (
-            <div className="flex items-start gap-2 text-foreground/90">
-              <CheckCircle2 className="size-3.5 text-emerald-500 mt-0.5 shrink-0" />
-              <div>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  Fait :{" "}
-                </span>
-                {status.fait}
-              </div>
+          {isAssistant && status && (
+            <div className="mt-2.5 rounded-lg border border-border/60 bg-muted/20 p-2.5 text-xs space-y-1.5">
+              {status.fait && (
+                <div className="flex items-start gap-2 text-foreground/90">
+                  <CheckCircle2 className="size-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      Fait :{" "}
+                    </span>
+                    {status.fait}
+                  </div>
+                </div>
+              )}
+              {status.reste && (
+                <div className="flex items-start gap-2 text-foreground/90">
+                  <Clock className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">
+                      Reste :{" "}
+                    </span>
+                    {status.reste}
+                  </div>
+                </div>
+              )}
+              {status.attention && (
+                <div className="flex items-start gap-2 text-foreground/90">
+                  <AlertTriangle className="size-3.5 text-rose-500 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-rose-600 dark:text-rose-400">
+                      Attention :{" "}
+                    </span>
+                    {status.attention}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          {status.reste && (
-            <div className="flex items-start gap-2 text-foreground/90">
-              <Clock className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
-              <div>
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
-                  Reste :{" "}
-                </span>
-                {status.reste}
-              </div>
-            </div>
-          )}
-          {status.attention && (
-            <div className="flex items-start gap-2 text-foreground/90">
-              <AlertTriangle className="size-3.5 text-rose-500 mt-0.5 shrink-0" />
-              <div>
-                <span className="font-semibold text-rose-600 dark:text-rose-400">
-                  Attention :{" "}
-                </span>
-                {status.attention}
-              </div>
-            </div>
-          )}
-        </div>
+        </>
       )}
 
       {/* ② Résultat / Plan d'action */}
