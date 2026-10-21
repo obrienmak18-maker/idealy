@@ -612,8 +612,10 @@ export function BuildTopBar() {
         missionSquadStatus: finalStatus,
       }));
       if (finalStatus === "ready") {
+        selectView("preview");
         toast.success("L’escouade a terminé la mission et validé le workspace.");
       } else {
+        selectView("code");
         toast.warning("Le cycle multi-agents est terminé, mais la mission nécessite une vérification.", {
           description: "Consulte les fichiers et le journal de build avant de poursuivre.",
         });
