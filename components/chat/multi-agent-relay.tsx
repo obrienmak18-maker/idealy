@@ -53,8 +53,8 @@ export function MultiAgentRelay({
         )}
       </span>
       <span className="min-w-0">
-        <span className="font-medium text-foreground">{agentName}</span>
-        <span> travaille sur la demande</span>
+        <span className="block font-medium text-foreground">{agentName}</span>
+        <span>{activityLabel}</span>
       </span>
       <span className="shrink-0 rounded-md bg-muted px-1.5 py-1 text-[10px] font-medium">
         {wayLabel}
