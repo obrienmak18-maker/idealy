@@ -7,7 +7,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [contract, adapter, route, page, layout, packageJson, workflow] = await Promise.all([
+const [contract, adapter, route, page, layout, packageJson, workflow, voiceMigration] = await Promise.all([
   read("lib/idealy/onboarding-contract.ts"),
   read("lib/idealy/backend-adapter.ts"),
   read("app/api/idealy/profile/onboarding/route.ts"),
@@ -15,10 +15,17 @@ const [contract, adapter, route, page, layout, packageJson, workflow] = await Pr
   read("app/(chat)/layout.tsx"),
   read("package.json"),
   read(".github/workflows/idealy-live-quality.yml"),
+  read("supabase/migrations/20261021143000_onboarding_voice_preference.sql"),
 ]);
 
 assert(contract.includes("onboardingInputSchema"), "Onboarding must have a shared Zod schema.");
 assert(contract.includes("idealyWays"), "Onboarding must use the central Way contract.");
+assert(contract.includes("idealyPreferredVoices"), "Onboarding must use a controlled list of voice presets.");
+assert(adapter.includes("p_preferred_voice: input.preferredVoice"), "Selected voice must be sent to the authenticated profile RPC.");
+assert(voiceMigration.includes("preferred_voice") && voiceMigration.includes("Invalid preferred voice"), "Database migration must store and validate the selected voice.");
+assert(page.includes("speechSynthesis.speak(utterance)"), "Onboarding must provide a real browser voice preview.");
+assert(page.includes("{accountEmail ||"), "Account email must be derived from the authenticated server session.");
+assert(!contract.includes("tone: z.enum"), "Do not collect onboarding settings that are not persisted.");
 assert(adapter.includes("completeMyIdealyOnboarding"), "Server adapter must call the onboarding RPC.");
 assert(adapter.includes("rpc/complete_my_onboarding"), "Onboarding must not PATCH profiles directly.");
 assert(route.includes("getToken"), "Onboarding route must require the authenticated server session.");
@@ -33,6 +40,7 @@ assert(route.includes("simulated: true"), "Explicit demo onboarding must be iden
 assert(page.includes("Étape {step + 1} sur {steps.length}"), "Onboarding UI must expose its step progress.");
 assert(page.includes("/api/idealy/profile/onboarding"), "Onboarding UI must use the authenticated API route.");
 assert(page.includes("Object.values(wayPresentations)"), "Onboarding UI must render the central Way presentations.");
+assert(contract.includes('"tiktok"') && contract.includes('"youtube"') && page.includes("How did you hear about Idealy?"), "Discovery-source question must remain available.");
 assert(!page.includes("document.cookie = `idealy_onboarding_completed=true"), "The browser must not locally mark onboarding complete.");
 assert(layout.includes("getMyIdealyOnboardingStatus"), "Workspace must evaluate onboarding status server-side.");
 assert(layout.includes("redirect(\"/onboarding\")"), "Workspace must gate incomplete regular profiles.");

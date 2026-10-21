@@ -20,6 +20,14 @@ export const idealyExperienceLevels = [
   "non_coder",
 ] as const;
 
+export const idealyPreferredVoices = ["aurora", "nova", "atlas", "pulse"] as const;
+
+export type IdealyPreferredVoice = (typeof idealyPreferredVoices)[number];
+
+export function isIdealyPreferredVoice(value: unknown): value is IdealyPreferredVoice {
+  return typeof value === "string" && idealyPreferredVoices.includes(value as IdealyPreferredVoice);
+}
+
 export const idealyDiscoverySources = [
   "tiktok",
   "youtube",
@@ -34,6 +42,7 @@ export const idealyDiscoverySources = [
 export const onboardingInputSchema = z.object({
   discoverySource: z.enum(idealyDiscoverySources).optional(),
   experienceLevel: z.enum(idealyExperienceLevels),
+  preferredVoice: z.enum(idealyPreferredVoices).default("nova"),
   firstName: z.string().trim().min(1, "Le prénom est requis.").max(80),
   lastName: z.string().trim().max(80).optional().default(""),
   preferredLanguage: z
@@ -52,7 +61,6 @@ export const onboardingInputSchema = z.object({
     .max(64)
     .regex(/^[A-Za-z0-9_+./-]+$/, "Fuseau horaire invalide.")
     .default("UTC"),
-  tone: z.enum(["concise", "educational", "bold"]).optional(),
   way: z.enum(idealyWays),
 });
 
@@ -61,6 +69,8 @@ export type OnboardingInput = z.infer<typeof onboardingInputSchema>;
 export type OnboardingStatus = {
   experienceLevel: string | null;
   firstName: string | null;
+  lastName: string | null;
+  preferredVoice: IdealyPreferredVoice | null;
   onboardingCompleted: boolean;
   primaryGoal: string | null;
   profileExists: boolean;

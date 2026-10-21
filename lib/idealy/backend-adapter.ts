@@ -13,7 +13,7 @@ import {
   designSpecificationToPrompt,
   runDesignCritic,
 } from "./design-engine";
-import type { OnboardingInput, OnboardingStatus } from "./onboarding-contract";
+import { isIdealyPreferredVoice, type OnboardingInput, type OnboardingStatus } from "./onboarding-contract";
 import { type IdealyWay, isIdealyWay } from "./product-contract";
 import { getUserById } from "@/lib/db/queries";
 import { signInFirebaseUserThroughSupabase } from "./supabase-auth";
@@ -98,6 +98,8 @@ type IdealyMissionResponse = {
 type IdealyProfileResponse = {
   experience_level?: unknown;
   first_name?: unknown;
+  last_name?: unknown;
+  preferred_voice?: unknown;
   id?: unknown;
   onboarding_completed?: unknown;
   primary_goal?: unknown;
@@ -314,7 +316,7 @@ export async function getMyIdealyOnboardingStatus({
   const { userId } = await getSupabaseServerContext(request, contextOverride);
   const profiles = await callSupabaseRest<IdealyProfileResponse[]>(
     request,
-    `profiles?select=id,first_name,way,onboarding_completed,experience_level,primary_goal,project_type&id=eq.${encodeURIComponent(userId)}&limit=1`,
+    `profiles?select=id,first_name,last_name,preferred_voice,way,onboarding_completed,experience_level,primary_goal,project_type&id=eq.${encodeURIComponent(userId)}&limit=1`,
     { cache: "no-store", method: "GET" },
     contextOverride
   );
@@ -329,6 +331,11 @@ export async function getMyIdealyOnboardingStatus({
       profile && typeof profile.first_name === "string"
         ? profile.first_name
         : null,
+    lastName:
+      profile && typeof profile.last_name === "string"
+        ? profile.last_name
+        : null,
+    preferredVoice: profile && isIdealyPreferredVoice(profile.preferred_voice) ? profile.preferred_voice : null,
     onboardingCompleted: profile?.onboarding_completed === true,
     primaryGoal:
       profile && typeof profile.primary_goal === "string"
@@ -369,6 +376,7 @@ export async function completeMyIdealyOnboarding({
         p_primary_goal: input.primaryGoal,
         p_project_type: input.projectType,
         p_timezone: input.timezone,
+        p_preferred_voice: input.preferredVoice,
         p_way: input.way,
       }),
       method: "POST",
