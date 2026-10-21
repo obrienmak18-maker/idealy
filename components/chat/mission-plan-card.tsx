@@ -86,15 +86,17 @@ export function MissionPlanCard() {
       : "planned";
   const isActive = ACTIVE_STATUSES.has(status);
   const isValidated = status === "ready";
+  const needsUserInput = status === "needs-user-input";
+  const failed = status === "needs-fix";
   const requestAlreadyQueued = metadata?.missionRunRequested === true;
 
   useEffect(() => {
-    if (isActive || isValidated || status === "needs-fix" || status === "needs-user-input") {
+    if (isActive || isValidated || failed || needsUserInput) {
       setIsSubmitting(false);
     } else if (!requestAlreadyQueued) {
       setIsSubmitting(false);
     }
-  }, [isActive, isValidated, requestAlreadyQueued, status]);
+  }, [failed, isActive, isValidated, needsUserInput, requestAlreadyQueued, status]);
 
   if (!missionId || !plan) return null;
   const missionPlan = plan;
@@ -127,7 +129,6 @@ export function MissionPlanCard() {
     }));
   }
 
-  const failed = status === "needs-fix" || status === "needs-user-input";
   const statusText = isValidated
     ? "Mission validée"
     : isActive
@@ -136,9 +137,11 @@ export function MissionPlanCard() {
         : status === "auto_correction_started"
           ? "Correction en cours"
           : "Construction en cours"
-      : failed
-        ? "Une vérification reste nécessaire"
-        : "Plan prêt à valider";
+      : needsUserInput
+        ? "Votre décision est requise"
+        : failed
+          ? "Une correction est nécessaire"
+          : "Plan prêt à valider";
 
   return (
     <section
@@ -241,7 +244,7 @@ export function MissionPlanCard() {
           <p className="mt-1 text-sm leading-6 text-muted-foreground">{missionPlan.nextStep}</p>
         </div>
 
-        {failed && typeof metadata?.missionSquadError === "string" ? (
+        {(failed || needsUserInput) && typeof metadata?.missionSquadError === "string" ? (
           <p
             aria-live="polite"
             className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs leading-5 text-amber-700 dark:text-amber-300"
@@ -268,7 +271,14 @@ export function MissionPlanCard() {
             <Code2 aria-hidden="true" className="size-3.5" />
             Ouvrir le workspace
           </button>
-          {isValidated ? null : (
+          {isValidated ? null : needsUserInput ? (
+            <p
+              className="max-w-52 text-xs leading-5 text-amber-700 dark:text-amber-300"
+              role="status"
+            >
+              Répondez dans la conversation pour préciser ce qui manque, puis lancez une nouvelle mission.
+            </p>
+          ) : (
             <button
               className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               disabled={isActive || isSubmitting || requestAlreadyQueued}
