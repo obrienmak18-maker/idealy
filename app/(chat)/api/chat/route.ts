@@ -85,7 +85,7 @@ import {
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import { checkIpRateLimit } from "@/lib/ratelimit";
-import type { ChatMessage, WaitingStatusData } from "@/lib/types";
+import type { ChatMessage, IdealyChatToolActivity, WaitingStatusData } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
@@ -295,9 +295,22 @@ async function streamIdealyEdgeResponse({
         try {
           const parsed = JSON.parse(raw) as {
             choices?: Array<{ delta?: { content?: string } }>;
+            activity?: IdealyChatToolActivity;
             event?: unknown;
             type?: string;
           };
+          if (
+            parsed.type === "idealy_tool_activity" &&
+            parsed.activity &&
+            typeof parsed.activity.toolCallId === "string"
+          ) {
+            dataStream.write({
+              data: parsed.activity,
+              id: parsed.activity.toolCallId,
+              type: "data-idealy-tool-activity",
+            });
+            continue;
+          }
           if (parsed.type === "idealy_file_event" && parsed.event) {
             dataStream.write({
               data: parsed.event as never,
