@@ -404,7 +404,6 @@ export function createToolEnabledChatResponse(input: {
                 model: input.model,
                 messages,
                 maxTokens,
-                headers: input.responseHeaders,
                 signal: controllerAbort.signal,
                 controller,
                 encoder,
@@ -414,12 +413,12 @@ export function createToolEnabledChatResponse(input: {
           }
 
           emitText(controller, encoder, "La recherche a atteint sa limite de sécurité. Consulte les résultats affichés ci-dessus.");
-          sse(controller, encoder, "[DONE]");
+          emitDone(controller, encoder);
         } catch (error) {
           if (controllerAbort.signal.aborted) return;
           console.error("Idealy tool-enabled chat failed", error);
           emitText(controller, encoder, "Une erreur a interrompu la recherche ou la génération. Consulte les résultats déjà affichés, puis réessaie.");
-          sse(controller, encoder, "[DONE]");
+          emitDone(controller, encoder);
         } finally {
           input.requestSignal.removeEventListener("abort", onAbort);
           try { controller.close(); } catch { /* the client may have disconnected */ }
