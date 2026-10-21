@@ -72,14 +72,14 @@ function PureMessages({
   const missionAgentName =
     typeof metadata?.missionActiveAgentName === "string" && metadata.missionActiveAgentName.trim()
       ? metadata.missionActiveAgentName.trim()
-      : chiefAgent.name;
-  const missionActiveAgent =
-    activeWayData.agents.find((agent) => agent.name.toLowerCase() === missionAgentName.toLowerCase()) ??
-    chiefAgent;
+      : "";
+  const missionActiveAgent = missionAgentName
+    ? activeWayData.agents.find((agent) => agent.name.toLowerCase() === missionAgentName.toLowerCase())
+    : undefined;
   const missionAgentRole =
     typeof metadata?.missionActiveAgentRole === "string" && metadata.missionActiveAgentRole.trim()
       ? metadata.missionActiveAgentRole.trim()
-      : missionActiveAgent.role;
+      : missionActiveAgent?.role ?? "";
   const missionFileCount = Array.isArray(metadata?.missionFiles)
     ? metadata.missionFiles.filter((file) =>
         Boolean(file && typeof file === "object" &&
@@ -363,7 +363,7 @@ function PureMessages({
                       ? "correcting"
                       : "building"
                 }
-                currentAgentAvatar={missionActiveAgent.avatarUrl}
+                currentAgentAvatar={missionActiveAgent?.avatarUrl}
                 currentAgentName={missionActiveAgent.name}
                 currentAgentRole={missionAgentRole}
                 currentWay={currentWay}
