@@ -178,6 +178,22 @@ function getUserLanguageFromRequest(request: Request): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+type WaitingMessageKey = "connecting" | "preparing" | "thinking" | "analyzing" | "creating" | "planning" | "modelSlow";
+
+function getChatWaitingMessage(language: string | null | undefined, key: WaitingMessageKey, modelName?: string) {
+  const locale = language?.toLowerCase().startsWith("en") ? "en" : language?.toLowerCase().startsWith("es") ? "es" : "fr";
+  if (key === "modelSlow") {
+    return locale === "en" ? (modelName || "The model") + " is taking a little longer than usual…"
+      : locale === "es" ? (modelName || "El modelo") + " está tardando un poco más de lo habitual…"
+      : (modelName || "Le modèle") + " met un peu plus de temps que prévu…";
+  }
+  const messages = {
+    fr: { connecting: "Connexion à l’IA…", preparing: "Préparation de la réponse…", thinking: "L’IA réfléchit…", analyzing: "Analyse de votre mission…", creating: "Création de l’espace de mission…", planning: "Planification de la construction…" },
+    en: { connecting: "Connecting to AI…", preparing: "Preparing the response…", thinking: "Thinking…", analyzing: "Analyzing your mission…", creating: "Creating the mission workspace…", planning: "Planning the build…" },
+    es: { connecting: "Conectando con la IA…", preparing: "Preparando la respuesta…", thinking: "Pensando…", analyzing: "Analizando tu misión…", creating: "Creando el espacio de la misión…", planning: "Planificando la construcción…" },
+  } as const;
+  return messages[locale][key];
+}
 async function streamIdealyEdgeResponse({
   dataStream,
   directModel,
@@ -666,22 +682,20 @@ export async function POST(request: Request) {
           });
         };
 
-        writeWaitingStatus("waiting", "Connexion à l'IA...");
+        const statusLanguage = getUserLanguageFromRequest(request);
+        writeWaitingStatus("waiting", getChatWaitingMessage(statusLanguage, "connecting"));
 
         healthCheckTimer = setTimeout(() => {
           getModelAvailability(chatModel)
             .then((availability) => {
               if (availability === "impacted") {
-                writeWaitingStatus(
-                  "health",
-                  `${modelName} met un peu de temps à répondre...`
-                );
+                writeWaitingStatus("health", getChatWaitingMessage(statusLanguage, "modelSlow", modelName));
               } else {
-                writeWaitingStatus("still-waiting", "Patience, préparation de la réponse...");
+                writeWaitingStatus("still-waiting", getChatWaitingMessage(statusLanguage, "preparing"));
               }
             })
             .catch(() => {
-              writeWaitingStatus("still-waiting", "Patience, préparation de la réponse...");
+              writeWaitingStatus("still-waiting", getChatWaitingMessage(statusLanguage, "preparing"));
             });
         }, HEALTH_CHECK_DELAY_MS);
 
@@ -691,7 +705,7 @@ export async function POST(request: Request) {
           }
           hasModelActivity = true;
           clearHealthCheckTimer();
-          writeWaitingStatus("thinking", "L'IA réfléchit...");
+          writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "thinking"));
         };
 
         const stopWaitingStatus = () => {
@@ -744,7 +758,7 @@ export async function POST(request: Request) {
             | undefined;
 
           if (idealyPrompt) {
-            writeWaitingStatus("thinking", "Analyse de votre mission...");
+            writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "analyzing"));
             intentCategory = await classifyIdealyIntent(request, idealyPrompt);
             dataStream.write({ data: intentCategory, type: "data-idealy-intent" });
 
@@ -771,7 +785,7 @@ export async function POST(request: Request) {
                 return;
               }
 
-              writeWaitingStatus("thinking", "Création de l'espace de mission...");
+              writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "creating"));
               const activeWay = normalizeMissionWay(userWay);
               const mission = await createIdealyMission({
                 chatId: id,
@@ -783,7 +797,7 @@ export async function POST(request: Request) {
               missionId = mission.id;
               dataStream.write({ data: mission.id, type: "data-idealy-mission" });
 
-              writeWaitingStatus("thinking", "Planification de la construction...");
+              writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "planning"));
               missionPlan = await createIdealyMissionPlan({
                 idempotencyKey: `${idempotencyKey}:plan`,
                 ...(directModel ? { model: directModel.edgeModel } : {}),
