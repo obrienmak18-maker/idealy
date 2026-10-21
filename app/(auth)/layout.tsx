@@ -55,7 +55,7 @@ async function AuthShell({ children }: { children: React.ReactNode }) {
     authShellCopy[locale === "en" || locale === "es" ? locale : "fr"];
 
   return (
-    <div className="relative flex min-h-dvh w-full overflow-hidden bg-[#0A0D14]">
+    <div className="idealy-auth-shell relative flex min-h-dvh w-full overflow-hidden bg-[#0A0D14]">
       <CosmicHorizon />
 
       {/* High-Energy Colliding Orbs bringing vibrant life to the auth screen */}
