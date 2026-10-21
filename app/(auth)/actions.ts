@@ -96,7 +96,9 @@ export const login = async (
     let turnstileProof: string | undefined;
     if (isTurnstileRequired()) {
       const challenge = await verifyTurnstileToken(
-        String(formData.get("turnstileToken") ?? "")
+        String(formData.get("turnstileToken") ?? ""),
+        undefined,
+        "login"
       );
       if (!challenge.ok) {
         return { status: "turnstile_failed" };
@@ -151,7 +153,9 @@ export const register = async (
     let turnstileProof: string | undefined;
     if (isTurnstileRequired()) {
       const challenge = await verifyTurnstileToken(
-        String(formData.get("turnstileToken") ?? "")
+        String(formData.get("turnstileToken") ?? ""),
+        undefined,
+        "register"
       );
       if (!challenge.ok) {
         return { status: "turnstile_failed" };
