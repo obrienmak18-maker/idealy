@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
+import { AnimatePresence, motion } from "framer-motion";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
@@ -247,23 +248,11 @@ function PureMessages({
               </div>
             </div>
 
-            {activeHomeTab === "suggestions" ? (
-              <SuggestedActions
-                chatId={chatId}
-                onSuggestionSelect={onSuggestionSelect}
-                selectedVisibilityType={selectedVisibilityType}
-                sendMessage={sendMessage}
-              />
-            ) : activeHomeTab === "templates" ? (
-              <WorkspaceTemplates onSelectTemplate={handleSelectTemplate} />
-            ) : (
-              <div className="w-full">
-                <IntakeSpecificationForm
-                  onCancel={handleIntakeCancel}
-                  onSubmit={handleIntakeSubmit}
-                />
-              </div>
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div key={activeHomeTab} className="w-full" initial={{ opacity: 0, y: 8, filter: "blur(3px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -6, filter: "blur(2px)" }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}>
+                {activeHomeTab === "suggestions" ? <SuggestedActions chatId={chatId} onSuggestionSelect={onSuggestionSelect} selectedVisibilityType={selectedVisibilityType} sendMessage={sendMessage} /> : activeHomeTab === "templates" ? <WorkspaceTemplates onSelectTemplate={handleSelectTemplate} /> : <IntakeSpecificationForm onCancel={handleIntakeCancel} onSubmit={handleIntakeSubmit} />}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       )}
