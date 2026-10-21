@@ -32,7 +32,7 @@ export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps
         "Gestion des leads, suivi des opportunités et tableau Kanban interactif."
       ),
       prompt:
-        "Je veux construire un CRM complet avec pipeline commercial. Inclus un tableau Kanban avec colonnes (Lead, Contacté, Proposition, Gagné), une fiche détaillée par contact, des filtres de recherche et des statistiques clés.",
+        language.startsWith("en") ? "Build a CRM web app with a sales Kanban pipeline, contact profiles, search and filters, follow-up reminders and a dashboard of deals and revenue." : language.startsWith("es") ? "Crea una aplicación CRM con un tablero Kanban comercial, perfiles de contactos, búsqueda y filtros, recordatorios y un panel de oportunidades e ingresos." : "Crée une application CRM avec pipeline commercial Kanban, fiches contacts, recherche et filtres, rappels de suivi et tableau de bord des opportunités et revenus.",
     },
     {
       id: "saas",
@@ -45,7 +45,7 @@ export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps
         "Métriques en temps réel, graphiques de conversion et gestion d'équipe."
       ),
       prompt:
-        "Construis un dashboard SaaS moderne et réactif. Inclus des KPIs (MRR, Churn, Utilisateurs actifs), un graphique d'évolution sur 30 jours, un tableau des dernières transactions avec filtres et un sélecteur de période.",
+        language.startsWith("en") ? "Build a SaaS analytics dashboard with revenue, churn and active-user KPIs, a 30-day chart, recent transactions, filters and a date-range selector." : language.startsWith("es") ? "Crea un panel de analítica SaaS con ingresos, cancelaciones y usuarios activos, gráfico de 30 días, transacciones recientes, filtros y selector de fechas." : "Crée un tableau de bord analytique SaaS avec revenus, résiliation et utilisateurs actifs, graphique sur 30 jours, transactions récentes, filtres et sélection de période.",
     },
     {
       id: "eLearning",
@@ -58,7 +58,7 @@ export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps
         "Modules de formation interactifs, quiz et suivi de progression des élèves."
       ),
       prompt:
-        "Aide-moi à créer une plateforme e-Learning interactive. Conçois le parcours avec catalogue de cours, vue détaillée du module avec lecteur vidéo et transcription, barre de progression globale et quiz interactif en fin de leçon.",
+        language.startsWith("en") ? "Build a school management web app with student records, attendance, tuition payments, class results, parent access and a dashboard for school administrators. Start with a polished responsive frontend and realistic sample data." : language.startsWith("es") ? "Crea una aplicación web de gestión escolar con fichas de alumnos, asistencia, pagos, resultados, acceso para padres y un panel para la dirección. Empieza con una interfaz adaptable y datos de ejemplo realistas." : "Crée une application web de gestion scolaire avec dossiers des élèves, présences, paiements, résultats, accès des parents et tableau de bord de la direction. Commence par une interface responsive soignée et des données d’exemple réalistes.",
     },
     {
       id: "marketplace",
@@ -71,7 +71,7 @@ export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps
         "Authentification multi-rôles, paiements récurrents et catalogue de produits."
       ),
       prompt:
-        "Je souhaite développer une marketplace moderne. Intègre un catalogue de services avec filtres par catégorie, des fiches prestataires détaillées, un panier avec estimation du prix et un flux de checkout avec simulation de paiement.",
+        language.startsWith("en") ? "Build a modern marketplace with searchable listings, category filters, seller profiles, favorites, a shopping cart, order summary and a simulated checkout. Make it feel like a real product, not a document." : language.startsWith("es") ? "Crea un marketplace moderno con catálogo filtrable, perfiles de vendedores, favoritos, carrito, resumen del pedido y pago simulado. Debe parecer un producto real, no un documento." : "Crée une marketplace moderne avec catalogue filtrable, profils vendeurs, favoris, panier, récapitulatif de commande et paiement simulé. Le résultat doit ressembler à un vrai produit, pas à un document.",
     },
   ];
 
