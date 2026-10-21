@@ -18,10 +18,10 @@ export type PreviewCompilationResult = {
  * Analyzes App Router, Pages Router, and HTML files.
  */
 function routePathFromFile(filePath: string): string | null {
-  const path = filePath.replace(/^\\/+/, "").replaceAll("\\\\", "/");
+  const path = filePath.replace(/^\/+/, "").replaceAll("\\", "/");
 
   // App Router: route groups such as (marketing) do not appear in the URL.
-  const appMatch = path.match(/^(?:src\\/)?app\\/(?:(.+)\\/)?page\\.(?:tsx|jsx|js|ts)$/);
+  const appMatch = path.match(/^(?:src\/)?app\/(?:(.+)\/)?page\.(?:tsx|jsx|js|ts)$/);
   if (appMatch) {
     const segments = (appMatch[1] ?? "")
       .split("/")
@@ -30,11 +30,11 @@ function routePathFromFile(filePath: string): string | null {
         !(segment.startsWith("(") && segment.endsWith(")")) &&
         !segment.startsWith("@")
       );
-    return `/${segments.join("/")}`.replace(/\\/+/g, "/");
+    return ("/" + segments.join("/")).replace(/\/+/g, "/");
   }
 
   // Pages Router: API handlers and framework files are not UI pages.
-  const pagesMatch = path.match(/^(?:src\\/)?pages\\/(.+)\\.(?:tsx|jsx|js|ts)$/);
+  const pagesMatch = path.match(/^(?:src\/)?pages\/(.+)\.(?:tsx|jsx|js|ts)$/);
   if (pagesMatch) {
     let pagePath = pagesMatch[1];
     if (
@@ -46,14 +46,14 @@ function routePathFromFile(filePath: string): string | null {
     }
     if (pagePath === "index") pagePath = "";
     else if (pagePath.endsWith("/index")) pagePath = pagePath.slice(0, -6);
-    return `/${pagePath}`.replace(/\\/+/g, "/");
+    return ("/" + pagePath).replace(/\/+/g, "/");
   }
 
   // Static HTML pages, including index.html at the project root.
-  const htmlMatch = path.match(/^(?:public\\/)?(.+)\\.html$/);
+  const htmlMatch = path.match(/^(?:public\/)?(.+)\.html$/);
   if (htmlMatch) {
     const htmlPath = htmlMatch[1] === "index" ? "" : htmlMatch[1];
-    return `/${htmlPath}`.replace(/\\/+/g, "/");
+    return ("/" + htmlPath).replace(/\/+/g, "/");
   }
 
   return null;
@@ -82,7 +82,7 @@ export function extractAvailableRoutes(
             .slice(1)
             .split("/")
             .map((segment) =>
-              segment.replace(/^\\[|\\]$/g, "").replace(/[-_]/g, " ")
+              segment.replace(/^\[|\]$/g, "").replace(/[-_]/g, " ")
             )
             .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
             .join(" / ");
