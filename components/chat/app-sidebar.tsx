@@ -79,7 +79,7 @@ function planDisplayName(plan: string | undefined, language: string): string {
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { burnDownPercentage, currentWay } = useGamificationStore();
   const { setOpenMobile, toggleSidebar, state } = useSidebar();
   const { mutate } = useSWRConfig();
