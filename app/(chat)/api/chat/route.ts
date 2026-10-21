@@ -792,10 +792,11 @@ export async function POST(request: Request) {
                 ...(directModel ? { provider: directModel.edgeProvider } : {}),
                 request,
                 way: activeWay,
+                requestedAgent,
               });
               dataStream.write({ data: missionPlan, type: "data-idealy-plan" });
               await updateIdealyMission({
-                dna: { intentCategory, plan: missionPlan, stage: "planned" },
+                dna: { intentCategory, plan: missionPlan, stage: "planned", ...(requestedAgent ? { requestedAgent } : {}) },
                 missionId,
                 request,
                 status: "planned",
