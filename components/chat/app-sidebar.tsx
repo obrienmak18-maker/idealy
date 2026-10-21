@@ -64,16 +64,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { LanguageSwitcher } from "@/components/branding/language-switcher";
 
 /** Capitalise first letter of plan name for display. */
-function planDisplayName(plan: string | undefined): string {
+function planDisplayName(plan: string | undefined, language: string): string {
   if (!plan) {
     return "—";
   }
-  const names: Record<string, string> = {
-    business: "Business",
-    free: "Découverte",
-    pro: "Pro",
+  const names: Record<string, Record<string, string>> = {
+    fr: { business: "Business", free: "Découverte", pro: "Pro" },
+    en: { business: "Business", free: "Free", pro: "Pro" },
+    es: { business: "Business", free: "Gratis", pro: "Pro" },
   };
-  return names[plan] ?? plan.charAt(0).toUpperCase() + plan.slice(1);
+  const localized = names[language] ?? names.fr;
+  return localized[plan] ?? plan.charAt(0).toUpperCase() + plan.slice(1);
 }
 
 export function AppSidebar({ user }: { user: User | undefined }) {
@@ -304,11 +305,11 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    aria-label="Options du workspace"
+                    aria-label={t("sidebar.workspaceOptions", "Workspace options")}
                     className="shrink-0 rounded-lg p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
                     type="button"
                   >
-                    <span className="sr-only">Options</span>
+                    <span className="sr-only">{t("sidebar.options", "Options")}</span>
                     <div className="flex size-4 flex-col items-center justify-center gap-0.5">
                       <span className="size-0.5 rounded-full bg-current" />
                       <span className="size-0.5 rounded-full bg-current" />
@@ -324,7 +325,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   <div className="mb-1 rounded-lg bg-gradient-to-br from-violet-500/10 via-card to-orange-400/10 px-3 py-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-semibold">
-                        {powerLoading ? "—" : `Plan ${planDisplayName(powerStatus?.plan)}`}
+                        {powerLoading ? "—" : `Plan ${planDisplayName(powerStatus?.plan, language)}`}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         {powerLoading
@@ -335,36 +336,36 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       </span>
                     </div>
                     <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                      Débloquez plus de missions, de connecteurs et de générations.
+                      {t("sidebar.planUnlock", "Unlock more missions, connectors, and generations.")}
                     </p>
                     <Link
                       className="mt-2 inline-flex rounded-md bg-foreground px-2.5 py-1 text-[10px] font-medium text-background hover:opacity-85"
                       href="/settings#billing"
                     >
-                      Voir les offres
+                      {t("sidebar.viewPlans", "View plans")}
                     </Link>
                   </div>
                   <DropdownMenuItem asChild>
-                    <Link href="/settings">Général</Link>
+                    <Link href="/settings">{t("sidebar.general", "General")}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/settings/appearance">Apparence</Link>
+                    <Link href="/settings/appearance">{t("sidebar.appearance", "Appearance")}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/settings/notifications">Notifications</Link>
+                    <Link href="/settings/notifications">{t("sidebar.notifications", "Notifications")}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/settings/privacy">Confidentialité</Link>
+                    <Link href="/settings/privacy">{t("sidebar.privacy", "Privacy")}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/settings/data">Données et mémoire</Link>
+                    <Link href="/settings/data">{t("sidebar.dataMemory", "Data & memory")}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/settings/shortcuts">Raccourcis</Link>
+                    <Link href="/settings/shortcuts">{t("sidebar.shortcuts", "Shortcuts")}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/settings#billing">Facturation et plan</Link>
+                    <Link href="/settings#billing">{t("sidebar.billingPlan", "Billing & plan")}</Link>
                   </DropdownMenuItem>
                   {user ? (
                     <>
@@ -374,7 +375,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                         onClick={handleShowDeleteAllDialog}
                       >
                         <TrashIcon className="mr-2 size-3.5" />
-                        <span>Effacer l'historique</span>
+                        <span>{t("sidebar.clearHistory", "Clear history")}</span>
                       </DropdownMenuItem>
                     </>
                   ) : null}
