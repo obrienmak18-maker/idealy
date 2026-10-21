@@ -20,6 +20,9 @@ const toolHeader = await readFile(new URL("../components/ai-elements/tool.tsx", 
 const missionPlan = await readFile(new URL("../components/chat/mission-plan-card.tsx", import.meta.url), "utf8");
 const missionPlanApi = await readFile(new URL("../app/api/idealy/missions/[missionId]/plan/route.ts", import.meta.url), "utf8");
 const missionPlanning = await readFile(new URL("../lib/idealy/backend-adapter.ts", import.meta.url), "utf8");
+const edgeChatTools = await readFile(new URL("../supabase/functions/process-ai-request/chatTools.ts", import.meta.url), "utf8");
+const edgeToolCalling = await readFile(new URL("../supabase/functions/process-ai-request/toolCalling.ts", import.meta.url), "utf8");
+const edgeRequest = await readFile(new URL("../supabase/functions/process-ai-request/index.ts", import.meta.url), "utf8");
 
 assert.match(schema, /new URL\(value\)\.protocol === "https:"/, "Les pièces jointes doivent utiliser HTTPS.");
 assert.match(schema, /parts: z\.array\(partSchema\)\.min\(1\)\.max\(8\)/, "Le nombre de parties d’un message utilisateur doit être borné.");
@@ -52,5 +55,22 @@ assert.match(missionPlan, /Valider et lancer/, "Mission launch requires a clear 
 assert.match(missionPlan, /beginEditing/, "The mission plan must be editable before launch.");
 assert.match(missionPlanApi, /export async function PATCH/, "Plan edits must be persisted through a real API endpoint.");
 assert.match(missionPlanApi, /user_id=eq\./, "Plan editing must be scoped to the authenticated mission owner.");
+assert.match(edgeRequest, /createToolEnabledChatResponse/, "The production Supabase Edge route must support real tool calls.");
+assert.match(edgeRequest, /shouldUseChatTools\(prompt\)/, "Production tool execution must be selected for research and media prompts.");
+assert.match(edgeRequest, /input\.workspaceStream && input\.missionId/, "Tool calling must preserve the strict workspace file-stream path.");
+for (const expected of ["webSearch", "searchImages", "generateImage", "https://api.exa.ai/search", "https://api.pexels.com/v1/search", "https://fal.run/fal-ai/flux/schnell", "EXA_API_KEY", "PEXELS_API_KEY", "FAL_KEY"]) {
+  assert.ok(edgeChatTools.includes(expected), `The production chat tools backend is missing ${expected}.`);
+}
+assert.match(edgeChatTools, /httpsUrl/, "Tool results must validate external URLs before they reach the UI.");
+assert.match(edgeToolCalling, /MAX_TOOL_EXECUTIONS = 3/, "Tool execution must be bounded to avoid uncontrolled tool loops.");
+assert.match(edgeToolCalling, /MAX_TOOL_ROUNDS = 2/, "Tool calls must have a bounded multi-round loop.");
+assert.match(edgeToolCalling, /state: "input-available"/, "A real tool call must publish an in-progress event.");
+assert.match(edgeToolCalling, /state: finalState/, "A completed tool call must publish its real result state.");
+assert.match(route, /parsed\.type === "idealy_tool_activity"/, "The production stream adapter must forward real tool activity.");
+assert.match(route, /data-idealy-tool-activity/, "Tool activity must enter the typed UI message stream.");
+assert.match(types, /"idealy-tool-activity": IdealyChatToolActivity/, "The custom stream event must have a typed UI contract.");
+assert.match(message, /type === "data-idealy-tool-activity"/, "The chat must render Edge tool activity cards.");
+assert.match(activityCard, /open=\{isOpen\} onOpenChange=\{setIsOpen\}/, "Tool cards must be manually collapsible after completion.");
+assert.match(activityCard, /setIsOpen\(!isTerminal\)/, "Tool cards must auto-collapse when the real result arrives.");
 
 console.log("Chat request contract passed.");
