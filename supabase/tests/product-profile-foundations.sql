@@ -61,7 +61,7 @@ BEGIN
 
   IF NOT has_function_privilege(
     'authenticated',
-    'public.complete_my_onboarding(text,text,text,text,text,text,text,text,text,text)',
+    'public.complete_my_onboarding(text,text,text,text,text,text,text,text,text)',
     'EXECUTE'
   ) THEN
     RAISE EXCEPTION 'authenticated must be able to complete its own onboarding';
@@ -69,14 +69,14 @@ BEGIN
 
   IF has_function_privilege(
     'anon',
-    'public.complete_my_onboarding(text,text,text,text,text,text,text,text,text,text)',
+    'public.complete_my_onboarding(text,text,text,text,text,text,text,text,text)',
     'EXECUTE'
   ) THEN
     RAISE EXCEPTION 'anon must not complete onboarding';
   END IF;
 
   SELECT pg_get_functiondef(
-    'public.complete_my_onboarding(text,text,text,text,text,text,text,text,text,text)'::regprocedure
+    'public.complete_my_onboarding(text,text,text,text,text,text,text,text,text)'::regprocedure
   )
   INTO onboarding_definition;
   IF position('v_user_id UUID := auth.uid()' IN onboarding_definition) = 0
