@@ -134,3 +134,4 @@ $$;
 REVOKE ALL ON FUNCTION public.complete_my_onboarding(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT)
   FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.complete_my_onboarding(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT)
+  TO authenticated;
