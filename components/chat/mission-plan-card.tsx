@@ -101,7 +101,7 @@ export function MissionPlanCard() {
   if (!missionId || !plan) return null;
   const missionPlan = plan;
 
-  function openWorkspace() {
+  function openWorkspace(view: "preview" | "code" = "preview") {
     setArtifact((current) => ({
       ...current,
       isVisible: true,
@@ -111,17 +111,17 @@ export function MissionPlanCard() {
     }));
     setMetadata((current: Record<string, unknown> | null) => ({
       ...(current ?? {}),
-      activeTab: "preview",
+      activeTab: view,
     }));
     window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("idealy:set-view", { detail: "preview" }));
+      window.dispatchEvent(new CustomEvent("idealy:set-view", { detail: view }));
     }, 0);
   }
 
   function handleLaunch() {
-    if (isSubmitting || isActive || requestAlreadyQueued || isValidated) return;
+    if (isSubmitting || isActive || requestAlreadyQueued || isValidated || needsUserInput) return;
     setIsSubmitting(true);
-    openWorkspace();
+    openWorkspace("code");
     setMetadata((current: Record<string, unknown> | null) => ({
       ...(current ?? {}),
       missionRunRequested: true,
