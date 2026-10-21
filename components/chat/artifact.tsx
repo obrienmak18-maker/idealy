@@ -28,6 +28,8 @@ import { imageArtifact } from "@/artifacts/image/client";
 import { sheetArtifact } from "@/artifacts/sheet/client";
 import { textArtifact } from "@/artifacts/text/client";
 import { useArtifact } from "@/hooks/use-artifact";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 import type { Document, Vote } from "@/lib/db/schema";
 import type { MissionFile } from "@/lib/idealy/mission-files";
@@ -79,6 +81,16 @@ export type UIArtifact = {
   };
 };
 
+function missionFileStatusLabel(status: MissionFile["status"]) {
+  switch (status) {
+    case "pending": return "En attente";
+    case "writing": return "Écriture";
+    case "saved": return "Enregistré";
+    case "validated": return "Validé";
+    case "error": return "Erreur";
+  }
+}
+
 function PureArtifact({
   addToolApprovalResponse: _addToolApprovalResponse,
   chatId: _chatId,
@@ -115,6 +127,14 @@ function PureArtifact({
   selectedModelId: string;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+  const { currentWay } = useGamificationStore();
+  const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
+  const builderAgent =
+    activeWayData.agents.find((agent) => agent.role.toLowerCase().includes("builder")) ??
+    activeWayData.agents[1];
+  const reviewerAgent =
+    activeWayData.agents.find((agent) => /review|qa|audit|vérification/i.test(agent.role)) ??
+    activeWayData.agents[activeWayData.agents.length - 1];
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
   const {
@@ -128,6 +148,18 @@ function PureArtifact({
     fetcher
   );
   const missionId = typeof metadata?.missionId === "string" ? metadata.missionId : null;
+  const missionSquadStatus =
+    typeof metadata?.missionSquadStatus === "string"
+      ? metadata.missionSquadStatus
+      : undefined;
+  const missionActiveAgentName =
+    typeof metadata?.missionActiveAgentName === "string"
+      ? metadata.missionActiveAgentName
+      : null;
+  const missionActiveAgentRole =
+    typeof metadata?.missionActiveAgentRole === "string"
+      ? metadata.missionActiveAgentRole
+      : null;
   const missionFileSequence = Number(metadata?.missionFileLastSequence ?? 0);
   const missionWorkspaceKey = missionId && !isDemoMode
     ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/idealy/missions/${missionId}/files?afterSequence=${missionFileSequence}`
@@ -516,6 +548,12 @@ function PureArtifact({
   }, [artifact.preview, artifact.content, artifact.status, missionFiles, previewPath]);
 
   const previewHtml = compiledPreview.html;
+  const isMissionBuildActive =
+    Boolean(missionId) &&
+    artifact.kind === "code" &&
+    ["building", "reviewing", "auto_correction_started"].includes(
+      missionSquadStatus ?? ""
+    );
 
   const previewScrollbarStyle =
     '<style>html{scrollbar-width:none;-ms-overflow-style:none}html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}body{overflow-x:hidden}</style>';
@@ -591,53 +629,77 @@ function PureArtifact({
                   srcDoc={previewHtmlForFrameWithPath}
                   title="Generated application preview"
                 />
-                {artifact.status === "streaming" ? (() => {
-                  // Derive the precise phase label from real squad lifecycle signals.
-                  // Priority: squad correction events > file events > default building state.
-                  const squadStatus = typeof metadata?.missionSquadStatus === "string"
-                    ? metadata.missionSquadStatus as string
-                    : undefined;
-                  const fileStatus = typeof metadata?.missionFileStatus === "string"
-                    ? metadata.missionFileStatus as string
-                    : undefined;
+                {isMissionBuildActive ? (() => {
+                  const squadStatus = missionSquadStatus;
+                  const role = (missionActiveAgentRole ?? "").toLocaleLowerCase("fr");
+                  const agentName =
+                    missionActiveAgentName ??
+                    (squadStatus === "reviewing" ? reviewerAgent?.name : builderAgent?.name) ??
+                    activeWayData.chiefName ??
+                    "Escouade Idealy";
 
-                  let phaseTitle = "Idealy construit votre application";
-                  let phaseDetail = "L'Architecte analyse la demande et structure le plan.";
-                  let phaseBadge = "Démarrage";
+                  let phaseTitle = missionActiveAgentName
+                    ? `${missionActiveAgentName} travaille sur l’application`
+                    : "L’escouade construit votre application";
+                  let phaseDetail = "Les agents coordonnent les prochaines étapes et enregistrent les fichiers du projet.";
+                  let phaseBadge = "Construction";
 
                   if (squadStatus === "auto_correction_started") {
-                    phaseTitle = "Correction automatique en cours";
-                    phaseDetail = "Le Reviewer a détecté des incohérences. Maël Forge applique les corrections.";
-                    phaseBadge = "Correction auto";
-                  } else if (squadStatus === "building" || fileStatus === "file_started" || fileStatus === "file_content") {
-                    phaseTitle = "Builder en cours de génération";
-                    phaseDetail = "Maël Forge écrit les fichiers. Ils apparaîtront dans l'onglet Code dès qu'ils sont sauvegardés.";
-                    phaseBadge = "Génération";
-                  } else if (fileStatus === "file_saved" || fileStatus === "file_validated") {
-                    phaseTitle = "Fichiers enregistrés — Reviewer actif";
-                    phaseDetail = "Iris Vale inspecte la cohérence structurelle des fichiers générés.";
+                    phaseTitle = `${agentName} corrige le projet`;
+                    phaseDetail = "Une vérification a identifié des problèmes. Les corrections sont appliquées avant la validation finale.";
+                    phaseBadge = "Correction";
+                  } else if (
+                    squadStatus === "reviewing" ||
+                    /review|quality|\bqa\b|audit|vérification/i.test(role)
+                  ) {
+                    phaseTitle = `${agentName} vérifie le résultat`;
+                    phaseDetail = "La cohérence du workspace et les critères de réussite sont en cours de vérification.";
                     phaseBadge = "Vérification";
-                  } else if (squadStatus === "planned") {
-                    phaseTitle = "Plan établi";
-                    phaseDetail = "Le plan est prêt. L'escouade démarre la génération.";
-                    phaseBadge = "Planifié";
+                  } else if (/builder|construction|implémentation|full.?stack/i.test(role)) {
+                    phaseTitle = `${agentName} écrit les fichiers`;
+                    phaseDetail = "Les fichiers réels apparaissent dans l’onglet Code à mesure qu’ils sont enregistrés.";
+                    phaseBadge = "Génération";
+                  } else if (/design|ui.?ux|expérience produit/i.test(role)) {
+                    phaseTitle = `${agentName} prépare l’interface`;
+                    phaseDetail = "L’agent de conception précise la structure visuelle et les règles d’accessibilité.";
+                    phaseBadge = "Design";
+                  } else if (/architecture|système|sécurité|performance|risque/i.test(role)) {
+                    phaseTitle = `${agentName} vérifie l’architecture`;
+                    phaseDetail = "Les contraintes techniques et les risques sont examinés avant la validation.";
+                    phaseBadge = "Architecture";
+                  } else if (/chef|coordination|architecte/i.test(role)) {
+                    phaseTitle = `${agentName} coordonne la mission`;
+                    phaseDetail = "Le plan est traduit en étapes concrètes pour les agents spécialisés.";
+                    phaseBadge = "Coordination";
                   }
 
                   return (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden bg-background/92 backdrop-blur-xl">
-                    <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-sky-400/15 blur-3xl" />
-                    <div className="pointer-events-none absolute -bottom-24 -right-24 size-80 rounded-full bg-violet-500/15 blur-3xl" />
-                    <div className="relative flex max-w-xs flex-col items-center px-6 text-center">
-                      <div className="idealy-build-mark mb-6 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_80px_rgba(56,189,248,0.16)]">
-                        <IdealyMark animated className="size-16" size={64} />
-                      </div>
-                      <p className="text-sm font-semibold tracking-[-0.01em] text-sidebar-foreground">{phaseTitle}</p>
-                      <p className="mt-2 text-xs leading-5 text-muted-foreground">{phaseDetail}</p>
-                      <div aria-live="polite" className="mt-6 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-300/90">
-                        <span className="size-1.5 animate-pulse rounded-full bg-sky-300" /> {phaseBadge}
+                    <div
+                      aria-live="polite"
+                      className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden bg-background/92 backdrop-blur-xl"
+                      data-testid="mission-build-overlay"
+                      role="status"
+                    >
+                      <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-sky-400/15 blur-3xl" />
+                      <div className="pointer-events-none absolute -bottom-24 -right-24 size-80 rounded-full bg-violet-500/15 blur-3xl" />
+                      <div className="relative flex max-w-xs flex-col items-center px-6 text-center">
+                        <div className="idealy-build-mark mb-6 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_80px_rgba(56,189,248,0.16)]">
+                          <IdealyMark animated className="size-16" size={64} />
+                        </div>
+                        <p className="text-sm font-semibold tracking-[-0.01em] text-sidebar-foreground">{phaseTitle}</p>
+                        <p className="mt-2 text-xs leading-5 text-muted-foreground">{phaseDetail}</p>
+                        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[10px] font-medium text-muted-foreground">
+                          <span className="max-w-48 truncate font-semibold text-foreground/90">{agentName}</span>
+                          {missionActiveAgentRole ? (
+                            <span className="max-w-36 truncate">{missionActiveAgentRole}</span>
+                          ) : null}
+                        </div>
+                        <div className="mt-4 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-300/90">
+                          <span className="size-1.5 animate-pulse rounded-full bg-sky-300" />
+                          {phaseBadge}
+                        </div>
                       </div>
                     </div>
-                  </div>
                   );
                 })() : null}
               </div>
@@ -795,7 +857,11 @@ function PureArtifact({
                     >
                       {isJson ? <FileJson className={`size-3.5 ${fileColor}`} /> : <FileCode2 className={`size-3.5 ${fileColor}`} />}
                       <span className="min-w-0 flex-1 truncate">{file.path}</span>
-                      <span className="text-[9px] uppercase tracking-[0.08em] opacity-70">{file.status}</span>
+                      <span
+                        aria-label={`Statut du fichier : ${missionFileStatusLabel(file.status)}`}
+                        className="shrink-0 text-[9px] uppercase tracking-[0.08em] opacity-80"
+                        title={missionFileStatusLabel(file.status)}
+                      >{missionFileStatusLabel(file.status)}</span>
                     </button>
                   );
                 }) : (
