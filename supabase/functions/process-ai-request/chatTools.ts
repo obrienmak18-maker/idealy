@@ -102,8 +102,7 @@ function configuredError(message: string) {
 async function searchWeb(args: JsonRecord, signal: AbortSignal) {
   const query = text(args.query, 500);
   const apiKey = Deno.env.get("EXA_API_KEY")?.trim()
-    || Deno.env.get("EXA_AI_API_KEY")?.trim()
-
+    || Deno.env.get("EXA_AI_API_KEY")?.trim();
 
   if (!apiKey) return configuredError("La recherche Web n’est pas configurée côté serveur (EXA_API_KEY).");
   if (query.length < 2) return { status: "error", message: "La requête de recherche est trop courte.", results: [] };
