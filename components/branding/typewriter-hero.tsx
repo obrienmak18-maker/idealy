@@ -8,19 +8,19 @@ type TypewriterHeroProps = {
 
 const copy = {
   fr: {
-    label: "Votre point de départ",
-    title: "Parlez de votre idée à l’IA",
-    description: "Idealy la transforme en mission et en workspace visible.",
+    label: "Commencez ici",
+    title: "Décrivez ce que vous voulez construire",
+    description: "Idealy structure votre demande et vous guide jusqu’à un résultat consultable.",
   },
   en: {
     label: "Start here",
-    title: "Talk through your idea with AI",
-    description: "Idealy turns it into a mission and a visible workspace.",
+    title: "Describe what you want to build",
+    description: "Idealy structures your request and guides you toward a reviewable result.",
   },
   es: {
     label: "Empieza aquí",
-    title: "Cuéntale tu idea a la IA",
-    description: "Idealy la convierte en una misión y un espacio de trabajo visible.",
+    title: "Describe lo que quieres construir",
+    description: "Idealy organiza tu solicitud y te guía hasta un resultado que puedes revisar.",
   },
 } as const;
 
