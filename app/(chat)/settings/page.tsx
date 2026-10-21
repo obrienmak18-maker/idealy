@@ -205,6 +205,17 @@ export default function SettingsIndex() {
           setSelectedWay(payload.way);
           setWay(payload.way);
         }
+        const hasSavedLocaleCookie = document.cookie
+          .split(";")
+          .some((part) => part.trim().startsWith("NEXT_LOCALE="));
+        if (
+          !hasSavedLocaleCookie &&
+          (payload.preferredLanguage === "fr" ||
+            payload.preferredLanguage === "en" ||
+            payload.preferredLanguage === "es")
+        ) {
+          setLanguage(payload.preferredLanguage);
+        }
         if (typeof payload.timezone === "string" && payload.timezone.trim()) {
           setTimezone(payload.timezone);
         }
@@ -221,7 +232,7 @@ export default function SettingsIndex() {
     return () => {
       active = false;
     };
-  }, [setWay]);
+  }, [setLanguage, setWay]);
 
   async function chooseWay(nextWay: IdealyWay) {
     if (nextWay === selectedWay || savingWay) return;
