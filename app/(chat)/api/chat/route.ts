@@ -243,6 +243,7 @@ async function streamIdealyEdgeResponse({
       ...(missionId ? { missionId, workspaceStream: true } : {}),
       maxTokens: 8000,
       mode: "auto",
+      language: language ?? "fr",
       prompt: getIdealyPrompt(messages),
       stream: true,
       systemPrompt: `${systemPrompt({
