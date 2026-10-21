@@ -5,14 +5,12 @@ import {
   ArrowLeftIcon,
   SearchIcon,
   PlusIcon,
-  CheckIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { IdealyOrbitalDisc } from "@/components/connectors/idealy-orbital-disc";
 import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import { listConnectorDefinitions } from "@/lib/idealy/connectors";
-import { useTranslation } from "@/lib/i18n/provider";
 import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 
 const CONNECTOR_CATEGORY_BADGES: Record<string, string> = {
@@ -53,7 +51,6 @@ const FILTER_TABS = [
 ];
 
 export default function PluginsPage() {
-  const { language } = useTranslation();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const connectors = listConnectorDefinitions();
 
@@ -138,8 +135,8 @@ export default function PluginsPage() {
         setStatusState("ready");
         setStatusMessage(
           liveActive.length > 0
-            ? `${liveActive.length} autorisation(s) active(s) confirmée(s) par le backend.`
-            : "Aucune autorisation OAuth active et prête côté serveur n’a été confirmée."
+            ? `${liveActive.length} autorisation(s) OAuth enregistrée(s), avec la configuration serveur disponible.`
+            : "Aucune autorisation OAuth active avec configuration serveur disponible n’a été trouvée."
         );
       } catch (error) {
         if (!active || controller.signal.aborted) return;
@@ -234,7 +231,11 @@ export default function PluginsPage() {
 
     setConnectingId(id);
     try {
-      const response = await fetch("/api/idealy/connectors/start", {
+      const startEndpoint =
+        connector.provider === "vercel"
+          ? "/api/idealy/connectors/vercel/start"
+          : "/api/idealy/connectors/start";
+      const response = await fetch(startEndpoint, {
         body: JSON.stringify({ provider: connector.provider }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -283,6 +284,9 @@ export default function PluginsPage() {
           </h1>
           <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground">
             Relie tes outils pour donner à Idealy les autorisations dont il a réellement besoin.
+          </p>
+          <p className="mt-2 max-w-3xl text-xs leading-relaxed text-muted-foreground">
+            Le statut provient du backend et du dernier retour OAuth. Il ne garantit pas, à lui seul, que chaque opération du fournisseur soit disponible.
           </p>
           <p
             aria-live="polite"
