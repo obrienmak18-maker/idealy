@@ -160,8 +160,10 @@ export function PlanChoices({ options, onSelectOption }: PlanChoicesProps) {
                 "group flex min-h-28 w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isSelected
                   ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                  : "border-border/70 bg-background hover:border-primary/50 hover:bg-muted/40"
+                  : "border-border/70 bg-background hover:border-primary/50 hover:bg-muted/40",
+                isConfirmed && "cursor-default opacity-75"
               )}
+              disabled={isConfirmed}
               key={`${option.title}-${index}`}
               onClick={() => setSelectedIndex(index)}
               type="button"
@@ -195,7 +197,7 @@ export function PlanChoices({ options, onSelectOption }: PlanChoicesProps) {
 
       {selected ? (
         <div className="mt-3 rounded-xl bg-muted/40 px-3 py-2.5" aria-live="polite">
-          <p className="text-xs font-medium text-foreground">Direction sélectionnée</p>
+          <p className="text-xs font-medium text-foreground">{isConfirmed ? "Choix envoyé dans la conversation" : "Direction sélectionnée"}</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {selected.title} — {selected.description}
           </p>
