@@ -277,7 +277,7 @@ function PureMessages({
                   .map((part) => part.text)
                   .join(" ") ?? "";
               const isAlvinRequested =
-                /(?:^|\\s)@alvin\\b|^\\s*alvin\\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\\s+(?:à\\s+)?alvin\\b|je\\s+veux\\s+(?:parler\\s+à|appeler)\\s+alvin/i.test(
+                /(?:^|\s)@alvin\b|^\s*alvin\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\s+(?:à\s+)?alvin\b|je\s+veux\s+(?:parler\s+à|appeler)\s+alvin/i.test(
                   priorUserText
                 );
 
@@ -318,7 +318,7 @@ function PureMessages({
                 <ThinkingMessage
                   agentAvatar={
                     messages.some((message) => message.role === "assistant") &&
-                    !/(?:^|\\s)@alvin\\b|^\\s*alvin\\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\\s+(?:à\\s+)?alvin\\b|je\\s+veux\\s+(?:parler\\s+à|appeler)\\s+alvin/i.test(
+                    !/(?:^|\s)@alvin\b|^\s*alvin\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\s+(?:à\s+)?alvin\b|je\s+veux\s+(?:parler\s+à|appeler)\s+alvin/i.test(
                       messages
                         .at(-1)
                         ?.parts.filter((part) => part.type === "text")
@@ -330,7 +330,7 @@ function PureMessages({
                   }
                   agentName={
                     messages.some((message) => message.role === "assistant") &&
-                    !/(?:^|\\s)@alvin\\b|^\\s*alvin\\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\\s+(?:à\\s+)?alvin\\b|je\\s+veux\\s+(?:parler\\s+à|appeler)\\s+alvin/i.test(
+                    !/(?:^|\s)@alvin\b|^\s*alvin\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\s+(?:à\s+)?alvin\b|je\s+veux\s+(?:parler\s+à|appeler)\s+alvin/i.test(
                       messages
                         .at(-1)
                         ?.parts.filter((part) => part.type === "text")
