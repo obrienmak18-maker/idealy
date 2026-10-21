@@ -128,7 +128,7 @@ function ResultLink({ url, title, description }: { url: string; title: string; d
   );
 }
 
-function ImageGrid({ images, credits, sourceLabel }: { images: Array<Record<string, unknown>>; credits: boolean; sourceLabel: string }) {
+function ImageGrid({ images, credits, sourceLabel, creditPrefix, creditSuffix }: { images: Array<Record<string, unknown>>; credits: boolean; sourceLabel: string; creditPrefix: string; creditSuffix: string }) {
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {images.slice(0, 6).map((image, index) => {
@@ -144,7 +144,7 @@ function ImageGrid({ images, credits, sourceLabel }: { images: Array<Record<stri
               <img src={imageUrl} alt={alt} loading="lazy" className="h-28 w-full object-cover transition-transform duration-200 hover:scale-[1.025]" />
             </a>
             {credits && photographer ? (
-              <p className="truncate px-2 py-1.5 text-[10px] text-muted-foreground">{photographer}</p>
+              <p className="truncate px-2 py-1.5 text-[10px] text-muted-foreground">{creditPrefix} {photographer} {creditSuffix}</p>
             ) : null}
             {sourceUrl ? (
               <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="block truncate px-2 pb-2 text-[10px] text-primary hover:underline">{credits ? "Pexels" : sourceLabel}</a>
@@ -204,10 +204,11 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
             {friendlyMessage ? <p className={`rounded-lg px-2.5 py-2 text-xs leading-5 ${isFailed || isProviderUnavailable ? "border border-amber-500/25 bg-amber-500/5 text-amber-700 dark:text-amber-300" : "text-muted-foreground"}`}>{friendlyMessage}</p> : null}
             {sources.length ? (
               <div className="space-y-1">
-                <div className="flex items-center justify-between gap-2 px-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{text.sources}</p>
                   <span className="text-[10px] text-muted-foreground">{sourceCount}</span>
                 </div>
+                {stringValue(result?.query) || stringValue(inputData?.query) ? <p className="px-2.5 text-[11px] text-muted-foreground">{text.query}: {stringValue(result?.query) || stringValue(inputData?.query)}</p> : null}
                 {sources.slice(0, 5).map((item, index) => {
                   const url = safeHttpUrl(item.url);
                   if (!url) return null;
@@ -227,7 +228,7 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{isPexels ? text.photos : text.generated}</p>
                   <span className="text-[10px] text-muted-foreground">{images.length}</span>
                 </div>
-                <ImageGrid credits={isPexels} images={images} sourceLabel={text.open} />
+                <ImageGrid credits={isPexels} images={images} sourceLabel={text.open} creditPrefix={text.photographer} creditSuffix={text.onPexels} />
               </>
             ) : !friendlyMessage ? <p className="text-xs text-muted-foreground">{text.noResults}</p> : null}
           </>
