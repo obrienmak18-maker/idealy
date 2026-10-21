@@ -36,6 +36,7 @@ Deno.serve(async (request) => {
       case "figma":
         return hasEnv("FIGMA_CLIENT_ID") && hasEnv("FIGMA_CLIENT_SECRET");
       case "google":
+      case "google-drive":
         return hasEnv("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_CLIENT_ID") &&
           hasEnv("GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET");
       case "notion":
@@ -65,7 +66,7 @@ Deno.serve(async (request) => {
 
   for (const integration of data ?? []) {
     const canonical = canonicalProvider(integration.provider);
-    const serverReady = providerServerReady(integration.provider);
+    const serverReady = providerServerReady(canonical);
     const expiresAt = integration.expires_at ?? null;
     const expired =
       Boolean(expiresAt) &&
