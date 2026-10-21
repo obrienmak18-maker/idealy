@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { classifyIntent } from './intentRouter.ts';
 import { streamUI, type AgentUIPhase } from './streamUI.ts';
+import { createToolEnabledChatResponse } from "./toolCalling.ts";
 import {
   consumeManagedCredit,
   isSupportedProvider,
@@ -41,6 +42,7 @@ type LLMRequest = {
   planOnly?: boolean;
   workspaceStream?: boolean;
   squadRun?: boolean;
+  language?: string;
 };
 
 const DEFAULT_MODELS: Record<Provider, string> = {
@@ -610,6 +612,31 @@ serve(async (req) => {
       : [systemPrompt, languageInstruction].filter(Boolean).join('\n');
     if (effectiveSystemPrompt) messages.push({ role: 'system', content: effectiveSystemPrompt });
     messages.push({ role: 'user', content: prompt });
+
+    // Production chat and ideation can call the same real research/image tools
+    // as the direct AI SDK path. Mission builders keep their strict NDJSON contract.
+    const canUseChatTools =
+      stream &&
+      !input.workspaceStream &&
+      input.planOnly !== true &&
+      input.squadRun !== true &&
+      !input.missionId &&
+      intentCategory !== "EXECUTION" &&
+      resolution.provider !== "anthropic";
+
+    if (canUseChatTools) {
+      return createToolEnabledChatResponse({
+        apiUrl: config.url,
+        apiKey: resolution.apiKey,
+        provider: resolution.provider,
+        model: resolution.model,
+        messages,
+        maxTokens,
+        language: responseLanguage,
+        responseHeaders: headers,
+        requestSignal: req.signal,
+      });
+    }
 
     const llmRes = await fetch(config.url, {
       method: 'POST',
