@@ -28,6 +28,10 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function localizedText(language: "fr" | "en" | "es", fr: string, en: string, es: string) {
+  return language === "en" ? en : language === "es" ? es : fr;
+}
+
 function stringField(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
@@ -97,13 +101,18 @@ function parseToolCalls(value: unknown): ToolCall[] {
   });
 }
 
-function toolFailure(name: string, message: string) {
+function toolFailure(name: string, message: string, language: "fr" | "en" | "es") {
   const kind: ChatToolName = isChatToolName(name) ? name : "webSearch";
+  const localizedMessage = message.includes("pas disponible")
+    ? localizedText(language, "Cette action n’est pas disponible dans le chat.", "This action is not available in chat.", "Esta acción no está disponible en el chat.")
+    : message.includes("Limite d’outils")
+      ? localizedText(language, "Limite d’outils par réponse atteinte. Cette action n’a pas été exécutée.", "The tool limit for this reply was reached. This action was not executed.", "Se alcanzó el límite de herramientas de esta respuesta. Esta acción no se ejecutó.")
+      : localizedText(language, "L’outil est momentanément indisponible. Aucun résultat n’a été inventé.", "The tool is temporarily unavailable. No result was fabricated.", "La herramienta no está disponible temporalmente. No se inventaron resultados.");
   const outputs = kind === "webSearch"
-    ? { status: "error", message, results: [] }
+    ? { status: "error", message: localizedMessage, results: [] }
     : kind === "searchImages"
-      ? { status: "error", message, photos: [] }
-      : { status: "error", message, images: [] };
+      ? { status: "error", message: localizedMessage, photos: [] }
+      : { status: "error", message: localizedMessage, images: [] };
   return outputs as Record<string, unknown>;
 }
 
@@ -161,6 +170,7 @@ async function streamFinalAnswer(input: {
   model: string;
   messages: InputMessage[];
   maxTokens: number;
+  language: "fr" | "en" | "es";
   signal: AbortSignal;
   controller: ReadableStreamDefaultController<Uint8Array>;
   encoder: TextEncoder;
@@ -184,8 +194,8 @@ async function streamFinalAnswer(input: {
   if (!response.ok || !response.body) {
     const status = response.status;
     const message = status === 429
-      ? "Le fournisseur IA est momentanément limité. Les résultats d’outils restent disponibles ci-dessus."
-      : "Les outils ont répondu, mais le fournisseur IA n’a pas pu finaliser la réponse.";
+      ? localizedText(input.language, "Le fournisseur IA est momentanément limité. Les résultats d’outils restent disponibles ci-dessus.", "The AI provider is rate-limited. Tool results remain available above.", "El proveedor de IA está limitado temporalmente. Los resultados de las herramientas siguen disponibles arriba.")
+      : localizedText(input.language, "Les outils ont répondu, mais le fournisseur IA n’a pas pu finaliser la réponse.", "The tools returned results, but the AI provider could not finish the reply.", "Las herramientas devolvieron resultados, pero el proveedor de IA no pudo terminar la respuesta.");
     emitText(input.controller, input.encoder, message);
     return;
   }
@@ -301,8 +311,8 @@ export function createToolEnabledChatResponse(input: {
               const content = await response.text().catch(() => "");
               console.error("Tool-enabled AI request failed", { status: response.status, provider: input.provider, body: content.slice(0, 300) });
               emitText(controller, encoder, response.status === 429
-                ? "Le fournisseur IA est momentanément limité. Réessaie dans quelques instants."
-                : "Le fournisseur IA n’a pas pu répondre à cette demande.");
+                ? localizedText(input.language, "Le fournisseur IA est momentanément limité. Réessaie dans quelques instants.", "The AI provider is rate-limited. Try again shortly.", "El proveedor de IA está limitado temporalmente. Inténtalo de nuevo en unos instantes.")
+                : localizedText(input.language, "Le fournisseur IA n’a pas pu répondre à cette demande.", "The AI provider could not answer this request.", "El proveedor de IA no pudo responder a esta solicitud."));
               emitDone(controller, encoder);
               return;
             }
@@ -312,7 +322,7 @@ export function createToolEnabledChatResponse(input: {
             };
             const assistant = payload.choices?.[0]?.message;
             if (!assistant) {
-              emitText(controller, encoder, "Le fournisseur IA a renvoyé une réponse vide. Réessaie.");
+              emitText(controller, encoder, localizedText(input.language, "Le fournisseur IA a renvoyé une réponse vide. Réessaie.", "The AI provider returned an empty response. Try again.", "El proveedor de IA devolvió una respuesta vacía. Inténtalo de nuevo."));
               emitDone(controller, encoder);
               return;
             }
@@ -320,7 +330,7 @@ export function createToolEnabledChatResponse(input: {
             const toolCalls = parseToolCalls(assistant.tool_calls);
             if (!toolCalls.length) {
               const answer = stringField(assistant.content).trim();
-              emitText(controller, encoder, answer || "Je n’ai pas obtenu de réponse textuelle exploitable.");
+              emitText(controller, encoder, answer || localizedText(input.language, "Je n’ai pas obtenu de réponse textuelle exploitable.", "I did not receive a usable text response.", "No recibí una respuesta de texto utilizable."));
               emitDone(controller, encoder);
               return;
             }
@@ -343,7 +353,7 @@ export function createToolEnabledChatResponse(input: {
               let output: Record<string, unknown>;
               const knownTool = isChatToolName(call.function.name);
               if (!knownTool) {
-                output = toolFailure(call.function.name, "Cette action n’est pas disponible dans le chat.");
+                output = toolFailure(call.function.name, "Cette action n’est pas disponible dans le chat.", input.language);
               } else {
                 const kind = call.function.name;
                 emitToolActivity(controller, encoder, {
@@ -353,7 +363,7 @@ export function createToolEnabledChatResponse(input: {
                   input: args,
                 });
                 if (totalToolCalls >= MAX_TOOL_EXECUTIONS) {
-                  output = toolFailure(call.function.name, "Limite d’outils par réponse atteinte. Cette action n’a pas été exécutée.");
+                  output = toolFailure(call.function.name, "Limite d’outils par réponse atteinte. Cette action n’a pas été exécutée.", input.language);
                 } else if (call.function.name === "generateImage" && generatedImageCalls > 0) {
                   output = { status: "error", message: "Une seule génération d’image est autorisée par réponse.", images: [] };
                 } else {
@@ -367,7 +377,7 @@ export function createToolEnabledChatResponse(input: {
                     });
                   } catch (error) {
                     console.error("Idealy chat tool failed", { tool: call.function.name, error });
-                    output = toolFailure(call.function.name, "L’outil est momentanément indisponible. Aucun résultat n’a été inventé.");
+                    output = toolFailure(call.function.name, "L’outil est momentanément indisponible. Aucun résultat n’a été inventé.", input.language);
                   }
                 }
                 const finalState =
@@ -404,6 +414,7 @@ export function createToolEnabledChatResponse(input: {
                 model: input.model,
                 messages,
                 maxTokens,
+                language: input.language,
                 signal: controllerAbort.signal,
                 controller,
                 encoder,
@@ -412,12 +423,12 @@ export function createToolEnabledChatResponse(input: {
             }
           }
 
-          emitText(controller, encoder, "La recherche a atteint sa limite de sécurité. Consulte les résultats affichés ci-dessus.");
+          emitText(controller, encoder, localizedText(input.language, "La recherche a atteint sa limite de sécurité. Consulte les résultats affichés ci-dessus.", "The search reached its safety limit. Review the results shown above.", "La búsqueda alcanzó su límite de seguridad. Revisa los resultados mostrados arriba."));
           emitDone(controller, encoder);
         } catch (error) {
           if (controllerAbort.signal.aborted) return;
           console.error("Idealy tool-enabled chat failed", error);
-          emitText(controller, encoder, "Une erreur a interrompu la recherche ou la génération. Consulte les résultats déjà affichés, puis réessaie.");
+          emitText(controller, encoder, localizedText(input.language, "Une erreur a interrompu la recherche ou la génération. Consulte les résultats déjà affichés, puis réessaie.", "An error interrupted the search or generation. Review the results already shown, then try again.", "Un error interrumpió la búsqueda o la generación. Revisa los resultados mostrados e inténtalo de nuevo."));
           emitDone(controller, encoder);
         } finally {
           input.requestSignal.removeEventListener("abort", onAbort);
