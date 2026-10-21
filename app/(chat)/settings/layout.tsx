@@ -8,6 +8,7 @@ import {
   KeyboardIcon,
   PaletteIcon,
   ShieldCheckIcon,
+  SlidersHorizontalIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,6 +41,7 @@ const layoutCopy = {
     manageBilling: "Gérer la facturation",
     opening: "Ouverture…",
     nav: [
+      { href: "/settings", icon: SlidersHorizontalIcon, label: "Général", desc: "Voie, langue et préférences" },
       { href: "/settings/appearance", icon: PaletteIcon, label: "Apparence", desc: "Thème et affichage" },
       { href: "/settings/notifications", icon: BellIcon, label: "Notifications", desc: "Alertes et récapitulatifs" },
       { href: "/settings/privacy", icon: ShieldCheckIcon, label: "Confidentialité", desc: "Sécurité et permissions" },
@@ -63,6 +65,7 @@ const layoutCopy = {
     manageBilling: "Manage billing",
     opening: "Opening…",
     nav: [
+      { href: "/settings", icon: SlidersHorizontalIcon, label: "General", desc: "Way, language and preferences" },
       { href: "/settings/appearance", icon: PaletteIcon, label: "Appearance", desc: "Theme and display" },
       { href: "/settings/notifications", icon: BellIcon, label: "Notifications", desc: "Alerts and recaps" },
       { href: "/settings/privacy", icon: ShieldCheckIcon, label: "Privacy", desc: "Security and permissions" },
@@ -86,6 +89,7 @@ const layoutCopy = {
     manageBilling: "Gestionar facturación",
     opening: "Abriendo…",
     nav: [
+      { href: "/settings", icon: SlidersHorizontalIcon, label: "General", desc: "Vía, idioma y preferencias" },
       { href: "/settings/appearance", icon: PaletteIcon, label: "Apariencia", desc: "Tema y visualización" },
       { href: "/settings/notifications", icon: BellIcon, label: "Notificaciones", desc: "Alertas y resúmenes" },
       { href: "/settings/privacy", icon: ShieldCheckIcon, label: "Privacidad", desc: "Seguridad y permisos" },
