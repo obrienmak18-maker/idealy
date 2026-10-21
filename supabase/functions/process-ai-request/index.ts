@@ -145,6 +145,37 @@ function isAgentUIPhase(value: unknown): value is AgentUIPhase {
   return value === 'planning' || value === 'building' || value === 'validating' || value === 'completed' || value === 'needs-fix';
 }
 
+/**
+ * Keep ordinary conversation on the provider's native token stream.
+ * The bounded server tool loop is used when the user's request signals live
+ * research or media retrieval/generation.
+ */
+function shouldUseChatTools(prompt: string): boolean {
+  const normalized = prompt.toLocaleLowerCase();
+  const researchTerms = [
+    "search the web", "web search", "look up", "do research", "research this",
+    "find sources", "cite sources", "latest", "current news", "today's", "today",
+    "on the internet", "online sources", "fact check", "search online",
+    "recherche sur le web", "recherche web", "fais des recherches", "faire des recherches",
+    "cherche sur internet", "sur le web", "sources fiables", "sources officielles",
+    "références officielles", "actualités", "aujourd'hui", "à jour", "récent",
+    "recherches en ligne", "buscar en internet", "busca en la web", "investiga",
+    "fuentes oficiales", "noticias actuales", "hoy", "últimas noticias",
+  ];
+  const imageTerms = [
+    "pexels", "stock photos", "real photos", "real images", "search images",
+    "find photos", "find images", "generate an image", "generate image",
+    "create an image", "make an image", "image generation", "illustration",
+    "génère une image", "générer une image", "crée une image", "créer une image",
+    "génération d'image", "génération d’images", "cherche des images",
+    "chercher des images", "photos réelles", "images réelles", "photos libres",
+    "recherche d'images", "buscar imágenes", "genera una imagen", "crear una imagen",
+    "fotos reales", "imágenes reales",
+  ];
+  return researchTerms.some((term) => normalized.includes(term)) ||
+    imageTerms.some((term) => normalized.includes(term));
+}
+
 type MissionPlanAgent = {
   name: string;
   responsibility: string;
@@ -622,6 +653,7 @@ serve(async (req) => {
       input.squadRun !== true &&
       !input.missionId &&
       intentCategory !== "EXECUTION" &&
+      shouldUseChatTools(prompt) &&
       resolution.provider !== "anthropic";
 
     if (canUseChatTools) {
