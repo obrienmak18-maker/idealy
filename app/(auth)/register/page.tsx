@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { signIn as signInWithAuthJs } from "next-auth/react";
 import { startTransition, useActionState, useCallback, useEffect, useState } from "react";
 
 import { FirebaseProviderActions } from "@/components/auth/firebase-provider-actions";
@@ -10,11 +9,11 @@ import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
 import {
   isFirebaseConfigured,
-  prepareFirebaseIdTokenForSupabase,
-  signInWithEmailFirebase,
+  sendEmailVerificationFirebase,
   signUpWithEmailFirebase,
 } from "@/lib/firebase/client";
 import { isIdealyWay } from "@/lib/idealy/product-contract";
+import { TurnstileField } from "@/components/auth/turnstile-field";
 import { type RegisterActionState, register } from "../actions";
 
 const registerMessages = {
@@ -28,6 +27,7 @@ const registerMessages = {
     "Votre compte est créé. Consultez votre e-mail pour le confirmer avant de vous connecter.",
   service_unavailable:
     "Le service d’inscription est momentanément indisponible. Réessayez dans un instant.",
+  turnstile_failed: "La vérification anti-robot a échoué ou a expiré. Recommencez la vérification.",
   user_exists: "Un compte existe déjà avec cette adresse e-mail.",
 } as const;
 
@@ -48,9 +48,14 @@ import { useTranslation } from "@/lib/i18n/provider";
 export default function Page() {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
-  const [termsAccepted, setTermsAccepted] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  const turnstileClientEnabled = Boolean(
+    process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY?.trim()
+  );
 
   const handleTermsChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,8 +132,11 @@ export default function Page() {
   }, [state.status]);
 
   const handleSubmit = async (formData: FormData) => {
-    setEmail(String(formData.get("email") ?? ""));
+    const emailValue = String(formData.get("email") ?? "").trim().toLowerCase();
+    const passwordValue = String(formData.get("password") ?? "");
+    setEmail(emailValue);
     setFirebaseError(null);
+    setPendingConfirmation(false);
 
     if (formData.get("terms") !== "on") {
       setFirebaseError(
@@ -137,88 +145,76 @@ export default function Page() {
       return;
     }
 
+    if (turnstileClientEnabled && !String(formData.get("turnstileToken") ?? "").trim()) {
+      setFirebaseError("Complétez la vérification anti-robot avant de créer votre compte.");
+      return;
+    }
+
     if (!isFirebaseConfigured()) {
       startTransition(() => {
         formAction(formData);
       });
+      setTurnstileToken("");
       return;
     }
 
-    const emailValue = String(formData.get("email") ?? "").trim();
-    const passwordValue = String(formData.get("password") ?? "");
+    try {
+      const preflight = await fetch("/api/auth/register/preflight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailValue,
+          turnstileToken: String(formData.get("turnstileToken") ?? ""),
+        }),
+      });
+      const result = (await preflight.json().catch(() => ({}))) as {
+        error?: string;
+        status?: string;
+      };
+      setTurnstileToken("");
+
+      if (preflight.status === 409 || result.status === "user_exists") {
+        setFirebaseError("Un compte existe déjà avec cette adresse e-mail. Connectez-vous plutôt que de créer un nouveau compte.");
+        return;
+      }
+      if (!preflight.ok) {
+        setFirebaseError(
+          result.error === "turnstile_failed"
+            ? "La vérification anti-robot a échoué ou a expiré. Recommencez la vérification."
+            : "Le service d’inscription est momentanément indisponible. Réessayez dans un instant."
+        );
+        return;
+      }
+    } catch {
+      setTurnstileToken("");
+      setFirebaseError("Le service d’inscription est momentanément indisponible. Réessayez dans un instant.");
+      return;
+    }
 
     try {
-      const idToken = await signUpWithEmailFirebase(
-        emailValue,
-        passwordValue
-      );
-
-      const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
-
-      const result = await signInWithAuthJs("firebase", {
-        idToken: supabaseIdToken,
-        redirect: false,
-      });
-
-      if (!result || result.error || result.ok === false) {
-        throw new Error("firebase_session_rejected");
+      await signUpWithEmailFirebase(emailValue, passwordValue);
+      try {
+        await sendEmailVerificationFirebase();
+      } catch {
+        setPendingConfirmation(true);
+        setFirebaseError("Votre compte a été créé, mais l’e-mail de confirmation n’a pas pu être envoyé. Réessayez depuis la page de connexion.");
+        return;
       }
 
+      setPendingConfirmation(true);
       setIsSuccessful(true);
-      window.location.assign(getOnboardingUrl());
+      toast({ description: "Compte créé. Consultez votre e-mail pour confirmer votre adresse avant de vous connecter.", type: "success" });
     } catch (error) {
       const code = firebaseErrorCode(error);
-      if (code === "firebase_not_configured") {
-        startTransition(() => {
-          formAction(formData);
-        });
-        return;
-      }
-      if (code === "firebase_session_rejected") {
-        setFirebaseError(
-          "Le compte Firebase a été créé, mais Idealy n’a pas pu ouvrir la session. Réessayez de vous connecter dans quelques secondes."
-        );
-        return;
-      }
-      if (code === "firebase_backend_unavailable") {
-        setFirebaseError(
-          "La connexion sécurisée au workspace n’est pas disponible. Réessayez dans un instant."
-        );
-        return;
-      }
       if (code === "auth/email-already-in-use") {
-        try {
-          const idToken = await signInWithEmailFirebase(emailValue, passwordValue);
-          const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
-          const result = await signInWithAuthJs("firebase", {
-            idToken: supabaseIdToken,
-            redirect: false,
-          });
-
-          if (result && !result.error && result.ok !== false) {
-            setIsSuccessful(true);
-            // Auth.js already set the session cookie. Navigate immediately;
-            // the destination will read the cookie on the server.
-            window.location.replace(getOnboardingUrl());
-            return;
-          }
-        } catch {
-          // Password didn't match or other error
-        }
-        setFirebaseError(
-          "Un compte existe déjà avec cette adresse e-mail. Vérifiez votre mot de passe habituel ou connectez-vous sur la page de connexion."
-        );
+        setFirebaseError("Un compte existe déjà avec cette adresse e-mail. Connectez-vous plutôt que de créer un nouveau compte.");
         return;
       }
       if (code === "auth/invalid-email" || code === "auth/weak-password") {
-        setFirebaseError(
-          "Saisissez une adresse e-mail valide et un mot de passe de 6 caractères minimum."
-        );
+        setFirebaseError("Saisissez une adresse e-mail valide et un mot de passe de 6 caractères minimum.");
         return;
       }
-      setFirebaseError(
-        "La création du compte est indisponible. Vérifiez la configuration Firebase puis réessayez."
-      );
+      setFirebaseError("La création du compte est indisponible. Vérifiez votre connexion puis réessayez.");
     }
   };
 
@@ -263,7 +259,20 @@ export default function Page() {
           ) : null}
         </div>
       ) : null}
+      <TurnstileField action="register" value={turnstileToken} onChange={setTurnstileToken} />
+      {pendingConfirmation ? (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-foreground" role="status">
+          <p className="font-semibold">Vérifiez votre adresse e-mail</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Nous avons envoyé un lien de confirmation à {email}. Ouvrez ce lien avant de vous connecter.
+          </p>
+          <Link className="mt-3 inline-flex text-xs font-semibold underline underline-offset-4" href="/login">
+            J’ai confirmé mon adresse — me connecter
+          </Link>
+        </div>
+      ) : (
       <AuthForm action={handleSubmit} defaultEmail={email} passwordAutoComplete="new-password">
+        <input name="turnstileToken" type="hidden" value={turnstileToken} />
         <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground cursor-pointer select-none">
           <input
             checked={termsAccepted}
@@ -299,11 +308,16 @@ export default function Page() {
           </Link>
         </p>
       </AuthForm>
-      <FirebaseProviderActions
-        nextPath={getOnboardingUrl()}
-        requireTerms={true}
-        termsAccepted={termsAccepted}
-      />
+      )}
+      {!pendingConfirmation ? (
+        <FirebaseProviderActions
+          nextPath={getOnboardingUrl()}
+          requireTerms={true}
+          termsAccepted={termsAccepted}
+          turnstileToken={turnstileToken}
+          onTurnstileTokenChange={setTurnstileToken}
+        />
+      ) : null}
     </>
   );
 }

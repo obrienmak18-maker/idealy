@@ -2,7 +2,8 @@ export type CredentialsAuthenticationOutcome =
   | "success"
   | "invalid_credentials"
   | "confirmation_required"
-  | "service_unavailable";
+  | "service_unavailable"
+  | "turnstile_failed";
 
 export function credentialsOutcomeFromCode(
   code: string | null | undefined
@@ -13,6 +14,10 @@ export function credentialsOutcomeFromCode(
 
   if (code === "service_unavailable") {
     return "service_unavailable";
+  }
+
+  if (code === "turnstile_failed") {
+    return "turnstile_failed";
   }
 
   return "invalid_credentials";

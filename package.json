@@ -49,7 +49,8 @@
     "test:way-preprompts": "tsx scripts/test-idealy-way-preprompts-contract.ts",
     "test:file-collection": "tsx scripts/test-idealy-file-collection-contract.ts",
     "test:bench-review": "tsx scripts/test-idealy-bench-review-contract.ts",
-    "bench": "tsx scripts/bench.ts"
+    "bench": "tsx scripts/bench.ts",
+    "test:turnstile": "node scripts/test-turnstile-contract.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.67",

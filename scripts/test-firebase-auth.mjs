@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const files = {
   auth: await readFile("app/(auth)/auth.ts", "utf8"),
+  turnstile: await readFile("lib/security/turnstile.ts", "utf8"),
   client: await readFile("lib/firebase/client.ts", "utf8"),
   login: await readFile("app/(auth)/login/page.tsx", "utf8"),
   providerActions: await readFile(
@@ -25,7 +26,10 @@ assert.match(files.login, /FirebaseProviderActions/);
 assert.match(files.register, /FirebaseProviderActions/);
 assert.match(files.providerActions, /Continuer avec Google/);
 assert.match(files.providerActions, /signInWithGoogleFirebase/);
-assert.match(files.providerActions, /await completeAuth\(idToken\)/);
+assert.match(files.providerActions, /await completeAuth\(authResult\.idToken, turnstileToken\)/);
+assert.match(files.auth, /verifyTurnstileToken/);
+assert.match(files.auth, /verifyTurnstileProof/);
+assert.match(files.turnstile, /challenges\.cloudflare\.com\/turnstile\/v0\/siteverify/);
 assert.doesNotMatch(files.providerActions, /\.catch\(\(\) => \{\}\)/);
 assert.ok(files.workspace.includes("'jwks-rsa>jose': '4.15.9'"));
 assert.ok(files.lockfile.includes("jwks-rsa>jose") && files.lockfile.includes("4.15.9"));

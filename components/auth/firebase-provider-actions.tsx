@@ -48,10 +48,14 @@ export function FirebaseProviderActions({
   nextPath,
   requireTerms = false,
   termsAccepted: controlledTermsAccepted,
+  turnstileToken,
+  onTurnstileTokenChange,
 }: {
   nextPath: string;
   requireTerms?: boolean;
   termsAccepted?: boolean;
+  turnstileToken: string;
+  onTurnstileTokenChange: (token: string) => void;
 }) {
   const { t } = useTranslation();
   const [isPending, startTransition] = useTransition();
@@ -65,6 +69,10 @@ export function FirebaseProviderActions({
     useState<ConfirmationResult | null>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const [showRedirectOption, setShowRedirectOption] = useState(false);
+  const [pendingRedirectIdToken, setPendingRedirectIdToken] = useState<string | null>(null);
+  const turnstileClientEnabled = Boolean(
+    process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY?.trim()
+  );
   const phoneAuthEnabled = false;
 
   const handleGoogleRedirectSignIn = useCallback(() => {
@@ -79,11 +87,12 @@ export function FirebaseProviderActions({
   }, []);
 
   const completeAuth = useCallback(
-    async (idToken: string) => {
+    async (idToken: string, challengeToken: string) => {
       try {
         const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
         const result = await signInWithAuthJs("firebase", {
           idToken: supabaseIdToken,
+          turnstileToken: challengeToken,
           redirect: false,
         });
 
@@ -115,7 +124,7 @@ export function FirebaseProviderActions({
 
         if (idToken) {
           clearGoogleRedirectPending();
-          await completeAuth(idToken);
+          setPendingRedirectIdToken(idToken);
           return;
         }
 
@@ -154,8 +163,44 @@ export function FirebaseProviderActions({
     };
   }, [completeAuth, t]);
 
+  useEffect(() => {
+    if (!pendingRedirectIdToken || (turnstileClientEnabled && !turnstileToken)) {
+      return;
+    }
+
+    let isActive = true;
+    void completeAuth(pendingRedirectIdToken, turnstileToken)
+      .then(() => {
+        if (isActive) setPendingRedirectIdToken(null);
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setProviderError(
+          "Google a terminé la connexion, mais Idealy n’a pas pu ouvrir la session. Recommencez avec une nouvelle vérification."
+        );
+        onTurnstileTokenChange("");
+        setPendingRedirectIdToken(null);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    completeAuth,
+    onTurnstileTokenChange,
+    pendingRedirectIdToken,
+    turnstileClientEnabled,
+    turnstileToken,
+  ]);
+
   const handleGoogleSignIn = useCallback(() => {
     setProviderError(null);
+    if (turnstileClientEnabled && !turnstileToken) {
+      const message = "Complétez la vérification anti-robot avant de continuer.";
+      setProviderError(message);
+      toast.error(message);
+      return;
+    }
     if (requireTerms && !termsAccepted) {
       const message =
         "Veuillez accepter les conditions d'utilisation et la politique de confidentialité avant de continuer.";
@@ -180,8 +225,9 @@ export function FirebaseProviderActions({
         if (authResult.redirecting || !authResult.idToken) {
           return;
         }
-        await completeAuth(authResult.idToken);
+        await completeAuth(authResult.idToken, turnstileToken);
       } catch (err: unknown) {
+        onTurnstileTokenChange("");
         const message = err instanceof Error ? err.message : "";
         const code =
           typeof err === "object" && err !== null && "code" in err
@@ -214,7 +260,7 @@ export function FirebaseProviderActions({
         toast.error(errorMessage);
       }
     });
-  }, [completeAuth, firebaseConfigured, nextPath, requireTerms, t, termsAccepted]);
+  }, [completeAuth, firebaseConfigured, nextPath, onTurnstileTokenChange, requireTerms, t, termsAccepted, turnstileClientEnabled, turnstileToken]);
 
   const handleSendPhoneCode = useCallback(() => {
     if (!firebaseConfigured) {
@@ -315,7 +361,7 @@ export function FirebaseProviderActions({
 
       <button
         className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border/50 bg-muted/30 text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={isPending || !firebaseConfigured || (requireTerms && !termsAccepted)}
+        disabled={isPending || !firebaseConfigured || (turnstileClientEnabled && !turnstileToken) || (requireTerms && !termsAccepted)}
         onClick={handleGoogleSignIn}
         type="button"
       >
