@@ -515,7 +515,7 @@ export default function WelcomePage() {
               </div>
             </div>
 
-            <div className="mt-9">
+            <div className="mt-9" id="squad">
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/45">{wayCopy.focus}</p>
               <div className="mt-4 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 md:grid-cols-3">
                 {wayCopy.roles.map(([role, description], index) => (
