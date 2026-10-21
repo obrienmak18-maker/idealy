@@ -13,6 +13,7 @@ import { PreviewMessage, ThinkingMessage } from "./message";
 import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
 import { WorkspaceTemplates } from "./workspace-templates";
+import type { PlanOption } from "./plan-choices";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -151,6 +152,18 @@ function PureMessages({
     [onSuggestionSelect, sendMessage]
   );
 
+  const handlePlanSelection = useCallback(
+    (option: PlanOption) => {
+      const brief =
+        `Je valide la direction « ${option.title} » : ${option.description}. Continue dans cette conversation à partir de ce choix, mets à jour le plan concret, puis exécute la mission. Ne prétends pas qu'une étape ou une intégration fonctionne tant qu'elle n'a pas été réellement vérifiée.`;
+      sendMessage({
+        parts: [{ text: brief, type: "text" }],
+        role: "user",
+      });
+    },
+    [sendMessage]
+  );
+
   const handleIntakeSubmit = useCallback(
     (formattedBrief: string) => {
       sendMessage({
@@ -279,6 +292,7 @@ function PureMessages({
                   key={message.id}
                   message={message}
                   onEdit={onEditMessage}
+                  onPlanSelection={handlePlanSelection}
                   regenerate={regenerate}
                   requiresScrollPadding={
                     hasSentMessage && index === messages.length - 1
