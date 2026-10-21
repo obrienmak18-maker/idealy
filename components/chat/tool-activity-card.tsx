@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n/provider";
 import { CheckCircle2, ExternalLink, LoaderCircle, AlertCircle } from "lucide-react";
 import { Tool, ToolContent, ToolHeader, type ToolPart } from "@/components/ai-elements/tool";
@@ -165,6 +166,11 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
   const result = asRecord(output);
   const status = stringValue(result?.status);
   const isTerminal = state === "output-available" || state === "output-error" || state === "output-denied";
+  const [isOpen, setIsOpen] = useState(!isTerminal);
+  useEffect(() => {
+    // Open while the tool is active, then collapse automatically when its real result arrives.
+    setIsOpen(!isTerminal);
+  }, [isTerminal, toolCallId]);
   const isRunning = state === "input-streaming" || state === "input-available";
   const isSuccessful = status === "success" || status === "completed";
   const isProviderUnavailable = status === "unconfigured" || status === "needs_credits";
@@ -189,7 +195,7 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
   const executionTime = typeof result?.executionTimeMs === "number" ? result.executionTimeMs : null;
 
   return (
-    <Tool className="w-[min(100%,560px)] overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-xs" defaultOpen={!isTerminal} key={toolCallId}>
+    <Tool className="w-[min(100%,560px)] overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-xs" open={isOpen} onOpenChange={setIsOpen} key={toolCallId}>
       <ToolHeader className="px-3 py-2.5" state={state} title={title} toolName={kind} type="dynamic-tool" />
       <ToolContent className="space-y-3 border-t border-border/50 px-3 py-3">
         {isRunning ? (
