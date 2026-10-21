@@ -305,7 +305,7 @@ export function FirebaseProviderActions({
           confirmationResult,
           verificationCode
         );
-        await completeAuth(idToken);
+        await completeAuth(idToken, turnstileToken);
       } catch {
         toast.error("Code incorrect ou expiré. Demandez un nouveau code.");
       }
