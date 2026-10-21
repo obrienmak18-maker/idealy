@@ -15,7 +15,6 @@ BEGIN
     'project_type',
     'discovery_source',
     'preferred_language',
-    'preferred_voice',
     'timezone',
     'onboarding_completed'
   ]
@@ -82,8 +81,6 @@ BEGIN
   INTO onboarding_definition;
   IF position('v_user_id UUID := auth.uid()' IN onboarding_definition) = 0
     OR position('Invalid way' IN onboarding_definition) = 0
-    OR position('v_preferred_voice TEXT' IN onboarding_definition) = 0
-    OR position('Invalid preferred voice' IN onboarding_definition) = 0
     OR position('onboarding_completed = TRUE' IN onboarding_definition) = 0
     OR position('SET search_path TO' IN onboarding_definition) = 0 THEN
     RAISE EXCEPTION 'complete_my_onboarding is missing identity, way or completion guards';
