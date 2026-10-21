@@ -191,6 +191,7 @@ async function streamIdealyEdgeResponse({
   userTone,
   userDisplayName,
   language,
+  requestedAgent,
 }: {
   dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
   directModel?: ReturnType<typeof getIdealyDirectProviderModel>;
@@ -204,6 +205,7 @@ async function streamIdealyEdgeResponse({
   userTone?: string | null;
   userDisplayName?: string | null;
   language?: string | null;
+  requestedAgent?: string | null;
 }) {
   const supabaseAccessToken = await getSupabaseAccessToken(request);
   if (!supabaseAccessToken) {
@@ -239,7 +241,7 @@ async function streamIdealyEdgeResponse({
         userDisplayName,
         userTone,
         userWay,
-      })}${designSpecification ? `\n\n${designSpecificationToPrompt(designSpecification)}` : ""}`,
+      })}${designSpecification ? `\n\n${designSpecificationToPrompt(designSpecification)}` : ""}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty in the reply. Keep the explanation clear and user-facing, and never claim that a separate agent ran unless orchestration records show it actually ran.` : ""}`,
     }),
     headers: {
       Authorization: `Bearer ${supabaseAccessToken}`,
@@ -824,6 +826,7 @@ export async function POST(request: Request) {
                 userTone,
                 userDisplayName,
                 language: userLanguage,
+                requestedAgent,
               });
             }
             stopWaitingStatus();
