@@ -17,7 +17,8 @@ export function isTurnstileRequired(): boolean {
 
 export async function verifyTurnstileToken(
   token: string,
-  remoteIp?: string | null
+  remoteIp?: string | null,
+  expectedAction?: "login" | "register"
 ): Promise<{ ok: boolean; enabled: boolean }> {
   if (!isTurnstileRequired()) {
     return { ok: true, enabled: false };
@@ -50,9 +51,13 @@ export async function verifyTurnstileToken(
     const result = (await response.json()) as {
       success?: boolean;
       hostname?: string;
+      action?: string;
     };
 
-    if (result.success !== true) {
+    if (
+      result.success !== true ||
+      (expectedAction !== undefined && result.action !== expectedAction)
+    ) {
       return { ok: false, enabled: true };
     }
 
