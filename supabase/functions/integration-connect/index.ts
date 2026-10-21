@@ -52,7 +52,7 @@ function getProviderConfig(provider: string): ProviderConfig | null {
         clientId: env("CANVA_CLIENT_ID"),
         clientSecret: env("CANVA_CLIENT_SECRET"),
         authorizationUrl: "https://www.canva.com/api/oauth/authorize",
-        scopes: "design:content:read design:content:write asset:read asset:write profile:read",
+        scopes: "design:meta:read design:content:read design:content:write asset:read asset:write profile:read",
         usePkce: true,
       };
     case "figma":
@@ -133,9 +133,16 @@ Deno.serve(async (request) => {
 
   const supabaseUrl = env("SUPABASE_URL");
   const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRoleKey || !config.clientId || !config.clientSecret) {
+  if (!supabaseUrl || !serviceRoleKey) {
     return corsResponse(
-      { error: `${requestedProvider} OAuth is not configured on the server.` },
+      { error: "Le service de connexion est indisponible. Aucune clé secrète ne doit être saisie dans l’application." },
+      503,
+      request,
+    );
+  }
+  if (!config.clientId || !config.clientSecret) {
+    return corsResponse(
+      { error: "La connexion " + requestedProvider + " n’est pas encore configurée côté serveur Idealy. L’utilisateur n’a pas besoin de fournir de clé API." },
       503,
       request,
     );
