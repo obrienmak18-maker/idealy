@@ -369,6 +369,40 @@ export function DataStreamHandler() {
         delta.type === "data-idealy-mission" ||
         delta.type === "data-idealy-plan"
       ) {
+        if (delta.type === "data-idealy-mission") {
+          const nextMissionId =
+            typeof delta.data === "string" ? delta.data : null;
+          if (!nextMissionId) continue;
+
+          // A new mission has its own file-event sequence, plan, agent status,
+          // and artifact. Never let a previous mission's sequence/status hide
+          // the files from this one.
+          setArtifact({
+            ...initialArtifactData,
+            isVisible: false,
+            kind: "code",
+            title: "Mission workspace",
+          });
+          setMetadata((current: Record<string, unknown> | null) => {
+            if (current?.missionId === nextMissionId) return current;
+            return {
+              ...(current ?? {}),
+              missionId: nextMissionId,
+              missionFileLastSequence: 0,
+              missionFiles: [],
+              missionFileStatus: null,
+              missionPlan: null,
+              missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
+              missionRunRequested: false,
+              missionSquadError: null,
+              missionSquadStatus: "planned",
+              missionActiveAgentName: null,
+              missionActiveAgentRole: null,
+            };
+          });
+          continue;
+        }
+
         if (delta.type === "data-idealy-plan") {
           const plan =
             delta.data && typeof delta.data === "object"
@@ -379,9 +413,8 @@ export function DataStreamHandler() {
               ? plan.projectKind.trim()
               : "Mission workspace";
 
-          // The plan is a persisted execution artifact, so reveal the workspace
-          // before the user confirms it. The actual squad still starts only
-          // after the explicit approval action in MissionPlanCard.
+          // Reveal the persisted plan in the workspace, but do not run the
+          // squad until the user explicitly confirms the mission card.
           setArtifact((current) => ({
             ...current,
             isVisible: true,
@@ -389,24 +422,21 @@ export function DataStreamHandler() {
             status: "idle",
             title: projectKind,
           }));
+          setMetadata((current: Record<string, unknown> | null) => ({
+            ...(current ?? {}),
+            missionPlan: delta.data,
+            missionSquadStatus: "planned",
+            missionActiveAgentName: null,
+            missionActiveAgentRole: null,
+            missionSquadError: null,
+            missionRunRequested: false,
+          }));
+          continue;
         }
 
         setMetadata((current: Record<string, unknown> | null) => ({
           ...(current ?? {}),
-          ...(delta.type === "data-idealy-intent"
-            ? { intentCategory: delta.data }
-            : delta.type === "data-idealy-mission"
-              ? { missionId: delta.data }
-              : {
-                  missionPlan: delta.data,
-                  missionSquadStatus:
-                    typeof current?.missionSquadStatus === "string"
-                      ? current.missionSquadStatus
-                      : "planned",
-                  missionActiveAgentName: null,
-                  missionActiveAgentRole: null,
-                  missionSquadError: null,
-                }),
+          intentCategory: delta.data,
         }));
         continue;
       }
