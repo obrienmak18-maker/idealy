@@ -19,6 +19,7 @@ const activityCard = await readFile(new URL("../components/chat/tool-activity-ca
 const toolHeader = await readFile(new URL("../components/ai-elements/tool.tsx", import.meta.url), "utf8");
 const missionPlan = await readFile(new URL("../components/chat/mission-plan-card.tsx", import.meta.url), "utf8");
 const missionPlanApi = await readFile(new URL("../app/api/idealy/missions/[missionId]/plan/route.ts", import.meta.url), "utf8");
+const missionPlanning = await readFile(new URL("../lib/idealy/backend-adapter.ts", import.meta.url), "utf8");
 
 assert.match(schema, /new URL\(value\)\.protocol === "https:"/, "Les pièces jointes doivent utiliser HTTPS.");
 assert.match(schema, /parts: z\.array\(partSchema\)\.min\(1\)\.max\(8\)/, "Le nombre de parties d’un message utilisateur doit être borné.");
@@ -31,6 +32,11 @@ assert.match(input, /capabilities\?\.\[model\.id\]\?\.vision/, "Le sélecteur do
 assert.match(route, /part\.type !== "file"[\s\S]*?Fichier joint[\s\S]*?contenu binaire[\s\S]*?n’est pas transmis/, "Le moteur de production doit recevoir une description honnête des pièces jointes qu’il ne peut pas lire.");
 
 assert.match(types, /searchImages: searchImagesTool/, "Pexels search results must be part of the chat message type contract.");
+assert.match(route, /getMissionAgentRoster\(userWay\)/, "The @agent mention must be validated against the active Way roster.");
+assert.match(route, /requestedAgent,/, "The explicit responder must flow through the production chat path.");
+assert.match(missionPlanning, /requestedAgent\?: string \| null/, "Mission planning must accept an explicit responder.");
+assert.match(missionPlanning, /explicitly selected @/, "The mission planner must receive the explicit responder instruction.");
+assert.match(missionPlanApi, /dna: updatedDna/, "An edited plan must be written to the persisted orchestration context.");
 assert.match(types, /generateImage: generateImageTool/, "Generated image results must be part of the chat message type contract.");
 assert.match(types, /webSearch: webSearchTool/, "Web search results must be part of the chat message type contract.");
 assert.match(types, /executeSandbox: executeSandboxTool/, "Sandbox execution results must be part of the chat message type contract.");
