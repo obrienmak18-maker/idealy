@@ -380,6 +380,7 @@ export function createToolEnabledChatResponse(input: {
                       name: call.function.name,
                       arguments: args,
                       language: input.language,
+                      signal: controllerAbort.signal,
                     });
                   } catch (error) {
                     console.error("Idealy chat tool failed", { tool: call.function.name, error });
@@ -408,6 +409,14 @@ export function createToolEnabledChatResponse(input: {
                 tool_call_id: call.id,
                 content: JSON.stringify(output),
               });
+            }
+
+            if (controllerAbort.signal.aborted) {
+              if (timedOut) {
+                emitText(controller, encoder, localizedText(input.language, "La recherche a pris trop de temps. Les résultats déjà affichés restent disponibles ; tu peux relancer une recherche plus ciblée.", "The search took too long. Results already shown remain available; try a more focused query.", "La búsqueda tardó demasiado. Los resultados mostrados siguen disponibles; intenta una consulta más específica."));
+                emitDone(controller, encoder);
+              }
+              return;
             }
 
             // Image results already appear in their own activity card. Avoid a second
