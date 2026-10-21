@@ -9,6 +9,7 @@ import { ConnectorCard } from "./connector-card";
 type IntegrationStatus = {
   provider: string;
   status: string;
+  serverReady?: boolean;
   displayName?: string | null;
 };
 
@@ -116,10 +117,11 @@ export function ConnectorCatalog({
       </div>
       <div className="divide-y divide-outline-variant/60 overflow-hidden rounded-2xl border border-outline-variant/70 bg-surface-container-low">
         {visible.map((connector) => {
-          const status = statusByProvider.get(connector.provider);
+          const canonicalProvider = connector.provider === "google" ? "google-drive" : connector.provider;
+          const status = statusByProvider.get(canonicalProvider) ?? statusByProvider.get(connector.id);
           return (
             <ConnectorCard
-              connected={status?.status === "active"}
+              connected={status?.status === "active" && status.serverReady === true}
               connector={connector}
               connectServiceState={connectServiceState}
               connectUnavailableReason={notice}
