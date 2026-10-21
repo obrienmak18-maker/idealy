@@ -23,11 +23,13 @@ import {
   ToolHeader,
   ToolInput,
   ToolOutput,
+  type ToolPart,
 } from "../ai-elements/tool";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
 import { MessageActions } from "./message-actions";
+import { ToolActivityCard } from "./tool-activity-card";
 import { MessageReasoning } from "./message-reasoning";
 import { extractPlanOptionsFromText, PlanChoices, textBeforePlanOptions, type PlanOption } from "./plan-choices";
 import { PreviewAttachment } from "./preview-attachment";
@@ -427,6 +429,37 @@ const PurePreviewMessage = ({
           key={key}
           onSelectPlanOption={onPlanSelection}
           text={part.text}
+        />
+      );
+    }
+
+    const activityTool =
+      type === "tool-webSearch"
+        ? "webSearch"
+        : type === "tool-searchImages"
+          ? "searchImages"
+          : type === "tool-generateImage"
+            ? "generateImage"
+            : type === "tool-executeSandbox"
+              ? "executeSandbox"
+              : null;
+    if (activityTool) {
+      const activityPart = part as unknown as {
+        toolCallId: string;
+        state: ToolPart["state"];
+        input?: unknown;
+        output?: unknown;
+        errorText?: string | null;
+      };
+      return (
+        <ToolActivityCard
+          key={activityPart.toolCallId || key}
+          toolCallId={activityPart.toolCallId || key}
+          kind={activityTool}
+          state={activityPart.state}
+          input={activityPart.input}
+          output={activityPart.output}
+          errorText={activityPart.errorText}
         />
       );
     }
