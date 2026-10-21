@@ -369,13 +369,44 @@ export function DataStreamHandler() {
         delta.type === "data-idealy-mission" ||
         delta.type === "data-idealy-plan"
       ) {
+        if (delta.type === "data-idealy-plan") {
+          const plan =
+            delta.data && typeof delta.data === "object"
+              ? delta.data as Record<string, unknown>
+              : {};
+          const projectKind =
+            typeof plan.projectKind === "string" && plan.projectKind.trim()
+              ? plan.projectKind.trim()
+              : "Mission workspace";
+
+          // The plan is a persisted execution artifact, so reveal the workspace
+          // before the user confirms it. The actual squad still starts only
+          // after the explicit approval action in MissionPlanCard.
+          setArtifact((current) => ({
+            ...current,
+            isVisible: true,
+            kind: "code",
+            status: "idle",
+            title: projectKind,
+          }));
+        }
+
         setMetadata((current: Record<string, unknown> | null) => ({
           ...(current ?? {}),
           ...(delta.type === "data-idealy-intent"
             ? { intentCategory: delta.data }
             : delta.type === "data-idealy-mission"
               ? { missionId: delta.data }
-              : { missionPlan: delta.data }),
+              : {
+                  missionPlan: delta.data,
+                  missionSquadStatus:
+                    typeof current?.missionSquadStatus === "string"
+                      ? current.missionSquadStatus
+                      : "planned",
+                  missionActiveAgentName: null,
+                  missionActiveAgentRole: null,
+                  missionSquadError: null,
+                }),
         }));
         continue;
       }
