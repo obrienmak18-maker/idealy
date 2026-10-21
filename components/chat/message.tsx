@@ -279,7 +279,7 @@ function ProgressiveTextMessage({
 
       {/* ② Résultat / Plan d'action */}
       {planOptions && planOptions.length >= 2 && (
-        <PlanChoices onSelect={handleSelectPlanOption} options={planOptions} />
+        <PlanChoices onSelectOption={handleSelectPlanOption} options={planOptions} />
       )}
     </div>
   );

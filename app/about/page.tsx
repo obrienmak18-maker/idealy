@@ -1,6 +1,22 @@
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
+
+export const metadata: Metadata = {
+  title: "À propos",
+  description:
+    "Découvrez l'histoire et la vision d'Idealy, studio de création logicielle assisté par intelligence artificielle.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    title: "À propos d'Idealy",
+    description:
+      "Une idée devient un produit logiciel, étape après étape avec Idealy.",
+    url: "/about",
+  },
+};
 
 export default function AboutPage() {
   return (

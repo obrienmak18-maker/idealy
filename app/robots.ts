@@ -5,21 +5,50 @@ export default function robots(): MetadataRoute.Robots {
 
   return {
     host: baseUrl,
-    rules: {
-      allow: ["/about", "/docs", "/privacy", "/terms", "/welcome"],
-      disallow: [
-        "/api/",
-        "/chat/",
-        "/demo-flow",
-        "/library/",
-        "/login",
-        "/plugins/",
-        "/reference-layout",
-        "/register",
-        "/settings/",
-      ],
-      userAgent: "*",
-    },
+    rules: [
+      {
+        userAgent: "*",
+        allow: [
+          "/",
+          "/welcome",
+          "/pricing",
+          "/about",
+          "/docs",
+          "/terms",
+          "/privacy",
+        ],
+        disallow: [
+          "/api/",
+          "/chat/",
+          "/settings/",
+          "/onboarding",
+          "/demo-flow",
+          "/library/",
+          "/login",
+          "/register",
+          "/plugins/",
+          "/reference-layout",
+        ],
+      },
+      {
+        userAgent: ["Googlebot", "Bingbot", "msnbot"],
+        allow: [
+          "/",
+          "/welcome",
+          "/pricing",
+          "/about",
+          "/docs",
+          "/terms",
+          "/privacy",
+        ],
+        disallow: [
+          "/api/",
+          "/chat/",
+          "/settings/",
+          "/onboarding",
+        ],
+      },
+    ],
     sitemap: `${baseUrl}/sitemap.xml`,
   };
 }
