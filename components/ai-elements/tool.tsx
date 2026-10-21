@@ -15,6 +15,12 @@ import {
   ChevronDownIcon,
   CircleIcon,
   ClockIcon,
+  CloudSun,
+  FileText,
+  ImageIcon,
+  Search,
+  Sparkles,
+  TerminalSquare,
   WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
@@ -135,6 +141,13 @@ export const ToolHeader = ({
   const locale = language === "en" || language === "es" ? language : "fr";
   const rawName = type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
   const derivedName = toolLabels[locale][rawName ?? ""] ?? rawName ?? "Tool";
+  const ToolIcon = rawName === "getWeather" ? CloudSun
+    : rawName === "createDocument" || rawName === "updateDocument" ? FileText
+    : rawName === "searchImages" ? ImageIcon
+    : rawName === "webSearch" ? Search
+    : rawName === "generateImage" || rawName === "requestSuggestions" ? Sparkles
+    : rawName === "executeSandbox" ? TerminalSquare
+    : WrenchIcon;
 
   return (
     <CollapsibleTrigger
@@ -145,7 +158,7 @@ export const ToolHeader = ({
       {...props}
     >
       <div className="flex items-center gap-2">
-        <WrenchIcon className="size-4 text-muted-foreground" />
+        <ToolIcon aria-hidden="true" className="size-4 text-muted-foreground" />
         <span className="font-medium text-sm">{title ?? derivedName}</span>
         {getStatusBadge(state, locale)}
       </div>
