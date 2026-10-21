@@ -8,9 +8,9 @@ import {
   ExternalLink,
   ShieldCheck,
   Sparkles,
-  Lock,
-  Plus,
   Key,
+  Loader2,
+  Link2,
   Layers,
   Code2,
 } from "lucide-react";
@@ -23,46 +23,61 @@ interface ConnectorDetailViewProps {
 }
 
 export function ConnectorDetailView({ connector }: ConnectorDetailViewProps) {
-  const [connectedList, setConnectedList] = useState<string[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    fetch("/api/idealy/connectors/status", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Connector status unavailable");
+        return response.json() as Promise<{
+          integrations?: Array<{ provider?: string; status?: string; serverReady?: boolean }>
+        }>;
+      })
+      .then((payload) => {
+        if (!active) return;
+        const status = payload.integrations?.find(
+          (entry) => entry.provider === connector.id || entry.provider === connector.provider,
+        );
+        setIsConnected(status?.status === "active" && status.serverReady === true);
+      })
+      .catch(() => {
+        if (active) setIsConnected(false);
+      })
+      .finally(() => {
+        if (active) setChecking(false);
+      });
+    return () => { active = false; };
+  }, [connector.id, connector.provider]);
+
+  const startOAuth = async () => {
+    if (connector.auth !== "oauth2" || isConnected) return;
+    setConnecting(true);
+    const provider = connector.id === "google-drive" ? "google-drive" : connector.provider;
     try {
-      const stored = window.localStorage.getItem("idealy:connected-connectors");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setConnectedList(parsed);
-        }
+      const endpoint = provider === "vercel"
+        ? "/api/idealy/connectors/vercel/start"
+        : "/api/idealy/connectors/start";
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      const payload = await response.json().catch(() => null) as { url?: string; error?: string } | null;
+      if (response.status === 401) {
+        throw new Error("Connecte-toi à Idealy avant de relier ce compte.");
       }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const isConnected = connectedList.includes(connector.id);
-
-  const toggleConnection = () => {
-    const nextList = isConnected
-      ? connectedList.filter((c) => c !== connector.id)
-      : [...connectedList, connector.id];
-
-    setConnectedList(nextList);
-    try {
-      window.localStorage.setItem(
-        "idealy:connected-connectors",
-        JSON.stringify(nextList)
-      );
-    } catch {
-      // ignore
-    }
-
-    if (isConnected) {
-      toast.info(`${connector.label} déconnecté.`);
-    } else {
-      toast.success(`${connector.label} connecté avec succès à l'escouade.`);
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload?.error ?? "La connexion OAuth est momentanément indisponible.");
+      }
+      window.location.assign(payload.url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Impossible de démarrer la connexion.");
+      setConnecting(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 selection:text-foreground">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -114,28 +129,31 @@ export function ConnectorDetailView({ connector }: ConnectorDetailViewProps) {
 
             {/* Actions rapides */}
             <div className="flex shrink-0 items-center gap-3">
-              <button
-                type="button"
-                aria-pressed={isConnected}
-                onClick={toggleConnection}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer shadow-sm ${
-                  isConnected
-                    ? "border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
-                    : "border border-transparent bg-primary text-primary-foreground hover:bg-primary/90"
-                }`}
-              >
-                {isConnected ? (
-                  <>
-                    <Lock className="size-3.5" />
-                    <span>Déconnecter</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="size-3.5" />
-                    <span>Connecter maintenant</span>
-                  </>
-                )}
-              </button>
+              {connector.auth === "oauth2" && !isConnected ? (
+                <button
+                  type="button"
+                  disabled={checking || connecting}
+                  onClick={() => void startOAuth()}
+                  className="inline-flex items-center gap-2 rounded-full border border-transparent bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                >
+                  {checking || connecting ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Link2 className="size-3.5" />
+                  )}
+                  <span>{checking ? "Vérification…" : connecting ? "Redirection…" : "Connecter avec " + connector.label}</span>
+                </button>
+              ) : isConnected ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-idealy-success/30 bg-idealy-success/10 px-3 py-2 text-xs font-medium text-idealy-success">
+                  <CheckCircle2 className="size-3.5" />
+                  Connecté
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-3 py-2 text-xs text-muted-foreground">
+                  <ShieldCheck className="size-3.5" />
+                  {connector.auth === "managed" ? "Géré par Idealy" : "Configuration serveur"}
+                </span>
+              )}
 
               {connector.docsUrl && (
                 <a
