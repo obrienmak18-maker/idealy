@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, ChevronDown, LoaderCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/provider";
 
 type MissionActivityState = "building" | "reviewing" | "correcting";
 
@@ -68,8 +69,8 @@ export function MultiAgentRelay({
   filesCount,
 }: MultiAgentRelayProps) {
   const [expanded, setExpanded] = useState(false);
-  const locale = (typeof document !== "undefined" ? document.documentElement.lang : "fr").slice(0, 2);
-  const language = locale === "en" || locale === "es" ? locale : "fr";
+  const { language: activeLanguage } = useTranslation();
+  const language = activeLanguage === "en" || activeLanguage === "es" ? activeLanguage : "fr";
   const text = copy[language];
   const agentName = currentAgentName.trim() || "Idealy";
   const label = text[activityState];
