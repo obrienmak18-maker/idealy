@@ -47,6 +47,15 @@ export type ChatTools = {
   executeSandbox: executeSandboxTool;
 };
 
+export type IdealyChatToolActivity = {
+  toolCallId: string;
+  kind: "webSearch" | "searchImages" | "generateImage";
+  state: "input-available" | "output-available" | "output-error";
+  input: Record<string, unknown>;
+  output?: Record<string, unknown>;
+  errorText?: string | null;
+};
+
 export type WaitingStatusData = {
   phase: "waiting" | "still-waiting" | "health" | "thinking";
   message: string;
@@ -73,6 +82,7 @@ export type CustomUIDataTypes = {
   "idealy-mission": string;
   "idealy-plan": MissionPlan;
   "idealy-file-event": MissionFileEvent;
+  "idealy-tool-activity": IdealyChatToolActivity;
 };
 
 export type ChatMessage = UIMessage<
