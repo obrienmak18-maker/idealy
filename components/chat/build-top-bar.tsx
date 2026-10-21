@@ -46,6 +46,57 @@ type WorkspaceView = "preview" | "code" | "database";
 type Device = "desktop" | "tablet" | "mobile";
 type PreviewPage = { label: string; path: string };
 
+type MissionReplayEvent = {
+  created_at: string;
+  event_type: string;
+  file_version: number | null;
+  mission_id: string;
+  path: string | null;
+  payload: Record<string, unknown> | null;
+  sequence: number;
+};
+
+type MissionReplayResponse = {
+  events: MissionReplayEvent[];
+  files: Array<{
+    checksum: string | null;
+    content: string;
+    id: string;
+    language: string | null;
+    mission_id: string;
+    path: string;
+    status: MissionFile["status"];
+    updated_at: string;
+    version: number;
+  }>;
+  lastSequence: number;
+};
+
+function missionFilesFromSnapshot(
+  files: MissionReplayResponse["files"]
+): MissionFile[] {
+  return files.map((file) => ({
+    checksum: file.checksum ?? undefined,
+    content: file.content,
+    id: file.id,
+    language: file.language ?? undefined,
+    missionId: file.mission_id,
+    path: file.path,
+    status: file.status,
+    updatedAt: file.updated_at,
+    version: file.version,
+  }));
+}
+
+function normalizedMissionStatus(value: unknown): string {
+  if (value === "ready") return "ready";
+  if (value === "blocked" || value === "needs-user-input") {
+    return "needs-user-input";
+  }
+  if (value === "needs-fix" || value === "failed") return "needs-fix";
+  return "building";
+}
+
 const controlClass =
   "inline-flex items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground";
 
@@ -62,9 +113,11 @@ function resolveSquadStatusLabel(
     return { label: "Mise à jour…", tone: "muted" };
   }
   if (isSquadRunning) {
-    // Running — check for correction phase signals
     if (missionSquadStatus === "auto_correction_started") {
       return { label: "Correction auto…", tone: "amber" };
+    }
+    if (missionSquadStatus === "reviewing") {
+      return { label: "Vérification…", tone: "sky" };
     }
     return { label: "Escouade en cours…", tone: "sky" };
   }
@@ -79,7 +132,9 @@ function resolveSquadStatusLabel(
     case "needs-user-input":
       return { label: "Votre retour requis", tone: "amber" };
     case "planned":
-      return { label: "Planifié", tone: "muted" };
+      return { label: "Plan prêt", tone: "muted" };
+    case "reviewing":
+      return { label: "Vérification…", tone: "sky" };
     case "draft":
       return { label: "Brouillon", tone: "muted" };
     case "running-local-demo":
@@ -337,32 +392,176 @@ export function BuildTopBar() {
     if (!missionId || isSquadRunning) {
       return;
     }
+
     setIsSquadRunning(true);
+    setMetadata((current: Record<string, unknown> | null) => ({
+      ...(current ?? {}),
+      missionActiveAgentName: null,
+      missionActiveAgentRole: null,
+      missionSquadError: null,
+      missionSquadStatus: "building",
+    }));
+    window.dispatchEvent(new Event("idealy:power-updated"));
+
+    // Demo mode is an explicitly separate local-only path. Production missions
+    // are updated from persisted backend events below, not an invented timeline.
     if (isDemoMode) {
       setMetadata((current: Record<string, unknown> | null) => ({
         ...(current ?? {}),
-        missionSquadStatus: "building",
+        missionSquadStatus: "running-local-demo",
         outputs: [
           ...(Array.isArray(current?.outputs) ? current.outputs : []),
           {
             contents: [
-              { type: "text", value: "[local] Lyra → Mason → Nova en cours" },
+              { type: "text", value: "[local demo] No remote squad execution was started." },
             ],
             id: `local-squad-${Date.now()}`,
-            status: "running",
+            status: "info",
           },
         ],
       }));
-      window.setTimeout(() => {
-        setMetadata((current: Record<string, unknown> | null) => ({
-          ...(current ?? {}),
-          ...localWorkspaceMetadata(),
-          missionSquadStatus: "ready",
-        }));
-        setIsSquadRunning(false);
-      }, 950);
+      setIsSquadRunning(false);
+      toast.info("Mode démo local : aucune mission distante ni dépense de Power n’a été exécutée.");
       return;
     }
+
+    const controller = new AbortController();
+    let latestSequence = Number(metadata?.missionFileLastSequence ?? 0);
+
+    const pollMissionEvents = async () => {
+      while (!controller.signal.aborted) {
+        try {
+          const response = await fetch(
+            `/api/idealy/missions/${missionId}/events?afterSequence=${latestSequence}`,
+            { cache: "no-store", signal: controller.signal }
+          );
+          if (response.ok) {
+            const replay = (await response.json()) as MissionReplayResponse;
+            if (
+              Array.isArray(replay.events) &&
+              Array.isArray(replay.files) &&
+              Number.isSafeInteger(replay.lastSequence)
+            ) {
+              const events = replay.events
+                .filter((event) => event.sequence > latestSequence)
+                .sort((a, b) => a.sequence - b.sequence);
+              const normalizedFiles = missionFilesFromSnapshot(replay.files);
+              let nextSquadStatus: string | undefined;
+              let nextAgentName: string | null | undefined;
+              let nextAgentRole: string | null | undefined;
+              let nextError: string | null | undefined;
+              let fileStatus: string | undefined;
+              let refreshPower = false;
+              let reachedTerminalEvent = false;
+
+              for (const event of events) {
+                const payload = event.payload ?? {};
+                if (event.event_type === "power_reserved" ||
+                    event.event_type === "power_consumed" ||
+                    event.event_type === "power_released") {
+                  refreshPower = true;
+                }
+
+                if (event.event_type === "mission_started") {
+                  nextSquadStatus = "building";
+                } else if (event.event_type === "agent_started") {
+                  const agent = typeof payload.agent === "string" ? payload.agent : "";
+                  nextAgentName = typeof payload.agentName === "string" ? payload.agentName : null;
+                  nextAgentRole = typeof payload.agentRole === "string" ? payload.agentRole : null;
+                  nextSquadStatus = agent === "reviewer" ? "reviewing" : "building";
+                } else if (event.event_type === "agent_completed") {
+                  const completedName = typeof payload.agentName === "string" ? payload.agentName : null;
+                  if (!completedName || completedName === nextAgentName) {
+                    nextAgentName = null;
+                    nextAgentRole = null;
+                  }
+                } else if (event.event_type === "auto_correction_started") {
+                  nextSquadStatus = "auto_correction_started";
+                  nextAgentName =
+                    typeof payload.correctionOwner === "string"
+                      ? payload.correctionOwner
+                      : nextAgentName ?? null;
+                  nextAgentRole = "Correction des fichiers après revue";
+                } else if (event.event_type === "validation_result") {
+                  nextSquadStatus = "reviewing";
+                } else if (
+                  event.event_type === "file_started" ||
+                  event.event_type === "file_content" ||
+                  event.event_type === "file_saved"
+                ) {
+                  fileStatus = event.event_type;
+                  if (nextSquadStatus !== "auto_correction_started") {
+                    nextSquadStatus = "building";
+                  }
+                } else if (event.event_type === "mission_completed") {
+                  const finalStatus = payload.finalStatus;
+                  nextSquadStatus = normalizedMissionStatus(finalStatus);
+                  nextAgentName = null;
+                  nextAgentRole = null;
+                  nextError =
+                    nextSquadStatus === "ready"
+                      ? null
+                      : "La mission a fini son cycle de vérification, mais nécessite une correction ou une décision.";
+                  reachedTerminalEvent = true;
+                  refreshPower = true;
+                } else if (event.event_type === "mission_error") {
+                  nextSquadStatus = "needs-fix";
+                  nextAgentName = null;
+                  nextAgentRole = null;
+                  nextError =
+                    typeof payload.error === "string"
+                      ? payload.error
+                      : "La mission a rencontré une erreur.";
+                  reachedTerminalEvent = true;
+                  refreshPower = true;
+                }
+
+                if (event.event_type === "agent_failed") {
+                  nextError =
+                    typeof payload.code === "string"
+                      ? `L’agent a échoué (${payload.code}).`
+                      : "Un agent a rencontré une erreur.";
+                }
+              }
+
+              latestSequence = Math.max(latestSequence, replay.lastSequence);
+              setMetadata((current: Record<string, unknown> | null) => {
+                if (current?.missionId !== missionId) return current;
+                const currentSequence = Number(current?.missionFileLastSequence ?? 0);
+                if (currentSequence > replay.lastSequence) return current;
+                return {
+                  ...(current ?? {}),
+                  missionFileLastSequence: replay.lastSequence,
+                  missionFiles: normalizedFiles,
+                  ...(fileStatus ? { missionFileStatus: fileStatus } : {}),
+                  ...(nextSquadStatus ? { missionSquadStatus: nextSquadStatus } : {}),
+                  ...(nextAgentName !== undefined
+                    ? { missionActiveAgentName: nextAgentName }
+                    : {}),
+                  ...(nextAgentRole !== undefined
+                    ? { missionActiveAgentRole: nextAgentRole }
+                    : {}),
+                  ...(nextError !== undefined ? { missionSquadError: nextError } : {}),
+                };
+              });
+
+              if (refreshPower) {
+                window.dispatchEvent(new Event("idealy:power-updated"));
+              }
+              if (reachedTerminalEvent) return;
+            }
+          }
+        } catch (error) {
+          if (controller.signal.aborted) return;
+          console.warn("Mission progress polling failed; retrying.", error);
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 900));
+      }
+    };
+
+    const pollTask = pollMissionEvents();
+
     try {
       const idempotencyKey = `squad:${missionId}:${crypto.randomUUID()}`;
       const response = await fetch(`/api/idealy/missions/${missionId}/squad`, {
@@ -373,26 +572,54 @@ export function BuildTopBar() {
       const payload = (await response.json().catch(() => null)) as {
         error?: string;
         status?: string;
+        validation?: { status?: string };
       } | null;
       if (!response.ok) {
-        throw new Error(payload?.error ?? "L'escouade n'a pas pu démarrer.");
+        throw new Error(payload?.error ?? "L’escouade n’a pas pu démarrer.");
       }
+      if (!payload || typeof payload.status !== "string") {
+        throw new Error("Le backend n’a pas renvoyé un statut de mission vérifiable.");
+      }
+
+      const finalStatus = normalizedMissionStatus(payload.status);
       setMetadata((current: Record<string, unknown> | null) => ({
         ...(current ?? {}),
         missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
-        missionSquadStatus: payload?.status ?? "ready",
+        missionSquadError:
+          finalStatus === "ready"
+            ? null
+            : payload.validation?.status === "needs-user-input"
+              ? "La mission a été construite, mais une validation ou une décision reste nécessaire."
+              : "La mission n’a pas passé toutes les vérifications.",
+        missionSquadStatus: finalStatus,
       }));
+      if (finalStatus === "ready") {
+        toast.success("L’escouade a terminé la mission et validé le workspace.");
+      } else {
+        toast.warning("Le cycle multi-agents est terminé, mais la mission nécessite une vérification.", {
+          description: "Consulte les fichiers et le journal de build avant de poursuivre.",
+        });
+      }
     } catch (error) {
       console.error("Mission squad launch failed", error);
       const errorMessage =
-        error instanceof Error ? error.message : "L'escouade n'a pas pu démarrer.";
+        error instanceof Error ? error.message : "L’escouade n’a pas pu démarrer.";
       setMetadata((current: Record<string, unknown> | null) => ({
         ...(current ?? {}),
+        missionSquadError: errorMessage,
         missionSquadStatus: "needs-fix",
       }));
+      window.dispatchEvent(new Event("idealy:power-updated"));
       toast.error(errorMessage);
     } finally {
+      controller.abort();
+      await pollTask.catch(() => undefined);
+      window.dispatchEvent(new Event("idealy:power-updated"));
       setIsSquadRunning(false);
+      setMetadata((current: Record<string, unknown> | null) => ({
+        ...(current ?? {}),
+        missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
+      }));
     }
   };
 
