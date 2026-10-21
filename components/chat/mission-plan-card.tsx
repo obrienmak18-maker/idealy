@@ -171,7 +171,7 @@ const copy = {
 } as const;
 
 export function MissionPlanCard() {
-  const { artifact, metadata, setArtifact, setMetadata } = useArtifact();
+  const { metadata, setArtifact, setMetadata } = useArtifact();
   const { currentWay } = useGamificationStore();
   const { language } = useTranslation();
   const locale = language === "en" || language === "es" ? language : "fr";
