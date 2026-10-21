@@ -133,7 +133,7 @@ function ImageGrid({ images, credits, sourceLabel, creditPrefix, creditSuffix }:
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {images.slice(0, 6).map((image, index) => {
         const imageUrl = safeHttpUrl(image.thumbnail) ?? safeHttpUrl(image.url);
-        const sourceUrl = safeHttpUrl(image.url);
+        const sourceUrl = safeHttpUrl(image.sourceUrl) ?? safeHttpUrl(image.url);
         if (!imageUrl) return null;
         const alt = stringValue(image.alt) || stringValue(image.prompt) || "Image result";
         const photographer = stringValue(image.photographer);
