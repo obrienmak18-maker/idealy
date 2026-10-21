@@ -635,6 +635,22 @@ export function BuildTopBar() {
     }
   };
 
+  // A mission-plan approval card can request a real squad launch before the
+  // workspace header existed. Consume that request after this header mounts.
+  const runSquadRef = useRef(runSquad);
+  runSquadRef.current = runSquad;
+
+  useEffect(() => {
+    if (metadata?.missionRunRequested !== true || !missionId || isSquadRunning) {
+      return;
+    }
+    setMetadata((current: Record<string, unknown> | null) => ({
+      ...(current ?? {}),
+      missionRunRequested: false,
+    }));
+    void runSquadRef.current();
+  }, [isSquadRunning, metadata?.missionRunRequested, missionId, setMetadata]);
+
   // Map tone to Tailwind classes
   const toneClasses: Record<typeof squadTone, string> = {
     emerald: "text-emerald-400",
