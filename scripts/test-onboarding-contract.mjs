@@ -19,6 +19,9 @@ const [contract, adapter, route, page, layout, packageJson, workflow] = await Pr
 
 assert(contract.includes("onboardingInputSchema"), "Onboarding must have a shared Zod schema.");
 assert(contract.includes("idealyWays"), "Onboarding must use the central Way contract.");
+assert(!contract.includes("preferredVoice"), "Audio voice preferences must not be collected during onboarding.");
+assert(!page.includes("speechSynthesis") && !page.includes("voicePresets"), "Audio playback controls must stay out of onboarding.");
+assert(page.includes("Object.values(wayPresentations)"), "Onboarding must retain the Idealy Way selector.");
 assert(page.includes("{accountEmail ||"), "Account email must be derived from the authenticated server session.");
 assert(!contract.includes("tone: z.enum"), "Do not collect onboarding settings that are not persisted.");
 assert(adapter.includes("completeMyIdealyOnboarding"), "Server adapter must call the onboarding RPC.");
