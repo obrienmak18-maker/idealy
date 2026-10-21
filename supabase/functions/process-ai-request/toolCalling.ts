@@ -155,7 +155,7 @@ async function streamFinalAnswer(input: {
   apiKey: string;
   provider: string;
   model: string;
-  messages: InputMessage[];
+  messages: unknown[];
   maxTokens: number;
   headers: Record<string, string>;
   signal: AbortSignal;
@@ -202,7 +202,7 @@ async function streamFinalAnswer(input: {
         const raw = line.slice(6).trim();
         if (!raw) continue;
         if (raw === "[DONE]") {
-          sse(input.controller, input.encoder, "[DONE]");
+          emitDone(input.controller, input.encoder);
           return;
         }
         try {
@@ -260,7 +260,7 @@ export function createToolEnabledChatResponse(input: {
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
       const run = async () => {
-        const messages = input.messages.map((message) => ({ ...message }));
+        const messages: InputMessage[] = input.messages.map((message) => ({ ...asRecord(message) }));
         const originalSystemMessage = messages.find((message) => message.role === "system");
         if (originalSystemMessage) {
           originalSystemMessage.content = stringField(originalSystemMessage.content) +
@@ -300,7 +300,7 @@ export function createToolEnabledChatResponse(input: {
               emitText(controller, encoder, response.status === 429
                 ? "Le fournisseur IA est momentanément limité. Réessaie dans quelques instants."
                 : "Le fournisseur IA n’a pas pu répondre à cette demande.");
-              sse(controller, encoder, "[DONE]");
+              emitDone(controller, encoder);
               return;
             }
 
