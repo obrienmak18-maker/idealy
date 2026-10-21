@@ -554,6 +554,12 @@ function PureArtifact({
     ["building", "reviewing", "auto_correction_started"].includes(
       missionSquadStatus ?? ""
     );
+  const showMissionStatusOverlay =
+    Boolean(missionId) &&
+    artifact.kind === "code" &&
+    ["planned", "building", "reviewing", "auto_correction_started"].includes(
+      missionSquadStatus ?? ""
+    );
 
   const previewScrollbarStyle =
     '<style>html{scrollbar-width:none;-ms-overflow-style:none}html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}body{overflow-x:hidden}</style>';
@@ -629,7 +635,7 @@ function PureArtifact({
                   srcDoc={previewHtmlForFrameWithPath}
                   title="Generated application preview"
                 />
-                {isMissionBuildActive ? (() => {
+                {showMissionStatusOverlay ? (() => {
                   const squadStatus = missionSquadStatus;
                   const role = (missionActiveAgentRole ?? "").toLocaleLowerCase("fr");
                   const agentName =
@@ -644,7 +650,11 @@ function PureArtifact({
                   let phaseDetail = "Les agents coordonnent les prochaines étapes et enregistrent les fichiers du projet.";
                   let phaseBadge = "Construction";
 
-                  if (squadStatus === "auto_correction_started") {
+                  if (squadStatus === "planned") {
+                    phaseTitle = "Plan prêt à valider";
+                    phaseDetail = "Consulte le plan dans la conversation, puis clique sur « Valider et lancer » pour démarrer l’escouade.";
+                    phaseBadge = "En attente de validation";
+                  } else if (squadStatus === "auto_correction_started") {
                     phaseTitle = `${agentName} corrige le projet`;
                     phaseDetail = "Une vérification a identifié des problèmes. Les corrections sont appliquées avant la validation finale.";
                     phaseBadge = "Correction";
@@ -677,14 +687,14 @@ function PureArtifact({
                     <div
                       aria-live="polite"
                       className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden bg-background/92 backdrop-blur-xl"
-                      data-testid="mission-build-overlay"
+                      data-testid="mission-status-overlay"
                       role="status"
                     >
                       <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-sky-400/15 blur-3xl" />
                       <div className="pointer-events-none absolute -bottom-24 -right-24 size-80 rounded-full bg-violet-500/15 blur-3xl" />
                       <div className="relative flex max-w-xs flex-col items-center px-6 text-center">
                         <div className="idealy-build-mark mb-6 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-[0_0_80px_rgba(56,189,248,0.16)]">
-                          <IdealyMark animated className="size-16" size={64} />
+                          <IdealyMark animated={isMissionBuildActive} className="size-16" size={64} />
                         </div>
                         <p className="text-sm font-semibold tracking-[-0.01em] text-sidebar-foreground">{phaseTitle}</p>
                         <p className="mt-2 text-xs leading-5 text-muted-foreground">{phaseDetail}</p>
@@ -695,7 +705,7 @@ function PureArtifact({
                           ) : null}
                         </div>
                         <div className="mt-4 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-sky-300/90">
-                          <span className="size-1.5 animate-pulse rounded-full bg-sky-300" />
+                          <span className={cn("size-1.5 rounded-full bg-sky-300", isMissionBuildActive && "animate-pulse")} />
                           {phaseBadge}
                         </div>
                       </div>
