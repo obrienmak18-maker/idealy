@@ -15,6 +15,7 @@ const artifact = read("components/chat/artifact.tsx");
 const databaseInspector = read("components/chat/database-inspector.tsx");
 const databaseRoute = read("app/api/idealy/missions/[missionId]/database/route.ts");
 const backendAdapter = read("lib/idealy/backend-adapter.ts");
+const previewCompiler = read("lib/idealy/preview-compiler.ts");
 
 // The active route must be visible and selectable without opening the overflow menu.
 assert.match(toolbar, /aria-label="Page affichée dans l’aperçu"/);
