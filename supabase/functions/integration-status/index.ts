@@ -37,30 +37,35 @@ Deno.serve(async (request) => {
       return false;
     }
   };
+  const oauthStorageReady = () =>
+    hasEnv("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY") && encryptionKeyReady();
   const providerServerReady = (provider: string) => {
     switch (provider) {
       case "github":
-        return encryptionKeyReady() && (hasEnv("GITHUB_OAUTH_CLIENT_ID", "GITHUB_CLIENT_ID") &&
-          hasEnv("GITHUB_OAUTH_CLIENT_SECRET", "GITHUB_CLIENT_SECRET"));
+        return oauthStorageReady() &&
+          hasEnv("GITHUB_OAUTH_CLIENT_ID", "GITHUB_CLIENT_ID") &&
+          hasEnv("GITHUB_OAUTH_CLIENT_SECRET", "GITHUB_CLIENT_SECRET");
       case "canva":
-        return encryptionKeyReady() && (hasEnv("CANVA_CLIENT_ID") && hasEnv("CANVA_CLIENT_SECRET"));
+        return oauthStorageReady() && hasEnv("CANVA_CLIENT_ID", "CANVA_CLIENT_SECRET");
       case "figma":
-        return encryptionKeyReady() && (hasEnv("FIGMA_CLIENT_ID") && hasEnv("FIGMA_CLIENT_SECRET"));
+        return oauthStorageReady() && hasEnv("FIGMA_CLIENT_ID", "FIGMA_CLIENT_SECRET");
       case "google":
       case "google-drive":
-        return encryptionKeyReady() && (hasEnv("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_CLIENT_ID") &&
-          hasEnv("GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"));
+        return oauthStorageReady() &&
+          hasEnv("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_CLIENT_ID") &&
+          hasEnv("GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET");
       case "notion":
-        return encryptionKeyReady() && (hasEnv("NOTION_CLIENT_ID") && hasEnv("NOTION_CLIENT_SECRET"));
+        return oauthStorageReady() && hasEnv("NOTION_CLIENT_ID", "NOTION_CLIENT_SECRET");
       case "slack":
-        return encryptionKeyReady() && (hasEnv("SLACK_CLIENT_ID") && hasEnv("SLACK_CLIENT_SECRET"));
+        return oauthStorageReady() && hasEnv("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET");
       case "vercel":
-        return encryptionKeyReady() && (hasEnv("VERCEL_APP_CLIENT_ID", "NEXT_PUBLIC_VERCEL_APP_CLIENT_ID") &&
-          hasEnv("VERCEL_APP_CLIENT_SECRET"));
+        return oauthStorageReady() &&
+          hasEnv("VERCEL_APP_CLIENT_ID", "NEXT_PUBLIC_VERCEL_APP_CLIENT_ID") &&
+          hasEnv("VERCEL_APP_CLIENT_SECRET");
       case "stripe":
         return hasEnv("STRIPE_SECRET_KEY");
       case "supabase":
-        return hasEnv("SUPABASE_URL") && hasEnv("SUPABASE_SERVICE_ROLE_KEY");
+        return hasEnv("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY");
       default:
         return false;
     }
