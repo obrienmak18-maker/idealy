@@ -122,7 +122,7 @@ export async function PATCH(
 
   try {
     const lookup = await fetch(
-      supabaseUrl + "/rest/v1/missions?select=id,brief,status&id=eq." +
+      supabaseUrl + "/rest/v1/missions?select=id,brief,dna,status&id=eq." +
         encodeURIComponent(missionId) + "&user_id=eq." + encodeURIComponent(userId) + "&limit=1",
       { headers, cache: "no-store" },
     );
@@ -148,6 +148,11 @@ export async function PATCH(
       plan,
       v1Scope: plan.v1Scope,
     };
+    const currentDna =
+      mission.dna && typeof mission.dna === "object" && !Array.isArray(mission.dna)
+        ? mission.dna as Record<string, unknown>
+        : {};
+    const updatedDna = { ...currentDna, plan };
 
     const update = await fetch(
       supabaseUrl + "/rest/v1/missions?id=eq." +
@@ -158,7 +163,7 @@ export async function PATCH(
           ...headers,
           Prefer: "return=representation",
         },
-        body: JSON.stringify({ brief: updatedBrief }),
+        body: JSON.stringify({ brief: updatedBrief, dna: updatedDna }),
         cache: "no-store",
       },
     );
