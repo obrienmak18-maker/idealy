@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { useArtifact } from "@/hooks/use-artifact";
 import { PowerStatusBadge } from "@/components/chat/power-status";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { cn } from "@/lib/utils";
 
 type PlanAgent = {
@@ -67,6 +69,9 @@ const ACTIVE_STATUSES = new Set([
 
 export function MissionPlanCard() {
   const { artifact, metadata, setArtifact, setMetadata } = useArtifact();
+  const { currentWay } = useGamificationStore();
+  const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
+  const runtimeAgents = activeWayData.agents;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const missionId =
@@ -192,23 +197,39 @@ export function MissionPlanCard() {
 
         <div>
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-foreground">Escouade assignée</p>
+            <p className="text-xs font-semibold text-foreground">Escouade Idealy configurée</p>
             <span className="text-[10px] text-muted-foreground">
-              {missionPlan.agents.length} agents
+              {runtimeAgents.length} agents
             </span>
           </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {runtimeAgents.map((agent) => (
+              <div
+                className="min-w-0 rounded-xl border border-border/60 bg-background/50 p-2.5"
+                key={agent.name}
+                title={agent.specialty}
+              >
+                <p className="truncate text-xs font-semibold text-foreground">{agent.name}</p>
+                <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-muted-foreground">
+                  {agent.role}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mb-2 mt-4 text-xs font-semibold text-foreground">
+            Travaux et livrables prévus par le plan
+          </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {missionPlan.agents.map((agent) => (
+            {missionPlan.agents.map((work, index) => (
               <div
                 className="rounded-xl border border-border/60 bg-background/50 p-3"
-                key={agent.name}
+                key={`${work.responsibility}-${index}`}
               >
-                <p className="text-xs font-semibold text-foreground">{agent.name}</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {agent.responsibility}
+                <p className="text-xs font-semibold text-foreground">
+                  {work.responsibility}
                 </p>
                 <p className="mt-2 text-[11px] leading-5 text-foreground/80">
-                  <span className="font-medium">Livrable : </span>{agent.result}
+                  <span className="font-medium">Résultat attendu : </span>{work.result}
                 </p>
               </div>
             ))}
