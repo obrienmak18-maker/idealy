@@ -71,7 +71,7 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
       writeOperation("open-pull-request", "Ouvrir une pull request", "repository-write"),
     ],
     dataBoundary: "user-selected-assets",
-    secretEnvNames: ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"],
+    secretEnvNames: ["GITHUB_OAUTH_CLIENT_ID", "GITHUB_OAUTH_CLIENT_SECRET"],
     notes: [
       "Les missions peuvent lire un dépôt explicitement choisi, mais ne publient jamais directement sur main.",
       "Toute écriture distante reste confirmée par l’utilisateur.",
@@ -118,7 +118,7 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
       writeOperation("deploy-production", "Déployer en production", "deployment-production", "publish"),
     ],
     dataBoundary: "metadata-only",
-    secretEnvNames: ["VERCEL_CLIENT_ID", "VERCEL_CLIENT_SECRET"],
+    secretEnvNames: ["VERCEL_APP_CLIENT_ID", "VERCEL_APP_CLIENT_SECRET"],
     notes: [
       "Le bouton de publication doit rester distinct du flux de conversation et demander une confirmation.",
     ],
