@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
+import { CookieNotice } from "@/components/cookies/cookie-notice";
 import { LanguageProvider } from "@/lib/i18n/provider";
 
 const siteUrl =
@@ -153,7 +154,7 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           disableTransitionOnChange
           enableSystem
         >
@@ -172,6 +173,7 @@ export default function RootLayout({
                   }}
                 />
                 <Suspense>{children}</Suspense>
+                <CookieNotice />
               </TooltipProvider>
             </LanguageProvider>
           </SessionProvider>
