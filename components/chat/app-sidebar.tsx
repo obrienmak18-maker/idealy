@@ -276,36 +276,32 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           <SidebarHistory user={user} />
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border pt-1.5 pb-2">
-          {/* Settings button — cleanly responsive and zero overflow */}
-          {state === "collapsed" ? (
-            <div className="flex flex-col items-center justify-center gap-1 px-1 mb-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    aria-label={t("sidebar.settings") || "Paramètres"}
-                    className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
-                    href="/settings"
-                  >
+          {/* Keep one stable settings link during sidebar width transitions.
+              The icon always occupies the same 32px cell; only the label fades away. */}
+          <div className="mb-1 flex items-center gap-1 px-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  aria-label={t("sidebar.settings") || "Paramètres"}
+                  className="flex h-9 min-w-0 flex-1 items-center justify-start rounded-lg text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  href="/settings"
+                >
+                  <span className="grid size-8 shrink-0 place-items-center">
                     <Settings2Icon className="size-4 shrink-0" />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {t("sidebar.settings") || "Paramètres"}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          ) : (
-            <div className="px-2 mb-1 flex items-center justify-between gap-1.5">
-              <Link
-                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer"
-                href="/settings"
-              >
-                <Settings2Icon className="size-4 shrink-0" />
-                <span className="truncate font-medium">{t("sidebar.settings") || "Paramètres"}</span>
-              </Link>
-              <div className="flex items-center gap-1 shrink-0">
-                <LanguageSwitcher />
-                <DropdownMenu>
+                  </span>
+                  <span className="min-w-0 max-w-40 overflow-hidden text-[12px] font-medium whitespace-nowrap opacity-100 transition-[max-width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
+                    {t("sidebar.settings") || "Paramètres"}
+                  </span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" hidden={state !== "collapsed"}>
+                {t("sidebar.settings") || "Paramètres"}
+              </TooltipContent>
+            </Tooltip>
+
+            <div className="flex max-w-[112px] shrink-0 items-center gap-1 overflow-hidden opacity-100 transition-[max-width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none">
+              <LanguageSwitcher />
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     aria-label="Options du workspace"
@@ -313,81 +309,79 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     type="button"
                   >
                     <span className="sr-only">Options</span>
-                    <div className="flex flex-col gap-0.5 items-center justify-center size-4">
+                    <div className="flex size-4 flex-col items-center justify-center gap-0.5">
                       <span className="size-0.5 rounded-full bg-current" />
                       <span className="size-0.5 rounded-full bg-current" />
                       <span className="size-0.5 rounded-full bg-current" />
                     </div>
                   </button>
                 </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-64 rounded-xl border border-outline-variant/70 bg-surface-container-high p-1.5 shadow-lg"
-                side="top"
-              >
-                {/* Dynamic plan card — reads real Power status, no hardcoded strings */}
-                <div className="mb-1 rounded-lg bg-gradient-to-br from-violet-500/10 via-card to-orange-400/10 px-3 py-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold">
-                      {powerLoading
-                        ? "—"
-                        : `Plan ${planDisplayName(powerStatus?.plan)}`}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {powerLoading
-                        ? "—"
-                        : powerStatus
-                          ? `${powerStatus.balance} ${powerStatus.resourceLabel}`
-                          : "—"}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                    Débloquez plus de missions, de connecteurs et de
-                    générations.
-                  </p>
-                  <Link
-                    className="mt-2 inline-flex rounded-md bg-foreground px-2.5 py-1 text-[10px] font-medium text-background hover:opacity-85"
-                    href="/settings#billing"
-                  >
-                    Voir les offres
-                  </Link>
-                </div>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings#appearance">Apparence</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings#notifications">Notifications</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings#privacy">Confidentialité</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings#data">Données et mémoire</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/settings#shortcuts">Raccourcis</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings#billing">Facturation et plan</Link>
-                </DropdownMenuItem>
-                {user ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
-                      onClick={handleShowDeleteAllDialog}
+                <DropdownMenuContent
+                  align="end"
+                  className="w-64 rounded-xl border border-outline-variant/70 bg-surface-container-high p-1.5 shadow-lg"
+                  side="top"
+                >
+                  <div className="mb-1 rounded-lg bg-gradient-to-br from-violet-500/10 via-card to-orange-400/10 px-3 py-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold">
+                        {powerLoading ? "—" : `Plan ${planDisplayName(powerStatus?.plan)}`}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {powerLoading
+                          ? "—"
+                          : powerStatus
+                            ? `${powerStatus.balance} ${powerStatus.resourceLabel}`
+                            : "—"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                      Débloquez plus de missions, de connecteurs et de générations.
+                    </p>
+                    <Link
+                      className="mt-2 inline-flex rounded-md bg-foreground px-2.5 py-1 text-[10px] font-medium text-background hover:opacity-85"
+                      href="/settings#billing"
                     >
-                      <TrashIcon className="mr-2 size-3.5" />
-                      <span>Effacer l'historique</span>
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-              </div>
+                      Voir les offres
+                    </Link>
+                  </div>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">Général</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/appearance">Apparence</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/notifications">Notifications</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/privacy">Confidentialité</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/data">Données et mémoire</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/shortcuts">Raccourcis</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings#billing">Facturation et plan</Link>
+                  </DropdownMenuItem>
+                  {user ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+                        onClick={handleShowDeleteAllDialog}
+                      >
+                        <TrashIcon className="mr-2 size-3.5" />
+                        <span>Effacer l'historique</span>
+                      </DropdownMenuItem>
+                    </>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          )}
+          </div>
           {user ? <SidebarUserNav user={user} /> : null}
         </SidebarFooter>
         <SidebarRail />
