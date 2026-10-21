@@ -245,29 +245,53 @@ function PureMessages({
           tabIndex={0}
         >
           <div className="mx-auto flex min-h-full min-w-0 max-w-4xl flex-col gap-5 px-2 py-6 md:gap-7 md:px-4">
-            {messages.map((message, index) => (
-              <PreviewMessage
-                addToolApprovalResponse={addToolApprovalResponse}
-                chatId={chatId}
-                isLoading={
-                  status === "streaming" && messages.length - 1 === index
-                }
-                isReadonly={isReadonly}
-                key={message.id}
-                message={message}
-                onEdit={onEditMessage}
-                regenerate={regenerate}
-                requiresScrollPadding={
-                  hasSentMessage && index === messages.length - 1
-                }
-                setMessages={setMessages}
-                vote={
-                  votes
-                    ? votes.find((vote) => vote.messageId === message.id)
-                    : undefined
-                }
-              />
-            ))}
+            {messages.map((message, index) => {
+              const priorUserMessage =
+                message.role === "assistant"
+                  ? [...messages.slice(0, index)]
+                      .reverse()
+                      .find((candidate) => candidate.role === "user")
+                  : undefined;
+              const priorUserText =
+                priorUserMessage?.parts
+                  ?.filter((part) => part.type === "text")
+                  .map((part) => part.text)
+                  .join(" ") ?? "";
+              const isAlvinRequested =
+                /(?:^|\\s)@alvin\\b|^\\s*alvin\\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\\s+(?:à\\s+)?alvin\\b|je\\s+veux\\s+(?:parler\\s+à|appeler)\\s+alvin/i.test(
+                  priorUserText
+                );
+
+              return (
+                <PreviewMessage
+                  addToolApprovalResponse={addToolApprovalResponse}
+                  chatId={chatId}
+                  isAlvinRequested={isAlvinRequested}
+                  isFirstAssistantMessage={
+                    message.role === "assistant" &&
+                    messages.find((candidate) => candidate.role === "assistant")?.id ===
+                      message.id
+                  }
+                  isLoading={
+                    status === "streaming" && messages.length - 1 === index
+                  }
+                  isReadonly={isReadonly}
+                  key={message.id}
+                  message={message}
+                  onEdit={onEditMessage}
+                  regenerate={regenerate}
+                  requiresScrollPadding={
+                    hasSentMessage && index === messages.length - 1
+                  }
+                  setMessages={setMessages}
+                  vote={
+                    votes
+                      ? votes.find((vote) => vote.messageId === message.id)
+                      : undefined
+                  }
+                />
+              );
+            })}
 
             {status === "submitted" &&
               messages.at(-1)?.role !== "assistant" && <ThinkingMessage />}
