@@ -35,7 +35,7 @@ import type { Document, Vote } from "@/lib/db/schema";
 import type { MissionFile } from "@/lib/idealy/mission-files";
 import { compileProjectPreview } from "@/lib/idealy/preview-compiler";
 import type { Attachment, ChatMessage } from "@/lib/types";
-import { fetcher } from "@/lib/utils";
+import { cn, fetcher } from "@/lib/utils";
 import { VersionFooter } from "./version-footer";
 import type { VisibilityType } from "./visibility-selector";
 import dynamic from "next/dynamic";
