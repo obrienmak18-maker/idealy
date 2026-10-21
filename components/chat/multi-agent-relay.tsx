@@ -29,6 +29,7 @@ const copy = {
     building: "Construit l’application",
     reviewing: "Vérifie le résultat",
     correcting: "Améliore un point détecté",
+    preparing: "Prépare la prochaine étape",
     details: "Détails",
     hide: "Réduire",
     active: "En cours",
@@ -40,6 +41,7 @@ const copy = {
     building: "Building the app",
     reviewing: "Checking the result",
     correcting: "Improving a detected issue",
+    preparing: "Preparing the next step",
     details: "Details",
     hide: "Collapse",
     active: "In progress",
@@ -51,6 +53,7 @@ const copy = {
     building: "Construyendo la aplicación",
     reviewing: "Verificando el resultado",
     correcting: "Mejorando un problema detectado",
+    preparing: "Preparando el siguiente paso",
     details: "Detalles",
     hide: "Contraer",
     active: "En curso",
@@ -73,7 +76,7 @@ export function MultiAgentRelay({
   const language = activeLanguage === "en" || activeLanguage === "es" ? activeLanguage : "fr";
   const text = copy[language];
   const agentName = currentAgentName.trim() || "Idealy";
-  const label = text[activityState];
+  const label = currentAgentName.trim() ? text[activityState] : text.preparing;
   const wayLabel = wayLabels[currentWay]?.[language] ?? "Idealy";
 
   return (
