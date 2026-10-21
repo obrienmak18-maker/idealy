@@ -812,8 +812,20 @@ export async function POST(request: Request) {
             if (intentCategory === "EXECUTION" && missionId && missionPlan) {
               const assistantId = generateId();
               dataStream.write({ id: assistantId, type: "text-start" });
+              const agentPrefix = requestedAgent ? "@" + requestedAgent : null;
+              const planMessage = userLanguage?.startsWith("en")
+                ? (agentPrefix
+                  ? agentPrefix + " has prepared a proposed plan for **" + missionPlan.projectKind + "**. The squad has not started yet. Review or edit the plan below, then approve it to start building."
+                  : "Here is the proposed plan for **" + missionPlan.projectKind + "**. The squad has not started yet. Review or edit the plan below, then approve it to start building.")
+                : userLanguage?.startsWith("es")
+                  ? (agentPrefix
+                    ? agentPrefix + " preparó una propuesta para **" + missionPlan.projectKind + "**. El equipo aún no ha empezado. Revisa o modifica el plan y después apruébalo para comenzar."
+                    : "Este es el plan propuesto para **" + missionPlan.projectKind + "**. El equipo aún no ha empezado. Revisa o modifica el plan y después apruébalo para comenzar.")
+                  : (agentPrefix
+                    ? agentPrefix + " a préparé une proposition pour **" + missionPlan.projectKind + "**. L’escouade n’a pas encore démarré. Vérifiez ou modifiez le plan ci-dessous, puis validez-le pour commencer."
+                    : "Voici le plan proposé pour **" + missionPlan.projectKind + "**. L’escouade n’a pas encore démarré. Vérifiez ou modifiez le plan ci-dessous, puis validez-le pour commencer.");
               dataStream.write({
-                delta: `Plan enregistré pour **${missionPlan.projectKind}**. L’escouade n’a pas encore démarré. Consultez le périmètre et les agents ci-dessous, puis cliquez sur **Valider et lancer** pour commencer la construction.`,
+                delta: planMessage,
                 id: assistantId,
                 type: "text-delta",
               });
