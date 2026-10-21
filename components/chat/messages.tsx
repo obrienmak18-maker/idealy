@@ -310,7 +310,7 @@ function PureMessages({
                   priorUserText
                 );
 
-              const requestedAgentToken = priorUserText.match(/(?:^|\\s)@([A-Za-z][A-Za-z0-9_-]{1,39})\\b/)?.[1] ?? null;
+              const requestedAgentToken = priorUserText.match(/(?:^|\s)@([A-Za-z][A-Za-z0-9_-]{1,39})\b/)?.[1] ?? null;
               const requestedAgentName = requestedAgentToken
                 ? activeWayData.agents.find((agent) => agent.name.toLowerCase() === requestedAgentToken.toLowerCase())?.name
                 : undefined;
