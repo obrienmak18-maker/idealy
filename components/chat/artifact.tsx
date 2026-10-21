@@ -22,6 +22,7 @@ import {
   useState,
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
+import { toast } from "sonner";
 import { useWindowSize } from "usehooks-ts";
 import { codeArtifact } from "@/artifacts/code/client";
 import { imageArtifact } from "@/artifacts/image/client";
@@ -205,14 +206,16 @@ function PureArtifact({
   const userScrolledArtifact = useRef(false);
   const [isContentDirty, setIsContentDirty] = useState(false);
   const openPreviewWindowForEvents = useCallback(() => {
-    const previewWindow = window.open(
-      "",
-      "idealy-preview",
-      "popup,width=1280,height=820"
-    );
+    // Called synchronously from the toolbar click event; do not defer window.open.
+    const previewWindow = window.open("about:blank", "_blank");
     if (!previewWindow) {
+      toast.error("Le navigateur a bloqué l’ouverture du nouvel onglet. Autorise les fenêtres surgissantes pour Idealy, puis réessaie.");
       return;
     }
+
+    // The generated preview is a standalone snapshot and does not need opener access.
+    previewWindow.opener = null;
+    previewWindow.document.open();
     previewWindow.document.write(
       previewHtmlForFrameRef.current || artifact.preview || ""
     );
@@ -571,19 +574,6 @@ function PureArtifact({
     ? previewHtmlForFrame.replace("</body>", `${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}</body>`)
     : `${previewHtmlForFrame}${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}`;
   previewHtmlForFrameRef.current = previewHtmlForFrameWithPath;
-
-  const openPreviewWindow = useCallback(() => {
-    const previewWindow = window.open(
-      "",
-      "idealy-preview",
-      "popup,width=1280,height=820"
-    );
-    if (!previewWindow) {
-      return;
-    }
-    previewWindow.document.write(previewHtmlForFrameWithPath);
-    previewWindow.document.close();
-  }, [previewHtmlForFrameWithPath]);
 
   if (!artifact.isVisible && !isMobile) {
     return (
