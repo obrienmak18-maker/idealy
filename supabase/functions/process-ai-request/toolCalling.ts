@@ -284,7 +284,13 @@ export function createToolEnabledChatResponse(input: {
 
         let totalToolCalls = 0;
         let generatedImageCalls = 0;
+        let generatedImageOutcome: Record<string, unknown> | null = null;
         let roundsWithTools = 0;
+        let timedOut = false;
+        const deadlineTimer = setTimeout(() => {
+          timedOut = true;
+          controllerAbort.abort();
+        }, 50_000);
         const maxTokens = Math.min(Math.max(128, input.maxTokens), 8000);
 
         try {
@@ -394,11 +400,27 @@ export function createToolEnabledChatResponse(input: {
                 });
               }
 
+              if (call.function.name === "generateImage") {
+                generatedImageOutcome = output;
+              }
               messages.push({
                 role: "tool",
                 tool_call_id: call.id,
                 content: JSON.stringify(output),
               });
+            }
+
+            // Image results already appear in their own activity card. Avoid a second
+            // paid model call just to narrate a generated image.
+            if (generatedImageCalls > 0) {
+              const status = stringField(generatedImageOutcome?.status);
+              const detail = stringField(generatedImageOutcome?.message);
+              const finalMessage = status === "success"
+                ? localizedText(input.language, "L’image générée est affichée ci-dessus.", "The generated image is shown above.", "La imagen generada aparece arriba.")
+                : detail || localizedText(input.language, "La génération n’a pas abouti. Consulte le détail dans la carte ci-dessus.", "Image generation did not complete. See the details above.", "La generación de imágenes no se completó. Consulta los detalles arriba.");
+              emitText(controller, encoder, finalMessage);
+              emitDone(controller, encoder);
+              return;
             }
 
             // Once the tool budget or round budget is used, make one final answer
@@ -430,11 +452,14 @@ export function createToolEnabledChatResponse(input: {
           emitText(controller, encoder, localizedText(input.language, "La recherche a atteint sa limite de sécurité. Consulte les résultats affichés ci-dessus.", "The search reached its safety limit. Review the results shown above.", "La búsqueda alcanzó su límite de seguridad. Revisa los resultados mostrados arriba."));
           emitDone(controller, encoder);
         } catch (error) {
-          if (controllerAbort.signal.aborted) return;
+          if (controllerAbort.signal.aborted && !timedOut) return;
           console.error("Idealy tool-enabled chat failed", error);
-          emitText(controller, encoder, localizedText(input.language, "Une erreur a interrompu la recherche ou la génération. Consulte les résultats déjà affichés, puis réessaie.", "An error interrupted the search or generation. Review the results already shown, then try again.", "Un error interrumpió la búsqueda o la generación. Revisa los resultados mostrados e inténtalo de nuevo."));
+          emitText(controller, encoder, timedOut
+            ? localizedText(input.language, "La recherche a pris trop de temps. Les résultats déjà affichés restent disponibles ; tu peux relancer une recherche plus ciblée.", "The search took too long. Results already shown remain available; try a more focused query.", "La búsqueda tardó demasiado. Los resultados mostrados siguen disponibles; intenta una consulta más específica.")
+            : localizedText(input.language, "Une erreur a interrompu la recherche ou la génération. Consulte les résultats déjà affichés, puis réessaie.", "An error interrupted the search or generation. Review the results already shown, then try again.", "Un error interrumpió la búsqueda o la generación. Revisa los resultados mostrados e inténtalo de nuevo."));
           emitDone(controller, encoder);
         } finally {
+          clearTimeout(deadlineTimer);
           input.requestSignal.removeEventListener("abort", onAbort);
           try { controller.close(); } catch { /* the client may have disconnected */ }
         }
