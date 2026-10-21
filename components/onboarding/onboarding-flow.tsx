@@ -7,11 +7,9 @@ import {
   Compass,
   Lightbulb,
   Mail,
-  Pause,
   Rocket,
   Sparkles,
   UserRound,
-  Volume2,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -23,8 +21,6 @@ import {
   idealyExperienceLevels,
   idealyProjectTypes,
   onboardingInputSchema,
-  idealyPreferredVoices,
-  isIdealyPreferredVoice,
 } from "@/lib/idealy/onboarding-contract";
 import {
   isIdealyWay,
@@ -43,7 +39,6 @@ type OnboardingDraft = {
   projectType: string;
   timezone: string;
   way: IdealyWay;
-  preferredVoice: (typeof idealyPreferredVoices)[number];
 };
 
 const projectLabels: Record<(typeof idealyProjectTypes)[number], { fr: string; en: string; es: string }> = {
@@ -77,21 +72,6 @@ const discoveryLabels: Record<(typeof idealyDiscoverySources)[number], { fr: str
 };
 
 // Ocean light modes per step: Alternating between Emerald/Teal and Violet/Purple
-
-type VoicePreset = {
-  id: (typeof idealyPreferredVoices)[number];
-  label: { fr: string; en: string; es: string };
-  description: { fr: string; en: string; es: string };
-  pitch: number;
-  rate: number;
-};
-
-const voicePresets: VoicePreset[] = [
-  { id: "aurora", label: { fr: "Aurore", en: "Aurora", es: "Aurora" }, description: { fr: "Douce & chaleureuse", en: "Soft & warm", es: "Suave y cálida" }, pitch: 1.12, rate: 0.92 },
-  { id: "nova", label: { fr: "Nova", en: "Nova", es: "Nova" }, description: { fr: "Naturelle & équilibrée", en: "Natural & balanced", es: "Natural y equilibrada" }, pitch: 1, rate: 1 },
-  { id: "atlas", label: { fr: "Atlas", en: "Atlas", es: "Atlas" }, description: { fr: "Posée & profonde", en: "Calm & grounded", es: "Serena y profunda" }, pitch: 0.78, rate: 0.88 },
-  { id: "pulse", label: { fr: "Pulse", en: "Pulse", es: "Pulse" }, description: { fr: "Vive & dynamique", en: "Bright & energetic", es: "Viva y dinámica" }, pitch: 1.18, rate: 1.08 },
-];
 
 const stepAuras = [
   {
@@ -143,7 +123,6 @@ export function OnboardingFlow() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
-  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
 
   // Animation states for the star logo transition onto ocean water
   const [starSettled, setStarSettled] = useState(false);
@@ -158,7 +137,6 @@ export function OnboardingFlow() {
     projectType: "",
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     way: initialWay,
-    preferredVoice: "nova",
   });
 
   // Exactly 4 structured, essential steps as requested by user
@@ -167,7 +145,7 @@ export function OnboardingFlow() {
       {
         icon: UserRound,
         key: "profile",
-        label: langKey === "en" ? "Profile & voice" : langKey === "es" ? "Perfil y voz" : "Profil & voix",
+        label: langKey === "en" ? "Your profile" : langKey === "es" ? "Tu perfil" : "Votre profil",
         badge: langKey === "en" ? "You" : langKey === "es" ? "Tú" : "Vous",
       },
       {
@@ -217,7 +195,6 @@ export function OnboardingFlow() {
 
         const status = (await result.json()) as {
           accountEmail?: unknown; accountName?: unknown; onboardingCompleted?: unknown;
-          firstName?: unknown; lastName?: unknown; preferredVoice?: unknown;
           experienceLevel?: unknown; primaryGoal?: unknown; projectType?: unknown; way?: unknown;
         };
         if (status.onboardingCompleted === true) {
@@ -233,7 +210,6 @@ export function OnboardingFlow() {
           ...current,
           firstName: typeof status.firstName === "string" && status.firstName.trim() ? status.firstName : current.firstName || nameParts[0] || "",
           lastName: typeof status.lastName === "string" && status.lastName.trim() ? status.lastName : current.lastName || nameParts.slice(1).join(" "),
-          preferredVoice: isIdealyPreferredVoice(status.preferredVoice) ? status.preferredVoice : current.preferredVoice,
           experienceLevel: typeof status.experienceLevel === "string" && idealyExperienceLevels.includes(status.experienceLevel as (typeof idealyExperienceLevels)[number]) ? status.experienceLevel : current.experienceLevel,
           primaryGoal: typeof status.primaryGoal === "string" ? status.primaryGoal : current.primaryGoal,
           projectType: typeof status.projectType === "string" && idealyProjectTypes.includes(status.projectType as (typeof idealyProjectTypes)[number]) ? status.projectType : current.projectType,
@@ -250,45 +226,6 @@ export function OnboardingFlow() {
     return () => controller.abort();
   }, [nextPath, router]);
 
-  const previewVoice = (voiceId: OnboardingDraft["preferredVoice"]) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setError(langKey === "en"
-        ? "Voice previews are not supported by this browser."
-        : langKey === "es" ? "Este navegador no admite la vista previa de voz."
-        : "L’aperçu vocal n’est pas pris en charge par ce navigateur.");
-      return;
-    }
-    if (previewingVoice === voiceId) {
-      window.speechSynthesis.cancel();
-      setPreviewingVoice(null);
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const preset = voicePresets.find((item) => item.id === voiceId) ?? voicePresets[1];
-    const sample = langKey === "en"
-      ? "Hello! I’m Idealy. Let’s build something great, one idea at a time."
-      : langKey === "es" ? "¡Hola! Soy Idealy. Construyamos algo genial, una idea a la vez."
-      : "Bonjour ! Je suis Idealy. Avançons ensemble, une idée à la fois.";
-    const utterance = new SpeechSynthesisUtterance(sample);
-    const speechLanguage = langKey === "en" ? "en-US" : langKey === "es" ? "es-ES" : "fr-FR";
-    utterance.lang = speechLanguage;
-    utterance.pitch = preset.pitch;
-    utterance.rate = preset.rate;
-    const installedVoice = window.speechSynthesis.getVoices().find((candidate) =>
-      candidate.lang.toLowerCase().startsWith(speechLanguage.slice(0, 2))
-    );
-    if (installedVoice) utterance.voice = installedVoice;
-    utterance.onend = () => setPreviewingVoice(null);
-    utterance.onerror = () => setPreviewingVoice(null);
-    setError(null);
-    setPreviewingVoice(voiceId);
-    window.speechSynthesis.speak(utterance);
-  };
-
-  useEffect(() => () => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
-  }, []);
-
   const updateDraft = <K extends keyof OnboardingDraft>(
     field: K,
     value: OnboardingDraft[K]
@@ -304,7 +241,7 @@ export function OnboardingFlow() {
     });
 
   const canContinue = () => {
-    if (step === 0) return draft.firstName.trim().length > 0 && Boolean(draft.preferredVoice);
+    if (step === 0) return draft.firstName.trim().length > 0;
     if (step === 1) return draft.primaryGoal.trim().length > 0 && Boolean(draft.projectType);
     if (step === 2) return Boolean(draft.experienceLevel) && Boolean(draft.way);
     if (step === 3) return validatedInput().success;
@@ -312,8 +249,6 @@ export function OnboardingFlow() {
   };
 
   const nextStep = () => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
-    setPreviewingVoice(null);
     if (!canContinue()) {
       setError(
         langKey === "en"
@@ -356,7 +291,6 @@ export function OnboardingFlow() {
         throw new Error(typeof body?.error === "string" ? body.error : "onboarding-failed");
       }
 
-      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
       window.location.assign(nextPath);
     } catch (submissionError) {
       setError(
@@ -525,7 +459,7 @@ export function OnboardingFlow() {
               <motion.div key="step-0" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3 }} className="space-y-5">
                 <div>
                   <span className="inline-block rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-teal-600 dark:text-teal-400">Question 1 / 4</span>
-                  <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{langKey === "en" ? "Your space, your voice" : langKey === "es" ? "Tu espacio, tu voz" : "Ton espace, ta voix"}</h1>
+                  <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{langKey === "en" ? "Make this space yours" : langKey === "es" ? "Haz tuyo este espacio" : "Personnalisez votre espace"}</h1>
                   <p className="mt-1 text-xs text-muted-foreground">{langKey === "en" ? "Make Idealy feel like yours. You can change these choices later." : langKey === "es" ? "Haz que Idealy se sienta tuyo. Puedes cambiar estas opciones después." : "Personnalisez votre espace. Vous pourrez modifier ces choix plus tard."}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -542,38 +476,6 @@ export function OnboardingFlow() {
                     {langKey === "en" ? "Last name" : langKey === "es" ? "Apellido" : "Nom"} <span className="font-normal text-muted-foreground">({langKey === "en" ? "optional" : langKey === "es" ? "opcional" : "facultatif"})</span>
                     <input value={draft.lastName} onChange={(event) => updateDraft("lastName", event.target.value)} maxLength={80} autoComplete="family-name" className="h-10 rounded-xl border border-border/70 bg-background/60 px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20" placeholder={langKey === "en" ? "Your last name" : langKey === "es" ? "Tu apellido" : "Votre nom"} />
                   </label>
-                </div>
-                <div>
-                  <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-xs font-semibold text-foreground">{langKey === "en" ? "Choose Idealy’s voice" : langKey === "es" ? "Elige la voz de Idealy" : "Choisissez la voix d’Idealy"}</span>
-                    <span className="text-[10px] text-muted-foreground">{langKey === "en" ? "Tap a voice to select it" : langKey === "es" ? "Toca una voz para elegirla" : "Touchez une voix pour la choisir"}</span>
-                  </div>
-                  <div role="radiogroup" aria-label={langKey === "en" ? "Idealy voice" : langKey === "es" ? "Voz de Idealy" : "Voix d’Idealy"} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    {voicePresets.map((voice) => {
-                      const selected = draft.preferredVoice === voice.id;
-                      return (
-                        <button type="button" role="radio" aria-checked={selected} key={voice.id} onClick={() => {
-                          updateDraft("preferredVoice", voice.id);
-                          if (previewingVoice && previewingVoice !== voice.id) {
-                            if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-                            setPreviewingVoice(null);
-                          }
-                        }} className={cn("group inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-2 text-left transition-colors", selected ? "border-teal-500/70 bg-teal-500/10 text-foreground" : "border-border/50 bg-transparent text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
-                          <motion.span animate={{ scale: selected ? [1, 1.18, 1] : 1, opacity: selected ? 1 : 0.45 }} transition={{ duration: 1.8, repeat: selected ? Infinity : 0, ease: "easeInOut" }} className={cn("size-2.5 shrink-0 rounded-full", voice.id === "aurora" ? "bg-rose-300" : voice.id === "nova" ? "bg-gradient-to-br from-teal-300 to-sky-400" : voice.id === "atlas" ? "bg-violet-400" : "bg-amber-300")} />
-                          <span className="text-xs font-semibold">{voice.label[langKey]}</span>
-                          <span className="hidden text-[10px] sm:inline">{voice.description[langKey]}</span>
-                          {selected && <Check className="size-3 shrink-0 text-teal-500" aria-hidden="true" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <button type="button" onClick={() => previewVoice(draft.preferredVoice)} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40" aria-label={previewingVoice === draft.preferredVoice ? (langKey === "en" ? "Stop voice preview" : langKey === "es" ? "Detener vista previa" : "Arrêter l’aperçu vocal") : (langKey === "en" ? "Play voice preview" : langKey === "es" ? "Escuchar voz" : "Écouter un aperçu")}>
-                      {previewingVoice === draft.preferredVoice ? <Pause className="size-3.5" /> : <Volume2 className="size-3.5" />}
-                      {previewingVoice === draft.preferredVoice ? (langKey === "en" ? "Stop preview" : langKey === "es" ? "Detener" : "Arrêter l’aperçu") : (langKey === "en" ? "Listen to this voice" : langKey === "es" ? "Escuchar esta voz" : "Écouter cette voix")}
-                    </button>
-                    <span className="text-[10px] text-muted-foreground">{langKey === "en" ? "Preview uses a voice available on your device." : langKey === "es" ? "La vista previa usa una voz disponible en tu dispositivo." : "L’aperçu utilise une voix disponible sur votre appareil."}</span>
-                  </div>
                 </div>
               </motion.div>
             )}
@@ -733,10 +635,6 @@ export function OnboardingFlow() {
                       <dd className="mt-0.5 font-semibold text-sm text-foreground">
                         {wayPresentations[draft.way].label}
                       </dd>
-                    </div>
-                    <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                      <dt className="text-muted-foreground">{langKey === "en" ? "Voice" : langKey === "es" ? "Voz" : "Voix"}</dt>
-                      <dd className="mt-0.5 font-medium text-foreground">{voicePresets.find((voice) => voice.id === draft.preferredVoice)?.label[langKey] || "Nova"}</dd>
                     </div>
                     <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
                       <dt className="text-muted-foreground">{langKey === "en" ? "Project type" : "Type de projet"}</dt>
