@@ -392,6 +392,12 @@ export function BuildTopBar() {
     if (!missionId || isSquadRunning) {
       return;
     }
+    if (metadata?.missionSquadStatus === "needs-user-input") {
+      toast.info(
+        "Répondez à la demande de précision dans la conversation avant de relancer l’escouade."
+      );
+      return;
+    }
 
     setIsSquadRunning(true);
     setMetadata((current: Record<string, unknown> | null) => ({
