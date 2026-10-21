@@ -339,6 +339,8 @@ export const {
         email: { label: "Email", type: "email" },
         intent: { label: "Intent", type: "text" },
         password: { label: "Password", type: "password" },
+        turnstileProof: { label: "Verified Turnstile proof", type: "text" },
+        turnstileToken: { label: "Turnstile token", type: "text" },
       },
     }),
     Credentials({
@@ -484,6 +486,7 @@ export const {
       },
       credentials: {
         idToken: { label: "Firebase ID token", type: "text" },
+        turnstileToken: { label: "Turnstile token", type: "text" },
       },
       id: "firebase",
     }),
