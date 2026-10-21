@@ -195,7 +195,7 @@ export function OnboardingFlow() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setStarSettled(true);
-    }, 450);
+    }, 1100);
     return () => clearTimeout(timer);
   }, []);
 

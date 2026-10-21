@@ -4,6 +4,10 @@
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS preferred_voice TEXT NOT NULL DEFAULT 'nova';
 
+UPDATE public.profiles
+SET preferred_voice = 'nova'
+WHERE preferred_voice IS NULL OR preferred_voice NOT IN ('aurora', 'nova', 'atlas', 'pulse');
+
 ALTER TABLE public.profiles
   DROP CONSTRAINT IF EXISTS profiles_preferred_voice_check,
   ADD CONSTRAINT profiles_preferred_voice_check
