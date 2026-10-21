@@ -406,7 +406,7 @@ function PureMultimodalInput({
 
     const messageText = redactLikelySecrets(input);
     if (messageText !== input) {
-      toast.warning("Une clé sensible a été masquée avant l’envoi.");
+      toast.warning(language.startsWith("en") ? "A sensitive key was masked before sending." : language.startsWith("es") ? "Se ocultó una clave sensible antes del envío." : "Une clé sensible a été masquée avant l’envoi.");
     }
     if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") {
       window.history.pushState(
@@ -599,7 +599,7 @@ function PureMultimodalInput({
     if (status === "ready" || status === "error") {
       submitForm();
     } else {
-      toast.error("Please wait for the model to finish its response!");
+      toast.error(language.startsWith("en") ? "Wait for the current response to finish." : language.startsWith("es") ? "Espera a que termine la respuesta actual." : "Attendez la fin de la réponse en cours.");
     }
   }, [attachments.length, handleSlashSelect, input, status, submitForm]);
 
@@ -747,18 +747,18 @@ function PureMultimodalInput({
         )}
         {hasMetadataOnlyAttachments ? (
           <p className="px-4 pt-2 text-[11px] leading-relaxed text-muted-foreground" role="status">
-            Les fichiers audio, vidéo, archives et formats non reconnus restent joints. Le modèle reçoit leur nom et leur format, mais leur contenu n’est pas encore analysé.
+            {language.startsWith("en") ? "Audio, video, archive and unsupported files stay attached. The model receives their names and formats, but their contents are not analyzed yet." : language.startsWith("es") ? "Los archivos de audio, vídeo, archivos comprimidos y formatos no compatibles se adjuntan, pero el modelo solo recibe sus nombres y formatos." : "Les fichiers audio, vidéo, archives et formats non reconnus restent joints. Le modèle reçoit leur nom et leur format, mais leur contenu n’est pas encore analysé."}
           </p>
         ) : null}
         {hasLikelySecret ? (
           <div className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-800 dark:text-amber-200" role="status">
-            <span>Clé sensible détectée : elle est masquée à l’écran et le sera aussi avant l’envoi.</span>
+            <span>{language.startsWith("en") ? "Sensitive key detected: it is hidden on screen and before sending." : language.startsWith("es") ? "Clave sensible detectada: se oculta en pantalla y antes del envío." : "Clé sensible détectée : elle est masquée à l’écran et le sera aussi avant l’envoi."}</span>
             <button
               className="shrink-0 rounded-md px-2 py-1 font-medium underline underline-offset-2"
               onClick={() => setShowSensitiveDraft((visible) => !visible)}
               type="button"
             >
-              {showSensitiveDraft ? "Masquer" : "Modifier"}
+              {showSensitiveDraft ? (language.startsWith("en") ? "Hide" : language.startsWith("es") ? "Ocultar" : "Masquer") : (language.startsWith("en") ? "Edit" : language.startsWith("es") ? "Editar" : "Modifier")}
             </button>
           </div>
         ) : null}
@@ -819,7 +819,7 @@ function PureMultimodalInput({
             <PromptInputTools>
               <PromptInputActionMenu>
                 <PromptInputActionMenuTrigger
-                  aria-label="Ajouter des éléments"
+                  aria-label={language.startsWith("en") ? "Add tools" : language.startsWith("es") ? "Añadir herramientas" : "Ajouter des éléments"}
                   className="h-8 w-8 rounded-xl border border-border/50 bg-background/50 p-1 text-muted-foreground transition-all duration-200 hover:rotate-90 hover:border-primary/40 hover:bg-primary/5 hover:text-foreground active:scale-95"
                 >
                   <PlusIcon className="size-4" />
