@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "@/lib/i18n/provider";
-import { CheckCircle2, Clock3, ExternalLink, Image as ImageIcon, LoaderCircle, Search, Sparkles, TerminalSquare, AlertCircle } from "lucide-react";
+import { CheckCircle2, ExternalLink, LoaderCircle, AlertCircle } from "lucide-react";
 import { Tool, ToolContent, ToolHeader, type ToolPart } from "@/components/ai-elements/tool";
 
 type ToolKind = "webSearch" | "searchImages" | "generateImage" | "executeSandbox";
@@ -115,13 +115,6 @@ const toolTitles = {
   es: { webSearch: "Búsqueda web", searchImages: "Búsqueda de imágenes", generateImage: "Generación de imágenes", executeSandbox: "Ejecución de código" },
 } as const;
 
-const toolIcons = {
-  webSearch: Search,
-  searchImages: ImageIcon,
-  generateImage: Sparkles,
-  executeSandbox: TerminalSquare,
-} as const;
-
 function ResultLink({ url, title, description }: { url: string; title: string; description?: string }) {
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className="group flex min-w-0 items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -135,7 +128,7 @@ function ResultLink({ url, title, description }: { url: string; title: string; d
   );
 }
 
-function ImageGrid({ images, credits }: { images: Array<Record<string, unknown>>; credits: boolean }) {
+function ImageGrid({ images, credits, sourceLabel }: { images: Array<Record<string, unknown>>; credits: boolean; sourceLabel: string }) {
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {images.slice(0, 6).map((image, index) => {
@@ -154,7 +147,7 @@ function ImageGrid({ images, credits }: { images: Array<Record<string, unknown>>
               <p className="truncate px-2 py-1.5 text-[10px] text-muted-foreground">{photographer}</p>
             ) : null}
             {sourceUrl ? (
-              <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="block truncate px-2 pb-2 text-[10px] text-primary hover:underline">{credits ? "Pexels" : "Ouvrir l’image"}</a>
+              <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="block truncate px-2 pb-2 text-[10px] text-primary hover:underline">{credits ? "Pexels" : sourceLabel}</a>
             ) : null}
           </div>
         );
@@ -168,7 +161,6 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
   const locale = language === "en" || language === "es" ? language : "fr";
   const text = toolCopy[locale];
   const title = toolTitles[locale][kind];
-  const Icon = toolIcons[kind];
   const inputData = asRecord(input);
   const result = asRecord(output);
   const status = stringValue(result?.status);
@@ -180,7 +172,7 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
   const rawMessage = stringValue(result?.message);
   const friendlyMessage = isProviderUnavailable
     ? status === "needs_credits" ? text.creditNeeded : text.notConfigured
-    : rawMessage || errorText || "";
+    : rawMessage || errorText || stringValue(result?.error) || "";
   const isSearch = kind === "webSearch";
   const isPexels = kind === "searchImages";
   const isGeneration = kind === "generateImage";
@@ -235,7 +227,7 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{isPexels ? text.photos : text.generated}</p>
                   <span className="text-[10px] text-muted-foreground">{images.length}</span>
                 </div>
-                <ImageGrid credits={isPexels} images={images} />
+                <ImageGrid credits={isPexels} images={images} sourceLabel={text.open} />
               </>
             ) : !friendlyMessage ? <p className="text-xs text-muted-foreground">{text.noResults}</p> : null}
           </>
