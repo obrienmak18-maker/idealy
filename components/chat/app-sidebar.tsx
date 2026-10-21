@@ -337,7 +337,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       {powerLoading
                         ? "—"
                         : powerStatus
-                          ? `${powerStatus.balance} énergie`
+                          ? `${powerStatus.balance} ${powerStatus.resourceLabel}`
                           : "—"}
                     </span>
                   </div>
