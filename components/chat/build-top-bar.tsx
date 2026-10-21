@@ -170,6 +170,10 @@ export function BuildTopBar() {
   const [view, setView] = useState<WorkspaceView>("preview");
   const [device, setDevice] = useState<Device>("desktop");
   const [page, setPage] = useState<PreviewPage>({ label: "Accueil", path: "/" });
+  const activePreviewPage =
+    dynamicPages.find((candidate) => candidate.path === page.path) ??
+    dynamicPages[0] ??
+    { label: "Accueil", path: "/" };
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -212,6 +216,22 @@ export function BuildTopBar() {
       setFavorite(false);
     }
   }, [chatId]);
+
+  // Keep the visible page picker synchronized with routes as files stream in.
+  // If a project's root route does not exist, select the first real route.
+  useEffect(() => {
+    const matchingPage = dynamicPages.find((candidate) => candidate.path === page.path);
+    if (matchingPage) {
+      if (matchingPage.label !== page.label) setPage(matchingPage);
+      return;
+    }
+
+    const nextPage = dynamicPages[0] ?? { label: "Accueil", path: "/" };
+    setPage(nextPage);
+    window.dispatchEvent(
+      new CustomEvent("idealy:set-preview-page", { detail: nextPage.path })
+    );
+  }, [dynamicPages, page.label, page.path]);
 
   // Derive squad status label from real metadata — no static strings
   const missionSquadStatus =
@@ -780,7 +800,7 @@ export function BuildTopBar() {
         </div>
       </div>
 
-      <div className="hidden items-center justify-center md:flex">
+      <div className="hidden min-w-0 items-center justify-center gap-1.5 md:flex">
         <div
           aria-label="Vues du workspace"
           className="flex items-center gap-0.5 rounded-xl border border-sidebar-border/70 bg-background/20 p-1 shadow-sm"
@@ -808,6 +828,37 @@ export function BuildTopBar() {
             </button>
           ))}
         </div>
+        {view === "preview" ? (
+          <div className="flex min-w-0 items-center gap-1 rounded-xl border border-sidebar-border/70 bg-background/20 p-1">
+            <Globe2 aria-hidden="true" className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
+            <select
+              aria-label="Page affichée dans l’aperçu"
+              className="h-7 min-w-0 max-w-[145px] cursor-pointer appearance-none rounded-md bg-transparent px-1.5 text-[11px] font-medium text-sidebar-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring xl:max-w-[170px]"
+              onChange={(event) => {
+                const nextPage = dynamicPages.find((candidate) => candidate.path === event.target.value);
+                if (nextPage) selectPage(nextPage);
+              }}
+              title={`${activePreviewPage.label} — ${activePreviewPage.path}`}
+              value={activePreviewPage.path}
+            >
+              {dynamicPages.map((previewPage) => (
+                <option key={previewPage.path} value={previewPage.path}>
+                  {previewPage.label} · {previewPage.path}
+                </option>
+              ))}
+            </select>
+            <button
+              aria-label="Ouvrir l’aperçu dans un nouvel onglet"
+              className={`${controlClass} size-7`}
+              disabled={artifact.kind !== "code"}
+              onClick={() => window.dispatchEvent(new Event("idealy:open-preview"))}
+              title="Ouvrir l’aperçu dans un nouvel onglet"
+              type="button"
+            >
+              <ExternalLink aria-hidden="true" className="size-3.5" />
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex min-w-0 items-center justify-end gap-1">
@@ -942,7 +993,8 @@ export function BuildTopBar() {
                 className="mt-1 flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 onClick={() => {
                   setMoreOpen(false);
-                  dispatch("idealy:open-preview");
+                  // Must dispatch in the click stack so window.open is not blocked.
+                  window.dispatchEvent(new Event("idealy:open-preview"));
                 }}
                 type="button"
               >
