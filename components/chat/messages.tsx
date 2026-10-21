@@ -13,6 +13,8 @@ import { PreviewMessage, ThinkingMessage } from "./message";
 import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
 import { WorkspaceTemplates } from "./workspace-templates";
+import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import type { PlanOption } from "./plan-choices";
 
 type MessagesProps = {
@@ -51,6 +53,10 @@ function PureMessages({
   onSuggestionSelect,
 }: MessagesProps) {
   const { t } = useTranslation();
+  const { currentWay } = useGamificationStore();
+  const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
+  const chiefAgent =
+    activeWayData.agents.find((agent) => agent.isChief) ?? activeWayData.agents[0];
   const [activeHomeTab, setActiveHomeTab] = useState<
     "suggestions" | "templates" | "specification"
   >("suggestions");
@@ -308,7 +314,34 @@ function PureMessages({
             })}
 
             {status === "submitted" &&
-              messages.at(-1)?.role !== "assistant" && <ThinkingMessage />}
+              messages.at(-1)?.role !== "assistant" && (
+                <ThinkingMessage
+                  agentAvatar={
+                    messages.some((message) => message.role === "assistant") &&
+                    !/(?:^|\\s)@alvin\\b|^\\s*alvin\\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\\s+(?:à\\s+)?alvin\\b|je\\s+veux\\s+(?:parler\\s+à|appeler)\\s+alvin/i.test(
+                      messages
+                        .at(-1)
+                        ?.parts.filter((part) => part.type === "text")
+                        .map((part) => part.text)
+                        .join(" ") ?? ""
+                    )
+                      ? chiefAgent?.avatarUrl ?? alvinMessenger.avatarUrl
+                      : alvinMessenger.avatarUrl
+                  }
+                  agentName={
+                    messages.some((message) => message.role === "assistant") &&
+                    !/(?:^|\\s)@alvin\\b|^\\s*alvin\\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\\s+(?:à\\s+)?alvin\\b|je\\s+veux\\s+(?:parler\\s+à|appeler)\\s+alvin/i.test(
+                      messages
+                        .at(-1)
+                        ?.parts.filter((part) => part.type === "text")
+                        .map((part) => part.text)
+                        .join(" ") ?? ""
+                    )
+                      ? chiefAgent?.name ?? "Chef d'équipe"
+                      : alvinMessenger.name
+                  }
+                />
+              )}
 
             <div
               className="min-h-[24px] min-w-[24px] shrink-0"
