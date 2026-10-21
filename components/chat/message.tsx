@@ -58,12 +58,13 @@ function ToolApprovalActions({
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   approvalId: string;
 }) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const denialReason = language.startsWith("en") ? "The user declined the weather lookup." : language.startsWith("es") ? "El usuario rechazó la consulta del tiempo." : "L’utilisateur a refusé la recherche météo.";
   const handleDeny = useCallback(() => {
     addToolApprovalResponse({
       approved: false,
       id: approvalId,
-      reason: "Utilisateur a refusé la recherche météo.",
+      reason: denialReason,
     });
   }, [addToolApprovalResponse, approvalId]);
 
