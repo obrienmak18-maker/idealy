@@ -3,6 +3,7 @@
 import { LoaderCircle, RadioTower } from "lucide-react";
 
 type MultiAgentRelayProps = {
+  activityState: "building" | "correcting";
   currentAgentName: string;
   currentWay: string;
   hasToolExecution: boolean;
@@ -18,6 +19,7 @@ const wayLabels: Record<string, string> = {
 };
 
 export function MultiAgentRelay({
+  activityState,
   currentAgentName,
   currentWay,
   hasToolExecution,
@@ -28,12 +30,16 @@ export function MultiAgentRelay({
   // This component reflects the live response state, not an invented task timeline.
   if (!hasToolExecution || !isLoading || isFinished) return null;
 
-  const agentName = currentAgentName.trim() || "L'équipe Idealy";
+  const agentName = currentAgentName.trim() || "Équipe Idealy";
+  const activityLabel =
+    activityState === "correcting"
+      ? "Corrige un problème détecté"
+      : "Construit l’application";
   const wayLabel = wayLabels[currentWay] ?? "Idealy";
 
   return (
     <div
-      aria-label={`${agentName} travaille sur la demande`}
+      aria-label={`${agentName} : ${activityLabel.toLocaleLowerCase("fr")}`}
       aria-live="polite"
       className="my-2 flex w-fit max-w-full items-center gap-2.5 rounded-xl border border-border/70 bg-card/70 px-3 py-2 text-xs text-muted-foreground"
       role="status"
