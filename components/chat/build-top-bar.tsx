@@ -427,6 +427,14 @@ export function BuildTopBar() {
 
     const controller = new AbortController();
     let latestSequence = Number(metadata?.missionFileLastSequence ?? 0);
+    let activeAgentName =
+      typeof metadata?.missionActiveAgentName === "string"
+        ? metadata.missionActiveAgentName
+        : null;
+    let activeAgentRole =
+      typeof metadata?.missionActiveAgentRole === "string"
+        ? metadata.missionActiveAgentRole
+        : null;
 
     const pollMissionEvents = async () => {
       while (!controller.signal.aborted) {
@@ -468,12 +476,16 @@ export function BuildTopBar() {
                   const agent = typeof payload.agent === "string" ? payload.agent : "";
                   nextAgentName = typeof payload.agentName === "string" ? payload.agentName : null;
                   nextAgentRole = typeof payload.agentRole === "string" ? payload.agentRole : null;
+                  activeAgentName = nextAgentName;
+                  activeAgentRole = nextAgentRole;
                   nextSquadStatus = agent === "reviewer" ? "reviewing" : "building";
                 } else if (event.event_type === "agent_completed") {
                   const completedName = typeof payload.agentName === "string" ? payload.agentName : null;
-                  if (!completedName || completedName === nextAgentName) {
+                  if (!completedName || completedName === activeAgentName) {
                     nextAgentName = null;
                     nextAgentRole = null;
+                    activeAgentName = null;
+                    activeAgentRole = null;
                   }
                 } else if (event.event_type === "auto_correction_started") {
                   nextSquadStatus = "auto_correction_started";
@@ -482,6 +494,8 @@ export function BuildTopBar() {
                       ? payload.correctionOwner
                       : nextAgentName ?? null;
                   nextAgentRole = "Correction des fichiers après revue";
+                  activeAgentName = nextAgentName;
+                  activeAgentRole = nextAgentRole;
                 } else if (event.event_type === "validation_result") {
                   nextSquadStatus = "reviewing";
                 } else if (
@@ -498,6 +512,8 @@ export function BuildTopBar() {
                   nextSquadStatus = normalizedMissionStatus(finalStatus);
                   nextAgentName = null;
                   nextAgentRole = null;
+                  activeAgentName = null;
+                  activeAgentRole = null;
                   nextError =
                     nextSquadStatus === "ready"
                       ? null
@@ -535,12 +551,8 @@ export function BuildTopBar() {
                   missionFiles: normalizedFiles,
                   ...(fileStatus ? { missionFileStatus: fileStatus } : {}),
                   ...(nextSquadStatus ? { missionSquadStatus: nextSquadStatus } : {}),
-                  ...(nextAgentName !== undefined
-                    ? { missionActiveAgentName: nextAgentName }
-                    : {}),
-                  ...(nextAgentRole !== undefined
-                    ? { missionActiveAgentRole: nextAgentRole }
-                    : {}),
+                  missionActiveAgentName: activeAgentName,
+                  missionActiveAgentRole: activeAgentRole,
                   ...(nextError !== undefined ? { missionSquadError: nextError } : {}),
                 };
               });
