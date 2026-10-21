@@ -60,7 +60,7 @@ export function CookieNotice() {
       role="region"
     >
       <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-        <Cookie aria-hidden="true" className="size-4.5" />
+        <Cookie aria-hidden="true" className="size-4" />
       </span>
 
       <div className="min-w-0 flex-1">
