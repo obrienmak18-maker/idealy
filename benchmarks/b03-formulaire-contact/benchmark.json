@@ -1,0 +1,18 @@
+{
+  "id": "b03-formulaire-contact",
+  "prompt_fichier": "prompt.md",
+  "attente": {
+    "fichiers_obligatoires": [
+      "src/App.tsx",
+      "package.json",
+      "index.html"
+    ],
+    "mots_interdits_code": [
+      "TODO",
+      "FIXME",
+      "placeholder"
+    ],
+    "imports_resolus_exiges": true,
+    "build_doit_passer": true
+  }
+}

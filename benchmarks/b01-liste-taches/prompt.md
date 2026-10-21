@@ -1,0 +1,1 @@
+Crée une application React+Vite : une liste de tâches avec ajout, cochage, suppression et compteur de tâches restantes. Les tâches persistent en localStorage. Un bouton « Tout effacer » demande confirmation avant d'agir.

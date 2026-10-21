@@ -1,8 +1,19 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Clock } from "lucide-react";
+import { IdealyMark } from "@/components/branding/idealy-logo";
 import type { Vote } from "@/lib/db/schema";
+import { useTranslation } from "@/lib/i18n/provider";
+import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
@@ -17,19 +28,17 @@ import {
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
-import { IdealyMark } from "@/components/branding/idealy-logo";
-import { useGamificationStore } from "@/lib/stores/use-gamification-store";
-import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
-import { PlanChoices, extractPlanOptionsFromText } from "./plan-choices";
-import { MultiAgentRelay } from "./multi-agent-relay";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
+import { MultiAgentRelay } from "./multi-agent-relay";
+import { extractPlanOptionsFromText, PlanChoices } from "./plan-choices";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
 
 function WaitingText() {
   const { waitingStatus } = useDataStream();
-  const waitingText = waitingStatus?.message ?? "L'escouade prépare l'intervention…";
+  const waitingText =
+    waitingStatus?.message ?? "L'escouade prépare l'intervention…";
 
   return (
     <div className="flex min-h-[calc(13px*1.65)] min-w-0 items-center text-[13px] leading-[1.65]">
@@ -51,6 +60,7 @@ function ToolApprovalActions({
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   approvalId: string;
 }) {
+  const { t } = useTranslation();
   const handleDeny = useCallback(() => {
     addToolApprovalResponse({
       approved: false,
@@ -73,14 +83,14 @@ function ToolApprovalActions({
         onClick={handleDeny}
         type="button"
       >
-        Deny
+        {t("chat.toolApproval.deny", "Refuser")}
       </button>
       <button
         className="rounded-md bg-primary px-3 py-1.5 text-primary-foreground text-sm transition-colors hover:bg-primary/90"
         onClick={handleAllow}
         type="button"
       >
-        Allow
+        {t("chat.toolApproval.allow", "Autoriser")}
       </button>
     </div>
   );
@@ -136,9 +146,9 @@ function parseProgressiveSections(text: string): {
 
   return {
     conclusion,
-    status: hasStatus ? { fait, reste, attention } : null,
-    lineCount,
     isLong,
+    lineCount,
+    status: hasStatus ? { attention, fait, reste } : null,
   };
 }
 
@@ -152,12 +162,22 @@ function ProgressiveTextMessage({
   isLoading: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { conclusion, status, lineCount, isLong } = parseProgressiveSections(text);
+  const router = useRouter();
+  const { conclusion, status, lineCount, isLong } =
+    parseProgressiveSections(text);
   const planOptions = isAssistant ? extractPlanOptionsFromText(text) : null;
 
   const handleToggleExpand = useCallback(() => {
     setIsExpanded((prev) => !prev);
   }, []);
+
+  const handleSelectPlanOption = useCallback(
+    (option: { description: string; title: string }) => {
+      const brief = `Je choisis la direction « ${option.title} » : ${option.description}. Établis le plan d'action détaillé et lance la mission sur cette base.`;
+      router.push(`/chat?prompt=${encodeURIComponent(brief)}`);
+    },
+    [router]
+  );
 
   const shouldCollapse = isAssistant && isLong && !isLoading && !isExpanded;
 
@@ -259,7 +279,7 @@ function ProgressiveTextMessage({
 
       {/* ② Résultat / Plan d'action */}
       {planOptions && planOptions.length >= 2 && (
-        <PlanChoices options={planOptions} />
+        <PlanChoices onSelect={handleSelectPlanOption} options={planOptions} />
       )}
     </div>
   );
@@ -294,9 +314,12 @@ const PurePreviewMessage = ({
 
   useDataStream();
 
+  const { t } = useTranslation();
+
   const { currentWay } = useGamificationStore();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
-  const chiefAgent = activeWayData?.agents?.find((a) => a.isChief) ?? activeWayData?.agents?.[0];
+  const chiefAgent =
+    activeWayData?.agents?.find((a) => a.isChief) ?? activeWayData?.agents?.[0];
   const builderAgent =
     activeWayData?.agents?.find(
       (a) =>
@@ -443,7 +466,10 @@ const PurePreviewMessage = ({
               <ToolHeader state="output-denied" type="tool-getWeather" />
               <ToolContent>
                 <div className="px-4 py-3 text-muted-foreground text-sm">
-                  Weather lookup was denied.
+                  {t(
+                    "chat.toolApproval.weatherDenied",
+                    "Recherche météo refusée."
+                  )}
                 </div>
               </ToolContent>
             </Tool>
@@ -494,7 +520,9 @@ const PurePreviewMessage = ({
             className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
             key={toolCallId}
           >
-            Error creating document: {String(part.output.error)}
+            {t("chat.toolApproval.errorCreatingDocument", {
+              error: String(part.output.error),
+            })}
           </div>
         );
       }
@@ -517,7 +545,9 @@ const PurePreviewMessage = ({
             className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
             key={toolCallId}
           >
-            Error updating document: {String(part.output.error)}
+            {t("chat.toolApproval.errorUpdatingDocument", {
+              error: String(part.output.error),
+            })}
           </div>
         );
       }
@@ -661,9 +691,6 @@ const PurePreviewMessage = ({
 export const PreviewMessage = PurePreviewMessage;
 
 export const ThinkingMessage = () => {
-  const { currentWay } = useGamificationStore();
-  const activeWayData = voiesCatalog[currentWay];
-  const chiefAgent = activeWayData?.agents?.find((a) => a.isChief) ?? activeWayData?.agents?.[0];
   // Alvin receives the incoming mission prompt
   const agentAvatar = alvinMessenger.avatarUrl;
 

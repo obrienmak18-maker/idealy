@@ -42,7 +42,14 @@
     "test:a11y-perf": "node scripts/test-a11y-perf-contract.mjs",
     "test:plugins": "tsx scripts/test-plugins.ts",
     "test:power-pack": "tsx scripts/test-power-pack.ts",
-    "test:orchestrator": "tsx scripts/test-orchestrator.ts"
+    "test:orchestrator": "tsx scripts/test-orchestrator.ts",
+    "typecheck:backend": "tsc --noEmit -p integrations/idealy/backend-core/tsconfig.json",
+    "test:actions-protocol": "tsx scripts/test-idealy-actions-protocol-contract.ts",
+    "test:way-plans": "tsx scripts/test-idealy-way-plans-contract.ts",
+    "test:way-preprompts": "tsx scripts/test-idealy-way-preprompts-contract.ts",
+    "test:file-collection": "tsx scripts/test-idealy-file-collection-contract.ts",
+    "test:bench-review": "tsx scripts/test-idealy-bench-review-contract.ts",
+    "bench": "tsx scripts/bench.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.67",

@@ -1,0 +1,1 @@
+Crée un tableau de bord de métriques React+Vite : quatre cartes de statistiques, un graphique simple rendu en SVG natif (pas de librairie externe), sélecteur de période 7/30 jours qui filtre les données.
