@@ -54,6 +54,8 @@ export const searchImages = () =>
           photographer: p.photographer,
           url: p.src.large,
           thumbnail: p.src.small,
+          sourceUrl: p.url,
+          photographerUrl: p.photographerUrl,
           dimensions: `${p.width}x${p.height}`,
         })),
       };
