@@ -308,6 +308,7 @@ const PurePreviewMessage = ({
   onEdit,
   isFirstAssistantMessage = false,
   isAlvinRequested = false,
+  requestedAgentName,
   onPlanSelection,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -322,6 +323,7 @@ const PurePreviewMessage = ({
   onEdit?: (message: ChatMessage) => void;
   isFirstAssistantMessage?: boolean;
   isAlvinRequested?: boolean;
+  requestedAgentName?: string;
   onPlanSelection?: (option: PlanOption) => void;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
@@ -342,10 +344,12 @@ const PurePreviewMessage = ({
   // Alvin introduces the first response or returns only when explicitly called.
   // Individual builder/reviewer identities are not inferred from natural-language
   // text; the live progress pill is driven by persisted backend mission events.
-  const activeAgent =
-    isAlvinRequested || isFirstAssistantMessage
-      ? alvinMessenger
-      : (chiefAgent ?? alvinMessenger);
+  const explicitlyRequestedAgent = requestedAgentName
+    ? activeWayData.agents.find((agent) => agent.name === requestedAgentName)
+    : undefined;
+  const activeAgent = isAlvinRequested
+    ? alvinMessenger
+    : explicitlyRequestedAgent ?? (isFirstAssistantMessage ? alvinMessenger : (chiefAgent ?? alvinMessenger));
   const agentName = activeAgent.name;
   const agentRole = activeAgent.role;
   const agentAvatar = activeAgent.avatarUrl;
