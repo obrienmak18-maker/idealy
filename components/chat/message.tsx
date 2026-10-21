@@ -13,6 +13,7 @@ import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
 import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { useArtifact } from "@/hooks/use-artifact";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
@@ -322,25 +323,23 @@ const PurePreviewMessage = ({
   const { t } = useTranslation();
 
   const { currentWay } = useGamificationStore();
+  const { metadata } = useArtifact();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const chiefAgent =
     activeWayData?.agents?.find((agent) => agent.isChief) ??
     activeWayData?.agents?.[0];
 
-  const messageText = message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("\n");
-  const normalizedMessageText = messageText.toLocaleLowerCase("fr");
-  const hasMissionActivity =
-    /plan enregistré|chef d['’]escouade|build complete|l['’]escouade prend le relais|relais au chef|mission de construction|génération de l['’]application|création de l['’]application|application est prête/i.test(
-      normalizedMessageText
-    );
+  const missionSquadStatus =
+    typeof metadata?.missionSquadStatus === "string"
+      ? metadata.missionSquadStatus
+      : null;
+  const isLiveBuildState =
+    missionSquadStatus === "building" ||
+    missionSquadStatus === "auto_correction_started";
 
   // Alvin introduces the first response or returns only when explicitly called.
-  // We do not guess that a builder/reviewer is speaking from the response text;
-  // the visible author remains the real squad chief until runtime events expose
-  // a verified individual agent state to the conversation UI.
+  // Individual builder/reviewer identities are not inferred from natural-language
+  // text; the live progress pill is driven by persisted backend mission events.
   const activeAgent =
     isAlvinRequested || isFirstAssistantMessage
       ? alvinMessenger
@@ -613,15 +612,17 @@ const PurePreviewMessage = ({
   ) : (
     <>
       {attachments}
-      {hasMissionActivity && isAssistant && isLoading && (
-        <MultiAgentRelay
-          currentAgentName={agentName}
-          currentWay={currentWay}
-          hasToolExecution={hasMissionActivity}
-          isFinished={false}
-          isLoading={isLoading}
-        />
-      )}
+      {isAssistant && isLoading && isLiveBuildState &&
+        !isFirstAssistantMessage && !isAlvinRequested && (
+          <MultiAgentRelay
+            activityState={missionSquadStatus === "auto_correction_started" ? "correcting" : "building"}
+            currentAgentName="Équipe Idealy"
+            currentWay={currentWay}
+            hasToolExecution
+            isFinished={false}
+            isLoading
+          />
+        )}
       {parts}
       {actions}
     </>
