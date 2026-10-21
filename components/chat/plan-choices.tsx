@@ -15,7 +15,7 @@ type PlanChoicesProps = {
 };
 
 const CHOICE_SECTION =
-  /(?:choisis(?:sez)?\s+(?:la\s+)?direction|quelle\s+(?:option|direction)|options?\s+(?:possibles|proposées|à considérer)|directions?\s+(?:possibles|proposées)|propositions?\s+(?:possibles|de direction)?|approches?\s+(?:possibles|proposées)|voici\s+(?:\d+\s+)?(?:options|directions|approches|pistes)|je\s+te\s+propose\s+(?:deux|trois|plusieurs)\s+(?:options|directions|approches|pistes))/i;
+  /(?:choisis(?:sez)?\s+(?:(?:la|une)\s+)?direction|quelle\s+(?:option|direction)|options?\s+(?:possibles|proposées|à considérer)|directions?\s+(?:possibles|proposées)|propositions?\s+(?:possibles|de direction)?|approches?\s+(?:possibles|proposées)|voici\s+(?:\d+\s+)?(?:options|directions|approches|pistes)|je\s+te\s+propose\s+(?:deux|trois|plusieurs)\s+(?:options|directions|approches|pistes))/i;
 
 function cleanMarkdown(value: string) {
   return value
