@@ -18,12 +18,13 @@ export function ConnectorConnectButton({
   async function handleConnect() {
     setLoading(true);
     try {
+      const oauthProvider = provider === "google" ? "google-drive" : provider;
       const endpoint =
-        provider === "vercel"
+        oauthProvider === "vercel"
           ? "/api/idealy/connectors/vercel/start"
           : "/api/idealy/connectors/start";
       const response = await fetch(endpoint, {
-        body: JSON.stringify({ provider }),
+        body: JSON.stringify({ provider: oauthProvider }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
