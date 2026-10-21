@@ -13,7 +13,7 @@ import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
 import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage, IdealyChatToolActivity } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
@@ -369,7 +369,7 @@ const PurePreviewMessage = ({
       (part.type === "reasoning" &&
         "text" in part &&
         part.text?.trim().length > 0) ||
-      part.type.startsWith("tool-")
+      part.type.startsWith("tool-") || part.type === "data-idealy-tool-activity"
   );
   const isThinking = isAssistant && isLoading && !hasAnyContent;
 
@@ -435,6 +435,33 @@ const PurePreviewMessage = ({
           key={key}
           onSelectPlanOption={onPlanSelection}
           text={part.text}
+        />
+      );
+    }
+
+    if (type === "data-idealy-tool-activity") {
+      const dataPart = part as unknown as {
+        data?: IdealyChatToolActivity;
+        id?: string;
+      };
+      const activity = dataPart.data;
+      if (
+        !activity ||
+        (activity.kind !== "webSearch" &&
+          activity.kind !== "searchImages" &&
+          activity.kind !== "generateImage")
+      ) {
+        return null;
+      }
+      return (
+        <ToolActivityCard
+          key={activity.toolCallId || dataPart.id || key}
+          toolCallId={activity.toolCallId || dataPart.id || key}
+          kind={activity.kind}
+          state={activity.state as ToolPart["state"]}
+          input={activity.input}
+          output={activity.output}
+          errorText={activity.errorText}
         />
       );
     }
