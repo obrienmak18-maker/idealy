@@ -91,8 +91,8 @@ export function MissionPlanCard() {
     }
   }, [isActive, isValidated, requestAlreadyQueued, status]);
 
+  if (!missionId || !plan) return null;
   const missionPlan = plan;
-  if (!missionId || !missionPlan) return null;
 
   function openWorkspace() {
     setArtifact((current) => ({
