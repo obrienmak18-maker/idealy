@@ -324,23 +324,8 @@ const PurePreviewMessage = ({
   const { currentWay } = useGamificationStore();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const chiefAgent =
-    activeWayData?.agents?.find((a) => a.isChief) ?? activeWayData?.agents?.[0];
-  const builderAgent =
-    activeWayData?.agents?.find(
-      (a) =>
-        a.role.toLowerCase().includes("builder") ||
-        a.name === "Naruto" ||
-        a.name === "Natsu" ||
-        a.name === "Gon" ||
-        a.name === "Elena"
-    ) ?? activeWayData?.agents?.[1];
-  const qaAgent =
-    activeWayData?.agents?.find(
-      (a) =>
-        a.role.toLowerCase().includes("qa") ||
-        a.name === "Shikamaru" ||
-        a.name === "Thomas"
-    ) ?? activeWayData?.agents?.[activeWayData.agents.length - 1];
+    activeWayData?.agents?.find((agent) => agent.isChief) ??
+    activeWayData?.agents?.[0];
 
   const messageText = message.parts
     .filter((part) => part.type === "text")
@@ -351,27 +336,15 @@ const PurePreviewMessage = ({
     /plan enregistré|chef d['’]escouade|build complete|l['’]escouade prend le relais|relais au chef|mission de construction|génération de l['’]application|création de l['’]application|application est prête/i.test(
       normalizedMessageText
     );
-  const handoffToChief =
-    /relais au chef|chef d['’]escouade prend le relais|plan remis au chef|le chef coordonne/i.test(
-      normalizedMessageText
-    );
-  const explicitReviewResult =
-    /vérification finale terminée|tests? (?:sont )?(?:passés|réussis)|validation finale (?:effectuée|terminée|réussie)/i.test(
-      normalizedMessageText
-    );
 
-  // Alvin is introduced once per conversation and appears again only when the
-  // user explicitly calls him. Other replies belong to the squad chief.
-  // Agent labels reflect visible evidence instead of pretending to know hidden work.
-  const activeAgent = isAlvinRequested || isFirstAssistantMessage
-    ? alvinMessenger
-    : handoffToChief
-      ? (chiefAgent ?? alvinMessenger)
-      : hasMissionActivity && isLoading
-        ? (builderAgent ?? chiefAgent ?? alvinMessenger)
-        : hasMissionActivity && explicitReviewResult
-          ? (qaAgent ?? chiefAgent ?? alvinMessenger)
-          : (chiefAgent ?? alvinMessenger);
+  // Alvin introduces the first response or returns only when explicitly called.
+  // We do not guess that a builder/reviewer is speaking from the response text;
+  // the visible author remains the real squad chief until runtime events expose
+  // a verified individual agent state to the conversation UI.
+  const activeAgent =
+    isAlvinRequested || isFirstAssistantMessage
+      ? alvinMessenger
+      : (chiefAgent ?? alvinMessenger);
   const agentName = activeAgent.name;
   const agentRole = activeAgent.role;
   const agentAvatar = activeAgent.avatarUrl;
