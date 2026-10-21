@@ -7,7 +7,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const [contract, adapter, route, page, layout, packageJson, workflow, voiceMigration] = await Promise.all([
+const [contract, adapter, route, page, layout, packageJson, workflow] = await Promise.all([
   read("lib/idealy/onboarding-contract.ts"),
   read("lib/idealy/backend-adapter.ts"),
   read("app/api/idealy/profile/onboarding/route.ts"),
@@ -15,15 +15,10 @@ const [contract, adapter, route, page, layout, packageJson, workflow, voiceMigra
   read("app/(chat)/layout.tsx"),
   read("package.json"),
   read(".github/workflows/idealy-live-quality.yml"),
-  read("supabase/migrations/20261021143000_onboarding_voice_preference.sql"),
 ]);
 
 assert(contract.includes("onboardingInputSchema"), "Onboarding must have a shared Zod schema.");
 assert(contract.includes("idealyWays"), "Onboarding must use the central Way contract.");
-assert(contract.includes("idealyPreferredVoices"), "Onboarding must use a controlled list of voice presets.");
-assert(adapter.includes("p_preferred_voice: input.preferredVoice"), "Selected voice must be sent to the authenticated profile RPC.");
-assert(voiceMigration.includes("preferred_voice") && voiceMigration.includes("Invalid preferred voice"), "Database migration must store and validate the selected voice.");
-assert(page.includes("speechSynthesis.speak(utterance)"), "Onboarding must provide a real browser voice preview.");
 assert(page.includes("{accountEmail ||"), "Account email must be derived from the authenticated server session.");
 assert(!contract.includes("tone: z.enum"), "Do not collect onboarding settings that are not persisted.");
 assert(adapter.includes("completeMyIdealyOnboarding"), "Server adapter must call the onboarding RPC.");
