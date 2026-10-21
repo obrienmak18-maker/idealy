@@ -24,16 +24,34 @@ Deno.serve(async (request) => {
   }
 
   const now = Date.now();
-  const providerRequirements: Record<string, string[]> = {
-    github: ["GITHUB_OAUTH_CLIENT_ID", "GITHUB_OAUTH_CLIENT_SECRET"],
-    canva: ["CANVA_CLIENT_ID", "CANVA_CLIENT_SECRET"],
-    figma: ["FIGMA_CLIENT_ID", "FIGMA_CLIENT_SECRET"],
-    google: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
-    notion: ["NOTION_CLIENT_ID", "NOTION_CLIENT_SECRET"],
-    slack: ["SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"],
-    vercel: ["VERCEL_APP_CLIENT_ID"],
-    stripe: ["STRIPE_SECRET_KEY"],
-    supabase: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+  const hasEnv = (...names: string[]) =>
+    names.some((name) => Boolean(Deno.env.get(name)?.trim()));
+  const providerServerReady = (provider: string) => {
+    switch (provider) {
+      case "github":
+        return hasEnv("GITHUB_OAUTH_CLIENT_ID", "GITHUB_CLIENT_ID") &&
+          hasEnv("GITHUB_OAUTH_CLIENT_SECRET", "GITHUB_CLIENT_SECRET");
+      case "canva":
+        return hasEnv("CANVA_CLIENT_ID") && hasEnv("CANVA_CLIENT_SECRET");
+      case "figma":
+        return hasEnv("FIGMA_CLIENT_ID") && hasEnv("FIGMA_CLIENT_SECRET");
+      case "google":
+        return hasEnv("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_CLIENT_ID") &&
+          hasEnv("GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET");
+      case "notion":
+        return hasEnv("NOTION_CLIENT_ID") && hasEnv("NOTION_CLIENT_SECRET");
+      case "slack":
+        return hasEnv("SLACK_CLIENT_ID") && hasEnv("SLACK_CLIENT_SECRET");
+      case "vercel":
+        return hasEnv("VERCEL_APP_CLIENT_ID", "NEXT_PUBLIC_VERCEL_APP_CLIENT_ID") &&
+          hasEnv("VERCEL_APP_CLIENT_SECRET");
+      case "stripe":
+        return hasEnv("STRIPE_SECRET_KEY");
+      case "supabase":
+        return hasEnv("SUPABASE_URL") && hasEnv("SUPABASE_SERVICE_ROLE_KEY");
+      default:
+        return false;
+    }
   };
 
   const result = new Map<string, {
@@ -47,8 +65,7 @@ Deno.serve(async (request) => {
 
   for (const integration of data ?? []) {
     const canonical = canonicalProvider(integration.provider);
-    const required = providerRequirements[integration.provider] ?? [];
-    const serverReady = required.every((name) => Boolean(Deno.env.get(name)?.trim()));
+    const serverReady = providerServerReady(integration.provider);
     const expiresAt = integration.expires_at ?? null;
     const expired =
       Boolean(expiresAt) &&
@@ -65,7 +82,9 @@ Deno.serve(async (request) => {
     });
   }
 
-  for (const [provider, required] of Object.entries(providerRequirements)) {
+  for (const provider of [
+    "github", "canva", "figma", "google", "notion", "slack", "vercel", "stripe", "supabase",
+  ]) {
     const canonical = canonicalProvider(provider);
     if (result.has(canonical)) continue;
     result.set(canonical, {
@@ -74,7 +93,7 @@ Deno.serve(async (request) => {
       connectedAt: null,
       expiresAt: null,
       metadata: {},
-      serverReady: required.every((name) => Boolean(Deno.env.get(name)?.trim())),
+      serverReady: providerServerReady(provider),
     });
   }
 
