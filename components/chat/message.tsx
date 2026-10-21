@@ -30,7 +30,6 @@ import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
-import { MultiAgentRelay } from "./multi-agent-relay";
 import { extractPlanOptionsFromText, PlanChoices, textBeforePlanOptions, type PlanOption } from "./plan-choices";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
@@ -340,14 +339,6 @@ const PurePreviewMessage = ({
     activeWayData?.agents?.find((agent) => agent.isChief) ??
     activeWayData?.agents?.[0];
 
-  const missionSquadStatus =
-    typeof metadata?.missionSquadStatus === "string"
-      ? metadata.missionSquadStatus
-      : null;
-  const isLiveBuildState =
-    missionSquadStatus === "building" ||
-    missionSquadStatus === "auto_correction_started";
-
   // Alvin introduces the first response or returns only when explicitly called.
   // Individual builder/reviewer identities are not inferred from natural-language
   // text; the live progress pill is driven by persisted backend mission events.
@@ -623,17 +614,6 @@ const PurePreviewMessage = ({
   ) : (
     <>
       {attachments}
-      {isAssistant && isLoading && isLiveBuildState &&
-        !isFirstAssistantMessage && !isAlvinRequested && (
-          <MultiAgentRelay
-            activityState={missionSquadStatus === "auto_correction_started" ? "correcting" : "building"}
-            currentAgentName="Équipe Idealy"
-            currentWay={currentWay}
-            hasToolExecution
-            isFinished={false}
-            isLoading
-          />
-        )}
       {parts}
       {actions}
     </>
