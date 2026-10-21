@@ -184,7 +184,7 @@ export const {
             const token = String(credentials.turnstileToken ?? "").trim();
             const verified = proof
               ? verifyTurnstileProof(proof, `credentials-${intent}`)
-              : (await verifyTurnstileToken(token)).ok;
+              : (await verifyTurnstileToken(token, undefined, intent)).ok;
             if (!verified) {
               throw new IdealyCredentialsSignin("turnstile_failed");
             }
@@ -341,6 +341,7 @@ export const {
         password: { label: "Password", type: "password" },
         turnstileProof: { label: "Verified Turnstile proof", type: "text" },
         turnstileToken: { label: "Turnstile token", type: "text" },
+        turnstileAction: { label: "Turnstile action", type: "text" },
       },
     }),
     Credentials({
@@ -357,8 +358,11 @@ export const {
         let supabaseAuth: SupabasePasswordAuthResult | null = null;
 
         if (isTurnstileRequired()) {
+          const turnstileAction = credentials.turnstileAction === "register" ? "register" : "login";
           const challenge = await verifyTurnstileToken(
-            String(credentials.turnstileToken ?? "")
+            String(credentials.turnstileToken ?? ""),
+            undefined,
+            turnstileAction
           );
           if (!challenge.ok) {
             throw new IdealyCredentialsSignin("turnstile_failed");
@@ -487,6 +491,7 @@ export const {
       credentials: {
         idToken: { label: "Firebase ID token", type: "text" },
         turnstileToken: { label: "Turnstile token", type: "text" },
+        turnstileAction: { label: "Turnstile action", type: "text" },
       },
       id: "firebase",
     }),
