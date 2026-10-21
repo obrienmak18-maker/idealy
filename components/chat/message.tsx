@@ -586,6 +586,26 @@ const PurePreviewMessage = ({
       );
     }
 
+    if (type === "tool-editDocument") {
+      const { toolCallId } = part;
+      if (part.output && typeof part.output === "object" && "error" in part.output) {
+        return (
+          <div key={toolCallId} className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-xs text-destructive">
+            {String(part.output.error)}
+          </div>
+        );
+      }
+      return (
+        <div className="relative" key={toolCallId}>
+          <DocumentPreview
+            args={part.output && typeof part.output === "object" ? { ...part.output, isUpdate: true } : { isUpdate: true }}
+            isReadonly={isReadonly}
+            result={part.output}
+          />
+        </div>
+      );
+    }
+
     if (type === "tool-requestSuggestions") {
       const { toolCallId, state } = part;
 
