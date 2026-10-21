@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import {
   BarChart3,
   BookOpen,
@@ -16,7 +17,8 @@ interface WorkspaceTemplatesProps {
 }
 
 export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const templates = [
     {
@@ -82,43 +84,26 @@ export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps
             {t("workspace.templates.title", "Modèles prêts à l'emploi")}
           </h3>
         </div>
-        <span className="text-[11px] font-medium text-muted-foreground">
-          4 templates
+        <span className="text-[10px] font-medium text-muted-foreground">
+          {language.startsWith("en") ? "4 app starters" : language.startsWith("es") ? "4 ideas de app" : "4 idées d’apps"}
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {templates.map((tpl, i) => {
           const Icon = tpl.icon;
+          const expanded = expandedId === tpl.id;
           return (
-            <motion.button
-              key={tpl.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05, duration: 0.3 }}
-              onClick={() => onSelectTemplate(tpl.prompt)}
-              type="button"
-              className="group relative flex flex-col justify-between rounded-2xl border border-outline-variant/70 bg-surface-container-low p-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface-container-high hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors ${tpl.bg}`}
-                >
-                  <Icon className={`size-4 ${tpl.color}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-[13px] text-foreground tracking-tight group-hover:text-primary transition-colors">
-                      {tpl.title}
-                    </span>
-                    <ArrowRight className="size-3 text-muted-foreground opacity-0 transition-all -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0" />
-                  </div>
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground line-clamp-2">
-                    {tpl.description}
-                  </p>
-                </div>
-              </div>
-            </motion.button>
+            <motion.div key={tpl.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.035, duration: 0.22 }} className="group rounded-xl border border-border/50 bg-card/35 transition-colors hover:border-border/80 hover:bg-card/55">
+              <button type="button" aria-expanded={expanded} onClick={() => setExpandedId(expanded ? null : tpl.id)} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                <span className={`flex size-7 shrink-0 items-center justify-center rounded-lg border ${tpl.bg}`}><Icon className={`size-3.5 ${tpl.color}`} /></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium text-foreground">{tpl.title}</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{tpl.description}</span></span>
+                <ArrowRight className={`size-3 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90 text-primary" : ""}`} />
+              </button>
+              <AnimatePresence initial={false}>
+                {expanded ? <motion.div key="details" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className="overflow-hidden"><div className="border-t border-border/40 px-3 pb-3 pt-2.5"><p className="text-[11px] leading-relaxed text-muted-foreground">{tpl.description}</p><button type="button" onClick={() => onSelectTemplate(tpl.prompt)} className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-foreground px-2.5 text-[11px] font-medium text-background transition hover:opacity-85">{language.startsWith("en") ? "Use this idea" : language.startsWith("es") ? "Usar esta idea" : "Utiliser cette idée"}<ArrowRight className="size-3" /></button></div></motion.div> : null}
+              </AnimatePresence>
+            </motion.div>
           );
         })}
       </div>
