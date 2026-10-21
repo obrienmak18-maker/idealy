@@ -5,6 +5,7 @@ const root = process.cwd();
 const migration = await readFile(resolve(root, "supabase/migrations/20260825000000_mission_agent_orchestration.sql"), "utf8");
 const orchestrator = await readFile(resolve(root, "supabase/functions/orchestrate-mission/index.ts"), "utf8");
 const workspaceTopBar = await readFile(resolve(root, "components/chat/build-top-bar.tsx"), "utf8");
+const missionPlanCard = await readFile(resolve(root, "components/chat/mission-plan-card.tsx"), "utf8");
 
 for (const expected of ["mission_agent_runs", "mission_action_confirmations", "confirmation_token_hash", "REVOKE ALL", "GRANT SELECT"]) {
   if (!migration.includes(expected)) throw new Error(`Missing migration protection: ${expected}`);
@@ -12,7 +13,13 @@ for (const expected of ["mission_agent_runs", "mission_action_confirmations", "c
 for (const expected of ["chief", "builder", "designer", "specialist", "reviewer", "idempotencyKey", "workspaceStream", "agent_failed", "user_id", "persistedPlan", "isMissionPlan", "validateWorkspaceStructure", "structural-preflight", "validation_result", "auto_correction_started", "power_reserved", "power_consumed"]) {
   if (!orchestrator.includes(expected)) throw new Error(`Missing squad contract: ${expected}`);
 }
-for (const expected of ["/squad", "crypto.randomUUID", "Run squad", "missionReplayNonce"]) {
-  if (!workspaceTopBar.includes(expected)) throw new Error(`Missing workspace squad launch: ${expected}`);
+for (const expected of ["/squad", "crypto.randomUUID", "missionReplayNonce", "missionRunRequested"]) {
+  if (!workspaceTopBar.includes(expected)) throw new Error(`Missing workspace squad lifecycle: ${expected}`);
 }
-console.log("Mission squad contract verified.");
+for (const expected of ["Valider et lancer", "missionRunRequested: true", "Relancer l’escouade"]) {
+  if (!missionPlanCard.includes(expected)) throw new Error(`Missing explicit mission approval: ${expected}`);
+}
+if (/onClick=\{runSquad\}/.test(workspaceTopBar)) {
+  throw new Error("The workspace header must not bypass the approved mission-plan card.");
+}
+console.log("Mission squad contract verified: launches require explicit plan approval.");
