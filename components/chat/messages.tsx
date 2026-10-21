@@ -185,6 +185,18 @@ function PureMessages({
     setActiveHomeTab("suggestions");
   }, []);
 
+  const latestExecutionPlanMessageId = [...messages]
+    .reverse()
+    .find(
+      (candidate) =>
+        candidate.role === "assistant" &&
+        candidate.parts.some(
+          (part) =>
+            part.type === "text" &&
+            /plan enregistré pour/i.test(part.text)
+        )
+    )?.id;
+
   return (
     <div className="relative flex-1 bg-background overflow-hidden">
       {messages.length === 0 && !isLoading && (
@@ -284,11 +296,7 @@ function PureMessages({
 
               const showsExecutionPlan =
                 message.role === "assistant" &&
-                message.parts.some(
-                  (part) =>
-                    part.type === "text" &&
-                    /plan enregistré pour/i.test(part.text)
-                );
+                message.id === latestExecutionPlanMessageId;
 
               return (
                 <Fragment key={message.id}>
