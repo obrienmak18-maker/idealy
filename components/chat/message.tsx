@@ -7,7 +7,6 @@ import {
   ChevronUp,
   Clock,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 import type { Vote } from "@/lib/db/schema";
@@ -31,7 +30,7 @@ import { DocumentPreview } from "./document-preview";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { MultiAgentRelay } from "./multi-agent-relay";
-import { extractPlanOptionsFromText, PlanChoices } from "./plan-choices";
+import { extractPlanOptionsFromText, PlanChoices, type PlanOption } from "./plan-choices";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
 
@@ -156,13 +155,14 @@ function ProgressiveTextMessage({
   text,
   isAssistant,
   isLoading,
+  onSelectPlanOption,
 }: {
   text: string;
   isAssistant: boolean;
   isLoading: boolean;
+  onSelectPlanOption?: (option: PlanOption) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const router = useRouter();
   const { conclusion, status, lineCount, isLong } =
     parseProgressiveSections(text);
   const planOptions = isAssistant ? extractPlanOptionsFromText(text) : null;
@@ -172,11 +172,10 @@ function ProgressiveTextMessage({
   }, []);
 
   const handleSelectPlanOption = useCallback(
-    (option: { description: string; title: string }) => {
-      const brief = `Je choisis la direction « ${option.title} » : ${option.description}. Établis le plan d'action détaillé et lance la mission sur cette base.`;
-      router.push(`/chat?prompt=${encodeURIComponent(brief)}`);
+    (option: PlanOption) => {
+      onSelectPlanOption?.(option);
     },
-    [router]
+    [onSelectPlanOption]
   );
 
   const shouldCollapse = isAssistant && isLong && !isLoading && !isExpanded;
@@ -298,6 +297,7 @@ const PurePreviewMessage = ({
   onEdit,
   isFirstAssistantMessage = false,
   isAlvinRequested = false,
+  onPlanSelection,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -311,6 +311,7 @@ const PurePreviewMessage = ({
   onEdit?: (message: ChatMessage) => void;
   isFirstAssistantMessage?: boolean;
   isAlvinRequested?: boolean;
+  onPlanSelection?: (option: PlanOption) => void;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file"
@@ -816,6 +817,7 @@ const PurePreviewMessage = ({
           isAssistant={isAssistant}
           isLoading={isLoading}
           key={key}
+          onSelectPlanOption={onPlanSelection}
           text={part.text}
         />
       );
