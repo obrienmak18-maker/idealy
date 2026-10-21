@@ -38,7 +38,10 @@ Deno.serve(async (request) => {
     }
   };
   const oauthStorageReady = () =>
-    hasEnv("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY") && encryptionKeyReady();
+    Boolean(
+      Deno.env.get("SUPABASE_URL")?.trim() &&
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim()
+    ) && encryptionKeyReady();
   const providerServerReady = (provider: string) => {
     switch (provider) {
       case "github":
@@ -65,7 +68,10 @@ Deno.serve(async (request) => {
       case "stripe":
         return hasEnv("STRIPE_SECRET_KEY");
       case "supabase":
-        return hasEnv("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY");
+        return Boolean(
+          Deno.env.get("SUPABASE_URL")?.trim() &&
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim()
+        );
       default:
         return false;
     }
