@@ -310,6 +310,11 @@ function PureMessages({
                   priorUserText
                 );
 
+              const requestedAgentToken = priorUserText.match(/(?:^|\\s)@([A-Za-z][A-Za-z0-9_-]{1,39})\\b/)?.[1] ?? null;
+              const requestedAgentName = requestedAgentToken
+                ? activeWayData.agents.find((agent) => agent.name.toLowerCase() === requestedAgentToken.toLowerCase())?.name
+                : undefined;
+
               const showsExecutionPlan =
                 message.role === "assistant" &&
                 message.id === latestExecutionPlanMessageId;
@@ -320,6 +325,7 @@ function PureMessages({
                     addToolApprovalResponse={addToolApprovalResponse}
                     chatId={chatId}
                     isAlvinRequested={isAlvinRequested}
+                    requestedAgentName={requestedAgentName}
                     isFirstAssistantMessage={
                       message.role === "assistant" &&
                       messages.find((candidate) => candidate.role === "assistant")?.id ===
