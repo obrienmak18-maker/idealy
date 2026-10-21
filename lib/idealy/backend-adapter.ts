@@ -602,6 +602,7 @@ export async function createIdealyMissionPlan({
   provider,
   request,
   way = "professional",
+  requestedAgent,
 }: {
   idempotencyKey: string;
   missionId?: string;
@@ -610,6 +611,7 @@ export async function createIdealyMissionPlan({
   provider?: string;
   request: Request;
   way?: MissionWay;
+  requestedAgent?: string | null;
 }): Promise<MissionPlan> {
   const design = buildDesignSpecification(prompt);
   const designCritic = runDesignCritic(design);
@@ -624,7 +626,7 @@ export async function createIdealyMissionPlan({
     planOnly: true,
     prompt,
     stream: false,
-    systemPrompt: `${MISSION_PLAN_SYSTEM_PROMPT}\n\n${designSpecificationToPrompt(design)}${missionPersonaPrompt(way)}`,
+    systemPrompt: `${MISSION_PLAN_SYSTEM_PROMPT}\n\n${designSpecificationToPrompt(design)}${missionPersonaPrompt(way)}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the first responder. Frame the plan from this agent’s specialty and voice while keeping every planned responsibility accurate to the squad. Do not claim this agent performed build steps or tools yet.` : ""}`,
   });
 
   return { ...parseMissionPlan(payload.plan), design, designCritic };
