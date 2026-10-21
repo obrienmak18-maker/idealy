@@ -99,7 +99,7 @@ function configuredError(message: string) {
   return { status: "unconfigured", message, results: [], photos: [], images: [] };
 }
 
-async function searchWeb(args: JsonRecord) {
+async function searchWeb(args: JsonRecord, signal: AbortSignal) {
   const query = text(args.query, 500);
   const apiKey = Deno.env.get("EXA_API_KEY")?.trim()
     || Deno.env.get("EXA_AI_API_KEY")?.trim()
@@ -119,7 +119,7 @@ async function searchWeb(args: JsonRecord) {
         numResults: 5,
         contents: { highlights: { maxCharacters: 700 } },
       }),
-      signal: AbortSignal.timeout(18_000),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(14_000)]),
     });
     if (!response.ok) {
       return { status: "error", query, message: `La recherche Web a échoué (Exa HTTP ${response.status}).`, results: [] };
@@ -152,7 +152,7 @@ async function searchWeb(args: JsonRecord) {
   }
 }
 
-async function searchPexels(args: JsonRecord, language: "fr" | "en" | "es") {
+async function searchPexels(args: JsonRecord, language: "fr" | "en" | "es", signal: AbortSignal) {
   const query = text(args.query, 300);
   const apiKey = Deno.env.get("PEXELS_API_KEY")?.trim();
   const count = positiveInteger(args.count, 4, 6);
@@ -214,7 +214,7 @@ async function searchPexels(args: JsonRecord, language: "fr" | "en" | "es") {
   }
 }
 
-async function generateFalImage(args: JsonRecord) {
+async function generateFalImage(args: JsonRecord, signal: AbortSignal) {
   const prompt = text(args.prompt, 3000);
   const apiKey = Deno.env.get("FAL_KEY")?.trim()
     || Deno.env.get("FAL_AI_API_KEY")?.trim()
@@ -230,7 +230,7 @@ async function generateFalImage(args: JsonRecord) {
       method: "POST",
       headers: { Authorization: "Key " + apiKey, "Content-Type": "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(32_000)]),
       body: JSON.stringify({
         prompt,
         image_size: imageSize,
@@ -323,6 +323,7 @@ export async function executeIdealyChatTool(input: {
   name: ChatToolName;
   arguments: JsonRecord;
   language: "fr" | "en" | "es";
+  signal: AbortSignal;
 }) {
   let output: Record<string, unknown> = {
     status: "error",
@@ -330,13 +331,13 @@ export async function executeIdealyChatTool(input: {
   };
   switch (input.name) {
     case "webSearch":
-      output = await searchWeb(input.arguments);
+      output = await searchWeb(input.arguments, input.signal);
       break;
     case "searchImages":
-      output = await searchPexels(input.arguments, input.language);
+      output = await searchPexels(input.arguments, input.language, input.signal);
       break;
     case "generateImage":
-      output = await generateFalImage(input.arguments);
+      output = await generateFalImage(input.arguments, input.signal);
       break;
   }
   return localizeToolOutput(input.name, output, input.language);
