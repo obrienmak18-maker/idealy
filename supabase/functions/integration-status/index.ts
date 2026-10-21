@@ -26,26 +26,37 @@ Deno.serve(async (request) => {
   const now = Date.now();
   const hasEnv = (...names: string[]) =>
     names.some((name) => Boolean(Deno.env.get(name)?.trim()));
+  const encryptionKeyReady = () => {
+    const encoded = Deno.env.get("INTEGRATION_ENCRYPTION_KEY")?.trim() ?? "";
+    if (!encoded) return false;
+    try {
+      const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
+      const decoded = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
+      return decoded.length === 32;
+    } catch {
+      return false;
+    }
+  };
   const providerServerReady = (provider: string) => {
     switch (provider) {
       case "github":
-        return hasEnv("GITHUB_OAUTH_CLIENT_ID", "GITHUB_CLIENT_ID") &&
-          hasEnv("GITHUB_OAUTH_CLIENT_SECRET", "GITHUB_CLIENT_SECRET");
+        return encryptionKeyReady() && (hasEnv("GITHUB_OAUTH_CLIENT_ID", "GITHUB_CLIENT_ID") &&
+          hasEnv("GITHUB_OAUTH_CLIENT_SECRET", "GITHUB_CLIENT_SECRET"));
       case "canva":
-        return hasEnv("CANVA_CLIENT_ID") && hasEnv("CANVA_CLIENT_SECRET");
+        return encryptionKeyReady() && (hasEnv("CANVA_CLIENT_ID") && hasEnv("CANVA_CLIENT_SECRET"));
       case "figma":
-        return hasEnv("FIGMA_CLIENT_ID") && hasEnv("FIGMA_CLIENT_SECRET");
+        return encryptionKeyReady() && (hasEnv("FIGMA_CLIENT_ID") && hasEnv("FIGMA_CLIENT_SECRET"));
       case "google":
       case "google-drive":
-        return hasEnv("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_CLIENT_ID") &&
-          hasEnv("GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET");
+        return encryptionKeyReady() && (hasEnv("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_CLIENT_ID") &&
+          hasEnv("GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"));
       case "notion":
-        return hasEnv("NOTION_CLIENT_ID") && hasEnv("NOTION_CLIENT_SECRET");
+        return encryptionKeyReady() && (hasEnv("NOTION_CLIENT_ID") && hasEnv("NOTION_CLIENT_SECRET"));
       case "slack":
-        return hasEnv("SLACK_CLIENT_ID") && hasEnv("SLACK_CLIENT_SECRET");
+        return encryptionKeyReady() && (hasEnv("SLACK_CLIENT_ID") && hasEnv("SLACK_CLIENT_SECRET"));
       case "vercel":
-        return hasEnv("VERCEL_APP_CLIENT_ID", "NEXT_PUBLIC_VERCEL_APP_CLIENT_ID") &&
-          hasEnv("VERCEL_APP_CLIENT_SECRET");
+        return encryptionKeyReady() && (hasEnv("VERCEL_APP_CLIENT_ID", "NEXT_PUBLIC_VERCEL_APP_CLIENT_ID") &&
+          hasEnv("VERCEL_APP_CLIENT_SECRET"));
       case "stripe":
         return hasEnv("STRIPE_SECRET_KEY");
       case "supabase":
