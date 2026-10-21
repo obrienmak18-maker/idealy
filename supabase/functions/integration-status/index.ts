@@ -49,18 +49,18 @@ Deno.serve(async (request) => {
           hasEnv("GITHUB_OAUTH_CLIENT_ID", "GITHUB_CLIENT_ID") &&
           hasEnv("GITHUB_OAUTH_CLIENT_SECRET", "GITHUB_CLIENT_SECRET");
       case "canva":
-        return oauthStorageReady() && hasEnv("CANVA_CLIENT_ID", "CANVA_CLIENT_SECRET");
+        return oauthStorageReady() && hasEnv("CANVA_CLIENT_ID") && hasEnv("CANVA_CLIENT_SECRET");
       case "figma":
-        return oauthStorageReady() && hasEnv("FIGMA_CLIENT_ID", "FIGMA_CLIENT_SECRET");
+        return oauthStorageReady() && hasEnv("FIGMA_CLIENT_ID") && hasEnv("FIGMA_CLIENT_SECRET");
       case "google":
       case "google-drive":
         return oauthStorageReady() &&
           hasEnv("GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_CLIENT_ID") &&
           hasEnv("GOOGLE_OAUTH_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET");
       case "notion":
-        return oauthStorageReady() && hasEnv("NOTION_CLIENT_ID", "NOTION_CLIENT_SECRET");
+        return oauthStorageReady() && hasEnv("NOTION_CLIENT_ID") && hasEnv("NOTION_CLIENT_SECRET");
       case "slack":
-        return oauthStorageReady() && hasEnv("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET");
+        return oauthStorageReady() && hasEnv("SLACK_CLIENT_ID") && hasEnv("SLACK_CLIENT_SECRET");
       case "vercel":
         return oauthStorageReady() &&
           hasEnv("VERCEL_APP_CLIENT_ID", "NEXT_PUBLIC_VERCEL_APP_CLIENT_ID") &&
