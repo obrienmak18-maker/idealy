@@ -1,6 +1,6 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { ArrowDownIcon, FileText, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { IntakeSpecificationForm } from "./intake-specification-form";
+import { MissionPlanCard } from "./mission-plan-card";
 import { PreviewMessage, ThinkingMessage } from "./message";
 import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
@@ -281,35 +282,45 @@ function PureMessages({
                   priorUserText
                 );
 
+              const showsExecutionPlan =
+                message.role === "assistant" &&
+                message.parts.some(
+                  (part) =>
+                    part.type === "text" &&
+                    /plan enregistré pour/i.test(part.text)
+                );
+
               return (
-                <PreviewMessage
-                  addToolApprovalResponse={addToolApprovalResponse}
-                  chatId={chatId}
-                  isAlvinRequested={isAlvinRequested}
-                  isFirstAssistantMessage={
-                    message.role === "assistant" &&
-                    messages.find((candidate) => candidate.role === "assistant")?.id ===
-                      message.id
-                  }
-                  isLoading={
-                    status === "streaming" && messages.length - 1 === index
-                  }
-                  isReadonly={isReadonly}
-                  key={message.id}
-                  message={message}
-                  onEdit={onEditMessage}
-                  onPlanSelection={handlePlanSelection}
-                  regenerate={regenerate}
-                  requiresScrollPadding={
-                    hasSentMessage && index === messages.length - 1
-                  }
-                  setMessages={setMessages}
-                  vote={
-                    votes
-                      ? votes.find((vote) => vote.messageId === message.id)
-                      : undefined
-                  }
-                />
+                <Fragment key={message.id}>
+                  <PreviewMessage
+                    addToolApprovalResponse={addToolApprovalResponse}
+                    chatId={chatId}
+                    isAlvinRequested={isAlvinRequested}
+                    isFirstAssistantMessage={
+                      message.role === "assistant" &&
+                      messages.find((candidate) => candidate.role === "assistant")?.id ===
+                        message.id
+                    }
+                    isLoading={
+                      status === "streaming" && messages.length - 1 === index
+                    }
+                    isReadonly={isReadonly}
+                    message={message}
+                    onEdit={onEditMessage}
+                    onPlanSelection={handlePlanSelection}
+                    regenerate={regenerate}
+                    requiresScrollPadding={
+                      hasSentMessage && index === messages.length - 1
+                    }
+                    setMessages={setMessages}
+                    vote={
+                      votes
+                        ? votes.find((vote) => vote.messageId === message.id)
+                        : undefined
+                    }
+                  />
+                  {showsExecutionPlan ? <MissionPlanCard /> : null}
+                </Fragment>
               );
             })}
 
