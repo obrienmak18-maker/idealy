@@ -16,10 +16,12 @@ const APP_ORIGIN = (
     ? "https://" + Deno.env.get("VERCEL_URL")!.trim()
     : "") ||
   "https://idealy-ai.vercel.app"
-).replace(/\\/+$/, "");
+);
 
 function redirect(query: string) {
-  return Response.redirect(APP_ORIGIN.replace(/\/$/, "") + "/connectors?" + query);
+  const target = new URL("/connectors", APP_ORIGIN);
+  target.search = query;
+  return Response.redirect(target.toString());
 }
 
 function env(name: string) {
