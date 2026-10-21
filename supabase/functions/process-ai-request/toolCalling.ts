@@ -381,7 +381,7 @@ export function createToolEnabledChatResponse(input: {
                   }
                 }
                 const finalState =
-                  output.status === "error" || output.status === "unconfigured"
+                  output.status === "error" || output.status === "unconfigured" || output.status === "needs_credits"
                     ? "output-error"
                     : "output-available";
                 emitToolActivity(controller, encoder, {
