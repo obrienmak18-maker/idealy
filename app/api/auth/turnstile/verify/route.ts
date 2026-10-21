@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const result = await verifyTurnstileToken(
     String((body as Record<string, unknown>).token),
-    ip
+    ip,
+    "login"
   );
 
   if (!result.ok) {
