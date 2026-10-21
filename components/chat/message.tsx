@@ -37,8 +37,14 @@ import { Weather } from "./weather";
 
 function WaitingText() {
   const { waitingStatus } = useDataStream();
-  const waitingText =
-    waitingStatus?.message ?? "L'escouade prépare l'intervention…";
+  const { language } = useTranslation();
+  const locale = language === "en" || language === "es" ? language : "fr";
+  const fallbackText = locale === "en"
+    ? "The squad is preparing the next step…"
+    : locale === "es"
+      ? "El equipo está preparando el siguiente paso…"
+      : "L’escouade prépare la prochaine étape…";
+  const waitingText = waitingStatus?.message ?? fallbackText;
 
   return (
     <div className="flex min-h-[calc(13px*1.65)] min-w-0 items-center text-[13px] leading-[1.65]">
@@ -68,7 +74,7 @@ function ToolApprovalActions({
       id: approvalId,
       reason: denialReason,
     });
-  }, [addToolApprovalResponse, approvalId]);
+  }, [addToolApprovalResponse, approvalId, denialReason]);
 
   const handleAllow = useCallback(() => {
     addToolApprovalResponse({
