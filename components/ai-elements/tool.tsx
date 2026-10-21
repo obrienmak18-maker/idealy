@@ -19,6 +19,7 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import { isValidElement } from "react";
+import { useTranslation } from "@/lib/i18n/provider";
 
 import { CodeBlock } from "./code-block";
 
@@ -45,14 +46,64 @@ export type ToolHeaderProps = {
     }
 );
 
-const statusLabels: Record<ToolPart["state"], string> = {
-  "approval-requested": "Awaiting Approval",
-  "approval-responded": "Responded",
-  "input-available": "Running",
-  "input-streaming": "Pending",
-  "output-available": "Completed",
-  "output-denied": "Denied",
-  "output-error": "Error",
+const statusLabels: Record<"fr" | "en" | "es", Record<ToolPart["state"], string>> = {
+  fr: {
+    "approval-requested": "À autoriser",
+    "approval-responded": "Autorisé",
+    "input-available": "En cours",
+    "input-streaming": "Préparation",
+    "output-available": "Terminé",
+    "output-denied": "Refusé",
+    "output-error": "Erreur",
+  },
+  en: {
+    "approval-requested": "Needs approval",
+    "approval-responded": "Approved",
+    "input-available": "Running",
+    "input-streaming": "Preparing",
+    "output-available": "Done",
+    "output-denied": "Denied",
+    "output-error": "Error",
+  },
+  es: {
+    "approval-requested": "Requiere permiso",
+    "approval-responded": "Autorizado",
+    "input-available": "En curso",
+    "input-streaming": "Preparando",
+    "output-available": "Terminado",
+    "output-denied": "Rechazado",
+    "output-error": "Error",
+  },
+};
+
+const toolLabels: Record<"fr" | "en" | "es", Record<string, string>> = {
+  fr: {
+    getWeather: "Recherche météo",
+    requestSuggestions: "Préparation d’idées",
+    createDocument: "Création d’un document",
+    updateDocument: "Mise à jour du document",
+    searchWeb: "Recherche sur le Web",
+    searchImages: "Recherche d’images",
+    generateImage: "Génération d’image",
+  },
+  en: {
+    getWeather: "Weather lookup",
+    requestSuggestions: "Preparing ideas",
+    createDocument: "Creating document",
+    updateDocument: "Updating document",
+    searchWeb: "Web search",
+    searchImages: "Image search",
+    generateImage: "Image generation",
+  },
+  es: {
+    getWeather: "Consulta del tiempo",
+    requestSuggestions: "Preparando ideas",
+    createDocument: "Creando documento",
+    updateDocument: "Actualizando documento",
+    searchWeb: "Búsqueda web",
+    searchImages: "Búsqueda de imágenes",
+    generateImage: "Generación de imágenes",
+  },
 };
 
 const statusIcons: Record<ToolPart["state"], ReactNode> = {
@@ -65,10 +116,10 @@ const statusIcons: Record<ToolPart["state"], ReactNode> = {
   "output-error": <XCircleIcon className="size-4 text-red-600" />,
 };
 
-export const getStatusBadge = (status: ToolPart["state"]) => (
+export const getStatusBadge = (status: ToolPart["state"], locale: "fr" | "en" | "es" = "fr") => (
   <Badge className="gap-1.5 rounded-full text-xs" variant="secondary">
     {statusIcons[status]}
-    {statusLabels[status]}
+    {statusLabels[locale][status]}
   </Badge>
 );
 
@@ -80,8 +131,10 @@ export const ToolHeader = ({
   toolName,
   ...props
 }: ToolHeaderProps) => {
-  const derivedName =
-    type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
+  const { language } = useTranslation();
+  const locale = language === "en" || language === "es" ? language : "fr";
+  const rawName = type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
+  const derivedName = toolLabels[locale][rawName ?? ""] ?? rawName ?? "Tool";
 
   return (
     <CollapsibleTrigger
@@ -94,7 +147,7 @@ export const ToolHeader = ({
       <div className="flex items-center gap-2">
         <WrenchIcon className="size-4 text-muted-foreground" />
         <span className="font-medium text-sm">{title ?? derivedName}</span>
-        {getStatusBadge(state)}
+        {getStatusBadge(state, locale)}
       </div>
       <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
     </CollapsibleTrigger>
