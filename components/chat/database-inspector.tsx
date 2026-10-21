@@ -124,6 +124,11 @@ export function DatabaseInspector({
   const [snapshot, setSnapshot] = useState<DatabaseInspectorSnapshot | null>(null);
   const [isSnapshotLoading, setIsSnapshotLoading] = useState(false);
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const databaseRefreshKey = [
+    metadata?.missionFileLastSequence ?? 0,
+    metadata?.missionReplayNonce ?? 0,
+    metadata?.missionSquadStatus ?? "",
+  ].join(":");
 
   useEffect(() => {
     if (!missionId || isDemoMode) {
@@ -169,7 +174,7 @@ export function DatabaseInspector({
       });
 
     return () => controller.abort();
-  }, [missionId, isDemoMode]);
+  }, [missionId, isDemoMode, databaseRefreshKey]);
 
   // Rows come from persisted Supabase queries or the current file snapshot.
   // Never synthesize successful agent runs, timestamps, or database events.
