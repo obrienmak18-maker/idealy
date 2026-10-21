@@ -14,6 +14,12 @@ export const metadata: Metadata = {
   title: "Transformez une idée en projet",
 };
 
+const baseUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "https://idealy-ai.vercel.app");
+
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
@@ -23,7 +29,7 @@ const structuredData = {
   inLanguage: "fr",
   name: "Idealy",
   operatingSystem: "Web",
-  url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://idealy.app"}/welcome`,
+  url: `${baseUrl}/welcome`,
 };
 
 export default function WelcomeLayout({ children }: { children: ReactNode }) {

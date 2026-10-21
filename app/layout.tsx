@@ -8,7 +8,12 @@ import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
 import { LanguageProvider } from "@/lib/i18n/provider";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://idealy.app";
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "https://idealy-ai.vercel.app");
+
 const googleVerification =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
   process.env.GOOGLE_SITE_VERIFICATION;
