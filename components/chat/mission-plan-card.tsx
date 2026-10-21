@@ -265,7 +265,7 @@ export function MissionPlanCard() {
         <div className="flex shrink-0 items-center gap-2">
           <button
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border/70 bg-background px-3.5 py-2 text-xs font-medium text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onClick={openWorkspace}
+            onClick={() => openWorkspace()}
             type="button"
           >
             <Code2 aria-hidden="true" className="size-3.5" />
