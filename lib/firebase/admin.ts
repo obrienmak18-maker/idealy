@@ -105,24 +105,7 @@ export async function verifyFirebaseToken(idToken: string) {
     }
   }
 
-  // Fallback: decode verified JWT payload
-  try {
-    const parts = idToken.split(".");
-    if (parts.length === 3) {
-      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
-      if (payload && payload.email && payload.sub) {
-        return {
-          uid: payload.sub,
-          email: payload.email,
-          name: payload.name || payload.email.split("@")[0],
-          picture: payload.picture || null,
-          email_verified: payload.email_verified ?? true,
-        } as any;
-      }
-    }
-  } catch {
-    // ignore
-  }
-
+  // No token payload may be trusted unless Firebase's signature and claims
+  // have been verified by Admin SDK or Google's public signing certificates.
   return null;
 }
