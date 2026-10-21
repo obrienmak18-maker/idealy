@@ -428,7 +428,7 @@ export async function POST(request: Request) {
 
     const lastUserPrompt =
       message?.role === "user" ? getTextFromMessageParts(message).trim() : "";
-    const requestedAgent = lastUserPrompt.match(/(?:^|\\s)@([A-Za-z0-9_-]{2,40})/)?.[1] ?? null;
+    const requestedAgent = lastUserPrompt.match(/(?:^|\s)@([A-Za-z0-9_-]{2,40})/)?.[1] ?? null;
 
     // Fast, resilient interceptor for conversational greetings across all environments
     if (lastUserPrompt && isSimpleGreeting(lastUserPrompt)) {
@@ -870,7 +870,7 @@ export async function POST(request: Request) {
               userDisplayName,
               userTone,
               userWay,
-            })}${requestedAgent ? `\\n\\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty and voice in this reply, while remaining truthful about which tools and agents actually executed. Do not claim a separate agent ran unless the orchestration actually invoked it.` : ""}`,
+            })}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty and voice in this reply, while remaining truthful about which tools and agents actually executed. Do not claim a separate agent ran unless the orchestration actually invoked it.` : ""}`,
             messages: modelMessages,
             model: getLanguageModel(chatModel),
             onAbort() {
