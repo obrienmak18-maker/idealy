@@ -22,6 +22,9 @@ assert.match(toolbar, /aria-label="Page affichée dans l’aperçu"/);
 assert.match(toolbar, /dynamicPages\.map\(\(previewPage\)/);
 assert.match(toolbar, /selectPage\(nextPage\)/);
 assert.match(toolbar, /activePreviewPage\.path/);
+assert.match(previewCompiler, /function routePathFromFile/);
+assert.match(previewCompiler, /segment\.startsWith\("\("/);
+assert.match(previewCompiler, /routePathFromFile\(file\.path\) === normalizedTarget/);
 
 // Opening another tab must happen in the direct click stack (no delayed custom event).
 assert.match(toolbar, /window\.dispatchEvent\(new Event\("idealy:open-preview"\)\)/);
