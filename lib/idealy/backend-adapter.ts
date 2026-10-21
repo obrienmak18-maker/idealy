@@ -64,6 +64,27 @@ export type IdealyMissionFile = {
   version: number;
 };
 
+export type IdealyMissionDatabaseRecord = {
+  created_at: string | null;
+  dna: unknown;
+  id: string;
+  status: string | null;
+  title: string | null;
+  validation: unknown;
+  way: string | null;
+};
+
+export type IdealyMissionAgentRun = {
+  agent_key: string;
+  completed_at: string | null;
+  id: string;
+  mission_id: string;
+  run_key: string;
+  started_at: string | null;
+  status: string;
+  step_index: number;
+};
+
 export type IdealyMissionCheckpoint = {
   checksum?: string;
   createdAt: string;
@@ -436,6 +457,36 @@ export async function listIdealyMissionFiles({
   );
 
   return Array.isArray(files) ? files : [];
+}
+
+export async function getIdealyMissionDatabaseRecord({
+  missionId,
+  request,
+}: {
+  missionId: string;
+  request: Request;
+}): Promise<IdealyMissionDatabaseRecord | null> {
+  const records = await callSupabaseRest<IdealyMissionDatabaseRecord[]>(
+    request,
+    `missions?select=id,title,status,way,dna,validation,created_at&id=eq.${encodeURIComponent(missionId)}&limit=1`,
+    { cache: "no-store", method: "GET" }
+  );
+  return Array.isArray(records) ? records[0] ?? null : null;
+}
+
+export async function listIdealyMissionAgentRuns({
+  missionId,
+  request,
+}: {
+  missionId: string;
+  request: Request;
+}): Promise<IdealyMissionAgentRun[]> {
+  const runs = await callSupabaseRest<IdealyMissionAgentRun[]>(
+    request,
+    `mission_agent_runs?select=id,mission_id,run_key,step_index,agent_key,status,started_at,completed_at&mission_id=eq.${encodeURIComponent(missionId)}&order=step_index.asc&limit=100`,
+    { cache: "no-store", method: "GET" }
+  );
+  return Array.isArray(runs) ? runs : [];
 }
 
 export async function listIdealyMissionCheckpoints({
