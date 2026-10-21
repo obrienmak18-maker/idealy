@@ -274,19 +274,69 @@ async function generateFalImage(args: JsonRecord) {
   }
 }
 
+function localizeToolMessage(
+  name: ChatToolName,
+  message: string,
+  language: "fr" | "en" | "es",
+) {
+  const value = message.toLowerCase();
+  const statusCode = message.match(/(?:http|fal\.ai)\s*(\d{3})/i)?.[1];
+  const words = {
+    webConfigured: localized(language, "La recherche Web n’est pas configurée côté serveur (EXA_API_KEY).", "Web search is not configured on the server (EXA_API_KEY).", "La búsqueda web no está configurada en el servidor (EXA_API_KEY)."),
+    pexelsConfigured: localized(language, "La recherche d’images n’est pas configurée côté serveur (PEXELS_API_KEY).", "Image search is not configured on the server (PEXELS_API_KEY).", "La búsqueda de imágenes no está configurada en el servidor (PEXELS_API_KEY)."),
+    falConfigured: localized(language, "La génération d’images n’est pas configurée côté serveur (FAL_KEY).", "Image generation is not configured on the server (FAL_KEY).", "La generación de imágenes no está configurada en el servidor (FAL_KEY)."),
+    shortQuery: localized(language, "La requête est trop courte.", "The query is too short.", "La consulta es demasiado corta."),
+    timedOut: localized(language, "L’action a dépassé le délai autorisé.", "The action timed out.", "La acción agotó el tiempo de espera."),
+    unavailable: localized(language, "Le service est momentanément indisponible.", "The service is temporarily unavailable.", "El servicio no está disponible temporalmente."),
+    httpError: localized(language, `La requête au fournisseur a échoué (HTTP ${statusCode ?? "inconnu"}).`, `The provider request failed (HTTP ${statusCode ?? "unknown"}).`, `La solicitud al proveedor falló (HTTP ${statusCode ?? "desconocido"}).`),
+    pexelsLimit: localized(language, "La limite de recherche Pexels est atteinte. Réessaie dans quelques instants.", "The Pexels search limit has been reached. Try again shortly.", "Se alcanzó el límite de búsqueda de Pexels. Inténtalo de nuevo en unos instantes."),
+    credits: localized(language, "Le fournisseur d’images demande des crédits supplémentaires. Aucune image n’a été générée.", "The image provider needs more credits. No image was generated.", "El proveedor de imágenes necesita más créditos. No se generó ninguna imagen."),
+    noImages: localized(language, "Le fournisseur n’a renvoyé aucune image utilisable.", "The provider returned no usable images.", "El proveedor no devolvió imágenes utilizables."),
+  };
+
+  if (/EXA_API_KEY|recherche web n’est pas configurée/i.test(message)) return words.webConfigured;
+  if (/PEXELS_API_KEY|recherche d’images n’est pas configurée/i.test(message)) return words.pexelsConfigured;
+  if (/FAL_KEY|génération d’images n’est pas configurée/i.test(message)) return words.falConfigured;
+  if (/trop courte|too short|demasiado corta/i.test(message)) return words.shortQuery;
+  if (/crédits supplémentaires|needs more credits|necesita más créditos/i.test(message)) return words.credits;
+  if (/aucune image utilisable|no usable images|imágenes utilizables/i.test(message)) return words.noImages;
+  if (/limite.*pexels|pexels.*limit|límite.*pexels/i.test(message)) return words.pexelsLimit;
+  if (/délai autorisé|timed out|tiempo de espera/i.test(message)) return words.timedOut;
+  if (/http\s*\d{3}/i.test(message)) return words.httpError;
+  if (/momentanément indisponible|temporarily unavailable|no está disponible temporalmente/i.test(message)) return words.unavailable;
+  if (language === "fr") return message;
+  if (name === "webSearch") return words.unavailable;
+  if (name === "searchImages") return words.unavailable;
+  return words.unavailable;
+}
+
+function localizeToolOutput(
+  name: ChatToolName,
+  output: Record<string, unknown>,
+  language: "fr" | "en" | "es",
+) {
+  if (typeof output.message !== "string") return output;
+  return { ...output, message: localizeToolMessage(name, output.message, language) };
+}
+
 export async function executeIdealyChatTool(input: {
   name: ChatToolName;
   arguments: JsonRecord;
   language: "fr" | "en" | "es";
 }) {
+  let output: Record<string, unknown>;
   switch (input.name) {
     case "webSearch":
-      return await searchWeb(input.arguments);
+      output = await searchWeb(input.arguments);
+      break;
     case "searchImages":
-      return await searchPexels(input.arguments, input.language);
+      output = await searchPexels(input.arguments, input.language);
+      break;
     case "generateImage":
-      return await generateFalImage(input.arguments);
+      output = await generateFalImage(input.arguments);
+      break;
   }
+  return localizeToolOutput(input.name, output, input.language);
 }
 
 export function isChatToolName(value: unknown): value is ChatToolName {
