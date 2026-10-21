@@ -40,6 +40,10 @@ function sse(controller: ReadableStreamDefaultController<Uint8Array>, encoder: T
   controller.enqueue(encoder.encode("data: " + JSON.stringify(value) + "\n\n"));
 }
 
+function emitDone(controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder) {
+  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+}
+
 function emitToolActivity(
   controller: ReadableStreamDefaultController<Uint8Array>,
   encoder: TextEncoder,
@@ -155,7 +159,7 @@ async function streamFinalAnswer(input: {
   apiKey: string;
   provider: string;
   model: string;
-  messages: unknown[];
+  messages: InputMessage[];
   maxTokens: number;
   headers: Record<string, string>;
   signal: AbortSignal;
@@ -230,7 +234,7 @@ async function streamFinalAnswer(input: {
         }
       }
     }
-    sse(input.controller, input.encoder, "[DONE]");
+    emitDone(input.controller, input.encoder);
   } finally {
     await reader.cancel().catch(() => undefined);
   }
@@ -310,7 +314,7 @@ export function createToolEnabledChatResponse(input: {
             const assistant = payload.choices?.[0]?.message;
             if (!assistant) {
               emitText(controller, encoder, "Le fournisseur IA a renvoyé une réponse vide. Réessaie.");
-              sse(controller, encoder, "[DONE]");
+              emitDone(controller, encoder);
               return;
             }
 
