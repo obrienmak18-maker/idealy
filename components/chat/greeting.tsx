@@ -121,13 +121,13 @@ export function Greeting() {
   return (
     <section
       aria-labelledby="idealy-welcome-title"
-      className="flex w-full flex-col items-center px-4 pb-2 pt-4 text-center sm:pt-6"
+      className="flex w-full flex-col items-center px-4 pb-1 pt-3 text-center sm:pt-4"
     >
       {/* Central Glowing Compass Star Logo */}
       <motion.div
         animate={{ opacity: 1, scale: 1 }}
         aria-hidden="true"
-        className="group relative mb-5 flex size-14 items-center justify-center rounded-2xl border border-white/10 bg-card/40 p-2.5 backdrop-blur-xl shadow-[0_0_40px_rgba(139,92,246,0.25)] ring-1 ring-white/10"
+        className="group relative mb-3 flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-card/40 p-2.5 backdrop-blur-xl shadow-[0_0_32px_rgba(139,92,246,0.2)] ring-1 ring-white/10"
         initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.9 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       >
@@ -139,7 +139,7 @@ export function Greeting() {
       <motion.h1
         key={`${language}-${phrase.prefix}`}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-2xl text-balance text-2xl font-semibold leading-tight tracking-[-0.03em] text-foreground sm:text-3xl md:text-4xl"
+        className="max-w-2xl text-balance text-xl font-semibold leading-tight tracking-[-0.03em] text-foreground sm:text-2xl md:text-3xl"
         id="idealy-welcome-title"
         initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
         transition={{ delay: 0.04, duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
@@ -154,7 +154,7 @@ export function Greeting() {
       <motion.p
         key={`${language}-${phrase.subtitle}`}
         animate={{ opacity: 1, y: 0 }}
-        className="mt-2.5 max-w-md text-pretty text-xs leading-relaxed text-muted-foreground/80 sm:text-sm"
+        className="mt-2 max-w-md text-pretty text-[11px] leading-relaxed text-muted-foreground/80 sm:text-xs"
         initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
         transition={{ delay: 0.1, duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
       >
