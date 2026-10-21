@@ -17,65 +17,84 @@ export type PreviewCompilationResult = {
  * Safely extracts routes available in the generated project.
  * Analyzes App Router, Pages Router, and HTML files.
  */
+function routePathFromFile(filePath: string): string | null {
+  const path = filePath.replace(/^\\/+/, "").replaceAll("\\\\", "/");
+
+  // App Router: route groups such as (marketing) do not appear in the URL.
+  const appMatch = path.match(/^(?:src\\/)?app\\/(?:(.+)\\/)?page\\.(?:tsx|jsx|js|ts)$/);
+  if (appMatch) {
+    const segments = (appMatch[1] ?? "")
+      .split("/")
+      .filter(Boolean)
+      .filter((segment) =>
+        !(segment.startsWith("(") && segment.endsWith(")")) &&
+        !segment.startsWith("@")
+      );
+    return `/${segments.join("/")}`.replace(/\\/+/g, "/");
+  }
+
+  // Pages Router: API handlers and framework files are not UI pages.
+  const pagesMatch = path.match(/^(?:src\\/)?pages\\/(.+)\\.(?:tsx|jsx|js|ts)$/);
+  if (pagesMatch) {
+    let pagePath = pagesMatch[1];
+    if (
+      pagePath.startsWith("api/") ||
+      ["_app", "_document", "_error"].includes(pagePath) ||
+      pagePath.startsWith("_middleware")
+    ) {
+      return null;
+    }
+    if (pagePath === "index") pagePath = "";
+    else if (pagePath.endsWith("/index")) pagePath = pagePath.slice(0, -6);
+    return `/${pagePath}`.replace(/\\/+/g, "/");
+  }
+
+  // Static HTML pages, including index.html at the project root.
+  const htmlMatch = path.match(/^(?:public\\/)?(.+)\\.html$/);
+  if (htmlMatch) {
+    const htmlPath = htmlMatch[1] === "index" ? "" : htmlMatch[1];
+    return `/${htmlPath}`.replace(/\\/+/g, "/");
+  }
+
+  return null;
+}
+
+/**
+ * Safely extracts only actual UI routes from generated App Router, Pages Router,
+ * and static HTML files. The same route resolver is used by the preview compiler.
+ */
 export function extractAvailableRoutes(
   files: MissionFile[]
 ): Array<{ label: string; path: string }> {
-  const routes = new Map<string, string>();
-
-  // If no files, return root
   if (!files || files.length === 0) {
     return [{ label: "Accueil", path: "/" }];
   }
 
+  const routes = new Map<string, string>();
   for (const file of files) {
-    const path = file.path.replace(/^\/+/, "");
+    const routePath = routePathFromFile(file.path);
+    if (routePath === null || routes.has(routePath)) continue;
 
-    // App Router: (src/)?app/(...)/page.(tsx|jsx|js)
-    const appMatch = path.match(/^(?:src\/)?app\/(?:(.+)\/)?page\.(?:tsx|jsx|js|ts)$/);
-    if (appMatch) {
-      const subPath = appMatch[1] ? `/${appMatch[1].replace(/\/\([^)]+\)/g, "")}` : "/";
-      const normalizedPath = subPath.replace(/\/+/g, "/");
-      const label = normalizedPath === "/"
+    const label =
+      routePath === "/"
         ? "Accueil"
-        : normalizedPath.slice(1).split("/").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ");
-      routes.set(normalizedPath, label);
-      continue;
-    }
-
-    // Pages Router: (src/)?pages/(...).(tsx|jsx|js)
-    const pagesMatch = path.match(/^(?:src\/)?pages\/(.+)\.(?:tsx|jsx|js|ts)$/);
-    if (pagesMatch) {
-      let pagePath = pagesMatch[1];
-      if (pagePath === "index") pagePath = "";
-      const normalizedPath = `/${pagePath}`.replace(/\/+/g, "/");
-      const label = normalizedPath === "/"
-        ? "Accueil"
-        : normalizedPath.slice(1).charAt(0).toUpperCase() + normalizedPath.slice(2);
-      routes.set(normalizedPath, label);
-      continue;
-    }
-
-    // Static HTML: (...).html
-    const htmlMatch = path.match(/^(?:public\/)?(.+)\.html$/);
-    if (htmlMatch) {
-      let htmlPath = htmlMatch[1];
-      if (htmlPath === "index") htmlPath = "";
-      const normalizedPath = `/${htmlPath}`.replace(/\/+/g, "/");
-      const label = normalizedPath === "/"
-        ? "Accueil"
-        : normalizedPath.slice(1).charAt(0).toUpperCase() + normalizedPath.slice(2);
-      routes.set(normalizedPath, label);
-    }
+        : routePath
+            .slice(1)
+            .split("/")
+            .map((segment) =>
+              segment.replace(/^\\[|\\]$/g, "").replace(/[-_]/g, " ")
+            )
+            .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+            .join(" / ");
+    routes.set(routePath, label);
   }
 
-  if (routes.size === 0) {
-    return [{ label: "Accueil", path: "/" }];
-  }
-
-  return Array.from(routes.entries()).map(([path, label]) => ({
-    label: label || (path === "/" ? "Accueil" : path),
-    path,
-  }));
+  return routes.size > 0
+    ? Array.from(routes.entries()).map(([routePath, label]) => ({
+        label,
+        path: routePath,
+      }))
+    : [{ label: "Accueil", path: "/" }];
 }
 
 /**
@@ -158,35 +177,29 @@ export function compileProjectPreview({
     };
   }
 
-  // 3. Find the best file matching the requested path or fallback to root
+  // 3. Select the actual file for the active route (including route groups).
   let targetFile: MissionFile | undefined;
   if (files && files.length > 0) {
-    // Try to match activePath
-    const normalizedTarget = activePath === "/" ? "" : activePath.replace(/^\//, "");
-    targetFile = files.find((f) => {
-      if (normalizedTarget === "") {
-        return (
-          f.path === "index.html" ||
-          f.path.endsWith("app/page.tsx") ||
-          f.path.endsWith("app/page.jsx") ||
-          f.path.endsWith("pages/index.tsx") ||
-          f.path.endsWith("src/App.tsx")
-        );
-      }
-      return (
-        f.path.includes(`app/${normalizedTarget}/page.`) ||
-        f.path.includes(`pages/${normalizedTarget}.`) ||
-        f.path.includes(`${normalizedTarget}.html`)
-      );
-    });
+    const normalizedTarget = `/${activePath.split("/").filter(Boolean).join("/")}`;
+    const matchingFiles = files
+      .filter((file) => routePathFromFile(file.path) === normalizedTarget)
+      .sort((left, right) => (right.version ?? 0) - (left.version ?? 0));
+    targetFile = matchingFiles[0];
 
-    // Fallback to first available html or tsx
+    // If a route disappears mid-stream, prefer the real root page before a
+    // generic fallback. This keeps selection deterministic while files stream.
+    if (!targetFile && normalizedTarget !== "/") {
+      targetFile = files
+        .filter((file) => routePathFromFile(file.path) === "/")
+        .sort((left, right) => (right.version ?? 0) - (left.version ?? 0))[0];
+    }
+
     if (!targetFile) {
       targetFile = files.find(
-        (f) =>
-          f.path.endsWith(".html") ||
-          f.path.endsWith(".tsx") ||
-          f.path.endsWith(".jsx")
+        (file) =>
+          file.path.endsWith(".html") ||
+          file.path.endsWith(".tsx") ||
+          file.path.endsWith(".jsx")
       );
     }
   }
