@@ -1359,8 +1359,25 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
 }
 
 /* Frosted dark-mode panels become crisp, layered light surfaces. */
-.welcome-page--light [class*="bg-white/"] {
-  background-color: rgba(255, 255, 255, 0.80) !important;
+.welcome-page--light [class*="bg-white/[0.03]"],
+.welcome-page--light [class*="bg-white/[0.04]"],
+.welcome-page--light [class*="bg-white/[0.055]"],
+.welcome-page--light [class~="bg-white/5"] {
+  background-color: rgba(255, 255, 255, 0.68) !important;
+}
+.welcome-page--light [class*="bg-white/[0.06]"],
+.welcome-page--light [class*="bg-white/[0.07]"],
+.welcome-page--light [class~="bg-white/10"] {
+  background-color: rgba(255, 255, 255, 0.84) !important;
+}
+.welcome-page--light [class*="bg-white/[0.12]"] {
+  background-color: rgba(226, 236, 251, 0.88) !important;
+}
+.welcome-page--light [class~="bg-white/15"] {
+  background-color: rgba(255, 255, 255, 0.82) !important;
+}
+.welcome-page--light [class~="bg-white/20"] {
+  background-color: rgba(224, 232, 242, 0.86) !important;
 }
 .welcome-page--light [class~="bg-white"] {
   background-color: #ffffff !important;
@@ -1410,4 +1427,62 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
   .welcome-page--light .welcome-orb {
     animation: none;
   }
+}
+
+
+/* Keep the selected site theme consistent from Welcome into account creation. */
+.idealy-auth-shell {
+  isolation: isolate;
+  background-color: #0a0d14;
+}
+
+.light .idealy-auth-shell {
+  color: #172338;
+  background-color: #f5f8fc !important;
+  background-image:
+    radial-gradient(ellipse at 8% 6%, rgba(56, 189, 248, 0.11), transparent 34%),
+    radial-gradient(ellipse at 88% 12%, rgba(139, 92, 246, 0.10), transparent 32%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 65%, #fff9f4 100%);
+}
+
+.light .idealy-auth-shell > [aria-hidden="true"] > div:first-child {
+  background: rgba(246, 249, 253, 0.92) !important;
+}
+
+.light .idealy-auth-shell > [aria-hidden="true"] svg {
+  opacity: 0.28 !important;
+}
+
+.light .idealy-auth-shell .welcome-orb {
+  opacity: 0.06 !important;
+  filter: blur(100px);
+}
+
+.light .idealy-auth-shell .welcome-grid {
+  background-image:
+    linear-gradient(rgba(71, 85, 105, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71, 85, 105, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  opacity: 0.45;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.light .idealy-auth-shell .idealy-surface {
+  background-color: rgba(255, 255, 255, 0.86) !important;
+  border-color: rgba(119, 136, 158, 0.26) !important;
+  box-shadow: 0 20px 60px rgba(37, 52, 76, 0.08);
+}
+
+.light .idealy-auth-shell [class*="bg-card/"] {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+}
+
+.light .idealy-auth-shell .idealy-surface a,
+.light .idealy-auth-shell .idealy-surface button {
+  color: inherit;
+}
+
+.light .idealy-auth-shell .idealy-surface button[class*="bg-foreground"] {
+  color: #ffffff;
+  background-color: #172338;
 }
