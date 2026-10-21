@@ -982,19 +982,9 @@ export function BuildTopBar() {
               </button>
               <div className="my-2 border-t border-border/60" />
               {missionId ? (
-                <button
-                  aria-busy={isSquadRunning}
-                  className="mt-1 flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sky-300 transition-colors hover:bg-accent disabled:opacity-50 lg:hidden"
-                  disabled={isSquadRunning}
-                  onClick={() => {
-                    setMoreOpen(false);
-                    void runSquad();
-                  }}
-                  type="button"
-                >
-                  <Sparkles aria-hidden="true" className="size-3.5" />
-                  {isSquadRunning ? "Escouade en cours…" : "Lancer l’escouade"}
-                </button>
+                <div className="rounded-lg border border-border/60 bg-background/40 px-2.5 py-2 text-[11px] leading-5 text-muted-foreground lg:hidden">
+                  Pour lancer l’escouade, valide d’abord le plan dans la conversation.
+                </div>
               ) : null}
               <div className="my-2 border-t border-border/60" />
               <button
@@ -1096,21 +1086,6 @@ export function BuildTopBar() {
             </div>
           ) : null}
         </div>
-        {missionId ? (
-          <button
-            aria-busy={isSquadRunning}
-            aria-label="Run mission squad"
-            className="hidden h-8 items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-400/10 px-2.5 text-[11px] font-semibold text-sky-200 transition hover:bg-sky-400/20 disabled:cursor-wait disabled:opacity-60 lg:inline-flex"
-            disabled={isSquadRunning}
-            onClick={runSquad}
-            type="button"
-          >
-            <Sparkles
-              className={`size-3.5 ${isSquadRunning ? "animate-pulse" : ""}`}
-            />
-            {isSquadRunning ? "Building" : "Run squad"}
-          </button>
-        ) : null}
         <button
           aria-label="Configurer le déploiement"
           className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
