@@ -13,7 +13,6 @@ import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
 import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
-import { useArtifact } from "@/hooks/use-artifact";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
@@ -112,21 +111,21 @@ function parseProgressiveSections(text: string): {
   for (const rawLine of lines) {
     const line = rawLine.trim();
     const faitMatch = line.match(
-      /^(?:[-*•]\s*)?(?:✓\s*|\[x\]\s*)?(?:Fait|Ce qui a été fait)\s*:\s*(.+)$/i
+      /^(?:[-*•]\s*)?(?:✓\s*|\[x\]\s*)?(?:Fait|Ce qui a été fait|Done|Completed|Hecho|Completado)\s*:\s*(.+)$/i
     );
     if (faitMatch?.[1]) {
       fait = faitMatch[1].trim();
     }
 
     const resteMatch = line.match(
-      /^(?:[-*•]\s*)?(?:⏳\s*|\[\s*\]\s*)?(?:Reste|Ce qui reste)\s*:\s*(.+)$/i
+      /^(?:[-*•]\s*)?(?:⏳\s*|\[\s*\]\s*)?(?:Reste|Ce qui reste|Remaining|What's left|Pendiente|Por hacer)\s*:\s*(.+)$/i
     );
     if (resteMatch?.[1]) {
       reste = resteMatch[1].trim();
     }
 
     const attentionMatch = line.match(
-      /^(?:[-*•]\s*)?(?:⚠️\s*|!\s*)?(?:Attention|Point d'attention|Points d'attention)\s*:\s*(.+)$/i
+      /^(?:[-*•]\s*)?(?:⚠️\s*|!\s*)?(?:Attention|Point d'attention|Points d'attention|Warning|Caution|Atención|Advertencia)\s*:\s*(.+)$/i
     );
     if (attentionMatch?.[1]) {
       attention = attentionMatch[1].trim();
@@ -163,6 +162,13 @@ function ProgressiveTextMessage({
   onSelectPlanOption?: (option: PlanOption) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { language } = useTranslation();
+  const locale = language === "en" || language === "es" ? language : "fr";
+  const labels = {
+    fr: { summary: "En résumé :", expand: "Afficher les détails", collapse: "Replier les détails", done: "Fait :", remaining: "Reste :", attention: "Attention :" },
+    en: { summary: "In summary:", expand: "Show details", collapse: "Collapse details", done: "Done:", remaining: "Remaining:", attention: "Note:" },
+    es: { summary: "En resumen:", expand: "Ver detalles", collapse: "Contraer detalles", done: "Hecho:", remaining: "Pendiente:", attention: "Aviso:" },
+  }[locale];
   const planOptions = isAssistant ? extractPlanOptionsFromText(text) : null;
   const displayText = planOptions ? textBeforePlanOptions(text) : text;
   const { conclusion, status, lineCount, isLong } =
@@ -186,21 +192,13 @@ function ProgressiveTextMessage({
       {/* ① Conclusion en une phrase visible immédiatement */}
       {isAssistant && conclusion && isLong && !isLoading && (
         <div className="rounded-lg bg-surface-container-lowest/80 border border-border/50 px-3 py-2 text-[13px] font-medium text-foreground/90 shadow-xs">
-          <span className="text-primary font-semibold mr-1.5">En résumé :</span>
+          <span className="text-primary font-semibold mr-1.5">{labels.summary}</span>
           {conclusion}
         </div>
       )}
 
       {displayText.trim().length > 0 && (
         <>
-          {/* Le corps d'une réponse proposant des choix ne répète pas la liste qui est devenue interactive. */}
-          {isAssistant && conclusion && isLong && !isLoading && (
-            <div className="rounded-lg bg-surface-container-lowest/80 border border-border/50 px-3 py-2 text-[13px] font-medium text-foreground/90 shadow-xs">
-              <span className="text-primary font-semibold mr-1.5">En résumé :</span>
-              {conclusion}
-            </div>
-          )}
-
           <div
             className={cn("relative transition-[max-height] duration-200", {
               "max-h-[180px] overflow-hidden": shouldCollapse,
@@ -236,12 +234,12 @@ function ProgressiveTextMessage({
               {isExpanded ? (
                 <>
                   <ChevronUp className="size-3.5" />
-                  <span>Replier les détails</span>
+                  <span>{labels.collapse}</span>
                 </>
               ) : (
                 <>
                   <ChevronDown className="size-3.5" />
-                  <span>Afficher les détails ({lineCount} lignes)</span>
+                  <span>{labels.expand} ({lineCount} {locale === "en" ? "lines" : locale === "es" ? "líneas" : "lignes"})</span>
                 </>
               )}
             </button>
@@ -254,7 +252,7 @@ function ProgressiveTextMessage({
                   <CheckCircle2 className="size-3.5 text-emerald-500 mt-0.5 shrink-0" />
                   <div>
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      Fait :{" "}
+                      {labels.done}{" "}
                     </span>
                     {status.fait}
                   </div>
@@ -265,7 +263,7 @@ function ProgressiveTextMessage({
                   <Clock className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
                   <div>
                     <span className="font-semibold text-amber-600 dark:text-amber-400">
-                      Reste :{" "}
+                      {labels.remaining}{" "}
                     </span>
                     {status.reste}
                   </div>
@@ -276,7 +274,7 @@ function ProgressiveTextMessage({
                   <AlertTriangle className="size-3.5 text-rose-500 mt-0.5 shrink-0" />
                   <div>
                     <span className="font-semibold text-rose-600 dark:text-rose-400">
-                      Attention :{" "}
+                      {labels.attention}{" "}
                     </span>
                     {status.attention}
                   </div>
@@ -335,7 +333,6 @@ const PurePreviewMessage = ({
   const { t } = useTranslation();
 
   const { currentWay } = useGamificationStore();
-  const { metadata } = useArtifact();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const chiefAgent =
     activeWayData?.agents?.find((agent) => agent.isChief) ??
