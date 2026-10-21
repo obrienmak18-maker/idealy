@@ -313,7 +313,7 @@ export const welcomeTranslations = {
           badge: "To try out",
           desc: "Explore the workspace, complete your first missions and evaluate the results before settling into a workflow.",
           features: [
-            "100 welcome Power Points",
+            "200 Power Points",
             "Interactive workspace with live preview",
             "Focused missions for specific tasks",
             "Project export in ZIP format",
@@ -509,7 +509,7 @@ export const welcomeTranslations = {
           badge: "Para probar",
           desc: "Descubre el espacio de trabajo, realiza tus primeras misiones y evalúa los resultados antes de definir tu flujo de trabajo.",
           features: [
-            "200 Power Points de bienvenida",
+            "200 Power Points",
             "Espacio de trabajo interactivo con vista previa en vivo",
             "Misiones específicas para tareas concretas",
             "Exportación de proyectos en formato ZIP",
