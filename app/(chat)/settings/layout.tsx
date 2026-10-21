@@ -165,7 +165,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         </div>
 
         {/* Carte facturation */}
-        <section className="mb-8 rounded-2xl border border-border/60 bg-gradient-to-br from-violet-500/10 via-card/40 to-orange-400/10 p-6">
+        <section id="billing" className="mb-8 rounded-2xl border border-border/60 bg-gradient-to-br from-violet-500/10 via-card/40 to-orange-400/10 p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="mb-2 flex items-center gap-2 text-violet-400">
