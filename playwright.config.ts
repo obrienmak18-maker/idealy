@@ -84,6 +84,11 @@ export default defineConfig({
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL,
 
+    // Fail a broken locator quickly instead of spending the entire 60-second
+    // test budget on every missing control.
+    actionTimeout: 10 * 1000,
+    navigationTimeout: 30 * 1000,
+
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "retain-on-failure",
   },
