@@ -51,12 +51,21 @@ assert.match(files.auth, /supabaseAccessToken: supabaseAuth\.accessToken/);
 assert.doesNotMatch(files.client, /FIREBASE_PRIVATE_KEY|FIREBASE_CLIENT_EMAIL/);
 const firebaseAdmin = await readFile("lib/firebase/admin.ts", "utf8");
 assert.match(firebaseAdmin, /verifyIdToken\(idToken, true\)/);
-assert.match(
-  firebaseAdmin,
-  /catch \(error\) \{[\\s\\S]*?console\\.warn\("\\[Firebase Admin token verification\\]", error\);[\\s\\S]*?return null;/
+const verifyFunctionStart = firebaseAdmin.indexOf(
+  "export async function verifyFirebaseToken"
 );
+const publicCertificateFallbackStart = firebaseAdmin.indexOf(
+  "  const projectId =",
+  verifyFunctionStart
+);
+const adminVerificationBlock = firebaseAdmin.slice(
+  verifyFunctionStart,
+  publicCertificateFallbackStart
+);
+assert.match(adminVerificationBlock, /verifyIdToken\\(idToken, true\\)/);
+assert.match(adminVerificationBlock, /return null;/);
 assert.doesNotMatch(
-  firebaseAdmin,
+  adminVerificationBlock,
   /Admin token verification, falling back to public cert/
 );
 assert.doesNotMatch(firebaseAdmin, /Buffer\.from\(parts\[1\], "base64url"\)/);
