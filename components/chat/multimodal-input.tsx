@@ -216,18 +216,21 @@ function PureMultimodalInput({
 
   // Voice lifecycle via dedicated hook
   const voiceBaseInput = useRef("");
+  const voiceFinalText = useRef("");
   const voice = useVoice({
     language,
     silenceTimeoutMs: 12_000,
     onInterim: (text) => {
       setShowSensitiveDraft(false);
       const prefix = voiceBaseInput.current.trim();
-      setInput(prefix ? `${prefix} ${text}` : text);
+      const committed = voiceFinalText.current.trim();
+      setInput([prefix, committed, text.trim()].filter(Boolean).join(" "));
     },
     onFinal: (text) => {
       setShowSensitiveDraft(false);
+      voiceFinalText.current = [voiceFinalText.current.trim(), text.trim()].filter(Boolean).join(" ");
       const prefix = voiceBaseInput.current.trim();
-      setInput(prefix ? `${prefix} ${text}` : text);
+      setInput([prefix, voiceFinalText.current].filter(Boolean).join(" "));
     },
     onError: (err) => {
       toast(err.message);
@@ -246,6 +249,7 @@ function PureMultimodalInput({
   const toggleSpeechRecognition = useCallback(() => {
     if (voice.state === "idle") {
       voiceBaseInput.current = input;
+      voiceFinalText.current = "";
       voice.start();
     } else {
       voice.stop();
@@ -903,7 +907,7 @@ function PureMultimodalInput({
                   ? "border-sky-400/30 bg-sky-400/10 text-sky-400"
                   : "border-border/50 text-muted-foreground hover:border-border hover:bg-muted/70 hover:text-foreground"
               )}
-              disabled={!voiceSupported}
+              disabled={!voiceCapabilitiesReady || voice.state === "requesting"}
               onClick={toggleSpeechRecognition}
               size="icon"
               title={voiceSupported ? (isListening ? "Arrêter la dictée" : "Dicter au micro") : "La dictée n'est pas disponible dans ce navigateur."}

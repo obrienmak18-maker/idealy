@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
@@ -50,6 +50,7 @@ import { useActiveChat } from "@/hooks/use-active-chat";
 import { usePowerStatus } from "@/hooks/use-power-status";
 import { useTranslation } from "@/lib/i18n/provider";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { isIdealyWay } from "@/lib/idealy/product-contract";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,11 +81,27 @@ function planDisplayName(plan: string | undefined, language: string): string {
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { t, language } = useTranslation();
-  const { burnDownPercentage, currentWay } = useGamificationStore();
+  const { currentWay, setWay } = useGamificationStore();
   const { setOpenMobile, toggleSidebar, state } = useSidebar();
   const { mutate } = useSWRConfig();
   const { resetToNewChat } = useActiveChat();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+
+  // Resolve the selected Way from the signed-in account, not the previous
+  // account's persisted local Zustand state.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/idealy/profile/preferences", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = (await response.json()) as { way?: unknown };
+        if (active && isIdealyWay(payload.way)) setWay(payload.way);
+      })
+      .catch(() => {
+        // Retain the local preference if the profile endpoint is temporarily unavailable.
+      });
+    return () => { active = false; };
+  }, [setWay]);
   const { loading: powerLoading, status: powerStatus } = usePowerStatus();
 
   const handleToggleSidebar = useCallback(() => {
@@ -244,19 +261,6 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       </div>
                     </div>
                   </div>
-                  <span className="text-[11px] font-semibold text-sidebar-foreground/80">
-                    {burnDownPercentage}%
-                  </span>
-                </div>
-                {/* Burn-down bar compact */}
-                <div className="mb-1.5 h-1 overflow-hidden rounded-full bg-sidebar-border/60">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all duration-500 ease-out bg-gradient-to-r",
-                      voiesCatalog[currentWay]?.accentClassName || "from-violet-500 to-orange-400"
-                    )}
-                    style={{ width: `${burnDownPercentage}%` }}
-                  />
                 </div>
                 <div className="flex items-center justify-between text-[9.5px] text-sidebar-foreground/60">
                   <span className="flex items-center gap-1 font-medium">

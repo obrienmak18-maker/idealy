@@ -57,6 +57,7 @@ type SpeechRecognitionResultLike = {
 
 type IdealySpeechRecognitionEvent = Event & {
   results: ArrayLike<SpeechRecognitionResultLike>;
+  resultIndex: number;
 };
 
 type IdealySpeechRecognitionErrorEvent = Event & {
@@ -253,7 +254,8 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
         resetSilenceTimer();
         let finalPart = "";
         let interimPart = "";
-        for (const res of Array.from(event.results)) {
+        for (let resultIndex = event.resultIndex; resultIndex < event.results.length; resultIndex += 1) {
+          const res = event.results[resultIndex];
           const text = res[0]?.transcript ?? "";
           if (res.isFinal) {
             finalPart += `${text} `;
