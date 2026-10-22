@@ -132,16 +132,38 @@ function mapErrorKind(event: IdealySpeechRecognitionErrorEvent): VoiceErrorKind 
   }
 }
 
-function getFriendlyErrorMessage(kind: VoiceErrorKind): string {
+function getFriendlyErrorMessage(kind: VoiceErrorKind, language: string): string {
+  const locale = language.toLowerCase().split("-")[0];
+  const messages = {
+    fr: {
+      PERMISSION_DENIED: "Accès micro refusé. Autorisez le microphone dans les paramètres du navigateur.",
+      NETWORK: "La reconnaissance vocale a besoin d’une connexion réseau.",
+      NOT_SUPPORTED: "La dictée vocale n’est pas prise en charge ici. Utilisez Chrome, Edge ou Safari.",
+      DEFAULT: "La dictée vocale s’est interrompue. Cliquez à nouveau pour reprendre.",
+    },
+    en: {
+      PERMISSION_DENIED: "Microphone access was denied. Allow microphone access in your browser settings.",
+      NETWORK: "Speech recognition needs a working network connection.",
+      NOT_SUPPORTED: "Speech recognition is not supported here. Try Chrome, Edge or Safari.",
+      DEFAULT: "Speech recognition stopped. Click the microphone to try again.",
+    },
+    es: {
+      PERMISSION_DENIED: "Se denegó el acceso al micrófono. Permítelo en la configuración del navegador.",
+      NETWORK: "El reconocimiento de voz necesita una conexión de red activa.",
+      NOT_SUPPORTED: "Este navegador no admite el reconocimiento de voz. Prueba Chrome, Edge o Safari.",
+      DEFAULT: "El reconocimiento de voz se detuvo. Vuelve a pulsar el micrófono para intentarlo.",
+    },
+  } as const;
+  const copy = locale === "en" ? messages.en : locale === "es" ? messages.es : messages.fr;
   switch (kind) {
     case "PERMISSION_DENIED":
-      return "Accès micro refusé. Veuillez autoriser le microphone dans la barre d'adresse de votre navigateur.";
+      return copy.PERMISSION_DENIED;
     case "NETWORK":
-      return "Connexion réseau insuffisante pour la reconnaissance vocale.";
+      return copy.NETWORK;
     case "NOT_SUPPORTED":
-      return "La reconnaissance vocale n'est pas prise en charge sur ce navigateur. Utilisez Chrome, Edge ou Safari.";
+      return copy.NOT_SUPPORTED;
     default:
-      return "La dictée vocale s'est interrompue. Cliquez à nouveau pour reprendre.";
+      return copy.DEFAULT;
   }
 }
 
@@ -211,7 +233,7 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
     if (!Ctor) {
       onErrorRef.current?.({
         kind: "NOT_SUPPORTED",
-        message: getFriendlyErrorMessage("NOT_SUPPORTED"),
+        message: getFriendlyErrorMessage("NOT_SUPPORTED", language),
       });
       return;
     }
@@ -231,7 +253,7 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
           setState("idle");
           onErrorRef.current?.({
             kind: "PERMISSION_DENIED",
-            message: getFriendlyErrorMessage("PERMISSION_DENIED"),
+            message: getFriendlyErrorMessage("PERMISSION_DENIED", language),
           });
           return;
         }
@@ -284,7 +306,7 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
         if (kind !== "ABORTED" && kind !== "NO_SPEECH") {
           onErrorRef.current?.({
             kind,
-            message: getFriendlyErrorMessage(kind),
+            message: getFriendlyErrorMessage(kind, language),
           });
         }
         recognitionRef.current = null;
