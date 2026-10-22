@@ -851,7 +851,7 @@ export async function POST(request: Request) {
                     : "Este es el plan propuesto para **" + missionPlan.projectKind + "**. El equipo aún no ha empezado. Revisa o modifica el plan y después apruébalo para comenzar.")
                   : (agentPrefix
                     ? agentPrefix + " a préparé une proposition pour **" + missionPlan.projectKind + "**. L’escouade n’a pas encore démarré. Vérifiez ou modifiez le plan ci-dessous, puis validez-le pour commencer."
-                    : "Voici le plan proposé pour **" + missionPlan.projectKind + "**. L’escouade n’a pas encore démarré. Vérifiez ou modifiez le plan ci-dessous, puis validez-le pour commencer.");
+                    : "Plan enregistré pour **" + missionPlan.projectKind + "**. L’escouade n’a pas encore démarré. Vérifiez ou modifiez le plan ci-dessous, puis cliquez sur **Valider et lancer** pour commencer la construction.");
               dataStream.write({
                 delta: planMessage,
                 id: assistantId,
