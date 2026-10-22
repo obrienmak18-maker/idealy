@@ -252,6 +252,14 @@ function PureMultimodalInput({
       toast(err.message);
     },
   });
+  // Browser speech APIs are not available during SSR, but may already exist
+  // on the client during hydration. Keep the initial render identical, then
+  // expose the real capability after the component mounts.
+  const [voiceCapabilitiesReady, setVoiceCapabilitiesReady] = useState(false);
+  useEffect(() => {
+    setVoiceCapabilitiesReady(true);
+  }, []);
+  const voiceSupported = voiceCapabilitiesReady && voice.supported;
   const isListening = voice.state === "listening";
 
   const toggleSpeechRecognition = useCallback(() => {
@@ -921,14 +929,14 @@ function PureMultimodalInput({
                   ? "border-sky-400/30 bg-sky-400/10 text-sky-400"
                   : "border-border/50 text-muted-foreground hover:border-border hover:bg-muted/70 hover:text-foreground"
               )}
-              disabled={!voice.supported}
+              disabled={!voiceSupported}
               onClick={toggleSpeechRecognition}
               size="icon"
-              title={voice.supported ? (isListening ? "Arrêter la dictée" : "Dicter au micro") : "La dictée n'est pas disponible dans ce navigateur."}
+              title={voiceSupported ? (isListening ? "Arrêter la dictée" : "Dicter au micro") : "La dictée n'est pas disponible dans ce navigateur."}
               type="button"
               variant="ghost"
             >
-              {voice.supported ? <MicIcon className="size-3.5" /> : <MicOffIcon className="size-3.5" />}
+              {voiceSupported ? <MicIcon className="size-3.5" /> : <MicOffIcon className="size-3.5" />}
             </Button>
             {status === "submitted" ? (
               <StopButton setMessages={setMessages} stop={stop} />
