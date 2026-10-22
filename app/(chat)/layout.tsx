@@ -11,6 +11,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
 import { getUserOnboardingStatus } from "@/lib/db/queries";
 import { auth } from "../(auth)/auth";
+import { isDevelopmentEnvironment } from "@/lib/constants";
 
 export const metadata: Metadata = {
   robots: { follow: false, index: false },
@@ -33,7 +34,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 }
 
 async function SidebarShell({ children }: { children: React.ReactNode }) {
-  const [session, cookieStore] = await Promise.all([auth(), cookies()]);
+  const isLocalDemo =
+    process.env.DEMO_MODE === "true" && isDevelopmentEnvironment;
+  // The proxy deliberately bypasses Auth.js for the local visual demo. Do not
+  // reintroduce an auth/session dependency here: Playwright and offline demo
+  // workspaces must render even without Postgres or external auth providers.
+  const [session, cookieStore] = await Promise.all([
+    isLocalDemo ? Promise.resolve(null) : auth(),
+    cookies(),
+  ]);
   const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
   let onboardingRequired = false;
 
