@@ -612,12 +612,25 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
   box-shadow: none !important;
 }
 
+.idealy-prompt-shell [data-slot="input-group"],
+.idealy-prompt-shell [data-slot="input-group"]:focus-within,
+.idealy-prompt-shell [data-slot="input-group"]:has([data-slot="input-group-control"]:focus-visible) {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 .idealy-prompt-shell [data-slot="input-group-control"],
 .idealy-prompt-shell [data-slot="input-group-control"]:focus,
 .idealy-prompt-shell [data-slot="input-group-control"]:focus-visible {
+  border: 0 !important;
+  border-bottom: 0 !important;
   outline: none !important;
   box-shadow: none !important;
-  border-bottom: 0 !important;
+}
+
+.idealy-prompt-shell [data-slot="input-group-addon"][data-align="block-end"] {
+  border-top: 0 !important;
+  box-shadow: none !important;
 }
 
 .ProseMirror {
