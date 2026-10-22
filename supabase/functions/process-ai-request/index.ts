@@ -906,12 +906,13 @@ Deno.serve(async (req) => {
         .eq('is_active', true)
         .maybeSingle();
 
-      if (policyError || !Number.isInteger(policy?.cost_points) || policy.cost_points <= 0) {
+      const policyCost = Number(policy?.cost_points);
+      if (policyError || !Number.isInteger(policyCost) || policyCost <= 0) {
         console.error('Simple mission Power policy unavailable.');
         return jsonError('Le calcul Power est momentanément indisponible. Aucun point n’a été débité.', 503, headers, 'POWER_POLICY_UNAVAILABLE');
       }
 
-      simplePowerReservedPoints = policy.cost_points;
+      simplePowerReservedPoints = policyCost;
       const basePowerKey = input.idempotencyKey?.trim() || `${user.id}:mission-simple:${input.missionId}`;
       simplePowerReservationKey = `${basePowerKey}:power:simple`;
       if (simplePowerReservationKey.length > 200) {
