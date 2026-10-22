@@ -46,7 +46,7 @@ export const PROVIDER_CONFIGS: Record<
     envKey: "GEMINI_API_KEY",
   },
   anthropic: {
-    url: "https://api.anthropic.com/v1/chat/completions",
+    url: "https://api.anthropic.com/v1/messages",
     envKey: "ANTHROPIC_API_KEY",
   },
   moonshot: {
