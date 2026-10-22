@@ -81,6 +81,27 @@ function getInitialWay(value: string | null): IdealyWay {
   return isIdealyWay(value) ? value : "professional";
 }
 
+const wayCopy: Record<"fr" | "en" | "es", Record<IdealyWay, { label: string; description: string }>> = {
+  fr: {
+    mage: { label: "Voie du Mage", description: "Créer, explorer et tester des solutions originales avec méthode." },
+    ninja: { label: "Voie du Ninja", description: "Avancer vite, précisément et avec le moins de friction possible." },
+    hunter: { label: "Voie du Hunter", description: "Rechercher, comparer et choisir la meilleure prochaine étape." },
+    professional: { label: "Voie du Pro", description: "Concevoir une base robuste, maintenable et prête à durer." },
+  },
+  en: {
+    mage: { label: "Mage Path", description: "Create, explore and test original solutions with a clear method." },
+    ninja: { label: "Ninja Path", description: "Move quickly and precisely with as little friction as possible." },
+    hunter: { label: "Hunter Path", description: "Research, compare and choose the best next step." },
+    professional: { label: "Pro Path", description: "Build a robust, maintainable foundation that lasts." },
+  },
+  es: {
+    mage: { label: "Vía del Mago", description: "Crear, explorar y probar soluciones originales con método." },
+    ninja: { label: "Vía del Ninja", description: "Avanzar rápido y con precisión, con la menor fricción posible." },
+    hunter: { label: "Vía del Hunter", description: "Investigar, comparar y elegir el siguiente paso más adecuado." },
+    professional: { label: "Vía Pro", description: "Crear una base sólida, mantenible y preparada para crecer." },
+  },
+};
+
 export function OnboardingFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -142,7 +163,7 @@ export function OnboardingFlow() {
         icon: Lightbulb,
         key: "goal",
         label: t("onboarding.steps.goal") || "Vision & Projet",
-        badge: langKey === "en" ? "Vision" : "Intention",
+        badge: langKey === "en" ? "Vision" : langKey === "es" ? "Visión" : "Intention",
       },
       {
         icon: Compass,
@@ -154,7 +175,7 @@ export function OnboardingFlow() {
         icon: Sparkles,
         key: "discovery",
         label: t("onboarding.steps.discovery") || "Découverte & Lancement",
-        badge: langKey === "en" ? "Ready" : "Prêt",
+        badge: langKey === "en" ? "Ready" : langKey === "es" ? "Listo" : "Prêt",
       },
     ],
     [t, langKey]
@@ -382,7 +403,7 @@ export function OnboardingFlow() {
             {step === 0 && (
               <motion.div key="step-0" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3 }} className="space-y-5">
                 <div>
-                  <span className="inline-block rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-teal-600 dark:text-teal-400">Question 1 / 4</span>
+                  <span className="inline-block rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-teal-600 dark:text-teal-400">{langKey === "en" ? "Question 1 / 4" : langKey === "es" ? "Pregunta 1 / 4" : "Question 1 / 4"}</span>
                   <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{langKey === "en" ? "Make this space yours" : langKey === "es" ? "Haz tuyo este espacio" : "Personnalisez votre espace"}</h1>
                   <p className="mt-1 text-xs text-muted-foreground">{langKey === "en" ? "Make Idealy feel like yours. You can change these choices later." : langKey === "es" ? "Haz que Idealy se sienta tuyo. Puedes cambiar estas opciones después." : "Personnalisez votre espace. Vous pourrez modifier ces choix plus tard."}</p>
                 </div>
@@ -415,15 +436,17 @@ export function OnboardingFlow() {
               >
                 <div>
                   <span className="inline-block rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400">
-                    Question 2 / 4
+                    {langKey === "es" ? "Pregunta 2 / 4" : "Question 2 / 4"}
                   </span>
                   <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                    {langKey === "en" ? "What would you like to build?" : "Qu’aimeriez-vous rendre possible ?"}
+                    {langKey === "en" ? "What would you like to build?" : langKey === "es" ? "¿Qué te gustaría crear?" : "Qu’aimeriez-vous rendre possible ?"}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {langKey === "en"
                       ? "A short phrase helps your agents orient their analysis."
-                      : "Une phrase suffit pour orienter l’analyse de vos 5 agents d’escouade."}
+                      : langKey === "es"
+                        ? "Una frase breve ayuda a tus agentes a orientar el análisis."
+                        : "Une phrase suffit pour orienter l’analyse de vos agents."}
                   </p>
                 </div>
 
@@ -512,7 +535,7 @@ export function OnboardingFlow() {
             {step === 2 && (
               <motion.div key="step-2" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3 }} className="space-y-5">
                 <div>
-                  <span className="inline-block rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">Question 3 / 4</span>
+                  <span className="inline-block rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">{langKey === "es" ? "Pregunta 3 / 4" : "Question 3 / 4"}</span>
                   <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{langKey === "en" ? "How do you like to work?" : langKey === "es" ? "¿Cómo te gusta trabajar?" : "Comment aimez-vous travailler ?"}</h2>
                   <p className="mt-1 text-xs text-muted-foreground">{langKey === "en" ? "This helps Idealy adapt its guidance and workflow to you." : langKey === "es" ? "Idealy adapta su guía y su flujo de trabajo a ti." : "Idealy adapte ses explications et sa manière de travailler à votre niveau."}</p>
                 </div>
@@ -521,7 +544,7 @@ export function OnboardingFlow() {
                     <button type="button" key={value} onClick={() => updateDraft("experienceLevel", value)} className={cn("group flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-left text-xs transition-all cursor-pointer", draft.experienceLevel === value ? "border-cyan-500 bg-cyan-500/10 text-foreground ring-1 ring-cyan-500/30" : "border-border/60 bg-background/40 hover:border-cyan-500/40 hover:bg-muted/30")}>
                       <span className="min-w-0">
                         <span className="block font-semibold text-xs text-foreground">{experienceLabels[value][langKey] || experienceLabels[value].fr}</span>
-                        <span className="block text-[10px] text-muted-foreground">{value === "non_coder" ? (langKey === "en" ? "Visual guidance from the start" : "Guidage visuel complet") : value === "beginner" ? (langKey === "en" ? "Step-by-step explanations" : "Explications pas-à-pas") : value === "intermediate" ? (langKey === "en" ? "A balance of detail and speed" : "Équilibre et efficacité") : (langKey === "en" ? "Direct code and architecture" : "Code direct & architectures")}</span>
+                        <span className="block text-[10px] text-muted-foreground">{value === "non_coder" ? (langKey === "en" ? "Visual guidance from the start" : langKey === "es" ? "Guía visual desde el inicio" : "Guidage visuel complet") : value === "beginner" ? (langKey === "en" ? "Step-by-step explanations" : langKey === "es" ? "Explicaciones paso a paso" : "Explications pas-à-pas") : value === "intermediate" ? (langKey === "en" ? "A balance of detail and speed" : langKey === "es" ? "Equilibrio entre detalle y rapidez" : "Équilibre et efficacité") : (langKey === "en" ? "Direct code and architecture" : langKey === "es" ? "Código y arquitectura directos" : "Code direct & architectures")}</span>
                       </span>
                       {draft.experienceLevel === value && <Check className="ml-2 size-3.5 shrink-0 text-cyan-500" aria-hidden="true" />}
                     </button>
@@ -533,12 +556,12 @@ export function OnboardingFlow() {
                     {Object.values(wayPresentations).map((way) => (
                       <button type="button" key={way.id} aria-pressed={draft.way === way.id} onClick={() => updateDraft("way", way.id)} className={cn("inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors", draft.way === way.id ? "border-primary/70 bg-primary/10 text-foreground" : "border-border/60 bg-transparent text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
                         <span className={cn("size-2 rounded-full bg-gradient-to-br", way.accentClassName)} aria-hidden="true" />
-                        <span>{way.label}</span>
+                        <span>{wayCopy[langKey][way.id].label}</span>
                         {draft.way === way.id && <Check className="size-3 text-primary" aria-hidden="true" />}
                       </button>
                     ))}
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">{wayPresentations[draft.way].description}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{wayCopy[langKey][draft.way].description}</p>
                 </div>
               </motion.div>
             )}
@@ -561,8 +584,10 @@ export function OnboardingFlow() {
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {langKey === "en"
-                      ? "Optional canal — helps our team understand your arrival."
-                      : "Facultatif — aide notre équipe à savoir par quel canal vous êtes arrivé."}
+                      ? "Optional — helps our team understand how you found us."
+                      : langKey === "es"
+                        ? "Opcional: ayuda a nuestro equipo a saber cómo nos encontraste."
+                        : "Facultatif — aide notre équipe à savoir par quel canal vous êtes arrivé."}
                   </p>
                 </div>
 
@@ -592,21 +617,21 @@ export function OnboardingFlow() {
                   </h3>
                   <dl className="grid gap-2 text-xs sm:grid-cols-3">
                     <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                      <dt className="text-muted-foreground">{langKey === "en" ? "Profile" : "Profil"}</dt>
+                      <dt className="text-muted-foreground">{langKey === "en" ? "Profile" : langKey === "es" ? "Perfil" : "Profil"}</dt>
                       <dd className="mt-0.5 font-semibold text-sm text-foreground">
-                        {[draft.firstName, draft.lastName].filter(Boolean).join(" ") || "Créateur Idealy"}
+                        {[draft.firstName, draft.lastName].filter(Boolean).join(" ") || (langKey === "en" ? "Idealy creator" : langKey === "es" ? "Creador de Idealy" : "Créateur Idealy")}
                       </dd>
                     </div>
                     <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
                       <dt className="text-muted-foreground">{langKey === "en" ? "Chosen Way" : langKey === "es" ? "Vía elegida" : "Voie choisie"}</dt>
                       <dd className="mt-0.5 font-semibold text-sm text-foreground">
-                        {wayPresentations[draft.way].label}
+                        {wayCopy[langKey][draft.way].label}
                       </dd>
                     </div>
                     <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                      <dt className="text-muted-foreground">{langKey === "en" ? "Project type" : "Type de projet"}</dt>
+                      <dt className="text-muted-foreground">{langKey === "en" ? "Project type" : langKey === "es" ? "Tipo de proyecto" : "Type de projet"}</dt>
                       <dd className="mt-0.5 font-medium text-foreground">
-                        {draft.projectType ? projectLabels[draft.projectType as keyof typeof projectLabels]?.[langKey] || draft.projectType : "Application web"}
+                        {draft.projectType ? projectLabels[draft.projectType as keyof typeof projectLabels]?.[langKey] || draft.projectType : (langKey === "en" ? "Web application" : langKey === "es" ? "Aplicación web" : "Application web")}
                       </dd>
                     </div>
                   </dl>
@@ -631,7 +656,7 @@ export function OnboardingFlow() {
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-medium text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40 cursor-pointer"
             >
               <ArrowLeft className="size-3.5" aria-hidden="true" />
-              {langKey === "en" ? "Back" : "Retour"}
+              {langKey === "en" ? "Back" : langKey === "es" ? "Atrás" : "Retour"}
             </button>
 
             {step < steps.length - 1 ? (
@@ -645,7 +670,7 @@ export function OnboardingFlow() {
                     : "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 shadow-purple-500/20"
                 )}
               >
-                {langKey === "en" ? "Continue" : "Continuer"}
+                {langKey === "en" ? "Continue" : langKey === "es" ? "Continuar" : "Continuer"}
                 <ArrowRight className="size-3.5" aria-hidden="true" />
               </button>
             ) : (
@@ -656,8 +681,8 @@ export function OnboardingFlow() {
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 via-purple-600 to-violet-600 px-6 text-xs font-bold text-white shadow-lg shadow-purple-500/25 transition hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
               >
                 {isSubmitting
-                  ? (langKey === "en" ? "Opening workspace…" : "Ouverture du workspace…")
-                  : (langKey === "en" ? "Open my workspace" : "Ouvrir mon workspace")}
+                  ? (langKey === "en" ? "Opening workspace…" : langKey === "es" ? "Abriendo el espacio…" : "Ouverture du workspace…")
+                  : (langKey === "en" ? "Open my workspace" : langKey === "es" ? "Abrir mi espacio" : "Ouvrir mon workspace")}
                 <Rocket className="size-3.5" aria-hidden="true" />
               </button>
             )}
