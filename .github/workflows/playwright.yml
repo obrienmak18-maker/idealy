@@ -82,7 +82,7 @@ jobs:
         shell: bash
         run: |
           if [ -d test-results ]; then
-            find test-results -type f -name 'error-context.md' -print -exec cat {} \\;
+            find test-results -type f -name 'error-context.md' -print -exec cat {} +
           else
             echo "No Playwright test-results directory was produced."
           fi
