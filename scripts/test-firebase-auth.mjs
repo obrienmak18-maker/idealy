@@ -62,7 +62,7 @@ const adminVerificationBlock = firebaseAdmin.slice(
   verifyFunctionStart,
   publicCertificateFallbackStart
 );
-assert.match(adminVerificationBlock, /verifyIdToken\\(idToken, true\\)/);
+assert.ok(adminVerificationBlock.includes("verifyIdToken(idToken, true)"));
 assert.match(adminVerificationBlock, /return null;/);
 assert.doesNotMatch(
   adminVerificationBlock,
