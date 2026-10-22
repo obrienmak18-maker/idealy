@@ -17,6 +17,7 @@ import { type OnboardingInput, type OnboardingStatus } from "./onboarding-contra
 import { type IdealyWay, isIdealyWay } from "./product-contract";
 import { getUserById } from "@/lib/db/queries";
 import { signInFirebaseUserThroughSupabase } from "./supabase-auth";
+import { normalizeMissionFilePath } from "./mission-files";
 
 export type IdealyIntentCategory = "CONVERSATION" | "IDEATION" | "EXECUTION";
 
@@ -457,6 +458,96 @@ export async function listIdealyMissionFiles({
   );
 
   return Array.isArray(files) ? files : [];
+}
+
+export async function saveIdealyMissionFile({
+  content,
+  expectedVersion,
+  missionId,
+  path,
+  request,
+}: {
+  content: string;
+  expectedVersion: number;
+  missionId: string;
+  path: string;
+  request: Request;
+}): Promise<{
+  eventPersisted: boolean;
+  file: {
+    checksum: string | null;
+    content: string;
+    id: string;
+    language: string | null;
+    missionId: string;
+    path: string;
+    status: "saved";
+    updatedAt: string;
+    version: number;
+  };
+  lastSequence: number | null;
+}> {
+  const normalizedPath = normalizeMissionFilePath(path);
+  if (new TextEncoder().encode(content).byteLength > 1_000_000) {
+    throw Object.assign(new Error("Le fichier dépasse la limite de 1 Mo."), { status: 413 });
+  }
+
+  const { accessToken, anonKey, url } = await getSupabaseServerContext(request);
+  const response = await fetch(`${url}/functions/v1/save-mission-file`, {
+    body: JSON.stringify({
+      content,
+      expectedVersion,
+      missionId,
+      path: normalizedPath,
+    }),
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: anonKey,
+      "Content-Type": "application/json",
+      "x-client-info": "idealy-workspace-editor",
+    },
+    method: "POST",
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | {
+        error?: string;
+        code?: string;
+        eventPersisted?: boolean;
+        file?: {
+          checksum: string | null;
+          content: string;
+          id: string;
+          language: string | null;
+          missionId: string;
+          path: string;
+          status: "saved";
+          updatedAt: string;
+          version: number;
+        };
+        lastSequence?: number | null;
+      }
+    | null;
+
+  if (!response.ok) {
+    const error = new Error(
+      payload && typeof payload.error === "string"
+        ? payload.error
+        : `Le service de fichiers a répondu ${response.status}.`,
+    ) as Error & { status?: number; code?: string };
+    error.status = response.status;
+    error.code = payload?.code;
+    throw error;
+  }
+  if (!payload?.file || typeof payload.file.content !== "string") {
+    throw new Error("Le service de fichiers n’a pas confirmé l’enregistrement.");
+  }
+
+  return {
+    eventPersisted: payload.eventPersisted === true,
+    file: payload.file,
+    lastSequence:
+      typeof payload.lastSequence === "number" ? payload.lastSequence : null,
+  };
 }
 
 export async function getIdealyMissionDatabaseRecord({
