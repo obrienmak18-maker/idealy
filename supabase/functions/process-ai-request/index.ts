@@ -814,31 +814,16 @@ Deno.serve(async (req) => {
     const intentCategory = input.intentCategory ?? 'EXECUTION';
     let energyRemaining: number | null = null;
 
-    // Any mission runtime is billed by the canonical Power contract:
-    // - simple mission: consume_power_points once here
-    // - squad mission: reserve -> execute -> settle/release in orchestrate-mission
-    // Legacy user_credits must never be charged in parallel for mission work.
+    // Mission execution is billed by the canonical Power contract.
+    // Simple runs reserve points immediately before the provider call and settle
+    // them only after a provider returns HTTP success. Squad runs have their own
+    // reserve -> execute -> settle/release lifecycle in orchestrate-mission.
     const isSimpleMission =
       Boolean(input.missionId) &&
       input.squadRun !== true &&
       intentCategory === 'EXECUTION' &&
       input.workspaceStream !== true;
     const isMissionRuntime = Boolean(input.missionId);
-    if (managed && isSimpleMission) {
-      const powerKey = input.idempotencyKey?.trim() || `${user.id}:mission-simple:${input.missionId}`;
-      const { error: powerError } = await supabaseAdmin.rpc('consume_power_points', {
-        p_action_type: 'mission_simple',
-        p_idempotency_key: powerKey,
-        p_mission_id: input.missionId,
-        p_user_id: user.id,
-      });
-      if (powerError) {
-        if (/insufficient|power/i.test(powerError.message)) {
-          return jsonError('Power insuffisant pour cette mission.', 402, headers, 'POWER_REQUIRED');
-        }
-        throw new Error(`Power debit failed: ${powerError.message}`);
-      }
-    }
 
     // Legacy managed credits remain only for non-mission chat/ideation.
     // Mission execution is already accounted for by Power and must not debit
@@ -911,21 +896,99 @@ Deno.serve(async (req) => {
       });
     }
 
-    const providerAttempt = await fetchProviderWithFallback({
-      primary: resolution,
-      messages,
-      maxTokens,
-      stream,
-      signal: req.signal,
-      responseHeaders: headers,
-    });
+    let simplePowerReservationKey: string | null = null;
+    let simplePowerReservedPoints = 0;
+    if (managed && isSimpleMission && input.missionId) {
+      const { data: policy, error: policyError } = await supabaseAdmin
+        .from('power_action_policies')
+        .select('cost_points')
+        .eq('action_type', 'mission_simple')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (policyError || !Number.isInteger(policy?.cost_points) || policy.cost_points <= 0) {
+        console.error('Simple mission Power policy unavailable.');
+        return jsonError('Le calcul Power est momentanément indisponible. Aucun point n’a été débité.', 503, headers, 'POWER_POLICY_UNAVAILABLE');
+      }
+
+      simplePowerReservedPoints = policy.cost_points;
+      const basePowerKey = input.idempotencyKey?.trim() || `${user.id}:mission-simple:${input.missionId}`;
+      simplePowerReservationKey = `${basePowerKey}:power:simple`;
+      if (simplePowerReservationKey.length > 200) {
+        return jsonError('La clé de mission est trop longue pour réserver Power.', 400, headers, 'INVALID_POWER_KEY');
+      }
+
+      const { data: reservation, error: reserveError } = await supabaseAdmin.rpc('reserve_power_points', {
+        p_user_id: user.id,
+        p_operation: 'mission_simple',
+        p_reserved_points: simplePowerReservedPoints,
+        p_idempotency_key: simplePowerReservationKey,
+        p_mission_id: input.missionId,
+        p_task_id: null,
+        p_metadata: { source: 'process-ai-request', providerMode: resolution.mode },
+      });
+
+      if (reserveError || !Array.isArray(reservation) || !reservation[0]?.reservation_id) {
+        const message = reserveError?.message ?? 'Power reservation returned no result.';
+        if (/insufficient|power/i.test(message)) {
+          return jsonError('Power insuffisant pour cette mission.', 402, headers, 'POWER_REQUIRED');
+        }
+        console.error('Simple mission Power reservation failed.');
+        return jsonError('La réservation Power a échoué. Réessayez sans relancer plusieurs fois.', 503, headers, 'POWER_RESERVATION_FAILED');
+      }
+    }
+
+    let providerAttempt: { response: Response; resolution: ResolvedProvider };
+    try {
+      providerAttempt = await fetchProviderWithFallback({
+        primary: resolution,
+        messages,
+        maxTokens,
+        stream,
+        signal: req.signal,
+        responseHeaders: headers,
+      });
+    } catch (error) {
+      if (simplePowerReservationKey) {
+        const { error: releaseError } = await supabaseAdmin.rpc('release_power_reservation', {
+          p_idempotency_key: simplePowerReservationKey,
+          p_reason: 'AI provider request failed before a response',
+        });
+        if (releaseError) console.error('Simple mission Power release failed after provider error.');
+      }
+      throw error;
+    }
     const llmRes = providerAttempt.response;
     resolution = providerAttempt.resolution;
 
-
     if (!llmRes.ok) {
+      if (simplePowerReservationKey) {
+        const { error: releaseError } = await supabaseAdmin.rpc('release_power_reservation', {
+          p_idempotency_key: simplePowerReservationKey,
+          p_reason: `AI provider returned HTTP ${llmRes.status}`,
+        });
+        if (releaseError) {
+          console.error('Simple mission Power reservation remains held after provider failure.');
+        }
+      }
       const err = await llmRes.json().catch(() => ({ error: llmRes.statusText }));
       return jsonError(err.error?.message ?? err.error ?? 'LLM error.', llmRes.status, headers);
+    }
+
+    if (simplePowerReservationKey) {
+      const { error: settleError } = await supabaseAdmin.rpc('settle_power_reservation', {
+        p_idempotency_key: simplePowerReservationKey,
+        p_actual_points: simplePowerReservedPoints,
+      });
+      if (settleError) {
+        await llmRes.body?.cancel().catch(() => undefined);
+        const { error: releaseError } = await supabaseAdmin.rpc('release_power_reservation', {
+          p_idempotency_key: simplePowerReservationKey,
+          p_reason: 'Power settlement failed before output was returned',
+        });
+        if (releaseError) console.error('Simple mission Power reservation remains held after settlement failure.');
+        return jsonError('La génération n’a pas pu être confirmée dans Power. Réessayez dans un instant.', 503, headers, 'POWER_SETTLEMENT_FAILED');
+      }
     }
 
     if (stream) {
