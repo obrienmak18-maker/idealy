@@ -82,7 +82,7 @@ function PureMessages({
       ? metadata.missionActiveAgentRole.trim()
       : missionActiveAgent?.role ?? "";
   const missionFileCount = Array.isArray(metadata?.missionFiles)
-    ? metadata.missionFiles.filter((file) =>
+    ? metadata.missionFiles.filter((file: unknown) =>
         Boolean(file && typeof file === "object" &&
           "status" in file && (file.status === "saved" || file.status === "validated"))
       ).length
@@ -375,7 +375,7 @@ function PureMessages({
                       : "building"
                 }
                 currentAgentAvatar={missionActiveAgent?.avatarUrl}
-                currentAgentName={missionActiveAgent.name}
+                currentAgentName={missionActiveAgent?.name ?? (missionAgentName || chiefAgent?.name || alvinMessenger.name)}
                 currentAgentRole={missionAgentRole}
                 currentWay={currentWay}
                 filesCount={missionFileCount}
