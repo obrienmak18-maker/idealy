@@ -896,7 +896,10 @@ function PureMultimodalInput({
                   })}
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
-
+              <ModelSelectorCompact
+                onModelChange={onModelChange}
+                selectedModelId={selectedModelId}
+              />
             </PromptInputTools>
 
           <div className="flex items-center gap-1.5">
