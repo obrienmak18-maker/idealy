@@ -455,7 +455,7 @@ async function streamWorkspaceBuild(
   controller.enqueue(encoder.encode('data: [DONE]\\n\\n'));
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const headers = getCorsHeaders(req);
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers });
