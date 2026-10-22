@@ -93,7 +93,7 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 export const maxDuration = 60;
 
 function shouldUseIdealyEdgeProvider() {
-  return isProductionEnvironment || process.env.IDEALY_AI_PROVIDER === "supabase-function";
+  return isProductionEnvironment || process.env.VERCEL_ENV === "preview" || process.env.IDEALY_AI_PROVIDER === "supabase-function";
 }
 
 async function getSupabaseAccessToken(request: Request) {
