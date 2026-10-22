@@ -143,6 +143,11 @@ function PureMultimodalInput({
       attachment.contentType !== "application/pdf"
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [composerHydrated, setComposerHydrated] = useState(false);
+
+  useEffect(() => {
+    setComposerHydrated(true);
+  }, []);
   const { width } = useWindowSize();
   const hasAutoFocused = useRef(false);
   useEffect(() => {
@@ -803,6 +808,7 @@ function PureMultimodalInput({
         <PromptInputTextarea
           className="min-h-20 max-h-64 overflow-y-auto resize-none border-0 bg-transparent px-4 pt-4 pb-2 text-[13px] leading-6 outline-none ring-0 focus-visible:ring-0 focus-visible:outline-none placeholder:text-muted-foreground/55"
           data-testid="multimodal-input"
+          data-hydrated={composerHydrated ? "true" : "false"}
           onChange={handleInput}
           onKeyDown={handleTextareaKeyDown}
           placeholder={
