@@ -11,6 +11,8 @@ const [hook, streamHandler, artifact, topBar, localDemo] = await Promise.all([
 const suggestedActions = await readFile("components/chat/suggested-actions.tsx", "utf8");
 const nextConfig = await readFile("next.config.ts", "utf8");
 const chatLayout = await readFile("app/(chat)/layout.tsx", "utf8");
+const chatComposer = await readFile("components/chat/multimodal-input.tsx", "utf8");
+const cookieNotice = await readFile("components/cookies/cookie-notice.tsx", "utf8");
 
 assert.match(hook, /if \(!isDemoMode\) \{\s*return sendRemoteMessage/);
 assert.match(hook, /setDataStream\(localWorkspaceDataStream\(\)\)/);
@@ -28,6 +30,8 @@ assert.match(nextConfig, /explicitClientDemoMode === "true" \|\| explicitClientD
 assert.match(nextConfig, /NEXT_PUBLIC_DEMO_MODE: clientDemoMode/);
 assert.match(chatLayout, /const isLocalDemo =/);
 assert.match(chatLayout, /isLocalDemo \? Promise\.resolve\(null\) : auth\(\)/);
+assert.match(chatComposer, /<ModelSelectorCompact[\\s\\S]*selectedModelId=\\{selectedModelId\\}/);
+assert.match(cookieNotice, /isChatWorkspace \\? "bottom-44" : "bottom-4"/);
 assert.doesNotMatch(localDemo, /fetch\s*\(/);
 
 console.log("Local workspace demo contract passed.");
