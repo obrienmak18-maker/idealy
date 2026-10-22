@@ -7,10 +7,7 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
 import { CookieNotice } from "@/components/cookies/cookie-notice";
-import { LanguageProvider } from "@/lib/i18n/provider";
-import { cookies } from "next/headers";
-import { connection } from "next/server";
-import type { SupportedLanguage } from "@/lib/i18n/language-store";
+import { ServerLanguageProvider } from "@/lib/i18n/server-language-provider";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -87,6 +84,11 @@ const DARK_THEME_COLOR = "hsl(240deg 10% 3.92%)";
 const THEME_COLOR_SCRIPT = `\
 (function() {
   var html = document.documentElement;
+  var localeCookie = document.cookie.split(';').map(function(part) { return part.trim(); }).find(function(part) { return part.indexOf('NEXT_LOCALE=') === 0; });
+  var locale = localeCookie ? localeCookie.slice('NEXT_LOCALE='.length) : '';
+  if (locale === 'fr' || locale === 'en' || locale === 'es') {
+    html.setAttribute('lang', locale);
+  }
   var meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) {
     meta = document.createElement('meta');
@@ -132,20 +134,13 @@ const jsonLdSchema = {
   ],
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Cookie-based localization must be resolved on the server so the first
-  // HTML render and the first client hydration use the same language.
-  await connection();
-  const localeCookie = (await cookies()).get("NEXT_LOCALE")?.value;
-  const initialLanguage: SupportedLanguage =
-    localeCookie === "en" || localeCookie === "es" ? localeCookie : "fr";
-
   return (
-    <html lang={initialLanguage} suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning>
       <head>
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: "Required"
@@ -171,21 +166,23 @@ export default async function RootLayout({
           <SessionProvider
             basePath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}
           >
-            <LanguageProvider initialLanguage={initialLanguage}>
-              <TooltipProvider>
-                <Toaster
-                  closeButton
-                  position="top-center"
-                  richColors
-                  toastOptions={{
-                    className:
-                      "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
-                  }}
-                />
-                <Suspense>{children}</Suspense>
-                <CookieNotice />
-              </TooltipProvider>
-            </LanguageProvider>
+            <TooltipProvider>
+              <Toaster
+                closeButton
+                position="top-center"
+                richColors
+                toastOptions={{
+                  className:
+                    "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
+                }}
+              />
+              <Suspense fallback={null}>
+                <ServerLanguageProvider>
+                  <Suspense>{children}</Suspense>
+                  <CookieNotice />
+                </ServerLanguageProvider>
+              </Suspense>
+            </TooltipProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>
