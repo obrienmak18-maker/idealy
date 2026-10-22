@@ -20,8 +20,10 @@ jobs:
       POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
       BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
       REDIS_URL: ${{ secrets.REDIS_URL }}
-      DEMO_MODE: "false"
-      NEXT_PUBLIC_DEMO_MODE: "false"
+      # E2E only: exercise the real workspace UI with the local test stream
+      # and bypass login/database setup. This workflow variable is never used in production.
+      DEMO_MODE: "true"
+      NEXT_PUBLIC_DEMO_MODE: "true"
 
     steps:
       - uses: actions/checkout@v4
