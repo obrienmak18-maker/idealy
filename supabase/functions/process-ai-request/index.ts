@@ -587,6 +587,7 @@ async function fetchProviderWithFallback(input: {
   maxTokens: number;
   stream: boolean;
   signal: AbortSignal;
+  responseHeaders: Record<string, string>;
 }): Promise<{ response: Response; resolution: ResolvedProvider }> {
   const candidates = input.primary.mode === "byok"
     ? [input.primary.provider]
@@ -663,6 +664,7 @@ async function fetchProviderWithFallback(input: {
         signal: input.signal,
       });
     } catch (error) {
+      if (input.signal.aborted) throw error;
       console.warn(`AI provider request failed before a response (provider=${resolution.provider}); checking configured fallback.`);
       continue;
     }
@@ -687,7 +689,7 @@ async function fetchProviderWithFallback(input: {
     response: lastResponse ?? jsonError(
       "Aucun fournisseur IA configuré ne peut répondre pour le moment.",
       503,
-      getCorsHeaders(new Request("https://idealy.invalid")),
+      input.responseHeaders,
       "AI_PROVIDER_UNAVAILABLE",
     ),
     resolution: lastResolution,
@@ -915,6 +917,7 @@ Deno.serve(async (req) => {
       maxTokens,
       stream,
       signal: req.signal,
+      responseHeaders: headers,
     });
     const llmRes = providerAttempt.response;
     resolution = providerAttempt.resolution;
