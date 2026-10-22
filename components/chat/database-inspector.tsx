@@ -238,8 +238,6 @@ export function DatabaseInspector({
             ? "Supabase · lecture seule"
             : "Données indisponibles";
 
-  const currentDefinition = TABLE_DEFINITIONS[selectedTable] || TABLE_DEFINITIONS.mission_files;
-  const currentRows = (tableData as Record<string, Record<string, unknown>[]>)[selectedTable] || [];
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return currentRows;
