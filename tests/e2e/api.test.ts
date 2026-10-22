@@ -6,6 +6,7 @@ const ERROR_TEXT_REGEX = /error|failed|trouble/i;
 test.describe("Chat API Integration", () => {
   test("sends message and receives AI response", async ({ page }) => {
     await page.goto("/", { waitUntil: "commit" });
+    await expect(page.getByTestId("multimodal-input")).toHaveAttribute("data-hydrated", "true");
 
     const input = page.getByTestId("multimodal-input");
     await input.fill("Hello");
@@ -22,6 +23,7 @@ test.describe("Chat API Integration", () => {
 
   test("redirects to /chat/:id after sending message", async ({ page }) => {
     await page.goto("/", { waitUntil: "commit" });
+    await expect(page.getByTestId("multimodal-input")).toHaveAttribute("data-hydrated", "true");
 
     const input = page.getByTestId("multimodal-input");
     await input.fill("Test redirect");
@@ -33,6 +35,7 @@ test.describe("Chat API Integration", () => {
 
   test("clears input after sending", async ({ page }) => {
     await page.goto("/", { waitUntil: "commit" });
+    await expect(page.getByTestId("multimodal-input")).toHaveAttribute("data-hydrated", "true");
 
     const input = page.getByTestId("multimodal-input");
     await input.fill("Test message");
@@ -44,6 +47,7 @@ test.describe("Chat API Integration", () => {
 
   test("shows stop button during generation", async ({ page }) => {
     await page.goto("/", { waitUntil: "commit" });
+    await expect(page.getByTestId("multimodal-input")).toHaveAttribute("data-hydrated", "true");
     const input = page.getByTestId("multimodal-input");
     await input.fill("Test");
     await page.getByTestId("send-button").click();
@@ -65,8 +69,11 @@ test.describe("Chat Error Handling", () => {
     });
 
     await page.goto("/", { waitUntil: "commit" });
+    await expect(page.getByTestId("multimodal-input")).toHaveAttribute("data-hydrated", "true");
     const input = page.getByTestId("multimodal-input");
     await input.fill("Test error");
+    await expect(input).toHaveValue("Test error");
+    await expect(page.getByTestId("send-button")).toBeEnabled();
     await page.getByTestId("send-button").click();
 
     // Should show error toast or message
@@ -79,6 +86,7 @@ test.describe("Chat Error Handling", () => {
 test.describe("Suggested Actions", () => {
   test("selecting a suggestion prefills the composer without auto-sending", async ({ page }) => {
     await page.goto("/", { waitUntil: "commit" });
+    await expect(page.getByTestId("multimodal-input")).toHaveAttribute("data-hydrated", "true");
 
     const input = page.getByTestId("multimodal-input");
     const firstSuggestion = page.locator(
