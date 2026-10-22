@@ -7,13 +7,13 @@ import {
   ChevronUp,
   Clock,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
 import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { useArtifact } from "@/hooks/use-artifact";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
@@ -31,7 +31,7 @@ import { DocumentPreview } from "./document-preview";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { MultiAgentRelay } from "./multi-agent-relay";
-import { extractPlanOptionsFromText, PlanChoices } from "./plan-choices";
+import { extractPlanOptionsFromText, PlanChoices, textBeforePlanOptions, type PlanOption } from "./plan-choices";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
 
@@ -156,27 +156,28 @@ function ProgressiveTextMessage({
   text,
   isAssistant,
   isLoading,
+  onSelectPlanOption,
 }: {
   text: string;
   isAssistant: boolean;
   isLoading: boolean;
+  onSelectPlanOption?: (option: PlanOption) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const router = useRouter();
-  const { conclusion, status, lineCount, isLong } =
-    parseProgressiveSections(text);
   const planOptions = isAssistant ? extractPlanOptionsFromText(text) : null;
+  const displayText = planOptions ? textBeforePlanOptions(text) : text;
+  const { conclusion, status, lineCount, isLong } =
+    parseProgressiveSections(displayText);
 
   const handleToggleExpand = useCallback(() => {
     setIsExpanded((prev) => !prev);
   }, []);
 
   const handleSelectPlanOption = useCallback(
-    (option: { description: string; title: string }) => {
-      const brief = `Je choisis la direction « ${option.title} » : ${option.description}. Établis le plan d'action détaillé et lance la mission sur cette base.`;
-      router.push(`/chat?prompt=${encodeURIComponent(brief)}`);
+    (option: PlanOption) => {
+      onSelectPlanOption?.(option);
     },
-    [router]
+    [onSelectPlanOption]
   );
 
   const shouldCollapse = isAssistant && isLong && !isLoading && !isExpanded;
@@ -191,90 +192,100 @@ function ProgressiveTextMessage({
         </div>
       )}
 
-      {/* ③ Détails et contenu principal (repliés par défaut à 180px si long) */}
-      <div
-        className={cn("relative transition-[max-height] duration-200", {
-          "max-h-[180px] overflow-hidden": shouldCollapse,
-        })}
-      >
-        <MessageContent
-          className={cn("text-[14px] leading-[1.75] md:text-[15px]", {
-            "idealy-bubble-user w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm":
-              !isAssistant,
-          })}
-          data-testid="message-content"
-        >
-          <MessageResponse
-            caret={isAssistant && isLoading ? "circle" : undefined}
-            isAnimating={isAssistant && isLoading}
+      {displayText.trim().length > 0 && (
+        <>
+          {/* Le corps d'une réponse proposant des choix ne répète pas la liste qui est devenue interactive. */}
+          {isAssistant && conclusion && isLong && !isLoading && (
+            <div className="rounded-lg bg-surface-container-lowest/80 border border-border/50 px-3 py-2 text-[13px] font-medium text-foreground/90 shadow-xs">
+              <span className="text-primary font-semibold mr-1.5">En résumé :</span>
+              {conclusion}
+            </div>
+          )}
+
+          <div
+            className={cn("relative transition-[max-height] duration-200", {
+              "max-h-[180px] overflow-hidden": shouldCollapse,
+            })}
           >
-            {sanitizeText(text)}
-          </MessageResponse>
-        </MessageContent>
+            <MessageContent
+              className={cn("text-[14px] leading-[1.75] md:text-[15px]", {
+                "idealy-bubble-user w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm":
+                  !isAssistant,
+              })}
+              data-testid="message-content"
+            >
+              <MessageResponse
+                caret={isAssistant && isLoading ? "circle" : undefined}
+                isAnimating={isAssistant && isLoading}
+              >
+                {sanitizeText(displayText)}
+              </MessageResponse>
+            </MessageContent>
 
-        {shouldCollapse && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
-        )}
-      </div>
+            {shouldCollapse && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+            )}
+          </div>
 
-      {isAssistant && isLong && !isLoading && (
-        <button
-          aria-expanded={isExpanded}
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
-          onClick={handleToggleExpand}
-          type="button"
-        >
-          {isExpanded ? (
-            <>
-              <ChevronUp className="size-3.5" />
-              <span>Replier les détails</span>
-            </>
-          ) : (
-            <>
-              <ChevronDown className="size-3.5" />
-              <span>Afficher les détails ({lineCount} lignes)</span>
-            </>
+          {isAssistant && isLong && !isLoading && (
+            <button
+              aria-expanded={isExpanded}
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
+              onClick={handleToggleExpand}
+              type="button"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="size-3.5" />
+                  <span>Replier les détails</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="size-3.5" />
+                  <span>Afficher les détails ({lineCount} lignes)</span>
+                </>
+              )}
+            </button>
           )}
-        </button>
-      )}
 
-      {/* ④ Statut structuré (Fait / Reste / Attention) */}
-      {isAssistant && status && (
-        <div className="mt-2.5 rounded-lg border border-border/60 bg-muted/20 p-2.5 text-xs space-y-1.5">
-          {status.fait && (
-            <div className="flex items-start gap-2 text-foreground/90">
-              <CheckCircle2 className="size-3.5 text-emerald-500 mt-0.5 shrink-0" />
-              <div>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  Fait :{" "}
-                </span>
-                {status.fait}
-              </div>
+          {isAssistant && status && (
+            <div className="mt-2.5 rounded-lg border border-border/60 bg-muted/20 p-2.5 text-xs space-y-1.5">
+              {status.fait && (
+                <div className="flex items-start gap-2 text-foreground/90">
+                  <CheckCircle2 className="size-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      Fait :{" "}
+                    </span>
+                    {status.fait}
+                  </div>
+                </div>
+              )}
+              {status.reste && (
+                <div className="flex items-start gap-2 text-foreground/90">
+                  <Clock className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">
+                      Reste :{" "}
+                    </span>
+                    {status.reste}
+                  </div>
+                </div>
+              )}
+              {status.attention && (
+                <div className="flex items-start gap-2 text-foreground/90">
+                  <AlertTriangle className="size-3.5 text-rose-500 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-rose-600 dark:text-rose-400">
+                      Attention :{" "}
+                    </span>
+                    {status.attention}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          {status.reste && (
-            <div className="flex items-start gap-2 text-foreground/90">
-              <Clock className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
-              <div>
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
-                  Reste :{" "}
-                </span>
-                {status.reste}
-              </div>
-            </div>
-          )}
-          {status.attention && (
-            <div className="flex items-start gap-2 text-foreground/90">
-              <AlertTriangle className="size-3.5 text-rose-500 mt-0.5 shrink-0" />
-              <div>
-                <span className="font-semibold text-rose-600 dark:text-rose-400">
-                  Attention :{" "}
-                </span>
-                {status.attention}
-              </div>
-            </div>
-          )}
-        </div>
+        </>
       )}
 
       {/* ② Résultat / Plan d'action */}
@@ -296,6 +307,9 @@ const PurePreviewMessage = ({
   isReadonly,
   requiresScrollPadding: _requiresScrollPadding,
   onEdit,
+  isFirstAssistantMessage = false,
+  isAlvinRequested = false,
+  onPlanSelection,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -307,6 +321,9 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
   requiresScrollPadding: boolean;
   onEdit?: (message: ChatMessage) => void;
+  isFirstAssistantMessage?: boolean;
+  isAlvinRequested?: boolean;
+  onPlanSelection?: (option: PlanOption) => void;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file"
@@ -317,48 +334,27 @@ const PurePreviewMessage = ({
   const { t } = useTranslation();
 
   const { currentWay } = useGamificationStore();
+  const { metadata } = useArtifact();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const chiefAgent =
-    activeWayData?.agents?.find((a) => a.isChief) ?? activeWayData?.agents?.[0];
-  const builderAgent =
-    activeWayData?.agents?.find(
-      (a) =>
-        a.role.toLowerCase().includes("builder") ||
-        a.name === "Naruto" ||
-        a.name === "Natsu" ||
-        a.name === "Gon" ||
-        a.name === "Elena"
-    ) ?? activeWayData?.agents?.[1];
-  const qaAgent =
-    activeWayData?.agents?.find(
-      (a) =>
-        a.role.toLowerCase().includes("qa") ||
-        a.name === "Shikamaru" ||
-        a.name === "Thomas"
-    ) ?? activeWayData?.agents?.[activeWayData.agents.length - 1];
+    activeWayData?.agents?.find((agent) => agent.isChief) ??
+    activeWayData?.agents?.[0];
 
-  // Detect tool calls or build/relay execution
-  const hasToolOrBuild = message.parts?.some(
-    (p) =>
-      p.type.startsWith("tool-") ||
-      (p.type === "text" &&
-        (p.text.includes("Plan enregistré") ||
-          p.text.includes("Chef d'escouade") ||
-          p.text.includes("Build complete") ||
-          p.text.includes("l'escouade prend le relais") ||
-          p.text.includes("relais au Chef") ||
-          p.text.includes("Naruto")))
-  );
+  const missionSquadStatus =
+    typeof metadata?.missionSquadStatus === "string"
+      ? metadata.missionSquadStatus
+      : null;
+  const isLiveBuildState =
+    missionSquadStatus === "building" ||
+    missionSquadStatus === "auto_correction_started";
 
-  // Relay handoff:
-  // - While building/coding: Builder (Naruto) is actively on the front line!
-  // - When finished building: QA (Shikamaru) delivers final validation!
-  // - In conversation & plan definition: Alvin (Messenger) frames the mission.
-  const activeAgent = hasToolOrBuild
-    ? isLoading
-      ? (builderAgent ?? chiefAgent ?? alvinMessenger)
-      : (qaAgent ?? chiefAgent ?? alvinMessenger)
-    : alvinMessenger;
+  // Alvin introduces the first response or returns only when explicitly called.
+  // Individual builder/reviewer identities are not inferred from natural-language
+  // text; the live progress pill is driven by persisted backend mission events.
+  const activeAgent =
+    isAlvinRequested || isFirstAssistantMessage
+      ? alvinMessenger
+      : (chiefAgent ?? alvinMessenger);
   const agentName = activeAgent.name;
   const agentRole = activeAgent.role;
   const agentAvatar = activeAgent.avatarUrl;
@@ -436,6 +432,7 @@ const PurePreviewMessage = ({
           isAssistant={isAssistant}
           isLoading={isLoading}
           key={key}
+          onSelectPlanOption={onPlanSelection}
           text={part.text}
         />
       );
@@ -626,15 +623,17 @@ const PurePreviewMessage = ({
   ) : (
     <>
       {attachments}
-      {hasToolOrBuild && isAssistant && (
-        <MultiAgentRelay
-          currentAgentName={agentName}
-          currentWay={currentWay}
-          hasToolExecution={true}
-          isFinished={!isLoading}
-          isLoading={isLoading}
-        />
-      )}
+      {isAssistant && isLoading && isLiveBuildState &&
+        !isFirstAssistantMessage && !isAlvinRequested && (
+          <MultiAgentRelay
+            activityState={missionSquadStatus === "auto_correction_started" ? "correcting" : "building"}
+            currentAgentName="Équipe Idealy"
+            currentWay={currentWay}
+            hasToolExecution
+            isFinished={false}
+            isLoading
+          />
+        )}
       {parts}
       {actions}
     </>
@@ -690,9 +689,13 @@ const PurePreviewMessage = ({
 
 export const PreviewMessage = PurePreviewMessage;
 
-export const ThinkingMessage = () => {
-  // Alvin receives the incoming mission prompt
-  const agentAvatar = alvinMessenger.avatarUrl;
+export const ThinkingMessage = ({
+  agentName = alvinMessenger.name,
+  agentAvatar = alvinMessenger.avatarUrl,
+}: {
+  agentName?: string;
+  agentAvatar?: string;
+} = {}) => {
 
   return (
     <div
@@ -706,7 +709,7 @@ export const ThinkingMessage = () => {
             {agentAvatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                alt="Alvin - Messager actif"
+                alt={agentName}
                 className="size-full object-cover"
                 src={agentAvatar}
               />

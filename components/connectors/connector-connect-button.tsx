@@ -18,7 +18,11 @@ export function ConnectorConnectButton({
   async function handleConnect() {
     setLoading(true);
     try {
-      const response = await fetch("/api/idealy/connectors/start", {
+      const endpoint =
+        provider === "vercel"
+          ? "/api/idealy/connectors/vercel/start"
+          : "/api/idealy/connectors/start";
+      const response = await fetch(endpoint, {
         body: JSON.stringify({ provider }),
         headers: { "Content-Type": "application/json" },
         method: "POST",

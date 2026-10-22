@@ -32,8 +32,12 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null) as { provider?: unknown } | null;
-  const provider =
+  const requestedProvider =
     typeof body?.provider === "string" ? body.provider.trim().toLowerCase() : "";
+  // The catalog uses "google" while the OAuth Edge Function's provider
+  // contract is "google-drive". Normalize the alias at this boundary.
+  const provider =
+    requestedProvider === "google" ? "google-drive" : requestedProvider;
 
   if (!allowedProviders.has(provider)) {
     return Response.json(

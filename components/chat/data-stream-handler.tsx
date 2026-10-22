@@ -213,21 +213,42 @@ export function DataStreamHandler() {
           eventContent.length > 0 &&
           (delta.data.eventType === "file_content" ||
             delta.data.eventType === "file_saved");
+        const eventType = String(delta.data.eventType);
+        const payload =
+          delta.data.payload && typeof delta.data.payload === "object"
+            ? delta.data.payload as Record<string, unknown>
+            : {};
         const isTerminalEvent =
-          delta.data.eventType === "mission_completed" ||
-          delta.data.eventType === "mission_error";
-        if (isTerminalEvent) {
+          eventType === "mission_completed" ||
+          eventType === "mission_error";
+        const isPowerEvent =
+          eventType === "power_reserved" ||
+          eventType === "power_consumed" ||
+          eventType === "power_released";
+        const completionStatus = payload.finalStatus;
+        const missionSucceeded =
+          eventType === "mission_completed" && completionStatus === "ready";
+
+        if (isTerminalEvent || isPowerEvent) {
           window.dispatchEvent(new Event("idealy:power-updated"));
         }
         if (isTerminalEvent && readIdealyNotificationPreferences().squad) {
-          if (delta.data.eventType === "mission_completed") {
-            toast.success("Mission terminée", {
-              description: "Votre espace de travail est prêt à être consulté.",
+          if (missionSucceeded) {
+            toast.success("Mission terminée et validée", {
+              description: "Les vérifications sont passées. Le workspace est prêt à être consulté.",
             });
             sendIdealyDesktopNotification(
-              "Mission terminée",
-              "Votre espace de travail est prêt à être consulté."
+              "Mission terminée et validée",
+              "Les vérifications sont passées. Le workspace est prêt à être consulté."
             );
+          } else if (eventType === "mission_completed") {
+            const description =
+              typeof payload.validationStatus === "string" &&
+              payload.validationStatus === "needs-user-input"
+                ? "Le cycle est terminé, mais une décision ou une correction reste nécessaire."
+                : "Le cycle est terminé sans validation complète. Consultez le rapport du Reviewer.";
+            toast.warning("Mission terminée — validation requise", { description });
+            sendIdealyDesktopNotification("Mission terminée — validation requise", description);
           } else {
             toast.error("La mission a rencontré un problème", {
               description: "Ouvrez le chat pour consulter l’état et réessayer.",
@@ -262,22 +283,60 @@ export function DataStreamHandler() {
             },
             delta.data
           );
-          // Translate VFS event types into missionSquadStatus for the canvas to read.
-          // This is the bridge between the orchestrator lifecycle and UI truth.
-          const eventType = delta.data.eventType;
+          // Translate persisted mission events into workspace state. A completed
+          // event is not necessarily a successful validation: finalStatus is the
+          // backend's actual outcome and decides what the UI may claim.
+          const eventType = String(delta.data.eventType);
+          const eventPayload =
+            delta.data.payload && typeof delta.data.payload === "object"
+              ? delta.data.payload as Record<string, unknown>
+              : {};
           let nextSquadStatus: string | undefined;
+          let nextAgentName: string | null | undefined;
+          let nextAgentRole: string | null | undefined;
+
           if (eventType === "mission_completed") {
-            nextSquadStatus = "ready";
+            nextSquadStatus =
+              eventPayload.finalStatus === "ready"
+                ? "ready"
+                : eventPayload.finalStatus === "blocked" ||
+                    eventPayload.finalStatus === "needs-user-input"
+                  ? "needs-user-input"
+                  : "needs-fix";
+            nextAgentName = null;
+            nextAgentRole = null;
           } else if (eventType === "mission_error") {
             nextSquadStatus = "needs-fix";
+            nextAgentName = null;
+            nextAgentRole = null;
           } else if (eventType === "auto_correction_started") {
             nextSquadStatus = "auto_correction_started";
+            nextAgentName =
+              typeof eventPayload.correctionOwner === "string"
+                ? eventPayload.correctionOwner
+                : undefined;
+            nextAgentRole = "Correction des fichiers après revue";
+          } else if (eventType === "agent_started") {
+            nextSquadStatus =
+              eventPayload.agent === "reviewer" ? "reviewing" : "building";
+            nextAgentName =
+              typeof eventPayload.agentName === "string"
+                ? eventPayload.agentName
+                : null;
+            nextAgentRole =
+              typeof eventPayload.agentRole === "string"
+                ? eventPayload.agentRole
+                : null;
+          } else if (eventType === "agent_completed") {
+            nextAgentName = null;
+            nextAgentRole = null;
+          } else if (eventType === "validation_result") {
+            nextSquadStatus = "reviewing";
           } else if (
             eventType === "file_started" ||
             eventType === "file_content" ||
             eventType === "file_saved"
           ) {
-            // Only advance to "building" if not already in a more specific state
             const currentSquad =
               typeof current?.missionSquadStatus === "string"
                 ? current.missionSquadStatus
@@ -294,6 +353,12 @@ export function DataStreamHandler() {
             ...(nextSquadStatus === undefined
               ? {}
               : { missionSquadStatus: nextSquadStatus }),
+            ...(nextAgentName === undefined
+              ? {}
+              : { missionActiveAgentName: nextAgentName }),
+            ...(nextAgentRole === undefined
+              ? {}
+              : { missionActiveAgentRole: nextAgentRole }),
           };
         });
         continue;
@@ -304,13 +369,74 @@ export function DataStreamHandler() {
         delta.type === "data-idealy-mission" ||
         delta.type === "data-idealy-plan"
       ) {
+        if (delta.type === "data-idealy-mission") {
+          const nextMissionId =
+            typeof delta.data === "string" ? delta.data : null;
+          if (!nextMissionId) continue;
+
+          // A new mission has its own file-event sequence, plan, agent status,
+          // and artifact. Never let a previous mission's sequence/status hide
+          // the files from this one.
+          setArtifact({
+            ...initialArtifactData,
+            isVisible: false,
+            kind: "code",
+            title: "Mission workspace",
+          });
+          setMetadata((current: Record<string, unknown> | null) => {
+            if (current?.missionId === nextMissionId) return current;
+            return {
+              ...(current ?? {}),
+              missionId: nextMissionId,
+              missionFileLastSequence: 0,
+              missionFiles: [],
+              missionFileStatus: null,
+              missionPlan: null,
+              missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
+              missionRunRequested: false,
+              missionSquadError: null,
+              missionSquadStatus: "planned",
+              missionActiveAgentName: null,
+              missionActiveAgentRole: null,
+            };
+          });
+          continue;
+        }
+
+        if (delta.type === "data-idealy-plan") {
+          const plan =
+            delta.data && typeof delta.data === "object"
+              ? delta.data as Record<string, unknown>
+              : {};
+          const projectKind =
+            typeof plan.projectKind === "string" && plan.projectKind.trim()
+              ? plan.projectKind.trim()
+              : "Mission workspace";
+
+          // Reveal the persisted plan in the workspace, but do not run the
+          // squad until the user explicitly confirms the mission card.
+          setArtifact((current) => ({
+            ...current,
+            isVisible: true,
+            kind: "code",
+            status: "idle",
+            title: projectKind,
+          }));
+          setMetadata((current: Record<string, unknown> | null) => ({
+            ...(current ?? {}),
+            missionPlan: delta.data,
+            missionSquadStatus: "planned",
+            missionActiveAgentName: null,
+            missionActiveAgentRole: null,
+            missionSquadError: null,
+            missionRunRequested: false,
+          }));
+          continue;
+        }
+
         setMetadata((current: Record<string, unknown> | null) => ({
           ...(current ?? {}),
-          ...(delta.type === "data-idealy-intent"
-            ? { intentCategory: delta.data }
-            : delta.type === "data-idealy-mission"
-              ? { missionId: delta.data }
-              : { missionPlan: delta.data }),
+          intentCategory: delta.data,
         }));
         continue;
       }

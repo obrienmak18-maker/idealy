@@ -5,14 +5,12 @@ import {
   ArrowLeftIcon,
   SearchIcon,
   PlusIcon,
-  CheckIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { IdealyOrbitalDisc } from "@/components/connectors/idealy-orbital-disc";
 import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import { listConnectorDefinitions } from "@/lib/idealy/connectors";
-import { useTranslation } from "@/lib/i18n/provider";
 import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 
 const CONNECTOR_CATEGORY_BADGES: Record<string, string> = {
@@ -53,14 +51,20 @@ const FILTER_TABS = [
 ];
 
 export default function PluginsPage() {
-  const { language } = useTranslation();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const connectors = listConnectorDefinitions();
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  // Start empty – connectors are shown as connected only after real OAuth verification
+  // This list is always hydrated from the authenticated backend; never toggled locally.
   const [connectedList, setConnectedList] = useState<string[]>([]);
+  const [statusState, setStatusState] = useState<
+    "checking" | "ready" | "unauthenticated" | "unavailable"
+  >("checking");
+  const [statusMessage, setStatusMessage] = useState(
+    "Vérification du statut des connexions…"
+  );
+  const [connectingId, setConnectingId] = useState<string | null>(null);
 
   // Keyboard shortcut ⌘K / Ctrl+K to focus search input
   useEffect(() => {
@@ -74,34 +78,82 @@ export default function PluginsPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Fetch live backend connector status if available
+  // Load the backend's persisted OAuth state. An unavailable/unauthenticated
+  // status must never fall back to a locally simulated connected state.
   useEffect(() => {
+    const controller = new AbortController();
     let active = true;
-    fetch("/api/idealy/connectors/status", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const payload = (await response.json()) as {
-          integrations?: Array<{ provider?: string; status?: string }>;
-        };
+
+    async function loadConnectorStatus() {
+      try {
+        const response = await fetch("/api/idealy/connectors/status", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
         if (!active) return;
-        const liveActive = (payload.integrations ?? [])
-          .filter((entry) => entry.status === "active")
+        if (response.status === 401) {
+          setConnectedList([]);
+          setStatusState("unauthenticated");
+          setStatusMessage(
+            "Connecte-toi à Idealy pour consulter les autorisations de tes connecteurs."
+          );
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            `Le service de statut a répondu ${response.status}.`
+          );
+        }
+
+        const payload = (await response.json()) as {
+          integrations?: Array<{
+            provider?: string;
+            status?: string;
+            serverReady?: boolean;
+          }>;
+        };
+        if (!Array.isArray(payload.integrations)) {
+          throw new Error("Le service a renvoyé un statut de connecteurs invalide.");
+        }
+
+        const liveActive = payload.integrations
+          .filter(
+            (entry) => entry.status === "active" && entry.serverReady === true
+          )
           .flatMap((entry) =>
             entry.provider === "google"
               ? ["google-drive"]
               : entry.provider
-              ? [entry.provider]
-              : []
+                ? [entry.provider]
+                : []
           );
-        if (liveActive.length > 0) {
-          setConnectedList((prev) => Array.from(new Set([...prev, ...liveActive])));
-        }
-      })
-      .catch(() => {
-        // Fallback to active demo list
-      });
+
+        if (!active) return;
+        setConnectedList(Array.from(new Set(liveActive)));
+        setStatusState("ready");
+        setStatusMessage(
+          liveActive.length > 0
+            ? `${liveActive.length} autorisation(s) OAuth enregistrée(s), avec la configuration serveur disponible.`
+            : "Aucune autorisation OAuth active avec configuration serveur disponible n’a été trouvée."
+        );
+      } catch (error) {
+        if (!active || controller.signal.aborted) return;
+        setConnectedList([]);
+        setStatusState("unavailable");
+        setStatusMessage(
+          error instanceof Error
+            ? error.message
+            : "Le statut des connecteurs est actuellement indisponible."
+        );
+      }
+    }
+
+    void loadConnectorStatus();
     return () => {
       active = false;
+      controller.abort();
     };
   }, []);
 
@@ -155,32 +207,62 @@ export default function PluginsPage() {
   }, [orderedConnectors, searchQuery, selectedCategory]);
 
   const toggleConnector = async (id: string) => {
-    if (connectedList.includes(id)) {
-      setConnectedList((prev) => prev.filter((item) => item !== id));
-      toast.success(`${id.charAt(0).toUpperCase() + id.slice(1)} déconnecté.`);
+    const connector = connectors.find((entry) => entry.id === id);
+    if (!connector) {
+      toast.error("Connecteur introuvable.");
       return;
     }
 
-    const connector = connectors.find((entry) => entry.id === id);
-    if (connector?.auth === "oauth2") {
-      try {
-        const response = await fetch("/api/idealy/connectors/start", {
-          body: JSON.stringify({ provider: connector.provider }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        });
-        const payload = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
-        if (response.ok && payload?.url) {
-          window.location.assign(payload.url);
-          return;
-        }
-      } catch {
-        // Fallback to local toggle in dev mode
-      }
+    if (connectedList.includes(id)) {
+      toast.info(
+        "La déconnexion depuis Idealy n’est pas encore disponible. Aucun état local n’a été modifié."
+      );
+      return;
     }
 
-    setConnectedList((prev) => [...prev, id]);
-    toast.success(`${id.charAt(0).toUpperCase() + id.slice(1)} connecté avec succès.`);
+    if (connector.auth !== "oauth2") {
+      const message =
+        connector.auth === "managed"
+          ? "Cette intégration est gérée côté serveur et ne se connecte pas depuis ce bouton."
+          : "Ce connecteur nécessite une configuration serveur. Aucun faux état de connexion ne sera affiché.";
+      toast.error(message);
+      return;
+    }
+
+    setConnectingId(id);
+    try {
+      const startEndpoint =
+        connector.provider === "vercel"
+          ? "/api/idealy/connectors/vercel/start"
+          : "/api/idealy/connectors/start";
+      const response = await fetch(startEndpoint, {
+        body: JSON.stringify({ provider: connector.provider }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        url?: string;
+        error?: string;
+      } | null;
+
+      if (!response.ok || typeof payload?.url !== "string" || !payload.url) {
+        throw new Error(
+          payload?.error ??
+            `Le service OAuth de ${connector.label} n’a pas fourni d’URL d’autorisation.`
+        );
+      }
+
+      // The persisted state is refreshed after the provider redirects back.
+      // Do not set connectedList here: opening OAuth is not a completed connection.
+      window.location.assign(payload.url);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : `Impossible de démarrer la connexion à ${connector.label}.`
+      );
+      setConnectingId(null);
+    }
   };
 
   return (
@@ -201,7 +283,34 @@ export default function PluginsPage() {
             Connecteurs & Intégrations
           </h1>
           <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground">
-            Reliez vos outils pour que l'agent lise, construise et déploie dans votre écosystème.
+            Relie tes outils pour donner à Idealy les autorisations dont il a réellement besoin.
+          </p>
+          <p className="mt-2 max-w-3xl text-xs leading-relaxed text-muted-foreground">
+            Le statut provient du backend et du dernier retour OAuth. Il ne garantit pas, à lui seul, que chaque opération du fournisseur soit disponible.
+          </p>
+          <p
+            aria-live="polite"
+            className="mt-3 flex items-start gap-2 rounded-xl border border-border/60 bg-card/60 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
+            role="status"
+          >
+            <span
+              aria-hidden="true"
+              className={`mt-1 size-1.5 shrink-0 rounded-full ${
+                statusState === "ready"
+                  ? "bg-emerald-500"
+                  : statusState === "unavailable"
+                    ? "bg-amber-500"
+                    : statusState === "unauthenticated"
+                      ? "bg-muted-foreground"
+                      : "animate-pulse bg-primary"
+              }`}
+            />
+            <span>
+              {statusMessage}
+              {statusState === "unauthenticated"
+                ? " Aucun connecteur n’est affiché comme connecté sans session vérifiée."
+                : ""}
+            </span>
           </p>
         </header>
 
@@ -302,27 +411,43 @@ export default function PluginsPage() {
                   </div>
                 </Link>
 
-                {/* Côté droit : Badge • Connecté OU Bouton + Connecter */}
+                {/* Les états positifs viennent exclusivement du backend. */}
                 <div className="shrink-0">
                   {isConnected ? (
-                    <button
-                      type="button"
-                      onClick={() => toggleConnector(connector.id)}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-idealy-success/30 bg-idealy-success/10 px-3 py-1.5 text-xs font-medium text-idealy-success transition-colors hover:bg-idealy-success/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
-                      title="Cliquer pour déconnecter"
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-full border border-idealy-success/30 bg-idealy-success/10 px-3 py-1.5 text-xs font-medium text-idealy-success"
+                      title="Autorisation enregistrée côté serveur"
                     >
                       <span className="size-1.5 rounded-full bg-idealy-success" />
-                      <span>Connecté</span>
-                    </button>
-                  ) : (
+                      <span>Autorisation active</span>
+                    </span>
+                  ) : connector.auth === "oauth2" ? (
                     <button
+                      disabled={connectingId === connector.id || statusState === "checking"}
                       type="button"
-                      onClick={() => toggleConnector(connector.id)}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-surface-container px-3 py-1.5 text-xs font-medium text-on-surface-variant transition-colors hover:border-primary/50 hover:bg-surface-container-high hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
+                      onClick={() => void toggleConnector(connector.id)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-surface-container px-3 py-1.5 text-xs font-medium text-on-surface-variant transition-colors hover:border-primary/50 hover:bg-surface-container-high hover:text-foreground disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     >
                       <PlusIcon className="size-3.5" />
-                      <span>Connecter</span>
+                      <span>
+                        {connectingId === connector.id
+                          ? "Ouverture…"
+                          : "Connecter"}
+                      </span>
                     </button>
+                  ) : (
+                    <span
+                      className="inline-flex items-center rounded-full border border-outline-variant bg-surface-container px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground"
+                      title={
+                        connector.auth === "managed"
+                          ? "Cette intégration est gérée côté serveur."
+                          : "Cette intégration nécessite une configuration côté serveur."
+                      }
+                    >
+                      {connector.auth === "managed"
+                        ? "Géré côté serveur"
+                        : "Configuration serveur"}
+                    </span>
                   )}
                 </div>
               </div>

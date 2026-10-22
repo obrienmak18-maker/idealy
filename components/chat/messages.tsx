@@ -1,18 +1,23 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { ArrowDownIcon, FileText, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
 import type { ChatMessage } from "@/lib/types";
+import { redactLikelySecrets } from "@/lib/sensitive-text";
 import { cn } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { IntakeSpecificationForm } from "./intake-specification-form";
+import { MissionPlanCard } from "./mission-plan-card";
 import { PreviewMessage, ThinkingMessage } from "./message";
 import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
 import { WorkspaceTemplates } from "./workspace-templates";
+import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import type { PlanOption } from "./plan-choices";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -50,6 +55,10 @@ function PureMessages({
   onSuggestionSelect,
 }: MessagesProps) {
   const { t } = useTranslation();
+  const { currentWay } = useGamificationStore();
+  const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
+  const chiefAgent =
+    activeWayData.agents.find((agent) => agent.isChief) ?? activeWayData.agents[0];
   const [activeHomeTab, setActiveHomeTab] = useState<
     "suggestions" | "templates" | "specification"
   >("suggestions");
@@ -151,19 +160,53 @@ function PureMessages({
     [onSuggestionSelect, sendMessage]
   );
 
-  const handleIntakeSubmit = useCallback(
-    (formattedBrief: string) => {
+  const handlePlanSelection = useCallback(
+    (option: PlanOption) => {
+      const brief =
+        `Je valide la direction « ${option.title} » : ${option.description}. Continue dans cette conversation à partir de ce choix, mets à jour le plan concret, puis exécute la mission. Ne prétends pas qu'une étape ou une intégration fonctionne tant qu'elle n'a pas été réellement vérifiée.`;
       sendMessage({
-        parts: [{ text: formattedBrief, type: "text" }],
+        parts: [{ text: brief, type: "text" }],
         role: "user",
       });
     },
     [sendMessage]
   );
 
+  const handleIntakeSubmit = useCallback(
+    (formattedBrief: string) => {
+      // The structured intake bypasses the ordinary composer, so apply the
+      // same secret redaction and chat-route update before sending.
+      const safeBrief = redactLikelySecrets(formattedBrief);
+      if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") {
+        window.history.pushState(
+          {},
+          "",
+          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+        );
+      }
+      sendMessage({
+        parts: [{ text: safeBrief, type: "text" }],
+        role: "user",
+      });
+    },
+    [chatId, sendMessage]
+  );
+
   const handleIntakeCancel = useCallback(() => {
     setActiveHomeTab("suggestions");
   }, []);
+
+  const latestExecutionPlanMessageId = [...messages]
+    .reverse()
+    .find(
+      (candidate) =>
+        candidate.role === "assistant" &&
+        candidate.parts.some(
+          (part) =>
+            part.type === "text" &&
+            /plan enregistré pour/i.test(part.text)
+        )
+    )?.id;
 
   return (
     <div className="relative flex-1 bg-background overflow-hidden">
@@ -245,32 +288,90 @@ function PureMessages({
           tabIndex={0}
         >
           <div className="mx-auto flex min-h-full min-w-0 max-w-4xl flex-col gap-5 px-2 py-6 md:gap-7 md:px-4">
-            {messages.map((message, index) => (
-              <PreviewMessage
-                addToolApprovalResponse={addToolApprovalResponse}
-                chatId={chatId}
-                isLoading={
-                  status === "streaming" && messages.length - 1 === index
-                }
-                isReadonly={isReadonly}
-                key={message.id}
-                message={message}
-                onEdit={onEditMessage}
-                regenerate={regenerate}
-                requiresScrollPadding={
-                  hasSentMessage && index === messages.length - 1
-                }
-                setMessages={setMessages}
-                vote={
-                  votes
-                    ? votes.find((vote) => vote.messageId === message.id)
-                    : undefined
-                }
-              />
-            ))}
+            {messages.map((message, index) => {
+              const priorUserMessage =
+                message.role === "assistant"
+                  ? [...messages.slice(0, index)]
+                      .reverse()
+                      .find((candidate) => candidate.role === "user")
+                  : undefined;
+              const priorUserText =
+                priorUserMessage?.parts
+                  ?.filter((part) => part.type === "text")
+                  .map((part) => part.text)
+                  .join(" ") ?? "";
+              const isAlvinRequested =
+                /(?:^|\s)@alvin\b|^\s*alvin\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\s+(?:à\s+)?alvin\b|je\s+veux\s+(?:parler\s+à|appeler)\s+alvin/i.test(
+                  priorUserText
+                );
+
+              const showsExecutionPlan =
+                message.role === "assistant" &&
+                message.id === latestExecutionPlanMessageId;
+
+              return (
+                <Fragment key={message.id}>
+                  <PreviewMessage
+                    addToolApprovalResponse={addToolApprovalResponse}
+                    chatId={chatId}
+                    isAlvinRequested={isAlvinRequested}
+                    isFirstAssistantMessage={
+                      message.role === "assistant" &&
+                      messages.find((candidate) => candidate.role === "assistant")?.id ===
+                        message.id
+                    }
+                    isLoading={
+                      status === "streaming" && messages.length - 1 === index
+                    }
+                    isReadonly={isReadonly}
+                    message={message}
+                    onEdit={onEditMessage}
+                    onPlanSelection={handlePlanSelection}
+                    regenerate={regenerate}
+                    requiresScrollPadding={
+                      hasSentMessage && index === messages.length - 1
+                    }
+                    setMessages={setMessages}
+                    vote={
+                      votes
+                        ? votes.find((vote) => vote.messageId === message.id)
+                        : undefined
+                    }
+                  />
+                  {showsExecutionPlan ? <MissionPlanCard /> : null}
+                </Fragment>
+              );
+            })}
 
             {status === "submitted" &&
-              messages.at(-1)?.role !== "assistant" && <ThinkingMessage />}
+              messages.at(-1)?.role !== "assistant" && (
+                <ThinkingMessage
+                  agentAvatar={
+                    messages.some((message) => message.role === "assistant") &&
+                    !/(?:^|\s)@alvin\b|^\s*alvin\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\s+(?:à\s+)?alvin\b|je\s+veux\s+(?:parler\s+à|appeler)\s+alvin/i.test(
+                      messages
+                        .at(-1)
+                        ?.parts.filter((part) => part.type === "text")
+                        .map((part) => part.text)
+                        .join(" ") ?? ""
+                    )
+                      ? chiefAgent?.avatarUrl ?? alvinMessenger.avatarUrl
+                      : alvinMessenger.avatarUrl
+                  }
+                  agentName={
+                    messages.some((message) => message.role === "assistant") &&
+                    !/(?:^|\s)@alvin\b|^\s*alvin\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\s+(?:à\s+)?alvin\b|je\s+veux\s+(?:parler\s+à|appeler)\s+alvin/i.test(
+                      messages
+                        .at(-1)
+                        ?.parts.filter((part) => part.type === "text")
+                        .map((part) => part.text)
+                        .join(" ") ?? ""
+                    )
+                      ? chiefAgent?.name ?? "Chef d'équipe"
+                      : alvinMessenger.name
+                  }
+                />
+              )}
 
             <div
               className="min-h-[24px] min-w-[24px] shrink-0"

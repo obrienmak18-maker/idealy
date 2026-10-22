@@ -110,11 +110,19 @@ assert.doesNotMatch(
 // PowerStatusBadge compact preserved (required by test-power-system-v2.mjs)
 assert.match(topbar, /<PowerStatusBadge compact \/>/, "topbar must keep PowerStatusBadge compact");
 
-// Squad contracts preserved (required by test-mission-squad-contract.mjs)
+// Mission launch belongs to the explicit plan approval card, not the workspace header.
 assert.match(topbar, /crypto\.randomUUID/, "topbar must use crypto.randomUUID for idempotency");
 assert.match(topbar, /missionReplayNonce/, "topbar must increment missionReplayNonce");
-assert.match(topbar, /Run squad/, "topbar must have Run squad label");
+assert.match(topbar, /missionRunRequested/, "topbar must consume plan-card launch requests");
 assert.match(topbar, /\/squad/, "topbar must POST to /squad endpoint");
+assert.doesNotMatch(
+  topbar,
+  /onClick=\{runSquad\}/,
+  "topbar must not bypass explicit mission-plan approval"
+);
+const missionPlanCard = read("components/chat/mission-plan-card.tsx");
+assert.match(missionPlanCard, /Valider et lancer/, "mission card must have explicit launch confirmation");
+assert.match(missionPlanCard, /missionRunRequested: true/, "mission card must send launch requests");
 
 // aria-live on status pill for screen-reader correctness
 assert.match(topbar, /aria-live="polite"/, "topbar squad status pill must have aria-live");
