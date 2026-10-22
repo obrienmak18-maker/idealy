@@ -189,14 +189,16 @@ export default function WelcomePage() {
     <main
       className={`welcome-page relative min-h-dvh overflow-hidden bg-[#0A0D14] text-white selection:bg-violet-500 selection:text-white ${resolvedTheme === "light" ? "welcome-page--light" : "welcome-page--dark"}`}
     >
-      {resolvedTheme === "light" ? (
-        <div
-          aria-hidden="true"
-          className="welcome-light-backdrop pointer-events-none absolute inset-0 z-0"
-        />
-      ) : (
+      <div
+        aria-hidden="true"
+        className="welcome-light-backdrop pointer-events-none absolute inset-0 z-0"
+      />
+      <div
+        aria-hidden="true"
+        className="welcome-dark-backdrop pointer-events-none absolute inset-0 z-0"
+      >
         <CosmicHorizon />
-      )}
+      </div>
 
       {/* High-Energy Colliding Orbs bringing vibrant life to the screen */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">

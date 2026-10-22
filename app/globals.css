@@ -249,6 +249,24 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+
+/* Theme backdrop visibility is driven by next-themes' early html class to avoid a hydration flash. */
+html.light .welcome-dark-backdrop { display: none; }
+html.dark .welcome-light-backdrop { display: none; }
+
+/* Keep interactive states legible in light mode after static theme overrides. */
+html.light .welcome-page a:hover:not([class~="bg-white"]):not([class*="bg-gradient-to-r"]) {
+  color: #0369a1 !important;
+}
+html.light .welcome-page a[class~="bg-white"][class~="text-black"]:hover {
+  color: #ffffff !important;
+  background-color: #24334a !important;
+}
+html.light .welcome-page button[class~="border-white/45"]:hover {
+  border-color: #8aa8e8 !important;
+  background-color: #e2ebfb !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -1274,7 +1292,7 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
   -webkit-background-clip: text;
 }
 
-.welcome-page--light {
+html.light .welcome-page {
   color: #172338 !important;
   background-color: #f7f9fc !important;
   background-image:
@@ -1291,7 +1309,7 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
     radial-gradient(ellipse at 58% 62%, rgba(249, 115, 22, 0.055), transparent 42%);
 }
 
-.welcome-page--light .welcome-grid {
+html.light .welcome-page .welcome-grid {
   background-image:
     linear-gradient(rgba(71, 85, 105, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(71, 85, 105, 0.045) 1px, transparent 1px);
@@ -1300,131 +1318,131 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
   mask-image: linear-gradient(to bottom, black, transparent 82%);
 }
 
-.welcome-page--light .welcome-orb {
+html.light .welcome-page .welcome-orb {
   opacity: 0.055;
   filter: blur(100px);
 }
 
-.welcome-page--light .welcome-gradient-text {
+html.light .welcome-page .welcome-gradient-text {
   background-image: linear-gradient(100deg, #0369a1 0%, #6d28d9 52%, #c2410c 100%);
 }
 
-.welcome-page--light [class~="text-white"] {
+html.light .welcome-page [class~="text-white"] {
   color: #172338 !important;
 }
-.welcome-page--light [class~="text-white/95"],
-.welcome-page--light [class~="text-white/90"] {
+html.light .welcome-page [class~="text-white/95"],
+html.light .welcome-page [class~="text-white/90"] {
   color: #24334a !important;
 }
-.welcome-page--light [class~="text-white/85"],
-.welcome-page--light [class~="text-white/80"] {
+html.light .welcome-page [class~="text-white/85"],
+html.light .welcome-page [class~="text-white/80"] {
   color: #34445b !important;
 }
-.welcome-page--light [class~="text-white/75"],
-.welcome-page--light [class~="text-white/70"],
-.welcome-page--light [class~="text-white/65"] {
+html.light .welcome-page [class~="text-white/75"],
+html.light .welcome-page [class~="text-white/70"],
+html.light .welcome-page [class~="text-white/65"] {
   color: #4b5c73 !important;
 }
-.welcome-page--light [class~="text-white/60"],
-.welcome-page--light [class~="text-white/55"] {
+html.light .welcome-page [class~="text-white/60"],
+html.light .welcome-page [class~="text-white/55"] {
   color: #586980 !important;
 }
-.welcome-page--light [class~="text-white/50"],
-.welcome-page--light [class~="text-white/45"] {
-  color: #697a90 !important;
+html.light .welcome-page [class~="text-white/50"],
+html.light .welcome-page [class~="text-white/45"] {
+  color: #62708a !important;
 }
-.welcome-page--light [class~="text-white/40"] {
-  color: #7b8aa0 !important;
+html.light .welcome-page [class~="text-white/40"] {
+  color: #5b6a80 !important;
 }
 
 /* Keep saturated controls legible while shifting small labels to darker brand tones. */
-.welcome-page--light [class~="text-violet-200"],
-.welcome-page--light [class~="text-violet-300"],
-.welcome-page--light [class~="text-violet-400"] {
+html.light .welcome-page [class~="text-violet-200"],
+html.light .welcome-page [class~="text-violet-300"],
+html.light .welcome-page [class~="text-violet-400"] {
   color: #6840b4 !important;
 }
-.welcome-page--light [class~="text-sky-300"],
-.welcome-page--light [class~="text-sky-400"] {
+html.light .welcome-page [class~="text-sky-300"],
+html.light .welcome-page [class~="text-sky-400"] {
   color: #116b9f !important;
 }
-.welcome-page--light [class~="text-orange-300"] {
+html.light .welcome-page [class~="text-orange-300"] {
   color: #a84e16 !important;
 }
-.welcome-page--light [class~="text-emerald-300"],
-.welcome-page--light [class~="text-emerald-400"] {
+html.light .welcome-page [class~="text-emerald-300"],
+html.light .welcome-page [class~="text-emerald-400"] {
   color: #087856 !important;
 }
-.welcome-page--light [class~="text-amber-300"] {
+html.light .welcome-page [class~="text-amber-300"] {
   color: #926000 !important;
 }
 
 /* Frosted dark-mode panels become crisp, layered light surfaces. */
-.welcome-page--light [class*="bg-white/[0.03]"],
-.welcome-page--light [class*="bg-white/[0.04]"],
-.welcome-page--light [class*="bg-white/[0.055]"],
-.welcome-page--light [class~="bg-white/5"] {
+html.light .welcome-page [class*="bg-white/[0.03]"],
+html.light .welcome-page [class*="bg-white/[0.04]"],
+html.light .welcome-page [class*="bg-white/[0.055]"],
+html.light .welcome-page [class~="bg-white/5"] {
   background-color: rgba(255, 255, 255, 0.68) !important;
 }
-.welcome-page--light [class*="bg-white/[0.06]"],
-.welcome-page--light [class*="bg-white/[0.07]"],
-.welcome-page--light [class~="bg-white/10"] {
+html.light .welcome-page [class*="bg-white/[0.06]"],
+html.light .welcome-page [class*="bg-white/[0.07]"],
+html.light .welcome-page [class~="bg-white/10"] {
   background-color: rgba(255, 255, 255, 0.84) !important;
 }
-.welcome-page--light [class*="bg-white/[0.12]"] {
+html.light .welcome-page [class*="bg-white/[0.12]"] {
   background-color: rgba(226, 236, 251, 0.88) !important;
 }
-.welcome-page--light [class~="bg-white/15"] {
+html.light .welcome-page [class~="bg-white/15"] {
   background-color: rgba(255, 255, 255, 0.82) !important;
 }
-.welcome-page--light [class~="bg-white/20"] {
+html.light .welcome-page [class~="bg-white/20"] {
   background-color: rgba(224, 232, 242, 0.86) !important;
 }
-.welcome-page--light [class~="bg-white"] {
+html.light .welcome-page [class~="bg-white"] {
   background-color: #ffffff !important;
 }
-.welcome-page--light [class*="border-white/"] {
+html.light .welcome-page [class*="border-white/"] {
   border-color: rgba(119, 136, 158, 0.25) !important;
 }
-.welcome-page--light [class~="border-white/45"] {
+html.light .welcome-page [class~="border-white/45"] {
   border-color: #9dbaf3 !important;
   background-color: #edf3ff !important;
 }
-.welcome-page--light [class~="border-[#09090f]"] {
+html.light .welcome-page [class~="border-[#09090f]"] {
   border-color: rgba(255, 255, 255, 0.96) !important;
 }
-.welcome-page--light [class~="bg-[#0b0b12]"],
-.welcome-page--light [class~="bg-[#14131d]/95"] {
+html.light .welcome-page [class~="bg-[#0b0b12]"],
+html.light .welcome-page [class~="bg-[#14131d]/95"] {
   background-color: #ffffff !important;
   color: #172338 !important;
 }
-.welcome-page--light [class*="border-violet-"],
-.welcome-page--light [class*="border-sky-"],
-.welcome-page--light [class*="border-emerald-"] {
+html.light .welcome-page [class*="border-violet-"],
+html.light .welcome-page [class*="border-sky-"],
+html.light .welcome-page [class*="border-emerald-"] {
   border-color: color-mix(in srgb, currentColor 22%, white) !important;
 }
-.welcome-page--light [class*="shadow-2xl"],
-.welcome-page--light [class*="shadow-xl"] {
+html.light .welcome-page [class*="shadow-2xl"],
+html.light .welcome-page [class*="shadow-xl"] {
   --tw-shadow-color: rgba(37, 52, 76, 0.10);
 }
 
 /* The main call to action is deliberately dark on the pale background. */
-.welcome-page--light a[class~="bg-white"][class~="text-black"] {
+html.light .welcome-page a[class~="bg-white"][class~="text-black"] {
   color: #ffffff !important;
   background-color: #172338 !important;
   box-shadow: 0 10px 28px rgba(23, 35, 56, 0.16) !important;
 }
-.welcome-page--light a[class*="bg-gradient-to-r"][class~="text-white"] {
+html.light .welcome-page a[class*="bg-gradient-to-r"][class~="text-white"] {
   color: #ffffff !important;
 }
 
 /* Make the selected Way stand out as a selection, not as a glow lost on white. */
-.welcome-page--light button[class~="border-white/45"] {
+html.light .welcome-page button[class~="border-white/45"] {
   background-color: #edf3ff !important;
   box-shadow: 0 12px 28px rgba(59, 91, 145, 0.10) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .welcome-page--light .welcome-orb {
+  html.light .welcome-page .welcome-orb {
     animation: none;
   }
 }
