@@ -89,7 +89,10 @@ export async function verifyFirebaseToken(idToken: string) {
     try {
       return await getAuth(getAdminApp()).verifyIdToken(idToken, true);
     } catch (error) {
-      console.warn("[Firebase Admin token verification, falling back to public cert]:", error);
+      // Do not retry without revocation checks: that would accept a revoked
+      // token whenever the Admin verifier reports auth/id-token-revoked.
+      console.warn("[Firebase Admin token verification]", error);
+      return null;
     }
   }
 
