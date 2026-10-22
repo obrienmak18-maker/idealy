@@ -77,19 +77,19 @@ test.describe("Chat Error Handling", () => {
 });
 
 test.describe("Suggested Actions", () => {
-  test("suggested actions are clickable", async ({ page }) => {
+  test("selecting a suggestion prefills the composer without auto-sending", async ({ page }) => {
     await page.goto("/");
 
-    const suggestions = page.locator(
+    const input = page.getByTestId("multimodal-input");
+    const firstSuggestion = page.locator(
       "[data-testid='suggested-actions'] button"
-    );
-    const count = await suggestions.count();
+    ).first();
 
-    if (count > 0) {
-      await suggestions.first().click();
+    await expect(firstSuggestion).toBeVisible();
+    await firstSuggestion.click();
 
-      // Should redirect after clicking suggestion
-      await expect(page).toHaveURL(CHAT_URL_REGEX, { timeout: 10_000 });
-    }
+    // Suggestions are editable drafts; the user explicitly decides when to send.
+    await expect(input).toHaveValue(/\S/, { timeout: 5_000 });
+    await expect(page).toHaveURL("/");
   });
 });
