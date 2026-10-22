@@ -5,6 +5,7 @@ import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
 import type { ChatMessage } from "@/lib/types";
+import { redactLikelySecrets } from "@/lib/sensitive-text";
 import { cn } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
@@ -173,12 +174,22 @@ function PureMessages({
 
   const handleIntakeSubmit = useCallback(
     (formattedBrief: string) => {
+      // The structured intake bypasses the ordinary composer, so apply the
+      // same secret redaction and chat-route update before sending.
+      const safeBrief = redactLikelySecrets(formattedBrief);
+      if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") {
+        window.history.pushState(
+          {},
+          "",
+          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+        );
+      }
       sendMessage({
-        parts: [{ text: formattedBrief, type: "text" }],
+        parts: [{ text: safeBrief, type: "text" }],
         role: "user",
       });
     },
-    [sendMessage]
+    [chatId, sendMessage]
   );
 
   const handleIntakeCancel = useCallback(() => {
