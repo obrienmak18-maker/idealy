@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Model Selector", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/", { waitUntil: "commit" });
   });
 
   test("displays a model button", async ({ page }) => {
