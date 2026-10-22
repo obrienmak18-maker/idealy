@@ -249,6 +249,24 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+
+/* Theme backdrop visibility is driven by next-themes' early html class to avoid a hydration flash. */
+html.light .welcome-dark-backdrop { display: none; }
+html.dark .welcome-light-backdrop { display: none; }
+
+/* Keep interactive states legible in light mode after static theme overrides. */
+html.light .welcome-page a:hover:not([class~="bg-white"]):not([class*="bg-gradient-to-r"]) {
+  color: #0369a1 !important;
+}
+html.light .welcome-page a[class~="bg-white"][class~="text-black"]:hover {
+  color: #ffffff !important;
+  background-color: #24334a !important;
+}
+html.light .welcome-page button[class~="border-white/45"]:hover {
+  border-color: #8aa8e8 !important;
+  background-color: #e2ebfb !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -1257,4 +1275,233 @@ html[data-idealy-canvas-expanded] [data-idealy-chat-pane="true"] {
   .idealy-canvas-tab {
     transition: none;
   }
+}
+
+
+/* Welcome page theme — keep the dark visual identity and give light mode its own
+   readable surfaces instead of simply swapping the page background. */
+.welcome-page {
+  isolation: isolate;
+}
+
+.welcome-page .welcome-gradient-text {
+  display: inline-block;
+  color: transparent;
+  background-image: linear-gradient(100deg, #7dd3fc 0%, #c4b5fd 52%, #fdba74 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+html.light .welcome-page {
+  color: #172338 !important;
+  background-color: #f7f9fc !important;
+  background-image:
+    radial-gradient(ellipse at 12% 0%, rgba(56, 189, 248, 0.10), transparent 34%),
+    radial-gradient(ellipse at 88% 9%, rgba(139, 92, 246, 0.09), transparent 31%),
+    linear-gradient(180deg, #f8fbff 0%, #f6f8fc 58%, #fffaf6 100%) !important;
+  color-scheme: light;
+}
+
+.welcome-light-backdrop {
+  background:
+    radial-gradient(ellipse at 10% 4%, rgba(56, 189, 248, 0.11), transparent 33%),
+    radial-gradient(ellipse at 88% 12%, rgba(139, 92, 246, 0.10), transparent 30%),
+    radial-gradient(ellipse at 58% 62%, rgba(249, 115, 22, 0.055), transparent 42%);
+}
+
+html.light .welcome-page .welcome-grid {
+  background-image:
+    linear-gradient(rgba(71, 85, 105, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71, 85, 105, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  opacity: 0.42;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+html.light .welcome-page .welcome-orb {
+  opacity: 0.055;
+  filter: blur(100px);
+}
+
+html.light .welcome-page .welcome-gradient-text {
+  background-image: linear-gradient(100deg, #0369a1 0%, #6d28d9 52%, #c2410c 100%);
+}
+
+html.light .welcome-page [class~="text-white"]:not(:hover):not(:focus-visible){
+  color: #172338 !important;
+}
+html.light .welcome-page [class~="text-white/95"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/90"]:not(:hover):not(:focus-visible){
+  color: #24334a !important;
+}
+html.light .welcome-page [class~="text-white/85"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/80"]:not(:hover):not(:focus-visible){
+  color: #34445b !important;
+}
+html.light .welcome-page [class~="text-white/75"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/70"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/65"]:not(:hover):not(:focus-visible){
+  color: #4b5c73 !important;
+}
+html.light .welcome-page [class~="text-white/60"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/55"]:not(:hover):not(:focus-visible){
+  color: #586980 !important;
+}
+html.light .welcome-page [class~="text-white/50"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/45"]:not(:hover):not(:focus-visible){
+  color: #62708a !important;
+}
+html.light .welcome-page [class~="text-white/40"]:not(:hover):not(:focus-visible){
+  color: #5b6a80 !important;
+}
+
+/* Keep saturated controls legible while shifting small labels to darker brand tones. */
+html.light .welcome-page [class~="text-violet-200"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-violet-300"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-violet-400"]:not(:hover):not(:focus-visible){
+  color: #6840b4 !important;
+}
+html.light .welcome-page [class~="text-sky-300"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-sky-400"]:not(:hover):not(:focus-visible){
+  color: #116b9f !important;
+}
+html.light .welcome-page [class~="text-orange-300"]:not(:hover):not(:focus-visible){
+  color: #a84e16 !important;
+}
+html.light .welcome-page [class~="text-emerald-300"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-emerald-400"]:not(:hover):not(:focus-visible){
+  color: #087856 !important;
+}
+html.light .welcome-page [class~="text-amber-300"]:not(:hover):not(:focus-visible){
+  color: #926000 !important;
+}
+
+/* Frosted dark-mode panels become crisp, layered light surfaces. */
+html.light .welcome-page [class*="bg-white/[0.03]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="bg-white/[0.04]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="bg-white/[0.055]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="bg-white/5"]:not(:hover):not(:focus-visible){
+  background-color: rgba(255, 255, 255, 0.68) !important;
+}
+html.light .welcome-page [class*="bg-white/[0.06]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="bg-white/[0.07]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="bg-white/10"]:not(:hover):not(:focus-visible){
+  background-color: rgba(255, 255, 255, 0.84) !important;
+}
+html.light .welcome-page [class*="bg-white/[0.12]"]:not(:hover):not(:focus-visible){
+  background-color: rgba(226, 236, 251, 0.88) !important;
+}
+html.light .welcome-page [class~="bg-white/15"]:not(:hover):not(:focus-visible){
+  background-color: rgba(255, 255, 255, 0.82) !important;
+}
+html.light .welcome-page [class~="bg-white/20"]:not(:hover):not(:focus-visible){
+  background-color: rgba(224, 232, 242, 0.86) !important;
+}
+html.light .welcome-page [class~="bg-white"]:not(:hover):not(:focus-visible){
+  background-color: #ffffff !important;
+}
+html.light .welcome-page [class*="border-white/"]:not(:hover):not(:focus-visible){
+  border-color: rgba(119, 136, 158, 0.25) !important;
+}
+html.light .welcome-page [class~="border-white/45"]:not(:hover):not(:focus-visible){
+  border-color: #9dbaf3 !important;
+  background-color: #edf3ff !important;
+}
+html.light .welcome-page [class~="border-[#09090f]"]:not(:hover):not(:focus-visible){
+  border-color: rgba(255, 255, 255, 0.96) !important;
+}
+html.light .welcome-page [class~="bg-[#0b0b12]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="bg-[#14131d]/95"]:not(:hover):not(:focus-visible){
+  background-color: #ffffff !important;
+  color: #172338 !important;
+}
+html.light .welcome-page [class*="border-violet-"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="border-sky-"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="border-emerald-"]:not(:hover):not(:focus-visible){
+  border-color: color-mix(in srgb, currentColor 22%, white) !important;
+}
+html.light .welcome-page [class*="shadow-2xl"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="shadow-xl"]:not(:hover):not(:focus-visible){
+  --tw-shadow-color: rgba(37, 52, 76, 0.10);
+}
+
+/* The main call to action is deliberately dark on the pale background. */
+html.light .welcome-page a[class~="bg-white"][class~="text-black"]:not(:hover):not(:focus-visible){
+  color: #ffffff !important;
+  background-color: #172338 !important;
+  box-shadow: 0 10px 28px rgba(23, 35, 56, 0.16) !important;
+}
+html.light .welcome-page a[class*="bg-gradient-to-r"][class~="text-white"]:not(:hover):not(:focus-visible){
+  color: #ffffff !important;
+}
+
+/* Make the selected Way stand out as a selection, not as a glow lost on white. */
+html.light .welcome-page button[class~="border-white/45"]:not(:hover):not(:focus-visible){
+  background-color: #edf3ff !important;
+  box-shadow: 0 12px 28px rgba(59, 91, 145, 0.10) !important;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  html.light .welcome-page .welcome-orb {
+    animation: none;
+  }
+}
+
+
+/* Keep the selected site theme consistent from Welcome into account creation. */
+.idealy-auth-shell {
+  isolation: isolate;
+  background-color: #0a0d14;
+}
+
+.light .idealy-auth-shell {
+  color: #172338;
+  background-color: #f5f8fc !important;
+  background-image:
+    radial-gradient(ellipse at 8% 6%, rgba(56, 189, 248, 0.11), transparent 34%),
+    radial-gradient(ellipse at 88% 12%, rgba(139, 92, 246, 0.10), transparent 32%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 65%, #fff9f4 100%);
+}
+
+.light .idealy-auth-shell > [aria-hidden="true"] > div:first-child {
+  background: rgba(246, 249, 253, 0.92) !important;
+}
+
+.light .idealy-auth-shell > [aria-hidden="true"] svg {
+  opacity: 0.28 !important;
+}
+
+.light .idealy-auth-shell .welcome-orb {
+  opacity: 0.06 !important;
+  filter: blur(100px);
+}
+
+.light .idealy-auth-shell .welcome-grid {
+  background-image:
+    linear-gradient(rgba(71, 85, 105, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71, 85, 105, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  opacity: 0.45;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.light .idealy-auth-shell .idealy-surface {
+  background-color: rgba(255, 255, 255, 0.86) !important;
+  border-color: rgba(119, 136, 158, 0.26) !important;
+  box-shadow: 0 20px 60px rgba(37, 52, 76, 0.08);
+}
+
+.light .idealy-auth-shell [class*="bg-card/"] {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+}
+
+.light .idealy-auth-shell .idealy-surface a,
+.light .idealy-auth-shell .idealy-surface button {
+  color: inherit;
+}
+
+.light .idealy-auth-shell .idealy-surface button[class*="bg-foreground"] {
+  color: #ffffff;
+  background-color: #172338;
 }

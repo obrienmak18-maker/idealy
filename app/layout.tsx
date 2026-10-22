@@ -6,7 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
-import { LanguageProvider } from "@/lib/i18n/provider";
+import { CookieNotice } from "@/components/cookies/cookie-notice";
+import { ServerLanguageProvider } from "@/lib/i18n/server-language-provider";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -83,6 +84,11 @@ const DARK_THEME_COLOR = "hsl(240deg 10% 3.92%)";
 const THEME_COLOR_SCRIPT = `\
 (function() {
   var html = document.documentElement;
+  var localeCookie = document.cookie.split(';').map(function(part) { return part.trim(); }).find(function(part) { return part.indexOf('NEXT_LOCALE=') === 0; });
+  var locale = localeCookie ? localeCookie.slice('NEXT_LOCALE='.length) : '';
+  if (locale === 'fr' || locale === 'en' || locale === 'es') {
+    html.setAttribute('lang', locale);
+  }
   var meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) {
     meta = document.createElement('meta');
@@ -153,27 +159,30 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           disableTransitionOnChange
           enableSystem
         >
           <SessionProvider
             basePath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}
           >
-            <LanguageProvider>
-              <TooltipProvider>
-                <Toaster
-                  closeButton
-                  position="top-center"
-                  richColors
-                  toastOptions={{
-                    className:
-                      "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
-                  }}
-                />
-                <Suspense>{children}</Suspense>
-              </TooltipProvider>
-            </LanguageProvider>
+            <TooltipProvider>
+              <Toaster
+                closeButton
+                position="top-center"
+                richColors
+                toastOptions={{
+                  className:
+                    "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
+                }}
+              />
+              <Suspense fallback={null}>
+                <ServerLanguageProvider>
+                  <Suspense>{children}</Suspense>
+                  <CookieNotice />
+                </ServerLanguageProvider>
+              </Suspense>
+            </TooltipProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

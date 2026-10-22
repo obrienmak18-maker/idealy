@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { classifyIntent } from './intentRouter.ts';
 import { streamUI, type AgentUIPhase } from './streamUI.ts';
+import { createToolEnabledChatResponse } from "./toolCalling.ts";
 import {
   consumeManagedCredit,
   isSupportedProvider,
@@ -41,6 +42,7 @@ type LLMRequest = {
   planOnly?: boolean;
   workspaceStream?: boolean;
   squadRun?: boolean;
+  language?: string;
 };
 
 const DEFAULT_MODELS: Record<Provider, string> = {
@@ -141,6 +143,37 @@ function normalizeResponseLanguage(value: unknown): 'fr' | 'en' | 'es' {
 
 function isAgentUIPhase(value: unknown): value is AgentUIPhase {
   return value === 'planning' || value === 'building' || value === 'validating' || value === 'completed' || value === 'needs-fix';
+}
+
+/**
+ * Keep ordinary conversation on the provider's native token stream.
+ * The bounded server tool loop is used when the user's request signals live
+ * research or media retrieval/generation.
+ */
+function shouldUseChatTools(prompt: string): boolean {
+  const normalized = prompt.toLocaleLowerCase();
+  const researchTerms = [
+    "search the web", "web search", "look up", "do research", "research this",
+    "find sources", "cite sources", "latest", "current news", "today's", "today",
+    "on the internet", "online sources", "fact check", "search online",
+    "recherche sur le web", "recherche web", "fais des recherches", "faire des recherches",
+    "cherche sur internet", "sur le web", "sources fiables", "sources officielles",
+    "références officielles", "actualités", "aujourd'hui", "à jour", "récent",
+    "recherches en ligne", "buscar en internet", "busca en la web", "investiga",
+    "fuentes oficiales", "noticias actuales", "hoy", "últimas noticias",
+  ];
+  const imageTerms = [
+    "pexels", "stock photos", "real photos", "real images", "search images",
+    "find photos", "find images", "generate an image", "generate image",
+    "create an image", "make an image", "image generation", "illustration",
+    "génère une image", "générer une image", "crée une image", "créer une image",
+    "génération d'image", "génération d’images", "cherche des images",
+    "chercher des images", "photos réelles", "images réelles", "photos libres",
+    "recherche d'images", "buscar imágenes", "genera una imagen", "crear una imagen",
+    "fotos reales", "imágenes reales",
+  ];
+  return researchTerms.some((term) => normalized.includes(term)) ||
+    imageTerms.some((term) => normalized.includes(term));
 }
 
 type MissionPlanAgent = {
@@ -610,6 +643,32 @@ serve(async (req) => {
       : [systemPrompt, languageInstruction].filter(Boolean).join('\n');
     if (effectiveSystemPrompt) messages.push({ role: 'system', content: effectiveSystemPrompt });
     messages.push({ role: 'user', content: prompt });
+
+    // Production chat and ideation can call the same real research/image tools
+    // as the direct AI SDK path. Mission builders keep their strict NDJSON contract.
+    const canUseChatTools =
+      stream &&
+      !input.workspaceStream &&
+      input.planOnly !== true &&
+      input.squadRun !== true &&
+      !input.missionId &&
+      intentCategory !== "EXECUTION" &&
+      shouldUseChatTools(prompt) &&
+      resolution.provider !== "anthropic";
+
+    if (canUseChatTools) {
+      return createToolEnabledChatResponse({
+        apiUrl: config.url,
+        apiKey: resolution.apiKey,
+        provider: resolution.provider,
+        model: resolution.model,
+        messages,
+        maxTokens,
+        language: responseLanguage,
+        responseHeaders: headers,
+        requestSignal: req.signal,
+      });
+    }
 
     const llmRes = await fetch(config.url, {
       method: 'POST',

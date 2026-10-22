@@ -20,6 +20,11 @@ import {
 } from "@/lib/idealy/supabase-auth";
 import { generateUUID } from "@/lib/utils";
 import { verifyFirebaseToken } from "@/lib/firebase/admin";
+import {
+  isTurnstileRequired,
+  verifyTurnstileProof,
+  verifyTurnstileToken,
+} from "@/lib/security/turnstile";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -30,6 +35,7 @@ class IdealyCredentialsSignin extends CredentialsSignin {
       | "confirmation_required"
       | "invalid_credentials"
       | "service_unavailable"
+      | "turnstile_failed"
   ) {
     super();
     this.code = code;
@@ -172,6 +178,18 @@ export const {
         const password = String(credentials.password ?? "demo-password");
 
         try {
+          const intent = credentials.intent === "register" ? "register" : "login";
+          if (isTurnstileRequired()) {
+            const proof = String(credentials.turnstileProof ?? "").trim();
+            const token = String(credentials.turnstileToken ?? "").trim();
+            const verified = proof
+              ? verifyTurnstileProof(proof, `credentials-${intent}`)
+              : (await verifyTurnstileToken(token, undefined, intent)).ok;
+            if (!verified) {
+              throw new IdealyCredentialsSignin("turnstile_failed");
+            }
+          }
+
           if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
             await compare(password, DUMMY_PASSWORD);
             return {
@@ -321,6 +339,9 @@ export const {
         email: { label: "Email", type: "email" },
         intent: { label: "Intent", type: "text" },
         password: { label: "Password", type: "password" },
+        turnstileProof: { label: "Verified Turnstile proof", type: "text" },
+        turnstileToken: { label: "Turnstile token", type: "text" },
+        turnstileAction: { label: "Turnstile action", type: "text" },
       },
     }),
     Credentials({
@@ -335,6 +356,18 @@ export const {
         let displayName: string | null = null;
         let photoUrl: string | null = null;
         let supabaseAuth: SupabasePasswordAuthResult | null = null;
+
+        if (isTurnstileRequired()) {
+          const turnstileAction = credentials.turnstileAction === "register" ? "register" : "login";
+          const challenge = await verifyTurnstileToken(
+            String(credentials.turnstileToken ?? ""),
+            undefined,
+            turnstileAction
+          );
+          if (!challenge.ok) {
+            throw new IdealyCredentialsSignin("turnstile_failed");
+          }
+        }
 
         // 1. Try Firebase Admin token verification
         try {
@@ -457,6 +490,8 @@ export const {
       },
       credentials: {
         idToken: { label: "Firebase ID token", type: "text" },
+        turnstileToken: { label: "Turnstile token", type: "text" },
+        turnstileAction: { label: "Turnstile action", type: "text" },
       },
       id: "firebase",
     }),

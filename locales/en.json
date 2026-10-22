@@ -164,7 +164,7 @@
     "loginTitle": "Welcome back to Idealy",
     "loginSubtitle": "Access your workspaces and continue building.",
     "registerTitle": "Create your Idealy workspace",
-    "registerSubtitle": "Turn your next big idea into a living product.",
+    "registerSubtitle": "Create an account to organize your projects, revisit missions and continue building in the Idealy workspace.",
     "emailLabel": "Email address",
     "emailPlaceholder": "you@example.com",
     "passwordLabel": "Password",
@@ -184,16 +184,15 @@
     "phoneUnavailable": "SMS sign-in is not configured yet. Please use your email address.",
     "phoneNotice": "Firebase protects code delivery with its official reCAPTCHA.",
     "googleButton": "Continue with Google",
-  "phoneButton": "Continue with Phone Number",
-  "orDivider": "or",
-  "accountExists": "This email address is already associated with an account.",
-  "accountExistsAction": "Sign in to continue.",
-  "invalidCredentials": "The email address or password is incorrect.",
-  "invalidData": "Enter a valid email address and a password with at least 6 characters.",
-  "serviceUnavailable": "The service is temporarily unavailable. Please try again shortly.",
-  "googleCancelled": "Google sign-in was cancelled. You can try again.",
-  "googleFailed": "Google sign-in failed. Try again or use your email address."
-
+    "phoneButton": "Continue with Phone Number",
+    "orDivider": "or",
+    "accountExists": "This email address is already associated with an account.",
+    "accountExistsAction": "Sign in to continue.",
+    "invalidCredentials": "The email address or password is incorrect.",
+    "invalidData": "Enter a valid email address and a password with at least 6 characters.",
+    "serviceUnavailable": "The service is temporarily unavailable. Please try again shortly.",
+    "googleCancelled": "Google sign-in was cancelled. You can try again.",
+    "googleFailed": "Google sign-in failed. Try again or use your email address."
   },
   "onboarding": {
     "badge": "Creation Space",
@@ -269,6 +268,18 @@
     "lastMonth": "Last 30 days",
     "older": "Older",
     "deleteTitle": "Delete this chat?",
-    "deleteDescription": "This action cannot be undone. This will permanently delete your chat."
+    "deleteDescription": "This action cannot be undone. This will permanently delete your chat.",
+    "general": "General",
+    "appearance": "Appearance",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "dataMemory": "Data & memory",
+    "shortcuts": "Shortcuts",
+    "billingPlan": "Billing & plan",
+    "viewPlans": "View plans",
+    "planUnlock": "Unlock more missions, connectors, and generations.",
+    "clearHistory": "Clear history",
+    "workspaceOptions": "Workspace options",
+    "options": "Options"
   }
 }

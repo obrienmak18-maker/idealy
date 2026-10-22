@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { IdealyOrbitalDisc } from "@/components/connectors/idealy-orbital-disc";
 import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import { listConnectorDefinitions } from "@/lib/idealy/connectors";
-import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 
 const CONNECTOR_CATEGORY_BADGES: Record<string, string> = {
   github: "VERSION CONTROL",
@@ -157,6 +156,38 @@ export default function PluginsPage() {
     };
   }, []);
 
+  // OAuth returns here after consent. Report the result once and remove callback
+  // parameters so a page refresh does not replay the notification.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const connectedProvider = url.searchParams.get("connected");
+    const displayName = url.searchParams.get("display");
+    const error = url.searchParams.get("error");
+
+    if (connectedProvider) {
+      toast.success((displayName || connectedProvider) + " est connecté à Idealy.");
+    } else if (error) {
+      const friendlyErrors: Record<string, string> = {
+        access_denied: "Autorisation refusée. Aucun compte n’a été connecté.",
+        provider_not_configured: "Ce connecteur n’est pas encore configuré côté serveur.",
+        oauth_server_not_configured: "Le service de connexion n’est pas encore configuré côté serveur.",
+        invalid_or_expired_state: "Cette demande de connexion a expiré. Réessaie.",
+        token_exchange_failed: "Le fournisseur n’a pas accepté l’échange de connexion. Vérifie la configuration OAuth.",
+        credential_storage_failed: "Le compte a répondu, mais Idealy n’a pas pu enregistrer les identifiants de façon sécurisée.",
+        plugin_activation_failed: "Le compte a répondu, mais l’activation du connecteur n’a pas abouti.",
+        integration_callback_failed: "La connexion n’a pas abouti. Réessaie depuis Idealy.",
+      };
+      toast.error(friendlyErrors[error] ?? "La connexion a échoué. Réessaie depuis Idealy.");
+    }
+
+    if (connectedProvider || error || displayName) {
+      url.searchParams.delete("connected");
+      url.searchParams.delete("display");
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    }
+  }, []);
+
   // Prioritize primary 8 connectors matching user's Image 2 in precise order
   const orderedConnectors = useMemo(() => {
     const preferredOrder = [
@@ -231,12 +262,14 @@ export default function PluginsPage() {
 
     setConnectingId(id);
     try {
+      const oauthProvider =
+        connector.id === "google-drive" ? "google-drive" : connector.provider;
       const startEndpoint =
-        connector.provider === "vercel"
+        oauthProvider === "vercel"
           ? "/api/idealy/connectors/vercel/start"
           : "/api/idealy/connectors/start";
       const response = await fetch(startEndpoint, {
-        body: JSON.stringify({ provider: connector.provider }),
+        body: JSON.stringify({ provider: oauthProvider }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
@@ -267,7 +300,14 @@ export default function PluginsPage() {
 
   return (
     <main className="relative min-h-dvh bg-background text-foreground pb-20 select-none overflow-hidden">
-      <CosmicHorizon />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      >
+        <div className="absolute -left-36 -top-32 size-[30rem] rounded-full bg-primary/[0.07] blur-[120px]" />
+        <div className="absolute -right-40 top-[18%] size-[34rem] rounded-full bg-violet-500/[0.07] blur-[135px]" />
+        <div className="absolute bottom-[-12rem] left-[24%] size-[28rem] rounded-full bg-cyan-500/[0.05] blur-[120px]" />
+      </div>
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-8 sm:px-8">
         {/* Navigation retour */}
         <Link

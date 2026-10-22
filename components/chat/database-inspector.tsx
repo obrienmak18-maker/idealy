@@ -11,7 +11,7 @@ import {
   Search,
   Table as TableIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { MissionFile } from "@/lib/idealy/mission-files";
 
@@ -36,6 +36,17 @@ type TableDefinition = {
   label: string;
   description: string;
   columns: TableColumn[];
+};
+
+type DatabaseInspectorSnapshot = {
+  mission: Record<string, unknown> | null;
+  agentRuns: Array<Record<string, unknown>>;
+  events: Array<Record<string, unknown>>;
+  errors: {
+    mission: string | null;
+    agentRuns: string | null;
+    events: string | null;
+  };
 };
 
 const TABLE_DEFINITIONS: Record<string, TableDefinition> = {
@@ -110,89 +121,84 @@ export function DatabaseInspector({
   const [activeTab, setActiveTab] = useState<"data" | "schema">("data");
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedCell, setCopiedCell] = useState<string | null>(null);
+  const [snapshot, setSnapshot] = useState<DatabaseInspectorSnapshot | null>(null);
+  const [isSnapshotLoading, setIsSnapshotLoading] = useState(false);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const databaseRefreshKey = [
+    metadata?.missionFileLastSequence ?? 0,
+    metadata?.missionReplayNonce ?? 0,
+    metadata?.missionSquadStatus ?? "",
+  ].join(":");
 
-  // Derive real rows for each table from current workspace state
+  useEffect(() => {
+    if (!missionId || isDemoMode) {
+      setSnapshot(null);
+      setSnapshotError(null);
+      setIsSnapshotLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setSnapshot(null);
+    setSnapshotError(null);
+    setIsSnapshotLoading(true);
+
+    fetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/database`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          const message =
+            payload && typeof payload.error === "string"
+              ? payload.error
+              : "Les données de la base n’ont pas pu être chargées.";
+          throw new Error(message);
+        }
+        return payload as DatabaseInspectorSnapshot;
+      })
+      .then((payload) => {
+        if (!controller.signal.aborted) setSnapshot(payload);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setSnapshotError(
+          error instanceof Error
+            ? error.message
+            : "Les données de la base n’ont pas pu être chargées."
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsSnapshotLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [missionId, isDemoMode, databaseRefreshKey]);
+
+  // Rows come from persisted Supabase queries or the current file snapshot.
+  // Never synthesize successful agent runs, timestamps, or database events.
   const tableData = useMemo(() => {
-    // 1. missions rows
-    const missionsRows = missionId
-      ? [
-          {
-            id: missionId,
-            title: (metadata?.title as string) || "Mission en cours",
-            status: (metadata?.missionSquadStatus as string) || "ready",
-            way: (metadata?.way as string) || "professional",
-            created_at: new Date().toISOString(),
-            dna: JSON.stringify(metadata?.missionPlan ?? {}).slice(0, 80) + "…",
-            validation: metadata?.validation ? JSON.stringify(metadata.validation).slice(0, 80) + "…" : "—",
-          },
-        ]
-      : [];
+    const missionsRows = snapshot?.mission ? [snapshot.mission] : [];
 
-    // 2. mission_files rows
-    const filesRows = missionFiles.map((file, idx) => ({
-      id: file.id || `f-${idx + 1}`,
+    const filesRows = missionFiles.map((file) => ({
+      id: file.id ?? "—",
       path: file.path,
-      version: file.version ?? 1,
+      version: file.version,
       status: file.status,
-      language: file.language || (file.path.endsWith(".tsx") ? "tsx" : file.path.endsWith(".json") ? "json" : "text"),
-      checksum: file.checksum ? `${file.checksum.slice(0, 12)}…` : "—",
-      source: "builder",
-      updated_at: file.updatedAt || new Date().toISOString(),
+      language:
+        file.language ||
+        (file.path.endsWith(".tsx")
+          ? "tsx"
+          : file.path.endsWith(".json")
+            ? "json"
+            : "text"),
+      checksum: file.checksum ?? "—",
+      updated_at: file.updatedAt ?? "—",
     }));
 
-    // 3. mission_agent_runs rows — strictly truthful derived from real mission metadata or empty
-    const rawRuns = Array.isArray(metadata?.agentRuns) ? (metadata.agentRuns as Record<string, unknown>[]) : null;
-    const runsRows = rawRuns
-      ? rawRuns
-      : (missionId || missionFiles.length > 0 || metadata?.missionSquadStatus)
-      ? [
-          {
-            id: "run-dispatch",
-            run_key: missionId ? `squad:${missionId}` : "squad:workspace",
-            step_index: 1,
-            agent_key: "Alvin (Messager Universel)",
-            status: "succeeded",
-            started_at: "Reçu",
-            completed_at: "Validé",
-          },
-          {
-            id: "run-blueprint",
-            run_key: missionId ? `squad:${missionId}` : "squad:workspace",
-            step_index: 2,
-            agent_key: "Chef d'Escouade",
-            status: "succeeded",
-            started_at: "Cadré",
-            completed_at: "Prêt",
-          },
-          {
-            id: "run-builder",
-            run_key: missionId ? `squad:${missionId}` : "squad:workspace",
-            step_index: 3,
-            agent_key: "Full-stack Builder",
-            status: missionFiles.length > 0 ? "succeeded" : "running",
-            started_at: "En cours",
-            completed_at: missionFiles.length > 0 ? `${missionFiles.length} fichier(s)` : "—",
-          },
-          {
-            id: "run-qa",
-            run_key: missionId ? `squad:${missionId}` : "squad:workspace",
-            step_index: 4,
-            agent_key: "Reviewer & QA",
-            status: metadata?.missionSquadStatus === "ready" ? "succeeded" : "queued",
-            started_at: metadata?.missionSquadStatus === "ready" ? "Vérifié" : "—",
-            completed_at: metadata?.missionSquadStatus === "ready" ? "Conforme" : "—",
-          },
-        ]
-      : [];
-
-    // 4. mission_file_events rows
-    const eventsRows = (missionFiles || []).map((file, idx) => ({
-      id: `evt-${idx + 1}`,
-      sequence: idx + 1,
-      event_type: file.status === "validated" ? "validation_result" : "file_saved",
-      path: file.path,
-      created_at: file.updatedAt || new Date().toISOString(),
-    }));
+    const runsRows = snapshot?.agentRuns ?? [];
+    const eventsRows = snapshot?.events ?? [];
 
     return {
       missions: missionsRows,
@@ -200,10 +206,38 @@ export function DatabaseInspector({
       mission_agent_runs: runsRows,
       mission_file_events: eventsRows,
     };
-  }, [missionFiles, metadata, missionId]);
+  }, [missionFiles, snapshot]);
 
   const currentDefinition = TABLE_DEFINITIONS[selectedTable] || TABLE_DEFINITIONS.mission_files;
   const currentRows = (tableData as Record<string, Record<string, unknown>[]>)[selectedTable] || [];
+  const isSnapshotTable =
+    selectedTable === "missions" ||
+    selectedTable === "mission_agent_runs" ||
+    selectedTable === "mission_file_events";
+  const currentTableError =
+    snapshotError ??
+    (selectedTable === "missions"
+      ? snapshot?.errors.mission
+      : selectedTable === "mission_agent_runs"
+        ? snapshot?.errors.agentRuns
+        : selectedTable === "mission_file_events"
+          ? snapshot?.errors.events
+          : null);
+  const isBackendReadable =
+    Boolean(snapshot) &&
+    Object.values(snapshot?.errors ?? {}).some((error) => error === null);
+  const statusLabel = isDemoMode
+    ? "Démo locale"
+    : !missionId
+      ? "Aucune mission"
+      : isSnapshotLoading
+        ? "Connexion…"
+        : snapshotError
+          ? "Données indisponibles"
+          : isBackendReadable
+            ? "Supabase · lecture seule"
+            : "Données indisponibles";
+
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return currentRows;
@@ -245,16 +279,17 @@ export function DatabaseInspector({
               <span className="text-sm font-semibold tracking-tight">Database Inspector</span>
               <span
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-                  isDemoMode
+                  isDemoMode || statusLabel === "Aucune mission" || statusLabel === "Données indisponibles"
                     ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
                     : "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
                 }`}
+                aria-live="polite"
               >
-                {isDemoMode ? "Démo locale" : "PostgreSQL RLS Actif"}
+                {statusLabel}
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Inspection des tables et schémas du workspace en lecture sécurisée
+              Inspection en lecture seule des enregistrements autorisés par la session active
             </p>
           </div>
         </div>
@@ -337,7 +372,7 @@ export function DatabaseInspector({
               <span>RLS & Sécurité</span>
             </div>
             <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-              Seules les lignes associées à votre utilisateur et mission sont autorisées en lecture.
+              Les requêtes passent par votre session Supabase. Les règles RLS du backend déterminent les lignes accessibles.
             </p>
           </div>
         </div>
@@ -424,7 +459,7 @@ export function DatabaseInspector({
                         {Object.entries(row).map(([key, val]) => {
                           const cellId = `${rowIdx}-${key}`;
                           const isCopied = copiedCell === cellId;
-                          const strVal = String(val ?? "—");
+                          const strVal = val == null ? "—" : typeof val === "object" ? JSON.stringify(val) : String(val);
                           return (
                             <td
                               className="group relative max-w-[200px] truncate px-3 py-2 text-sidebar-foreground/80 hover:text-sidebar-foreground"
@@ -455,11 +490,33 @@ export function DatabaseInspector({
                 </table>
               </div>
             ) : (
-              <div className="flex h-48 flex-col items-center justify-center text-center text-muted-foreground">
+              <div className="flex h-48 flex-col items-center justify-center px-6 text-center text-muted-foreground">
                 <FileCode2 className="mb-2 size-6 text-muted-foreground/50" />
-                <p className="text-xs font-medium text-sidebar-foreground">Aucune ligne trouvée</p>
-                <p className="mt-1 text-[11px]">
-                  {searchQuery ? "Aucun résultat pour ce filtre." : "Les enregistrements apparaîtront dès que la mission aura démarré."}
+                <p className="text-xs font-medium text-sidebar-foreground">
+                  {isSnapshotLoading && isSnapshotTable
+                    ? "Lecture des données réelles…"
+                    : currentTableError
+                      ? "Cette table n’a pas pu être lue"
+                      : isDemoMode && isSnapshotTable
+                        ? "Lecture de production désactivée en mode démo"
+                        : !missionId && isSnapshotTable
+                          ? "Aucune mission active"
+                          : searchQuery
+                            ? "Aucun résultat pour ce filtre."
+                            : "Aucune ligne disponible"}
+                </p>
+                <p className="mt-1 max-w-lg text-[11px] leading-5">
+                  {currentTableError
+                    ? "Aucune donnée simulée n’est affichée. Vérifie la configuration Supabase, la table et les règles d’accès."
+                    : isDemoMode && isSnapshotTable
+                      ? "Les tables missions, runs et événements sont lues depuis Supabase quand une mission réelle est ouverte."
+                      : !missionId && isSnapshotTable
+                        ? "Ouvre une mission persistée pour consulter les enregistrements accessibles."
+                        : searchQuery
+                          ? "Essaie un autre terme de recherche."
+                          : isSnapshotTable
+                            ? "Aucun enregistrement réel n’a été renvoyé pour cette mission."
+                            : "Les fichiers apparaîtront ici lorsqu’ils seront disponibles dans le workspace."}
                 </p>
               </div>
             )}

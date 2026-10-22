@@ -15,11 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # These should be the same ones as used in production
-      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      # Use a non-production secret only when the repository secret is unavailable.
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'idealy-playwright-only-secret-change-me-32chars' }}
       POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
       BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
       REDIS_URL: ${{ secrets.REDIS_URL }}
-      DEMO_MODE: "false"
+      # E2E only: exercise the real workspace UI with the local test stream
+      # and bypass login/database setup. This workflow variable is never used in production.
+      DEMO_MODE: "true"
+      # Keep normal client interactions (URL updates, controls); only server-side
+      # authentication/database/AI calls use the local test mode.
       NEXT_PUBLIC_DEMO_MODE: "false"
 
     steps:
@@ -53,7 +58,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -71,6 +75,16 @@ jobs:
 
       - name: Run Playwright tests
         run: pnpm test
+
+      - name: Print Playwright failure contexts
+        if: failure()
+        shell: bash
+        run: |
+          if [ -d test-results ]; then
+            find test-results -type f -name 'error-context.md' -print -exec cat {} +
+          else
+            echo "No Playwright test-results directory was produced."
+          fi
 
       - uses: actions/upload-artifact@v4
         if: always() && !cancelled()

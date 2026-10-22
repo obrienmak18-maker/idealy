@@ -49,11 +49,11 @@ const wayWorkspaceCopy = {
     specialists: "spécialistes",
     focus: "Ce que cette Voie privilégie",
     roles: [
-      ["Architecte", "Structure l’intention en Blueprint clair."],
-      ["Builder", "Transforme le Blueprint en produit."],
-      ["Reviewer", "Vérifie la qualité avant la suite."],
+      ["Architecte", "Clarifie le besoin et définit les principales étapes."],
+      ["Constructeur", "Assemble l’interface et la logique de l’application."],
+      ["Vérificateur", "Contrôle la cohérence et repère les problèmes."],
     ],
-    continue: "Choisir cette Voie",
+    continue: "Continuer avec cette Voie",
   },
   en: {
     active: "Active Way",
@@ -61,11 +61,11 @@ const wayWorkspaceCopy = {
     specialists: "specialists",
     focus: "What this Way prioritizes",
     roles: [
-      ["Architect", "Turns intent into a clear Blueprint."],
-      ["Builder", "Turns the Blueprint into a product."],
-      ["Reviewer", "Checks quality before the next step."],
+      ["Architect", "Clarifies the goal and defines the main steps."],
+      ["Builder", "Assembles the application interface and logic."],
+      ["Reviewer", "Checks consistency and identifies issues."],
     ],
-    continue: "Choose this Way",
+    continue: "Continue with this Way",
   },
   es: {
     active: "Vía activa",
@@ -73,98 +73,98 @@ const wayWorkspaceCopy = {
     specialists: "especialistas",
     focus: "Lo que prioriza esta Vía",
     roles: [
-      ["Arquitecto", "Convierte la intención en un Blueprint claro."],
-      ["Builder", "Convierte el Blueprint en un producto."],
-      ["Reviewer", "Verifica la calidad antes del siguiente paso."],
+      ["Arquitecto", "Aclara el objetivo y define los pasos principales."],
+      ["Constructor", "Ensambla la interfaz y la lógica de la aplicación."],
+      ["Revisor", "Comprueba la coherencia e identifica problemas."],
     ],
-    continue: "Elegir esta Vía",
+    continue: "Continuar con esta Vía",
   },
 } as const;
 
 const betaPolicyCopy = {
   fr: {
-    tag: "Phase Bêta Pionnière • 100% Offerte",
-    title: "Pourquoi les paiements ne sont pas activés ?",
+    tag: "Bêta · accès d’évaluation",
+    title: "Découvrez Idealy pendant la bêta",
     subtitle:
-      "Nous croyons que vous devez tester la puissance réelle d'Idealy et constater la fiabilité de nos escouades d'agents avant de dépenser le moindre centime. Pendant toute cette phase d'évaluation, tous les créateurs reçoivent des Power Points offerts.",
+      "Cette phase nous permet d’améliorer la qualité des missions, la fiabilité des résultats et l’expérience du workspace. Les modalités des abonnements seront précisées avant l’ouverture des paiements.",
     pillars: [
       {
         icon: Zap,
-        title: "Calcul & MicroVMs offerts",
+        title: "Un espace pour commencer",
         description:
-          "Chaque compte dispose de crédits Power offerts sans carte bancaire requise. Nos microVMs Linux sécurisées et nos agents s'exécutent gratuitement pour tester l'intégralité du studio.",
+          "Explorez les outils disponibles, décrivez un besoin et découvrez comment Idealy structure une mission avant de commencer la construction.",
       },
       {
         icon: Gauge,
-        title: "Transparence du modèle Power",
+        title: "Une consommation compréhensible",
         description:
-          "Le Power mesure la consommation d'énergie de calcul : une requête d'assistance simple consomme ~10 pts, une mission multi-agents avec génération et sandbox consomme ~50 pts.",
+          "Les points Power représentent l’utilisation des ressources nécessaires aux missions. Leur consommation dépend notamment de la portée et de la complexité du travail demandé.",
       },
       {
         icon: ShieldCheck,
-        title: "Aucun paywall précipité",
+        title: "Pas de paiement pendant la bêta",
         description:
-          "Nous optimisons continuellement l'orchestration de nos agents et la vitesse de déploiement. Les abonnements payants ne seront lancés que lorsque l'expérience sera irréprochable.",
+          "Vous pouvez évaluer Idealy pendant cette phase sans carte bancaire. Les abonnements seront présentés clairement avant leur mise en service.",
       },
     ],
     betaNotice:
-      "Paiements volontairement suspendus en phase Bêta — Choisissez une formule pour réserver votre accès Pionnier gratuit",
+      "Pendant la bêta, aucun paiement n’est demandé pour découvrir Idealy. Les formules affichées présentent les offres envisagées.",
   },
   en: {
-    tag: "Pioneer Beta Phase • 100% Free",
-    title: "Why are payments disabled right now?",
+    tag: "Beta · evaluation access",
+    title: "Explore Idealy during the beta",
     subtitle:
-      "We believe you should experience the true capabilities and autonomous speed of our AI squad before spending a single dollar. During our initial evaluation phase, every creator receives free Power Points.",
+      "This phase helps us improve mission quality, result reliability and the workspace experience. Subscription terms will be clarified before payments become available.",
     pillars: [
       {
         icon: Zap,
-        title: "Free Compute & MicroVMs",
+        title: "A workspace to get started",
         description:
-          "Every account gets free Power allocations without entering a credit card. Run real code in secure Linux sandboxes and build projects end-to-end completely free.",
+          "Explore the available tools, describe a goal and see how Idealy structures a mission before construction begins.",
       },
       {
         icon: Gauge,
-        title: "Transparent Power Consumption",
+        title: "Understand resource usage",
         description:
-          "Power strictly measures computing intensity: a single assistance prompt costs ~10 pts, while a full multi-agent sprint with code validation costs ~50 pts.",
+          "Power Points represent the resources used by missions. Consumption depends on the scope and complexity of the requested work.",
       },
       {
         icon: ShieldCheck,
-        title: "Zero Rushed Paywalls",
+        title: "No payment during the beta",
         description:
-          "We are actively tuning agent orchestration and sandbox performance. Billing will only go live once the platform delivers an unbeatable experience.",
+          "You can evaluate Idealy during this phase without a credit card. Subscription plans will be explained before they become available.",
       },
     ],
     betaNotice:
-      "Billing paused in private beta — Select a plan to claim your free Pioneer Access",
+      "During the beta, no payment is required to explore Idealy. The listed plans describe the intended offers.",
   },
   es: {
-    tag: "Fase Beta Pionera • 100% Gratuita",
-    title: "¿Por qué los pagos no están activados?",
+    tag: "Beta · acceso de evaluación",
+    title: "Descubre Idealy durante la beta",
     subtitle:
-      "Creemos que debes comprobar la potencia y fiabilidad de nuestros agentes de IA antes de pagar nada. Durante nuestra fase de evaluación, todos los creadores reciben Power Points gratuitos.",
+      "Esta fase nos permite mejorar la calidad de las misiones, la fiabilidad de los resultados y la experiencia del espacio de trabajo. Las condiciones de suscripción se comunicarán antes de activar los pagos.",
     pillars: [
       {
         icon: Zap,
-        title: "Cómputo y MicroVMs Gratuitos",
+        title: "Un espacio para empezar",
         description:
-          "Cada cuenta recibe créditos Power sin requerir tarjeta de crédito. Ejecuta código real en microVMs Linux seguras y prueba el estudio de forma gratuita.",
+          "Explora las herramientas disponibles, describe una necesidad y descubre cómo Idealy estructura una misión antes de empezar a construir.",
       },
       {
         icon: Gauge,
-        title: "Transparencia en el modelo Power",
+        title: "Uso de recursos comprensible",
         description:
-          "El Power mide el consumo computacional real: una tarea simple cuesta ~10 pts, una misión completa de escuadra multi-agente cuesta ~50 pts.",
+          "Los Power Points representan los recursos que utilizan las misiones. El consumo depende del alcance y la complejidad del trabajo solicitado.",
       },
       {
         icon: ShieldCheck,
-        title: "Sin barreras de pago apresuradas",
+        title: "Sin pagos durante la beta",
         description:
-          "Optimizamos continuamente la orquestación y el rendimiento de los sandbox. Los pagos solo se abrirán cuando la experiencia sea impecable.",
+          "Puedes evaluar Idealy durante esta fase sin tarjeta bancaria. Los planes de suscripción se explicarán antes de que estén disponibles.",
       },
     ],
     betaNotice:
-      "Pagos suspendidos en fase Beta — Elige un plan para reclamar tu acceso Pionero gratuito",
+      "Durante la beta, no necesitas pagar para descubrir Idealy. Los planes mostrados presentan las ofertas previstas.",
   },
 } as const;
 
@@ -186,8 +186,19 @@ export default function WelcomePage() {
   const betaCopy = betaPolicyCopy[lang === "en" ? "en" : lang === "es" ? "es" : "fr"];
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-[#0A0D14] text-white selection:bg-violet-500 selection:text-white">
-      <CosmicHorizon />
+    <main
+      className={`welcome-page relative min-h-dvh overflow-hidden bg-[#0A0D14] text-white selection:bg-violet-500 selection:text-white ${resolvedTheme === "light" ? "welcome-page--light" : "welcome-page--dark"}`}
+    >
+      <div
+        aria-hidden="true"
+        className="welcome-light-backdrop pointer-events-none absolute inset-0 z-0"
+      />
+      <div
+        aria-hidden="true"
+        className="welcome-dark-backdrop pointer-events-none absolute inset-0 z-0"
+      >
+        <CosmicHorizon />
+      </div>
 
       {/* High-Energy Colliding Orbs bringing vibrant life to the screen */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -264,7 +275,7 @@ export default function WelcomePage() {
           {/* Theme Toggle */}
           {mounted ? (
             <button
-              aria-label="Toggle Theme"
+              aria-label={resolvedTheme === "dark" ? (lang === "fr" ? "Activer le thème clair" : lang === "es" ? "Activar tema claro" : "Enable light theme") : (lang === "fr" ? "Activer le thème sombre" : lang === "es" ? "Activar tema oscuro" : "Enable dark theme")} title={resolvedTheme === "dark" ? (lang === "fr" ? "Thème clair" : lang === "es" ? "Tema claro" : "Light theme") : (lang === "fr" ? "Thème sombre" : lang === "es" ? "Tema oscuro" : "Dark theme")}
               className="flex size-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/70 backdrop-blur transition hover:bg-white/15 hover:text-white"
               onClick={() =>
                 setTheme(resolvedTheme === "dark" ? "light" : "dark")
@@ -506,7 +517,7 @@ export default function WelcomePage() {
               </div>
             </div>
 
-            <div className="mt-9">
+            <div className="mt-9" id="squad">
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/45">{wayCopy.focus}</p>
               <div className="mt-4 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 md:grid-cols-3">
                 {wayCopy.roles.map(([role, description], index) => (

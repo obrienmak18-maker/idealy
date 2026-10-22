@@ -50,7 +50,7 @@ const suggestionCatalog: SuggestionEntry[] = [
       "Cadrer la proposition de valeur, les sections clés et générer un prototype complet avec landing page.",
     label: "Prototype de lancement",
     prompt:
-      "Prépare un prototype de lancement pour mon idée. Clarifie le message principal, le public cible, la preuve de valeur, les sections de la page et les actions attendues. Génère ensuite une structure de contenu précise avant de passer à la preview.",
+      "Build a real, responsive product landing page for my startup. Create a polished hero, feature sections, pricing, testimonials, FAQ, mobile navigation and a working primary CTA. Use realistic content and finish the interface instead of returning a written plan.",
     tags: ["site", "prototype", "startup", "beginner", "intermediate"],
     gradient: "from-sky-500/20 to-blue-600/10 border-sky-500/20 text-sky-400",
   },
@@ -60,7 +60,7 @@ const suggestionCatalog: SuggestionEntry[] = [
       "Concevoir une application complète et responsive prête pour la production (UI, logique et données).",
     label: "Créer une application",
     prompt:
-      "Je veux construire une application complète et fonctionnelle. Aide-moi à choisir la structure des écrans, le parcours principal, les états vides et de chargement, les données de démonstration et les composants réutilisables. Commence par vérifier que le périmètre est suffisamment clair.",
+      "Build a complete, usable web application from this idea. Create the actual screens, navigation, responsive layout, interactive forms, realistic sample data, empty/loading/error states and working client-side interactions. Ask one concise question only if the product goal is genuinely unclear; otherwise start building.",
     tags: ["web", "site", "prototype", "intermediate", "advanced"],
     gradient: "from-violet-500/20 to-indigo-600/10 border-violet-500/20 text-violet-400",
   },
@@ -70,7 +70,7 @@ const suggestionCatalog: SuggestionEntry[] = [
       "Identité de marque, logo vectoriel, tokens de design et bannières visuelles coordonnées.",
     label: "Design Studio",
     prompt:
-      "Conçois une identité de marque complète et son Design Studio pour mon projet. Définis la palette de couleurs, la typographie, le logo vectoriel SVG, les tokens de design et les bannières visuelles coordonnées avant de lancer les maquettes.",
+      "Build an interactive brand design studio web app with editable color palettes, typography previews, logo/SVG preview, design tokens, component samples and export/copy actions. Make the controls work and present the result as a real application, not a written brand document.",
     tags: ["startup", "saas", "other", "beginner", "non_coder"],
     gradient: "from-fuchsia-500/20 to-purple-600/10 border-fuchsia-500/20 text-fuchsia-400",
   },
@@ -80,7 +80,7 @@ const suggestionCatalog: SuggestionEntry[] = [
       "Concevoir une application claire et accessible pour élèves, enseignants et parents.",
     label: "Créer une application scolaire",
     prompt:
-      "Aide-moi à concevoir une application scolaire claire et accessible. Commence par comprendre les utilisateurs (élèves, enseignants et parents), le problème prioritaire, les fonctionnalités essentielles, les données à prévoir et le style d’interface. Propose d’abord une spécification courte avant toute construction.",
+      "Build a responsive school management web app for school administrators, teachers and parents. Include student profiles, attendance, tuition payments, grades, search/filter controls and a dashboard with realistic demo data. Create working navigation and interactions; do not return only a specification.",
     tags: ["mobile", "web", "prototype", "beginner", "intermediate"],
     gradient: "from-emerald-500/20 to-teal-600/10 border-emerald-500/20 text-emerald-400",
   },
@@ -90,7 +90,7 @@ const suggestionCatalog: SuggestionEntry[] = [
       "Clarifier l’objectif, le public cible et établir un plan de mission concret avant le code.",
     label: "Structurer mon idée de produit",
     prompt:
-      "Aide-moi à clarifier mon idée de produit. Pose les questions utiles sur l’objectif, le public, la proposition de valeur, les contraintes et le résultat attendu, puis transforme les réponses en plan de mission concret avant de construire quoi que ce soit.",
+      "Help me turn my product idea into a small working first version. Ask at most one essential clarifying question, then build the main screen and core interaction with realistic sample data instead of producing a document or a long plan.",
     tags: ["startup", "saas", "other", "beginner", "non_coder"],
     gradient: "from-amber-500/20 to-orange-600/10 border-amber-500/20 text-amber-400",
   },
@@ -100,7 +100,7 @@ const suggestionCatalog: SuggestionEntry[] = [
       "Distinguer planification, exécution et validation avec des jalons d’avancement précis.",
     label: "Transformer mon objectif en étapes",
     prompt:
-      "Transforme mon objectif en étapes de réalisation réalistes. Distingue ce qui doit être compris, planifié, construit et vérifié. Signale les décisions manquantes et propose une première mission courte plutôt qu’un périmètre trop large.",
+      "Turn my goal into a small working app with one clear core workflow. Build the interface and interactive first version now, use realistic sample data, and keep any planning brief and directly tied to implementation.",
     tags: ["mobile", "web", "internal_tool", "non_coder", "beginner"],
     gradient: "from-cyan-500/20 to-blue-600/10 border-cyan-500/20 text-cyan-400",
   },
@@ -263,7 +263,7 @@ function PureSuggestedActions({
               }}
             >
               <button
-                className="group/card relative flex min-h-[148px] w-full flex-col justify-between rounded-2xl border border-white/10 bg-card/30 p-4 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-violet-500/50 hover:bg-card/50 hover:shadow-[0_12px_36px_rgba(139,92,246,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4.5"
+                className="group/card relative flex min-h-[104px] w-full flex-col justify-between rounded-xl border border-white/10 bg-card/20 p-3 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-violet-500/50 hover:bg-card/50 hover:shadow-[0_12px_36px_rgba(139,92,246,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4.5"
                 onClick={() => handleSuggestionClick(entry)}
                 type="button"
               >
@@ -279,17 +279,17 @@ function PureSuggestedActions({
                 </div>
 
                 {/* Middle: Title & Description */}
-                <div className="mt-3">
-                  <h3 className="text-sm font-semibold tracking-tight text-foreground transition-colors group-hover/card:text-violet-300">
+                <div className="mt-2">
+                  <h3 className="text-xs font-semibold tracking-tight text-foreground transition-colors group-hover/card:text-violet-300">
                     {entry.label}
                   </h3>
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground/80">
+                  <p className="mt-1 line-clamp-1 text-[11px] leading-relaxed text-muted-foreground/75">
                     {entry.description}
                   </p>
                 </div>
 
                 {/* Bottom: Subtle arrow */}
-                <div className="mt-2.5 flex items-center justify-end text-xs text-muted-foreground/60 transition-colors group-hover/card:text-violet-300">
+                <div className="mt-1.5 flex items-center justify-end text-[10px] text-muted-foreground/50 transition-colors group-hover/card:text-violet-300">
                   <ArrowRight aria-hidden="true" className="size-3.5 transition-transform group-hover/card:translate-x-1" />
                 </div>
               </button>

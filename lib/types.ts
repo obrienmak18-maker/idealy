@@ -2,6 +2,11 @@ import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { createDocument } from "./ai/tools/create-document";
+import type { editDocument } from "./ai/tools/edit-document";
+import type { executeSandbox } from "./ai/tools/execute-sandbox";
+import type { generateImage } from "./ai/tools/generate-image";
+import type { searchImages } from "./ai/tools/search-images";
+import type { webSearch } from "./ai/tools/web-search";
 import type { getWeather } from "./ai/tools/get-weather";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
 import type { updateDocument } from "./ai/tools/update-document";
@@ -20,6 +25,11 @@ export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
 type weatherTool = InferUITool<typeof getWeather>;
 type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;
+type editDocumentTool = InferUITool<ReturnType<typeof editDocument>>;
+type executeSandboxTool = InferUITool<ReturnType<typeof executeSandbox>>;
+type generateImageTool = InferUITool<ReturnType<typeof generateImage>>;
+type searchImagesTool = InferUITool<ReturnType<typeof searchImages>>;
+type webSearchTool = InferUITool<ReturnType<typeof webSearch>>;
 type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
 type requestSuggestionsTool = InferUITool<
   ReturnType<typeof requestSuggestions>
@@ -28,8 +38,22 @@ type requestSuggestionsTool = InferUITool<
 export type ChatTools = {
   getWeather: weatherTool;
   createDocument: createDocumentTool;
+  editDocument: editDocumentTool;
   updateDocument: updateDocumentTool;
   requestSuggestions: requestSuggestionsTool;
+  searchImages: searchImagesTool;
+  generateImage: generateImageTool;
+  webSearch: webSearchTool;
+  executeSandbox: executeSandboxTool;
+};
+
+export type IdealyChatToolActivity = {
+  toolCallId: string;
+  kind: "webSearch" | "searchImages" | "generateImage";
+  state: "input-available" | "output-available" | "output-error";
+  input: Record<string, unknown>;
+  output?: Record<string, unknown>;
+  errorText?: string | null;
 };
 
 export type WaitingStatusData = {
@@ -58,6 +82,7 @@ export type CustomUIDataTypes = {
   "idealy-mission": string;
   "idealy-plan": MissionPlan;
   "idealy-file-event": MissionFileEvent;
+  "idealy-tool-activity": IdealyChatToolActivity;
 };
 
 export type ChatMessage = UIMessage<

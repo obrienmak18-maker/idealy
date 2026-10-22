@@ -12,24 +12,24 @@ const authShellCopy = {
     back: "Back to Idealy",
     notice: "AI can make mistakes. Verify important information before acting.",
     subtitle:
-      "Imagine, structure and steer your project from one creation workspace.",
-    title: "Turn an intention into a concrete experience.",
+      "Move from an idea to a working application with clear steps and an AI-assisted workspace.",
+    title: "One workspace to plan, build and review your application.",
   },
   es: {
     back: "Volver a Idealy",
     notice:
       "La IA puede cometer errores. Verifica la información importante antes de actuar.",
     subtitle:
-      "Imagina, estructura y dirige tu proyecto desde un espacio de creación unificado.",
-    title: "Transforma una intención en una experiencia concreta.",
+      "Pasa de una idea a una aplicación funcional con pasos claros y un espacio de trabajo asistido por IA.",
+    title: "Un espacio para planificar, construir y revisar tu aplicación.",
   },
   fr: {
     back: "Retour à Idealy",
     notice:
       "L’IA peut se tromper. Vérifiez les informations importantes avant d’agir.",
     subtitle:
-      "Imaginez, structurez et pilotez votre projet depuis un espace de création unifié.",
-    title: "Transformez une intention en expérience concrète.",
+      "Passez d’une idée à une application concrète grâce à des étapes visibles et à un environnement de travail assisté par l’IA.",
+    title: "Un espace pour planifier, construire et vérifier votre application.",
   },
 } as const;
 
@@ -55,7 +55,7 @@ async function AuthShell({ children }: { children: React.ReactNode }) {
     authShellCopy[locale === "en" || locale === "es" ? locale : "fr"];
 
   return (
-    <div className="relative flex min-h-dvh w-full overflow-hidden bg-[#0A0D14]">
+    <div className="idealy-auth-shell relative flex min-h-dvh w-full overflow-hidden bg-[#0A0D14]">
       <CosmicHorizon />
 
       {/* High-Energy Colliding Orbs bringing vibrant life to the auth screen */}

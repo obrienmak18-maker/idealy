@@ -1,13 +1,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encryptIntegrationToken } from "../_shared/integrationCrypto.ts";
 
-const APP_ORIGIN =
-  Deno.env.get("APP_ORIGIN") ??
-  Deno.env.get("APP_URL") ??
-  "http://localhost:3000";
+const APP_ORIGIN = (
+  Deno.env.get("APP_ORIGIN")?.trim() ||
+  Deno.env.get("APP_URL")?.trim() ||
+  Deno.env.get("NEXT_PUBLIC_SITE_URL")?.trim() ||
+  (Deno.env.get("VERCEL_PROJECT_PRODUCTION_URL")?.trim()
+    ? "https://" + Deno.env.get("VERCEL_PROJECT_PRODUCTION_URL")!.trim()
+    : "") ||
+  (Deno.env.get("VERCEL_URL")?.trim()
+    ? "https://" + Deno.env.get("VERCEL_URL")!.trim()
+    : "") ||
+  "https://idealy-ai.vercel.app"
+);
 
 function redirect(query: string) {
-  return Response.redirect(`${APP_ORIGIN.replace(/\/$/, "")}/connectors?${query}`);
+  const target = new URL("/connectors", APP_ORIGIN);
+  target.search = query;
+  return Response.redirect(target.toString());
 }
 
 function encodeBase64Url(bytes: ArrayBuffer | Uint8Array): string {

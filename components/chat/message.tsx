@@ -13,8 +13,7 @@ import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
 import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
-import { useArtifact } from "@/hooks/use-artifact";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage, IdealyChatToolActivity } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
@@ -24,21 +23,28 @@ import {
   ToolHeader,
   ToolInput,
   ToolOutput,
+  type ToolPart,
 } from "../ai-elements/tool";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
 import { MessageActions } from "./message-actions";
+import { ToolActivityCard } from "./tool-activity-card";
 import { MessageReasoning } from "./message-reasoning";
-import { MultiAgentRelay } from "./multi-agent-relay";
 import { extractPlanOptionsFromText, PlanChoices, textBeforePlanOptions, type PlanOption } from "./plan-choices";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
 
 function WaitingText() {
   const { waitingStatus } = useDataStream();
-  const waitingText =
-    waitingStatus?.message ?? "L'escouade prépare l'intervention…";
+  const { language } = useTranslation();
+  const locale = language === "en" || language === "es" ? language : "fr";
+  const fallbackText = locale === "en"
+    ? "The squad is preparing the next step…"
+    : locale === "es"
+      ? "El equipo está preparando el siguiente paso…"
+      : "L’escouade prépare la prochaine étape…";
+  const waitingText = waitingStatus?.message ?? fallbackText;
 
   return (
     <div className="flex min-h-[calc(13px*1.65)] min-w-0 items-center text-[13px] leading-[1.65]">
@@ -60,14 +66,15 @@ function ToolApprovalActions({
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   approvalId: string;
 }) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const denialReason = language.startsWith("en") ? "The user declined the weather lookup." : language.startsWith("es") ? "El usuario rechazó la consulta del tiempo." : "L’utilisateur a refusé la recherche météo.";
   const handleDeny = useCallback(() => {
     addToolApprovalResponse({
       approved: false,
       id: approvalId,
-      reason: "User denied weather lookup",
+      reason: denialReason,
     });
-  }, [addToolApprovalResponse, approvalId]);
+  }, [addToolApprovalResponse, approvalId, denialReason]);
 
   const handleAllow = useCallback(() => {
     addToolApprovalResponse({
@@ -113,21 +120,21 @@ function parseProgressiveSections(text: string): {
   for (const rawLine of lines) {
     const line = rawLine.trim();
     const faitMatch = line.match(
-      /^(?:[-*•]\s*)?(?:✓\s*|\[x\]\s*)?(?:Fait|Ce qui a été fait)\s*:\s*(.+)$/i
+      /^(?:[-*•]\s*)?(?:✓\s*|\[x\]\s*)?(?:Fait|Ce qui a été fait|Done|Completed|Hecho|Completado)\s*:\s*(.+)$/i
     );
     if (faitMatch?.[1]) {
       fait = faitMatch[1].trim();
     }
 
     const resteMatch = line.match(
-      /^(?:[-*•]\s*)?(?:⏳\s*|\[\s*\]\s*)?(?:Reste|Ce qui reste)\s*:\s*(.+)$/i
+      /^(?:[-*•]\s*)?(?:⏳\s*|\[\s*\]\s*)?(?:Reste|Ce qui reste|Remaining|What's left|Pendiente|Por hacer)\s*:\s*(.+)$/i
     );
     if (resteMatch?.[1]) {
       reste = resteMatch[1].trim();
     }
 
     const attentionMatch = line.match(
-      /^(?:[-*•]\s*)?(?:⚠️\s*|!\s*)?(?:Attention|Point d'attention|Points d'attention)\s*:\s*(.+)$/i
+      /^(?:[-*•]\s*)?(?:⚠️\s*|!\s*)?(?:Attention|Point d'attention|Points d'attention|Warning|Caution|Atención|Advertencia)\s*:\s*(.+)$/i
     );
     if (attentionMatch?.[1]) {
       attention = attentionMatch[1].trim();
@@ -164,6 +171,13 @@ function ProgressiveTextMessage({
   onSelectPlanOption?: (option: PlanOption) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { language } = useTranslation();
+  const locale = language === "en" || language === "es" ? language : "fr";
+  const labels = {
+    fr: { summary: "En résumé :", expand: "Afficher les détails", collapse: "Replier les détails", done: "Fait :", remaining: "Reste :", attention: "Attention :" },
+    en: { summary: "In summary:", expand: "Show details", collapse: "Collapse details", done: "Done:", remaining: "Remaining:", attention: "Note:" },
+    es: { summary: "En resumen:", expand: "Ver detalles", collapse: "Contraer detalles", done: "Hecho:", remaining: "Pendiente:", attention: "Aviso:" },
+  }[locale];
   const planOptions = isAssistant ? extractPlanOptionsFromText(text) : null;
   const displayText = planOptions ? textBeforePlanOptions(text) : text;
   const { conclusion, status, lineCount, isLong } =
@@ -187,21 +201,13 @@ function ProgressiveTextMessage({
       {/* ① Conclusion en une phrase visible immédiatement */}
       {isAssistant && conclusion && isLong && !isLoading && (
         <div className="rounded-lg bg-surface-container-lowest/80 border border-border/50 px-3 py-2 text-[13px] font-medium text-foreground/90 shadow-xs">
-          <span className="text-primary font-semibold mr-1.5">En résumé :</span>
+          <span className="text-primary font-semibold mr-1.5">{labels.summary}</span>
           {conclusion}
         </div>
       )}
 
       {displayText.trim().length > 0 && (
         <>
-          {/* Le corps d'une réponse proposant des choix ne répète pas la liste qui est devenue interactive. */}
-          {isAssistant && conclusion && isLong && !isLoading && (
-            <div className="rounded-lg bg-surface-container-lowest/80 border border-border/50 px-3 py-2 text-[13px] font-medium text-foreground/90 shadow-xs">
-              <span className="text-primary font-semibold mr-1.5">En résumé :</span>
-              {conclusion}
-            </div>
-          )}
-
           <div
             className={cn("relative transition-[max-height] duration-200", {
               "max-h-[180px] overflow-hidden": shouldCollapse,
@@ -237,12 +243,12 @@ function ProgressiveTextMessage({
               {isExpanded ? (
                 <>
                   <ChevronUp className="size-3.5" />
-                  <span>Replier les détails</span>
+                  <span>{labels.collapse}</span>
                 </>
               ) : (
                 <>
                   <ChevronDown className="size-3.5" />
-                  <span>Afficher les détails ({lineCount} lignes)</span>
+                  <span>{labels.expand} ({lineCount} {locale === "en" ? "lines" : locale === "es" ? "líneas" : "lignes"})</span>
                 </>
               )}
             </button>
@@ -255,7 +261,7 @@ function ProgressiveTextMessage({
                   <CheckCircle2 className="size-3.5 text-emerald-500 mt-0.5 shrink-0" />
                   <div>
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      Fait :{" "}
+                      {labels.done}{" "}
                     </span>
                     {status.fait}
                   </div>
@@ -266,7 +272,7 @@ function ProgressiveTextMessage({
                   <Clock className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
                   <div>
                     <span className="font-semibold text-amber-600 dark:text-amber-400">
-                      Reste :{" "}
+                      {labels.remaining}{" "}
                     </span>
                     {status.reste}
                   </div>
@@ -277,7 +283,7 @@ function ProgressiveTextMessage({
                   <AlertTriangle className="size-3.5 text-rose-500 mt-0.5 shrink-0" />
                   <div>
                     <span className="font-semibold text-rose-600 dark:text-rose-400">
-                      Attention :{" "}
+                      {labels.attention}{" "}
                     </span>
                     {status.attention}
                   </div>
@@ -309,6 +315,7 @@ const PurePreviewMessage = ({
   onEdit,
   isFirstAssistantMessage = false,
   isAlvinRequested = false,
+  requestedAgentName,
   onPlanSelection,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -323,6 +330,7 @@ const PurePreviewMessage = ({
   onEdit?: (message: ChatMessage) => void;
   isFirstAssistantMessage?: boolean;
   isAlvinRequested?: boolean;
+  requestedAgentName?: string;
   onPlanSelection?: (option: PlanOption) => void;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
@@ -334,27 +342,20 @@ const PurePreviewMessage = ({
   const { t } = useTranslation();
 
   const { currentWay } = useGamificationStore();
-  const { metadata } = useArtifact();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const chiefAgent =
     activeWayData?.agents?.find((agent) => agent.isChief) ??
     activeWayData?.agents?.[0];
 
-  const missionSquadStatus =
-    typeof metadata?.missionSquadStatus === "string"
-      ? metadata.missionSquadStatus
-      : null;
-  const isLiveBuildState =
-    missionSquadStatus === "building" ||
-    missionSquadStatus === "auto_correction_started";
-
   // Alvin introduces the first response or returns only when explicitly called.
   // Individual builder/reviewer identities are not inferred from natural-language
   // text; the live progress pill is driven by persisted backend mission events.
-  const activeAgent =
-    isAlvinRequested || isFirstAssistantMessage
-      ? alvinMessenger
-      : (chiefAgent ?? alvinMessenger);
+  const explicitlyRequestedAgent = requestedAgentName
+    ? activeWayData.agents.find((agent) => agent.name === requestedAgentName)
+    : undefined;
+  const activeAgent = isAlvinRequested
+    ? alvinMessenger
+    : explicitlyRequestedAgent ?? (isFirstAssistantMessage ? alvinMessenger : (chiefAgent ?? alvinMessenger));
   const agentName = activeAgent.name;
   const agentRole = activeAgent.role;
   const agentAvatar = activeAgent.avatarUrl;
@@ -368,7 +369,7 @@ const PurePreviewMessage = ({
       (part.type === "reasoning" &&
         "text" in part &&
         part.text?.trim().length > 0) ||
-      part.type.startsWith("tool-")
+      part.type.startsWith("tool-") || part.type === "data-idealy-tool-activity"
   );
   const isThinking = isAssistant && isLoading && !hasAnyContent;
 
@@ -438,6 +439,64 @@ const PurePreviewMessage = ({
       );
     }
 
+    if (type === "data-idealy-tool-activity") {
+      const dataPart = part as unknown as {
+        data?: IdealyChatToolActivity;
+        id?: string;
+      };
+      const activity = dataPart.data;
+      if (
+        !activity ||
+        (activity.kind !== "webSearch" &&
+          activity.kind !== "searchImages" &&
+          activity.kind !== "generateImage")
+      ) {
+        return null;
+      }
+      return (
+        <ToolActivityCard
+          key={activity.toolCallId || dataPart.id || key}
+          toolCallId={activity.toolCallId || dataPart.id || key}
+          kind={activity.kind}
+          state={activity.state as ToolPart["state"]}
+          input={activity.input}
+          output={activity.output}
+          errorText={activity.errorText}
+        />
+      );
+    }
+
+    const activityTool =
+      type === "tool-webSearch"
+        ? "webSearch"
+        : type === "tool-searchImages"
+          ? "searchImages"
+          : type === "tool-generateImage"
+            ? "generateImage"
+            : type === "tool-executeSandbox"
+              ? "executeSandbox"
+              : null;
+    if (activityTool) {
+      const activityPart = part as unknown as {
+        toolCallId: string;
+        state: ToolPart["state"];
+        input?: unknown;
+        output?: unknown;
+        errorText?: string | null;
+      };
+      return (
+        <ToolActivityCard
+          key={activityPart.toolCallId || key}
+          toolCallId={activityPart.toolCallId || key}
+          kind={activityTool}
+          state={activityPart.state}
+          input={activityPart.input}
+          output={activityPart.output}
+          errorText={activityPart.errorText}
+        />
+      );
+    }
+
     if (type === "tool-getWeather") {
       const { toolCallId, state } = part;
       const approvalId = (part as { approval?: { id: string } }).approval?.id;
@@ -459,7 +518,7 @@ const PurePreviewMessage = ({
       if (isDenied) {
         return (
           <div className={widthClass} key={toolCallId}>
-            <Tool className="w-full" defaultOpen={true}>
+            <Tool className="w-full" defaultOpen={false}>
               <ToolHeader state="output-denied" type="tool-getWeather" />
               <ToolContent>
                 <div className="px-4 py-3 text-muted-foreground text-sm">
@@ -477,7 +536,7 @@ const PurePreviewMessage = ({
       if (state === "approval-responded") {
         return (
           <div className={widthClass} key={toolCallId}>
-            <Tool className="w-full" defaultOpen={true}>
+            <Tool className="w-full" defaultOpen={false}>
               <ToolHeader state={state} type="tool-getWeather" />
               <ToolContent>
                 <ToolInput input={part.input} />
@@ -489,7 +548,7 @@ const PurePreviewMessage = ({
 
       return (
         <div className={widthClass} key={toolCallId}>
-          <Tool className="w-full" defaultOpen={true}>
+          <Tool className="w-full" defaultOpen={state === "approval-requested" || state === "input-available" || state === "input-streaming"}>
             <ToolHeader state={state} type="tool-getWeather" />
             <ToolContent>
               {(state === "input-available" ||
@@ -560,13 +619,33 @@ const PurePreviewMessage = ({
       );
     }
 
+    if (type === "tool-editDocument") {
+      const { toolCallId } = part;
+      if (part.output && typeof part.output === "object" && "error" in part.output) {
+        return (
+          <div key={toolCallId} className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-xs text-destructive">
+            {String(part.output.error)}
+          </div>
+        );
+      }
+      return (
+        <div className="relative" key={toolCallId}>
+          <DocumentPreview
+            args={part.output && typeof part.output === "object" ? { ...part.output, isUpdate: true } : { isUpdate: true }}
+            isReadonly={isReadonly}
+            result={part.output}
+          />
+        </div>
+      );
+    }
+
     if (type === "tool-requestSuggestions") {
       const { toolCallId, state } = part;
 
       return (
         <Tool
           className="w-[min(100%,450px)]"
-          defaultOpen={true}
+          defaultOpen={state !== "output-available" && state !== "output-denied" && state !== "output-error"}
           key={toolCallId}
         >
           <ToolHeader state={state} type="tool-requestSuggestions" />
@@ -623,17 +702,6 @@ const PurePreviewMessage = ({
   ) : (
     <>
       {attachments}
-      {isAssistant && isLoading && isLiveBuildState &&
-        !isFirstAssistantMessage && !isAlvinRequested && (
-          <MultiAgentRelay
-            activityState={missionSquadStatus === "auto_correction_started" ? "correcting" : "building"}
-            currentAgentName="Équipe Idealy"
-            currentWay={currentWay}
-            hasToolExecution
-            isFinished={false}
-            isLoading
-          />
-        )}
       {parts}
       {actions}
     </>
@@ -672,8 +740,8 @@ const PurePreviewMessage = ({
               <span className="text-[13px] font-semibold tracking-tight text-foreground/90">
                 {agentName}
               </span>
-              <span className="text-[11px] text-muted-foreground font-mono">
-                • {agentRole}
+              <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {agentRole}
               </span>
             </div>
             {/* Le texte coule directement sur le fond de l'interface, sans bulle fermée ni bordure artificielle */}

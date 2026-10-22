@@ -2,8 +2,10 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import { ArrowDownIcon, FileText, Sparkles } from "lucide-react";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useMessages } from "@/hooks/use-messages";
+import { useArtifact } from "@/hooks/use-artifact";
 import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
+import { AnimatePresence, motion } from "framer-motion";
 import type { ChatMessage } from "@/lib/types";
 import { redactLikelySecrets } from "@/lib/sensitive-text";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,7 @@ import { WorkspaceTemplates } from "./workspace-templates";
 import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import type { PlanOption } from "./plan-choices";
+import { MultiAgentRelay } from "./multi-agent-relay";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -56,9 +59,34 @@ function PureMessages({
 }: MessagesProps) {
   const { t } = useTranslation();
   const { currentWay } = useGamificationStore();
+  const { metadata } = useArtifact();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const chiefAgent =
     activeWayData.agents.find((agent) => agent.isChief) ?? activeWayData.agents[0];
+
+  const missionId = typeof metadata?.missionId === "string" ? metadata.missionId : null;
+  const missionSquadStatus = typeof metadata?.missionSquadStatus === "string" ? metadata.missionSquadStatus : null;
+  const missionIsActive =
+    missionSquadStatus === "building" ||
+    missionSquadStatus === "reviewing" ||
+    missionSquadStatus === "auto_correction_started";
+  const missionAgentName =
+    typeof metadata?.missionActiveAgentName === "string" && metadata.missionActiveAgentName.trim()
+      ? metadata.missionActiveAgentName.trim()
+      : "";
+  const missionActiveAgent = missionAgentName
+    ? activeWayData.agents.find((agent) => agent.name.toLowerCase() === missionAgentName.toLowerCase())
+    : undefined;
+  const missionAgentRole =
+    typeof metadata?.missionActiveAgentRole === "string" && metadata.missionActiveAgentRole.trim()
+      ? metadata.missionActiveAgentRole.trim()
+      : missionActiveAgent?.role ?? "";
+  const missionFileCount = Array.isArray(metadata?.missionFiles)
+    ? metadata.missionFiles.filter((file: unknown) =>
+        Boolean(file && typeof file === "object" &&
+          "status" in file && (file.status === "saved" || file.status === "validated"))
+      ).length
+    : 0;
   const [activeHomeTab, setActiveHomeTab] = useState<
     "suggestions" | "templates" | "specification"
   >("suggestions");
@@ -258,23 +286,11 @@ function PureMessages({
               </div>
             </div>
 
-            {activeHomeTab === "suggestions" ? (
-              <SuggestedActions
-                chatId={chatId}
-                onSuggestionSelect={onSuggestionSelect}
-                selectedVisibilityType={selectedVisibilityType}
-                sendMessage={sendMessage}
-              />
-            ) : activeHomeTab === "templates" ? (
-              <WorkspaceTemplates onSelectTemplate={handleSelectTemplate} />
-            ) : (
-              <div className="w-full">
-                <IntakeSpecificationForm
-                  onCancel={handleIntakeCancel}
-                  onSubmit={handleIntakeSubmit}
-                />
-              </div>
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div key={activeHomeTab} className="w-full" initial={{ opacity: 0, y: 8, filter: "blur(3px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -6, filter: "blur(2px)" }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}>
+                {activeHomeTab === "suggestions" ? <SuggestedActions chatId={chatId} onSuggestionSelect={onSuggestionSelect} selectedVisibilityType={selectedVisibilityType} sendMessage={sendMessage} /> : activeHomeTab === "templates" ? <WorkspaceTemplates onSelectTemplate={handleSelectTemplate} /> : <IntakeSpecificationForm onCancel={handleIntakeCancel} onSubmit={handleIntakeSubmit} />}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       )}
@@ -305,6 +321,11 @@ function PureMessages({
                   priorUserText
                 );
 
+              const requestedAgentToken = priorUserText.match(/(?:^|\s)@([A-Za-z][A-Za-z0-9_-]{1,39})\b/)?.[1] ?? null;
+              const requestedAgentName = requestedAgentToken
+                ? activeWayData.agents.find((agent) => agent.name.toLowerCase() === requestedAgentToken.toLowerCase())?.name
+                : undefined;
+
               const showsExecutionPlan =
                 message.role === "assistant" &&
                 message.id === latestExecutionPlanMessageId;
@@ -315,6 +336,7 @@ function PureMessages({
                     addToolApprovalResponse={addToolApprovalResponse}
                     chatId={chatId}
                     isAlvinRequested={isAlvinRequested}
+                    requestedAgentName={requestedAgentName}
                     isFirstAssistantMessage={
                       message.role === "assistant" &&
                       messages.find((candidate) => candidate.role === "assistant")?.id ===
@@ -342,6 +364,23 @@ function PureMessages({
                 </Fragment>
               );
             })}
+
+            {missionId && missionIsActive ? (
+              <MultiAgentRelay
+                activityState={
+                  missionSquadStatus === "reviewing"
+                    ? "reviewing"
+                    : missionSquadStatus === "auto_correction_started"
+                      ? "correcting"
+                      : "building"
+                }
+                currentAgentAvatar={missionActiveAgent?.avatarUrl}
+                currentAgentName={missionActiveAgent?.name ?? (missionAgentName || chiefAgent?.name || alvinMessenger.name)}
+                currentAgentRole={missionAgentRole}
+                currentWay={currentWay}
+                filesCount={missionFileCount}
+              />
+            ) : null}
 
             {status === "submitted" &&
               messages.at(-1)?.role !== "assistant" && (

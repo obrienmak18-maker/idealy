@@ -19,6 +19,11 @@ const [contract, adapter, route, page, layout, packageJson, workflow] = await Pr
 
 assert(contract.includes("onboardingInputSchema"), "Onboarding must have a shared Zod schema.");
 assert(contract.includes("idealyWays"), "Onboarding must use the central Way contract.");
+assert(!contract.includes("preferredVoice"), "Audio voice preferences must not be collected during onboarding.");
+assert(!page.includes("speechSynthesis") && !page.includes("voicePresets"), "Audio playback controls must stay out of onboarding.");
+assert(page.includes("Object.values(wayPresentations)"), "Onboarding must retain the Idealy Way selector.");
+assert(page.includes("{accountEmail ||"), "Account email must be derived from the authenticated server session.");
+assert(!contract.includes("tone: z.enum"), "Do not collect onboarding settings that are not persisted.");
 assert(adapter.includes("completeMyIdealyOnboarding"), "Server adapter must call the onboarding RPC.");
 assert(adapter.includes("rpc/complete_my_onboarding"), "Onboarding must not PATCH profiles directly.");
 assert(route.includes("getToken"), "Onboarding route must require the authenticated server session.");
@@ -33,6 +38,7 @@ assert(route.includes("simulated: true"), "Explicit demo onboarding must be iden
 assert(page.includes("Étape {step + 1} sur {steps.length}"), "Onboarding UI must expose its step progress.");
 assert(page.includes("/api/idealy/profile/onboarding"), "Onboarding UI must use the authenticated API route.");
 assert(page.includes("Object.values(wayPresentations)"), "Onboarding UI must render the central Way presentations.");
+assert(contract.includes('"tiktok"') && contract.includes('"youtube"') && page.includes("How did you hear about Idealy?"), "Discovery-source question must remain available.");
 assert(!page.includes("document.cookie = `idealy_onboarding_completed=true"), "The browser must not locally mark onboarding complete.");
 assert(layout.includes("getMyIdealyOnboardingStatus"), "Workspace must evaluate onboarding status server-side.");
 assert(layout.includes("redirect(\"/onboarding\")"), "Workspace must gate incomplete regular profiles.");

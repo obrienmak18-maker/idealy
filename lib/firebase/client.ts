@@ -9,6 +9,7 @@ import {
   getRedirectResult,
   GoogleAuthProvider,
   getAuth,
+  sendEmailVerification,
   sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
@@ -108,6 +109,18 @@ export async function signUpWithEmailFirebase(
     password
   );
   return credential.user.getIdToken();
+}
+
+export function isFirebaseCurrentUserEmailVerified(): boolean {
+  return getFirebaseAuth().currentUser?.emailVerified === true;
+}
+
+export async function sendEmailVerificationFirebase(): Promise<void> {
+  const user = getFirebaseAuth().currentUser;
+  if (!user) {
+    throw new Error("firebase_user_not_found");
+  }
+  await sendEmailVerification(user);
 }
 
 /** Ensure Supabase's third-party auth role claim is present on a fresh token.

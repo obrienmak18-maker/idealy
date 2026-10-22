@@ -10,16 +10,16 @@ export function CosmicHorizon() {
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
     >
-      {/* 1. Deep cosmic gradient mesh */}
-      <div className="absolute inset-0 bg-[#07080E]/95" />
+      {/* Theme-aware base surface. Keep the glow decorative so it never hides page content. */}
+      <div className="absolute inset-0 bg-background/75 dark:bg-[#07080E]/80" />
 
       {/* 2. Top-left Cyan & Emerald stellar flare */}
-      <div className="absolute -left-32 -top-24 size-[34rem] rounded-full bg-cyan-500/[0.08] blur-[120px]" />
-      <div className="absolute left-[5%] top-[10%] size-[24rem] rounded-full bg-emerald-500/[0.04] blur-[100px]" />
+      <div className="absolute -left-32 -top-24 size-[34rem] rounded-full bg-cyan-500/[0.035] dark:bg-cyan-500/[0.08] blur-[120px]" />
+      <div className="absolute left-[5%] top-[10%] size-[24rem] rounded-full bg-emerald-500/[0.025] dark:bg-emerald-500/[0.04] blur-[100px]" />
 
       {/* 3. Right & Bottom-Right Violet & Magenta Nebula */}
-      <div className="absolute -right-24 top-[15%] size-[36rem] rounded-full bg-violet-600/[0.12] blur-[130px]" />
-      <div className="absolute right-[5%] bottom-[5%] size-[30rem] rounded-full bg-fuchsia-500/[0.08] blur-[120px]" />
+      <div className="absolute -right-24 top-[15%] size-[36rem] rounded-full bg-violet-600/[0.045] dark:bg-violet-600/[0.12] blur-[130px]" />
+      <div className="absolute right-[5%] bottom-[5%] size-[30rem] rounded-full bg-fuchsia-500/[0.03] dark:bg-fuchsia-500/[0.08] blur-[120px]" />
 
       {/* 4. Sweeping Planetary Orbital Horizon Line */}
       <svg

@@ -22,6 +22,7 @@ import {
   useState,
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
+import { toast } from "sonner";
 import { useWindowSize } from "usehooks-ts";
 import { codeArtifact } from "@/artifacts/code/client";
 import { imageArtifact } from "@/artifacts/image/client";
@@ -33,7 +34,7 @@ import { voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 import type { Document, Vote } from "@/lib/db/schema";
 import type { MissionFile } from "@/lib/idealy/mission-files";
-import { compileProjectPreview } from "@/lib/idealy/preview-compiler";
+import { compileProjectPreview, extractAvailableRoutes } from "@/lib/idealy/preview-compiler";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn, fetcher } from "@/lib/utils";
 import { VersionFooter } from "./version-footer";
@@ -188,6 +189,30 @@ function PureArtifact({
   const missionFiles = Array.isArray(metadata?.missionFiles)
     ? (metadata.missionFiles as MissionFile[])
     : [];
+  // The workspace stores every immutable version. The editor tree must show
+  // one row per path, always selecting the highest version for that path.
+  const latestMissionFiles = useMemo(() => {
+    const byPath = new Map<string, MissionFile>();
+    for (const file of missionFiles) {
+      const previous = byPath.get(file.path);
+      if (!previous || file.version > previous.version) {
+        byPath.set(file.path, file);
+      }
+    }
+    return Array.from(byPath.values()).sort((left, right) =>
+      left.path.localeCompare(right.path)
+    );
+  }, [missionFiles]);
+  const selectedMissionFile = latestMissionFiles.find(
+    (file) => file.path === selectedMissionFilePath
+  );
+  const selectedMissionFileContent = missionFiles
+    .filter(
+      (file) =>
+        file.path === selectedMissionFilePath &&
+        typeof file.content === "string"
+    )
+    .sort((left, right) => right.version - left.version)[0]?.content;
 
   const [isInspectorActive, setIsInspectorActive] = useState(false);
   const [inspectedElement, setInspectedElement] = useState<InspectedElement | null>(null);
@@ -205,17 +230,24 @@ function PureArtifact({
   const userScrolledArtifact = useRef(false);
   const [isContentDirty, setIsContentDirty] = useState(false);
   const openPreviewWindowForEvents = useCallback(() => {
-    const previewWindow = window.open(
-      "",
-      "idealy-preview",
-      "popup,width=1280,height=820"
-    );
-    if (!previewWindow) {
+    // Keep window.open in the original click stack so browser popup protection
+    // does not silently discard a valid user action.
+    const html = previewHtmlForFrameRef.current || artifact.preview || "";
+    if (!html.trim()) {
+      toast.error("L’aperçu n’est pas encore prêt. Attends la génération du premier fichier.");
       return;
     }
-    previewWindow.document.write(
-      previewHtmlForFrameRef.current || artifact.preview || ""
-    );
+
+    const previewWindow = window.open("about:blank", "_blank");
+    if (!previewWindow) {
+      toast.error("Le navigateur a bloqué l’ouverture du nouvel onglet. Autorise les fenêtres surgissantes pour Idealy, puis réessaie.");
+      return;
+    }
+
+    // The generated preview is a standalone snapshot and does not need opener access.
+    previewWindow.opener = null;
+    previewWindow.document.open();
+    previewWindow.document.write(html);
     previewWindow.document.close();
   }, [artifact.preview]);
 
@@ -330,19 +362,19 @@ function PureArtifact({
   }, [missionWorkspace, setMetadata]);
 
   useEffect(() => {
-    if (missionFiles.length === 0) {
+    if (latestMissionFiles.length === 0) {
       return;
     }
-    const selectedFile = missionFiles.find(
+    const selectedFile = latestMissionFiles.find(
       (file) => file.path === selectedMissionFilePath && file.content !== undefined
     );
-    const firstAvailableFile = missionFiles.find(
+    const firstAvailableFile = latestMissionFiles.find(
       (file) => file.content !== undefined && file.status !== "error"
     );
     if (!selectedFile && firstAvailableFile) {
       setSelectedMissionFilePath(firstAvailableFile.path);
     }
-  }, [missionFiles, selectedMissionFilePath]);
+  }, [latestMissionFiles, selectedMissionFilePath]);
 
   useEffect(() => {
     if (documents && documents.length > 0) {
@@ -428,29 +460,238 @@ function PureArtifact({
     [artifact, isDemoMode, mutate, setArtifact]
   );
 
-  const latestContentRef = useRef<string>("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingEditorSaveRef = useRef<{
+    content: string;
+    key: string;
+    target: { missionId: string | null; path: string; version: number } | null;
+  } | null>(null);
+  const missionFileVersionsRef = useRef(new Map<string, number>());
+  const missionFileSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    for (const file of latestMissionFiles) {
+      const key = `${file.missionId}:${file.path}`;
+      const cachedVersion = missionFileVersionsRef.current.get(key) ?? 0;
+      if (file.version > cachedVersion) {
+        missionFileVersionsRef.current.set(key, file.version);
+      }
+    }
+  }, [latestMissionFiles]);
+
+  const persistMissionFileContent = useCallback(
+    async (
+      updatedContent: string,
+      target: { missionId: string | null; path: string; version: number }
+    ) => {
+      if (isDemoMode) {
+        const previous = latestMissionFiles.find((file) => file.path === target.path);
+        const missionIdForFile = target.missionId ?? previous?.missionId ?? "local-demo";
+        const nextVersion = Math.max(previous?.version ?? 0, target.version) + 1;
+        const file: MissionFile = {
+          ...(previous ?? {
+            missionId: missionIdForFile,
+            path: target.path,
+            status: "saved" as const,
+            version: 0,
+          }),
+          content: updatedContent,
+          missionId: missionIdForFile,
+          path: target.path,
+          status: "saved",
+          updatedAt: new Date().toISOString(),
+          version: nextVersion,
+        };
+        setMetadata((current: Record<string, unknown> | null) => {
+          const files = Array.isArray(current?.missionFiles)
+            ? (current.missionFiles as MissionFile[])
+            : [];
+          return {
+            ...(current ?? {}),
+            missionFiles: [
+              ...files.filter(
+                (entry) =>
+                  !(
+                    entry.missionId === file.missionId &&
+                    entry.path === file.path &&
+                    entry.version === file.version
+                  )
+              ),
+              file,
+            ],
+            missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
+          };
+        });
+        missionFileVersionsRef.current.set(
+          `${missionIdForFile}:${target.path}`,
+          nextVersion
+        );
+        setIsContentDirty(false);
+        toast.info("Modification conservée dans cette session de démonstration uniquement.");
+        return;
+      }
+
+      if (!target.missionId) {
+        handleContentChange(updatedContent);
+        return;
+      }
+
+      const versionKey = `${target.missionId}:${target.path}`;
+      const expectedVersion = Math.max(
+        target.version,
+        missionFileVersionsRef.current.get(versionKey) ?? target.version
+      );
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/idealy/missions/${encodeURIComponent(target.missionId)}/files/edit`,
+        {
+          body: JSON.stringify({
+            content: updatedContent,
+            expectedVersion,
+            path: target.path,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        }
+      );
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        file?: MissionFile;
+        lastSequence?: number | null;
+      } | null;
+
+      if (!response.ok || !payload?.file) {
+        toast.error(
+          payload?.error ??
+            "Le fichier n’a pas pu être enregistré. Réessaie après avoir rechargé le workspace."
+        );
+        return;
+      }
+
+      const savedFile = payload.file;
+      missionFileVersionsRef.current.set(versionKey, savedFile.version);
+      setMetadata((current: Record<string, unknown> | null) => {
+        const files = Array.isArray(current?.missionFiles)
+          ? (current.missionFiles as MissionFile[])
+          : [];
+        return {
+          ...(current ?? {}),
+          missionFiles: [
+            ...files.filter(
+              (entry) =>
+                !(
+                  entry.missionId === savedFile.missionId &&
+                  entry.path === savedFile.path &&
+                  entry.version === savedFile.version
+                )
+            ),
+            savedFile,
+          ],
+          missionFileLastSequence: Math.max(
+            Number(current?.missionFileLastSequence ?? 0),
+            Number(payload.lastSequence ?? 0)
+          ),
+          missionFileStatus: "file_saved",
+          missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
+        };
+      });
+      setIsContentDirty(false);
+    },
+    [handleContentChange, isDemoMode, latestMissionFiles, setMetadata]
+  );
+
+  const queueMissionFileSave = useCallback(
+    (
+      updatedContent: string,
+      target: { missionId: string | null; path: string; version: number }
+    ) => {
+      const save = missionFileSaveQueueRef.current.then(async () => {
+        try {
+          await persistMissionFileContent(updatedContent, target);
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "L’enregistrement du fichier a échoué."
+          );
+        }
+      });
+      missionFileSaveQueueRef.current = save;
+    },
+    [persistMissionFileContent]
+  );
+
+  const flushPendingEditorSave = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const pending = pendingEditorSaveRef.current;
+    pendingEditorSaveRef.current = null;
+    if (!pending) return;
+    if (pending.target) {
+      queueMissionFileSave(pending.content, pending.target);
+    } else {
+      handleContentChange(pending.content);
+    }
+  }, [handleContentChange, queueMissionFileSave]);
 
   const saveContent = useCallback(
     (updatedContent: string, debounce: boolean) => {
-      latestContentRef.current = updatedContent;
       setIsContentDirty(true);
+      const target =
+        selectedMissionFilePath &&
+        selectedMissionFile &&
+        (missionId || isDemoMode)
+          ? {
+              missionId,
+              path: selectedMissionFilePath,
+              version: selectedMissionFile.version,
+            }
+          : null;
+      const key = target
+        ? `${target.missionId ?? "local-demo"}:${target.path}`
+        : `document:${artifact.documentId}`;
 
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
         saveTimerRef.current = null;
+        if (pendingEditorSaveRef.current?.key !== key) {
+          flushPendingEditorSave();
+        }
       }
+
+      pendingEditorSaveRef.current = {
+        content: updatedContent,
+        key,
+        target,
+      };
 
       if (debounce) {
         saveTimerRef.current = setTimeout(() => {
-          handleContentChange(latestContentRef.current);
           saveTimerRef.current = null;
+          const pending = pendingEditorSaveRef.current;
+          pendingEditorSaveRef.current = null;
+          if (!pending) return;
+          if (pending.target) {
+            queueMissionFileSave(pending.content, pending.target);
+          } else {
+            handleContentChange(pending.content);
+          }
         }, 2000);
       } else {
-        handleContentChange(updatedContent);
+        flushPendingEditorSave();
       }
     },
-    [handleContentChange]
+    [
+      artifact.documentId,
+      flushPendingEditorSave,
+      handleContentChange,
+      isDemoMode,
+      missionId,
+      queueMissionFileSave,
+      selectedMissionFile,
+      selectedMissionFilePath,
+    ]
   );
 
   const getDocumentContentById = useCallback(
@@ -536,16 +777,37 @@ function PureArtifact({
   }, [artifact.documentId, artifactDefinition, setMetadata]);
 
   const compiledPreview = useMemo(() => {
-    if (artifact.preview) {
-      return { html: artifact.preview, status: "ready" as const };
+    const hasMissionSource = missionFiles.some(
+      (file) => typeof file.content === "string" && file.content.trim().length > 0
+    );
+
+    // For a generated project, always compile the selected route from the
+    // persisted versioned workspace. A stale artifact.preview must not pin the
+    // iframe to an older page after the user changes the route or edits a file.
+    if (artifact.kind === "code" && hasMissionSource) {
+      return compileProjectPreview({
+        files: missionFiles,
+        singleCodeContent: artifact.content,
+        activePath: previewPath,
+        isStreaming: artifact.status === "streaming",
+      });
     }
+
+    if (artifact.preview) {
+      return {
+        availableRoutes: extractAvailableRoutes(missionFiles),
+        html: artifact.preview,
+        status: "ready" as const,
+      };
+    }
+
     return compileProjectPreview({
       files: missionFiles,
       singleCodeContent: artifact.content,
       activePath: previewPath,
       isStreaming: artifact.status === "streaming",
     });
-  }, [artifact.preview, artifact.content, artifact.status, missionFiles, previewPath]);
+  }, [artifact.kind, artifact.preview, artifact.content, artifact.status, missionFiles, previewPath]);
 
   const previewHtml = compiledPreview.html;
   const isMissionBuildActive =
@@ -572,19 +834,6 @@ function PureArtifact({
     : `${previewHtmlForFrame}${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}`;
   previewHtmlForFrameRef.current = previewHtmlForFrameWithPath;
 
-  const openPreviewWindow = useCallback(() => {
-    const previewWindow = window.open(
-      "",
-      "idealy-preview",
-      "popup,width=1280,height=820"
-    );
-    if (!previewWindow) {
-      return;
-    }
-    previewWindow.document.write(previewHtmlForFrameWithPath);
-    previewWindow.document.close();
-  }, [previewHtmlForFrameWithPath]);
-
   if (!artifact.isVisible && !isMobile) {
     return (
       <div
@@ -599,10 +848,7 @@ function PureArtifact({
   }
 
   const consoleEntries = metadata?.outputs ?? [];
-  const selectedMissionFile = missionFiles.find(
-    (file) => file.path === selectedMissionFilePath && file.content !== undefined
-  );
-  const editorContent = selectedMissionFile?.content ??
+  const editorContent = selectedMissionFileContent ??
     (isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex));
   const consoleError =
     consoleEntries
@@ -850,7 +1096,7 @@ function PureArtifact({
             <aside className="hidden w-56 shrink-0 overflow-y-auto border-r border-sidebar-border/60 bg-sidebar/70 p-3 sm:block overscroll-contain">
               <div className="mb-3 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"><span>Files</span><Folder className="size-3.5" /></div>
               <div className="space-y-1 text-xs">
-                {missionFiles.length > 0 ? missionFiles.map((file) => {
+                {latestMissionFiles.length > 0 ? latestMissionFiles.map((file) => {
                   const isActive = file.path === selectedMissionFilePath;
                   const isJson = file.path.endsWith(".json");
                   const fileColor = file.status === "error"

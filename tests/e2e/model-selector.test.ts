@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Model Selector", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/", { waitUntil: "commit" });
+    await expect(page.getByTestId("multimodal-input")).toHaveAttribute("data-hydrated", "true");
   });
 
   test("displays a model button", async ({ page }) => {

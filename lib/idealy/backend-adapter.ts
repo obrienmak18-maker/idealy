@@ -13,10 +13,11 @@ import {
   designSpecificationToPrompt,
   runDesignCritic,
 } from "./design-engine";
-import type { OnboardingInput, OnboardingStatus } from "./onboarding-contract";
+import { type OnboardingInput, type OnboardingStatus } from "./onboarding-contract";
 import { type IdealyWay, isIdealyWay } from "./product-contract";
 import { getUserById } from "@/lib/db/queries";
 import { signInFirebaseUserThroughSupabase } from "./supabase-auth";
+import { normalizeMissionFilePath } from "./mission-files";
 
 export type IdealyIntentCategory = "CONVERSATION" | "IDEATION" | "EXECUTION";
 
@@ -64,6 +65,27 @@ export type IdealyMissionFile = {
   version: number;
 };
 
+export type IdealyMissionDatabaseRecord = {
+  created_at: string | null;
+  dna: unknown;
+  id: string;
+  status: string | null;
+  title: string | null;
+  validation: unknown;
+  way: string | null;
+};
+
+export type IdealyMissionAgentRun = {
+  agent_key: string;
+  completed_at: string | null;
+  id: string;
+  mission_id: string;
+  run_key: string;
+  started_at: string | null;
+  status: string;
+  step_index: number;
+};
+
 export type IdealyMissionCheckpoint = {
   checksum?: string;
   createdAt: string;
@@ -98,6 +120,7 @@ type IdealyMissionResponse = {
 type IdealyProfileResponse = {
   experience_level?: unknown;
   first_name?: unknown;
+  last_name?: unknown;
   id?: unknown;
   onboarding_completed?: unknown;
   primary_goal?: unknown;
@@ -314,7 +337,7 @@ export async function getMyIdealyOnboardingStatus({
   const { userId } = await getSupabaseServerContext(request, contextOverride);
   const profiles = await callSupabaseRest<IdealyProfileResponse[]>(
     request,
-    `profiles?select=id,first_name,way,onboarding_completed,experience_level,primary_goal,project_type&id=eq.${encodeURIComponent(userId)}&limit=1`,
+    `profiles?select=id,first_name,last_name,way,onboarding_completed,experience_level,primary_goal,project_type&id=eq.${encodeURIComponent(userId)}&limit=1`,
     { cache: "no-store", method: "GET" },
     contextOverride
   );
@@ -328,6 +351,10 @@ export async function getMyIdealyOnboardingStatus({
     firstName:
       profile && typeof profile.first_name === "string"
         ? profile.first_name
+        : null,
+    lastName:
+      profile && typeof profile.last_name === "string"
+        ? profile.last_name
         : null,
     onboardingCompleted: profile?.onboarding_completed === true,
     primaryGoal:
@@ -431,6 +458,126 @@ export async function listIdealyMissionFiles({
   );
 
   return Array.isArray(files) ? files : [];
+}
+
+export async function saveIdealyMissionFile({
+  content,
+  expectedVersion,
+  missionId,
+  path,
+  request,
+}: {
+  content: string;
+  expectedVersion: number;
+  missionId: string;
+  path: string;
+  request: Request;
+}): Promise<{
+  eventPersisted: boolean;
+  file: {
+    checksum: string | null;
+    content: string;
+    id: string;
+    language: string | null;
+    missionId: string;
+    path: string;
+    status: "saved";
+    updatedAt: string;
+    version: number;
+  };
+  lastSequence: number | null;
+}> {
+  const normalizedPath = normalizeMissionFilePath(path);
+  if (new TextEncoder().encode(content).byteLength > 1_000_000) {
+    throw Object.assign(new Error("Le fichier dépasse la limite de 1 Mo."), { status: 413 });
+  }
+
+  const { accessToken, anonKey, url } = await getSupabaseServerContext(request);
+  const response = await fetch(`${url}/functions/v1/save-mission-file`, {
+    body: JSON.stringify({
+      content,
+      expectedVersion,
+      missionId,
+      path: normalizedPath,
+    }),
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: anonKey,
+      "Content-Type": "application/json",
+      "x-client-info": "idealy-workspace-editor",
+    },
+    method: "POST",
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | {
+        error?: string;
+        code?: string;
+        eventPersisted?: boolean;
+        file?: {
+          checksum: string | null;
+          content: string;
+          id: string;
+          language: string | null;
+          missionId: string;
+          path: string;
+          status: "saved";
+          updatedAt: string;
+          version: number;
+        };
+        lastSequence?: number | null;
+      }
+    | null;
+
+  if (!response.ok) {
+    const error = new Error(
+      payload && typeof payload.error === "string"
+        ? payload.error
+        : `Le service de fichiers a répondu ${response.status}.`,
+    ) as Error & { status?: number; code?: string };
+    error.status = response.status;
+    error.code = payload?.code;
+    throw error;
+  }
+  if (!payload?.file || typeof payload.file.content !== "string") {
+    throw new Error("Le service de fichiers n’a pas confirmé l’enregistrement.");
+  }
+
+  return {
+    eventPersisted: payload.eventPersisted === true,
+    file: payload.file,
+    lastSequence:
+      typeof payload.lastSequence === "number" ? payload.lastSequence : null,
+  };
+}
+
+export async function getIdealyMissionDatabaseRecord({
+  missionId,
+  request,
+}: {
+  missionId: string;
+  request: Request;
+}): Promise<IdealyMissionDatabaseRecord | null> {
+  const records = await callSupabaseRest<IdealyMissionDatabaseRecord[]>(
+    request,
+    `missions?select=id,title,status,way,dna,validation,created_at&id=eq.${encodeURIComponent(missionId)}&limit=1`,
+    { cache: "no-store", method: "GET" }
+  );
+  return Array.isArray(records) ? records[0] ?? null : null;
+}
+
+export async function listIdealyMissionAgentRuns({
+  missionId,
+  request,
+}: {
+  missionId: string;
+  request: Request;
+}): Promise<IdealyMissionAgentRun[]> {
+  const runs = await callSupabaseRest<IdealyMissionAgentRun[]>(
+    request,
+    `mission_agent_runs?select=id,mission_id,run_key,step_index,agent_key,status,started_at,completed_at&mission_id=eq.${encodeURIComponent(missionId)}&order=step_index.asc&limit=100`,
+    { cache: "no-store", method: "GET" }
+  );
+  return Array.isArray(runs) ? runs : [];
 }
 
 export async function listIdealyMissionCheckpoints({
@@ -597,6 +744,7 @@ export async function createIdealyMissionPlan({
   provider,
   request,
   way = "professional",
+  requestedAgent,
 }: {
   idempotencyKey: string;
   missionId?: string;
@@ -605,6 +753,7 @@ export async function createIdealyMissionPlan({
   provider?: string;
   request: Request;
   way?: MissionWay;
+  requestedAgent?: string | null;
 }): Promise<MissionPlan> {
   const design = buildDesignSpecification(prompt);
   const designCritic = runDesignCritic(design);
@@ -619,7 +768,7 @@ export async function createIdealyMissionPlan({
     planOnly: true,
     prompt,
     stream: false,
-    systemPrompt: `${MISSION_PLAN_SYSTEM_PROMPT}\n\n${designSpecificationToPrompt(design)}${missionPersonaPrompt(way)}`,
+    systemPrompt: `${MISSION_PLAN_SYSTEM_PROMPT}\n\n${designSpecificationToPrompt(design)}${missionPersonaPrompt(way)}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the first responder. Frame the plan from this agent’s specialty and voice while keeping every planned responsibility accurate to the squad. Do not claim this agent performed build steps or tools yet.` : ""}`,
   });
 
   return { ...parseMissionPlan(payload.plan), design, designCritic };

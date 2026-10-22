@@ -11,6 +11,11 @@ import {
   credentialsOutcomeFromRedirect,
 } from "@/lib/idealy/auth-outcome";
 import { signUpWithSupabasePassword } from "@/lib/idealy/supabase-auth";
+import {
+  createTurnstileProof,
+  isTurnstileRequired,
+  verifyTurnstileToken,
+} from "@/lib/security/turnstile";
 
 import { signIn } from "./auth";
 
@@ -31,6 +36,7 @@ export type LoginActionState = {
     | "invalid_credentials"
     | "confirmation_required"
     | "service_unavailable"
+    | "turnstile_failed"
     | "invalid_data";
 };
 
@@ -51,13 +57,15 @@ function signInErrorState(error: unknown): LoginActionState {
 async function establishCredentialsSession(
   email: string,
   password: string,
-  intent: "login" | "register"
+  intent: "login" | "register",
+  turnstileProof?: string
 ): Promise<LoginActionState> {
   try {
     const result = await signIn("credentials", {
       email,
       intent,
       password,
+      ...(turnstileProof ? { turnstileProof } : {}),
       redirect: false,
     });
 
@@ -85,10 +93,28 @@ export const login = async (
       return { status: "success" };
     }
 
+    let turnstileProof: string | undefined;
+    if (isTurnstileRequired()) {
+      const challenge = await verifyTurnstileToken(
+        String(formData.get("turnstileToken") ?? ""),
+        undefined,
+        "login"
+      );
+      if (!challenge.ok) {
+        return { status: "turnstile_failed" };
+      }
+      const proof = createTurnstileProof("credentials-login");
+      if (!proof) {
+        return { status: "service_unavailable" };
+      }
+      turnstileProof = proof;
+    }
+
     return await establishCredentialsSession(
       validatedData.email,
       validatedData.password,
-      "login"
+      "login",
+      turnstileProof
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -109,6 +135,7 @@ export type RegisterActionState = {
     | "service_unavailable"
     | "pending_confirmation"
     | "user_exists"
+    | "turnstile_failed"
     | "invalid_data";
 };
 
@@ -122,6 +149,23 @@ export const register = async (
       password: formData.get("password"),
       terms: formData.get("terms"),
     });
+
+    let turnstileProof: string | undefined;
+    if (isTurnstileRequired()) {
+      const challenge = await verifyTurnstileToken(
+        String(formData.get("turnstileToken") ?? ""),
+        undefined,
+        "register"
+      );
+      if (!challenge.ok) {
+        return { status: "turnstile_failed" };
+      }
+      const proof = createTurnstileProof("credentials-register");
+      if (!proof) {
+        return { status: "service_unavailable" };
+      }
+      turnstileProof = proof;
+    }
 
     const demoMode =
       process.env.DEMO_MODE === "true" && isDevelopmentEnvironment;
@@ -181,7 +225,8 @@ export const register = async (
     return await establishCredentialsSession(
       validatedData.email,
       validatedData.password,
-      "register"
+      "register",
+      turnstileProof
     );
   } catch (error) {
     if (error instanceof z.ZodError) {

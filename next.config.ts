@@ -2,6 +2,13 @@ import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
 
 const basePath = process.env.IS_DEMO === "1" ? "/demo" : "";
+const explicitClientDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE?.trim();
+const clientDemoMode =
+  explicitClientDemoMode === "true" || explicitClientDemoMode === "false"
+    ? explicitClientDemoMode
+    : process.env.DEMO_MODE === "true"
+      ? "true"
+      : "false";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: [
@@ -35,7 +42,7 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
-    NEXT_PUBLIC_DEMO_MODE: process.env.DEMO_MODE === "true" ? "true" : "false",
+    NEXT_PUBLIC_DEMO_MODE: clientDemoMode,
     // Prefer each project's configured Firebase Web credentials. Keep the
     // original project values as fallbacks for existing local environments.
     // The API key is public Firebase Web config, not a server secret.

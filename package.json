@@ -35,6 +35,7 @@
     "test:firebase-runtime": "node scripts/test-firebase-runtime.mjs",
     "test:workspace-ia": "node scripts/test-workspace-ia-contract.mjs",
     "test:canvas-lifecycle": "node scripts/test-canvas-lifecycle-contract.mjs",
+    "test:canvas-workspace-controls": "node scripts/test-canvas-workspace-controls.mjs",
     "test:agent-squad": "node scripts/test-agent-squad-personas-contract.mjs",
     "test:db-visual-inspector": "node scripts/test-database-and-visual-inspector-contract.mjs",
     "test:github-checkpoints": "node scripts/test-github-checkpoints-contract.mjs",
@@ -49,7 +50,8 @@
     "test:way-preprompts": "tsx scripts/test-idealy-way-preprompts-contract.ts",
     "test:file-collection": "tsx scripts/test-idealy-file-collection-contract.ts",
     "test:bench-review": "tsx scripts/test-idealy-bench-review-contract.ts",
-    "bench": "tsx scripts/bench.ts"
+    "bench": "tsx scripts/bench.ts",
+    "test:turnstile": "node scripts/test-turnstile-contract.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.67",

@@ -75,6 +75,13 @@ async function resolveSupabaseToken(
   return null;
 }
 
+function getAccountIdentity(token: { email?: unknown; name?: unknown }) {
+  return {
+    accountEmail: typeof token.email === "string" && token.email.trim() ? token.email.trim() : null,
+    accountName: typeof token.name === "string" && token.name.trim() ? token.name.trim() : null,
+  };
+}
+
 function hasTrustedOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return true;
@@ -88,7 +95,10 @@ function hasTrustedOrigin(request: Request) {
 export async function GET(request: Request) {
   if (process.env.DEMO_MODE === "true") {
     return response({
+      accountEmail: null,
+      accountName: null,
       firstName: null,
+      lastName: null,
       onboardingCompleted: false,
       profileExists: true,
       simulated: true,
@@ -117,7 +127,9 @@ export async function GET(request: Request) {
   const supabaseContext = await resolveSupabaseToken(token);
   if (!supabaseContext) {
     return response({
+      ...getAccountIdentity(token),
       firstName: null,
+      lastName: null,
       onboardingCompleted: false,
       profileExists: false,
       way: "professional",
@@ -125,12 +137,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    return response(
-      await getMyIdealyOnboardingStatus({
-        contextOverride: supabaseContext,
-        request,
-      }),
-    );
+    const status = await getMyIdealyOnboardingStatus({ contextOverride: supabaseContext, request });
+    return response({ ...status, ...getAccountIdentity(token) });
   } catch (error) {
     console.error("Idealy onboarding profile check failed", error);
     return response(

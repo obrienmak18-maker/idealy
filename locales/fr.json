@@ -164,7 +164,7 @@
     "loginTitle": "Bon retour sur Idealy",
     "loginSubtitle": "Retrouvez vos workspaces et poursuivez vos développements.",
     "registerTitle": "Créez votre espace Idealy",
-    "registerSubtitle": "Donnez une forme concrète à votre prochaine idée.",
+    "registerSubtitle": "Créez votre compte pour organiser vos projets, retrouver vos missions et poursuivre votre travail dans le workspace Idealy.",
     "emailLabel": "Adresse e-mail",
     "emailPlaceholder": "vous@exemple.com",
     "passwordLabel": "Mot de passe",
@@ -184,16 +184,15 @@
     "phoneUnavailable": "La connexion par SMS n’est pas encore configurée. Utilisez votre adresse e-mail.",
     "phoneNotice": "Firebase protège l’envoi du code par son reCAPTCHA officiel.",
     "googleButton": "Continuer avec Google",
-  "phoneButton": "Continuer avec un numéro de téléphone",
-  "orDivider": "ou",
-  "accountExists": "Cette adresse e-mail est déjà associée à un compte.",
-  "accountExistsAction": "Connectez-vous pour continuer.",
-  "invalidCredentials": "L’adresse e-mail ou le mot de passe est incorrect.",
-  "invalidData": "Saisissez une adresse e-mail valide et un mot de passe de 6 caractères minimum.",
-  "serviceUnavailable": "Le service est momentanément indisponible. Réessayez dans un instant.",
-  "googleCancelled": "Connexion Google annulée. Vous pouvez réessayer.",
-  "googleFailed": "La connexion avec Google a échoué. Réessayez ou utilisez votre adresse e-mail."
-
+    "phoneButton": "Continuer avec un numéro de téléphone",
+    "orDivider": "ou",
+    "accountExists": "Cette adresse e-mail est déjà associée à un compte.",
+    "accountExistsAction": "Connectez-vous pour continuer.",
+    "invalidCredentials": "L’adresse e-mail ou le mot de passe est incorrect.",
+    "invalidData": "Saisissez une adresse e-mail valide et un mot de passe de 6 caractères minimum.",
+    "serviceUnavailable": "Le service est momentanément indisponible. Réessayez dans un instant.",
+    "googleCancelled": "Connexion Google annulée. Vous pouvez réessayer.",
+    "googleFailed": "La connexion avec Google a échoué. Réessayez ou utilisez votre adresse e-mail."
   },
   "onboarding": {
     "badge": "Espace de création",
@@ -269,6 +268,18 @@
     "lastMonth": "30 derniers jours",
     "older": "Plus anciens",
     "deleteTitle": "Supprimer cette discussion ?",
-    "deleteDescription": "Cette action est irréversible. La discussion sera définitivement supprimée."
+    "deleteDescription": "Cette action est irréversible. La discussion sera définitivement supprimée.",
+    "general": "Général",
+    "appearance": "Apparence",
+    "notifications": "Notifications",
+    "privacy": "Confidentialité",
+    "dataMemory": "Données et mémoire",
+    "shortcuts": "Raccourcis",
+    "billingPlan": "Facturation et plan",
+    "viewPlans": "Voir les offres",
+    "planUnlock": "Débloquez plus de missions, de connecteurs et de générations.",
+    "clearHistory": "Effacer l’historique",
+    "workspaceOptions": "Options du workspace",
+    "options": "Options"
   }
 }

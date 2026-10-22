@@ -13,7 +13,10 @@ import {
   prepareFirebaseIdTokenForSupabase,
   requestPasswordResetFirebase,
   signInWithEmailFirebase,
+  isFirebaseCurrentUserEmailVerified,
+  sendEmailVerificationFirebase,
 } from "@/lib/firebase/client";
+import { TurnstileField } from "@/components/auth/turnstile-field";
 import { type LoginActionState, login } from "../actions";
 
 const loginMessages = {
@@ -24,6 +27,7 @@ const loginMessages = {
     "Saisissez une adresse e-mail valide et un mot de passe de 6 caractères minimum.",
   service_unavailable:
     "Le service de connexion est momentanément indisponible. Réessayez dans un instant.",
+  turnstile_failed: "La vérification anti-robot a échoué ou a expiré. Recommencez la vérification.",
 } as const;
 
 function extractErrorCode(error: unknown): string {
@@ -48,6 +52,12 @@ export default function Page() {
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const turnstileClientEnabled = Boolean(
+    process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY?.trim()
+  );
 
   const [state, formAction] = useActionState<LoginActionState, FormData>(
     login,
@@ -139,49 +149,107 @@ export default function Page() {
   const handleSubmit = async (formData: FormData) => {
     setEmail(String(formData.get("email") ?? ""));
     setFirebaseError(null);
+    setEmailVerificationRequired(false);
+
+    if (turnstileClientEnabled && !String(formData.get("turnstileToken") ?? "").trim()) {
+      setFirebaseError("Complétez la vérification anti-robot avant de vous connecter.");
+      return;
+    }
 
     if (!isFirebaseConfigured()) {
       startTransition(() => {
         formAction(formData);
       });
+      setTurnstileToken("");
       return;
     }
 
+    let idToken: string;
     try {
-      const idToken = await signInWithEmailFirebase(
+      idToken = await signInWithEmailFirebase(
         String(formData.get("email") ?? "").trim(),
         String(formData.get("password") ?? "")
       );
-
-      const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
-
-      const result = await signInWithAuthJs("firebase", {
-        idToken: supabaseIdToken,
-        redirect: false,
-      });
-
-      if (!result || result.error || result.ok === false) {
-        throw new Error("firebase_session_rejected");
-      }
-
-      setIsSuccessful(true);
-      // Auth.js already set the session cookie. A full navigation reloads it;
-      // do not wait for a potentially hanging /api/auth/session request.
-      window.location.replace(getOnboardingUrl());
     } catch (error) {
       const code = extractErrorCode(error);
       if (code === "auth/too-many-requests") {
         setFirebaseError("Trop de tentatives infructueuses. Veuillez patienter avant de réessayer.");
+        setTurnstileToken("");
         return;
       }
       if (code === "auth/invalid-email") {
         setFirebaseError("Saisissez une adresse e-mail valide.");
+        setTurnstileToken("");
         return;
       }
-      // Seamlessly fall back to NextAuth / Supabase credentials provider
+
+      // Firebase rejected the credentials before the Turnstile token reached
+      // Auth.js. The server action can safely validate it for the fallback path.
       startTransition(() => {
         formAction(formData);
       });
+      setTurnstileToken("");
+      return;
+    }
+
+    if (!isFirebaseCurrentUserEmailVerified()) {
+      setEmailVerificationRequired(true);
+      setFirebaseError("Votre adresse e-mail n’est pas encore confirmée. Ouvrez le lien reçu par e-mail, puis reconnectez-vous.");
+      return;
+    }
+
+    try {
+      const supabaseIdToken = await prepareFirebaseIdTokenForSupabase(idToken);
+      const result = await signInWithAuthJs("firebase", {
+        idToken: supabaseIdToken,
+        turnstileToken: String(formData.get("turnstileToken") ?? ""),
+        redirect: false,
+      });
+
+      setTurnstileToken("");
+      if (!result || result.error || result.ok === false) {
+        // The challenge may already have been consumed by Auth.js: never
+        // submit the same single-use token again through the fallback action.
+        setFirebaseError("L’identité a été reconnue, mais la session Idealy n’a pas pu être créée. Réessayez avec une nouvelle vérification.");
+        return;
+      }
+
+      setIsSuccessful(true);
+      window.location.replace(getOnboardingUrl());
+    } catch {
+      setTurnstileToken("");
+      setFirebaseError("La connexion sécurisée n’a pas pu être finalisée. Vérifiez votre connexion puis recommencez.");
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (turnstileClientEnabled && !turnstileToken) {
+      setFirebaseError("Complétez la vérification anti-robot pour renvoyer l’e-mail.");
+      return;
+    }
+
+    setIsResendingVerification(true);
+    try {
+      const response = await fetch("/api/auth/turnstile/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: turnstileToken, action: "login" }),
+      });
+      if (!response.ok) {
+        setFirebaseError("La vérification anti-robot a expiré. Recommencez-la puis réessayez.");
+        setTurnstileToken("");
+        return;
+      }
+
+      await sendEmailVerificationFirebase();
+      setFirebaseError(null);
+      toast({ description: "E-mail de confirmation renvoyé. Consultez votre boîte de réception.", type: "success" });
+      setTurnstileToken("");
+    } catch {
+      setFirebaseError("Impossible de renvoyer l’e-mail de confirmation pour le moment.");
+      setTurnstileToken("");
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -210,7 +278,9 @@ export default function Page() {
           ) : null}
         </div>
       ) : null}
+      <TurnstileField action="login" value={turnstileToken} onChange={setTurnstileToken} />
       <AuthForm action={handleSubmit} defaultEmail={email} onEmailChange={setEmail}>
+        <input name="turnstileToken" type="hidden" value={turnstileToken} />
         <div className="-mt-2 flex justify-end">
           <button
             className="min-h-9 rounded-lg px-2 text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
@@ -235,7 +305,21 @@ export default function Page() {
           </Link>
         </p>
       </AuthForm>
-      <FirebaseProviderActions nextPath={getDestinationUrl()} />
+      {emailVerificationRequired ? (
+        <button
+          className="min-h-10 rounded-xl border border-border/60 px-3 text-xs font-medium text-foreground transition hover:bg-muted disabled:opacity-60"
+          disabled={isResendingVerification}
+          onClick={handleResendVerification}
+          type="button"
+        >
+          {isResendingVerification ? "Envoi en cours…" : "Renvoyer l’e-mail de confirmation"}
+        </button>
+      ) : null}
+      <FirebaseProviderActions
+        nextPath={getDestinationUrl()}
+        turnstileToken={turnstileToken}
+        onTurnstileTokenChange={setTurnstileToken}
+      />
     </>
   );
 }

@@ -5,6 +5,7 @@ import type { UIMessage } from "ai";
 import equal from "fast-deep-equal";
 import {
   AlertCircle,
+  FileTextIcon,
   ArrowUpIcon,
   BrainIcon,
   CheckIcon,
@@ -57,6 +58,7 @@ import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/provider";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
+import { voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { CHAT_ATTACHMENT_MAX_BYTES } from "@/lib/chat-attachments";
 import {
   containsLikelySecret,
@@ -141,6 +143,11 @@ function PureMultimodalInput({
       attachment.contentType !== "application/pdf"
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [composerHydrated, setComposerHydrated] = useState(false);
+
+  useEffect(() => {
+    setComposerHydrated(true);
+  }, []);
   const { width } = useWindowSize();
   const hasAutoFocused = useRef(false);
   useEffect(() => {
@@ -171,6 +178,17 @@ function PureMultimodalInput({
   }, [input, setLocalStorageInput]);
 
   const { language } = useTranslation();
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const promptPlaceholders = language.startsWith("en")
+    ? ["Describe the app you want to build…", "Tip: type @ to choose an agent", "Tip: type / to explore commands", "Start with the problem your app solves…"]
+    : language.startsWith("es")
+      ? ["Describe la aplicación que quieres crear…", "Consejo: escribe @ para elegir un agente", "Consejo: escribe / para ver comandos", "Empieza por el problema que resuelve tu app…"]
+      : ["Décrivez l’application que vous voulez créer…", "Astuce : tapez @ pour choisir un agent", "Astuce : tapez / pour explorer les commandes", "Commencez par le problème que résout votre application…"];
+  useEffect(() => {
+    if (input.trim()) return;
+    const timer = window.setInterval(() => setPlaceholderIndex((index) => (index + 1) % promptPlaceholders.length), 4200);
+    return () => window.clearInterval(timer);
+  }, [input, promptPlaceholders.length]);
   const { currentWay } = useGamificationStore();
   const freeQuota = useFreeQuota();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -180,11 +198,44 @@ function PureMultimodalInput({
   const [slashQuery, setSlashQuery] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
   const [selectedConnectors, setSelectedConnectors] = useState<string[]>([]);
+  const [connectedConnectorIds, setConnectedConnectorIds] = useState<string[]>([]);
+  const [agentMentionOpen, setAgentMentionOpen] = useState(false);
+  const [agentMentionQuery, setAgentMentionQuery] = useState("");
+  const [agentMentionIndex, setAgentMentionIndex] = useState(0);
+  const activeWayAgents = (voiesCatalog[currentWay] ?? voiesCatalog.ninja).agents;
+  const filteredAgents = activeWayAgents.filter((agent) => agent.name.toLowerCase().includes(agentMentionQuery.toLowerCase()));
 
   const toggleConnector = useCallback((id: string) => {
+    if (!connectedConnectorIds.includes(id)) {
+      router.push("/plugins");
+      return;
+    }
     setSelectedConnectors((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
+  }, [connectedConnectorIds, router]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadConnectedConnectors() {
+      try {
+        const response = await fetch("/api/idealy/connectors/status", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json() as { integrations?: Array<{ provider?: string; status?: string; serverReady?: boolean }> };
+        const active = Array.isArray(payload.integrations)
+          ? payload.integrations.filter((entry) => entry.status === "active" && entry.serverReady === true).map((entry) => entry.provider).filter((id): id is string => typeof id === "string")
+          : [];
+        if (!cancelled) {
+          const ids = Array.from(new Set(active.map((id) => id.toLowerCase() === "google" ? "google-drive" : id.toLowerCase())));
+          setConnectedConnectorIds(ids);
+          setSelectedConnectors((current) => current.filter((id) => ids.includes(id)));
+        }
+      } catch {
+        if (!cancelled) { setConnectedConnectorIds([]); setSelectedConnectors([]); }
+      }
+    }
+    void loadConnectedConnectors();
+    return () => { cancelled = true; };
   }, []);
 
   // Voice lifecycle via dedicated hook
@@ -206,6 +257,14 @@ function PureMultimodalInput({
       toast(err.message);
     },
   });
+  // Browser speech APIs are not available during SSR, but may already exist
+  // on the client during hydration. Keep the initial render identical, then
+  // expose the real capability after the component mounts.
+  const [voiceCapabilitiesReady, setVoiceCapabilitiesReady] = useState(false);
+  useEffect(() => {
+    setVoiceCapabilitiesReady(true);
+  }, []);
+  const voiceSupported = voiceCapabilitiesReady && voice.supported;
   const isListening = voice.state === "listening";
 
   const toggleSpeechRecognition = useCallback(() => {
@@ -253,9 +312,26 @@ function PureMultimodalInput({
       } else {
         setSlashOpen(false);
       }
+      const mention = val.match(/(?:^|\s)@([\w-]*)$/);
+      if (mention) {
+        setAgentMentionOpen(true);
+        setAgentMentionQuery(mention[1]);
+        setAgentMentionIndex(0);
+      } else {
+        setAgentMentionOpen(false);
+      }
     },
     [setInput]
   );
+
+  const handleAgentMentionSelect = useCallback((agentName: string) => {
+    const match = input.match(/(?:^|\s)@([\w-]*)$/);
+    const prefix = match ? input.slice(0, input.length - match[0].length) : input;
+    setInput(`${prefix}${prefix ? " " : ""}@${agentName} `);
+    setAgentMentionOpen(false);
+    setAgentMentionQuery("");
+    window.setTimeout(() => textareaRef.current?.focus(), 0);
+  }, [input, setInput]);
 
   const handleSlashSelect = useCallback(
     (cmd: SlashCommand) => {
@@ -343,7 +419,7 @@ function PureMultimodalInput({
 
     const messageText = redactLikelySecrets(input);
     if (messageText !== input) {
-      toast.warning("Une clé sensible a été masquée avant l’envoi.");
+      toast.warning(language.startsWith("en") ? "A sensitive key was masked before sending." : language.startsWith("es") ? "Se ocultó una clave sensible antes del envío." : "Une clé sensible a été masquée avant l’envoi.");
     }
     if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") {
       window.history.pushState(
@@ -536,12 +612,18 @@ function PureMultimodalInput({
     if (status === "ready" || status === "error") {
       submitForm();
     } else {
-      toast.error("Please wait for the model to finish its response!");
+      toast.error(language.startsWith("en") ? "Wait for the current response to finish." : language.startsWith("es") ? "Espera a que termine la respuesta actual." : "Attendez la fin de la réponse en cours.");
     }
-  }, [attachments.length, handleSlashSelect, input, status, submitForm]);
+  }, [attachments.length, handleSlashSelect, input, language, status, submitForm]);
 
   const handleTextareaKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (agentMentionOpen) {
+        if (e.key === "ArrowDown") { e.preventDefault(); setAgentMentionIndex((i) => Math.min(i + 1, filteredAgents.length - 1)); return; }
+        if (e.key === "ArrowUp") { e.preventDefault(); setAgentMentionIndex((i) => Math.max(i - 1, 0)); return; }
+        if ((e.key === "Enter" || e.key === "Tab") && filteredAgents[agentMentionIndex]) { e.preventDefault(); handleAgentMentionSelect(filteredAgents[agentMentionIndex].name); return; }
+        if (e.key === "Escape") { e.preventDefault(); setAgentMentionOpen(false); return; }
+      }
       if (slashOpen) {
         const filtered = slashCommands.filter((cmd) =>
           cmd.name.startsWith(slashQuery.toLowerCase())
@@ -576,6 +658,10 @@ function PureMultimodalInput({
     },
     [
       editingMessage,
+      agentMentionOpen,
+      agentMentionIndex,
+      filteredAgents,
+      handleAgentMentionSelect,
       handleSlashSelect,
       onCancelEdit,
       slashIndex,
@@ -600,6 +686,18 @@ function PureMultimodalInput({
       ) : null}
 
       <div className="relative">
+        {agentMentionOpen ? (
+          <div className="absolute bottom-2 left-2 z-30 w-64 overflow-hidden rounded-2xl border border-border/70 bg-popover/95 p-1.5 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <p className="px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{language.startsWith("en") ? "Choose an agent" : language.startsWith("es") ? "Elegir un agente" : "Choisir un agent"}</p>
+            {filteredAgents.length ? filteredAgents.map((agent, index) => (
+              <button key={agent.name} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => handleAgentMentionSelect(agent.name)} className={cn("flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs transition-colors", index === agentMentionIndex ? "bg-primary/10 text-foreground" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground")}>
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/20 to-cyan-500/20 text-[10px] font-bold text-foreground">{agent.name.slice(0, 2).toUpperCase()}</span>
+                <span className="min-w-0 flex-1"><span className="block font-semibold">{agent.name}</span><span className="block truncate text-[10px] opacity-70">{agent.role}</span></span>
+                {agent.isChief ? <span className="text-[9px] text-primary">Lead</span> : null}
+              </button>
+            )) : <p className="px-3 py-2 text-xs text-muted-foreground">{language.startsWith("en") ? "No agent found" : language.startsWith("es") ? "No se encontró ningún agente" : "Aucun agent trouvé"}</p>}
+          </div>
+        ) : null}
         {slashOpen ? (
           <SlashCommandMenu
             onClose={handleSlashClose}
@@ -629,7 +727,7 @@ function PureMultimodalInput({
       )}
 
       <PromptInput
-        className="idealy-prompt-shell relative w-full [&>div]:rounded-2xl [&>div]:shadow-[var(--shadow-composer)]"
+        className="idealy-prompt-shell relative w-full rounded-[1.5rem] [&>div]:!rounded-[1.5rem] [&>div]:!border-border/60 [&>div]:!bg-background/95 [&>div]:!shadow-[0_12px_44px_-28px_rgba(30,41,59,0.45)] [&>div]:transition-all [&>div]:duration-200"
         onFilesDropped={handleFiles}
         onSubmit={handlePromptSubmit}
       >
@@ -662,31 +760,29 @@ function PureMultimodalInput({
         )}
         {hasMetadataOnlyAttachments ? (
           <p className="px-4 pt-2 text-[11px] leading-relaxed text-muted-foreground" role="status">
-            Les fichiers audio, vidéo, archives et formats non reconnus restent joints. Le modèle reçoit leur nom et leur format, mais leur contenu n’est pas encore analysé.
+            {language.startsWith("en") ? "Audio, video, archive and unsupported files stay attached. The model receives their names and formats, but their contents are not analyzed yet." : language.startsWith("es") ? "Los archivos de audio, vídeo, archivos comprimidos y formatos no compatibles se adjuntan, pero el modelo solo recibe sus nombres y formatos." : "Les fichiers audio, vidéo, archives et formats non reconnus restent joints. Le modèle reçoit leur nom et leur format, mais leur contenu n’est pas encore analysé."}
           </p>
         ) : null}
         {hasLikelySecret ? (
           <div className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-800 dark:text-amber-200" role="status">
-            <span>Clé sensible détectée : elle est masquée à l’écran et le sera aussi avant l’envoi.</span>
+            <span>{language.startsWith("en") ? "Sensitive key detected: it is hidden on screen and before sending." : language.startsWith("es") ? "Clave sensible detectada: se oculta en pantalla y antes del envío." : "Clé sensible détectée : elle est masquée à l’écran et le sera aussi avant l’envoi."}</span>
             <button
               className="shrink-0 rounded-md px-2 py-1 font-medium underline underline-offset-2"
               onClick={() => setShowSensitiveDraft((visible) => !visible)}
               type="button"
             >
-              {showSensitiveDraft ? "Masquer" : "Modifier"}
+              {showSensitiveDraft ? (language.startsWith("en") ? "Hide" : language.startsWith("es") ? "Ocultar" : "Masquer") : (language.startsWith("en") ? "Edit" : language.startsWith("es") ? "Editar" : "Modifier")}
             </button>
           </div>
         ) : null}
-        {input.length > 1200 ? (
-          <details className="mx-3 mt-3 overflow-hidden rounded-xl border border-border/60 bg-muted/25 text-xs">
-            <summary className="cursor-pointer px-3 py-2.5 font-medium text-foreground/80">
-              Aperçu du brief · {inputWordCount} mots · {input.length} caractères
-            </summary>
-            <div className="border-t border-border/50 px-3 py-3">
-              <p className="mb-2 text-muted-foreground">Ce texte sera envoyé comme consigne à l’IA. Les fichiers joints sont transmis séparément ; leur contenu dépend des capacités du modèle sélectionné.</p>
-              <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words font-sans leading-relaxed text-foreground/75">{redactLikelySecrets(input)}</pre>
+        {input.length > 3000 ? (
+          <div className="mx-3 mt-3 overflow-hidden rounded-2xl border border-border/60 bg-muted/20 shadow-inner">
+            <div className="flex items-center justify-between gap-3 border-b border-border/50 bg-background/70 px-3 py-2.5">
+              <div className="flex min-w-0 items-center gap-2"><FileTextIcon className="size-4 shrink-0 text-primary" /><span className="truncate text-xs font-semibold">{language.startsWith("en") ? "Prompt document" : language.startsWith("es") ? "Documento del prompt" : "Document du prompt"}</span></div>
+              <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{inputWordCount} {language.startsWith("en") ? "words" : language.startsWith("es") ? "palabras" : "mots"} · {input.length.toLocaleString()} {language.startsWith("en") ? "chars" : language.startsWith("es") ? "caracteres" : "caractères"}</span>
             </div>
-          </details>
+            <div className="max-h-28 overflow-auto px-3 py-2.5"><pre className="whitespace-pre-wrap break-words font-sans text-[11px] leading-relaxed text-muted-foreground">{redactLikelySecrets(input)}</pre></div>
+          </div>
         ) : null}
         {selectedConnectors.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 px-4 pt-2.5">
@@ -710,14 +806,15 @@ function PureMultimodalInput({
           </div>
         )}
         <PromptInputTextarea
-          className="min-h-16 max-h-48 overflow-y-auto text-[13px] leading-relaxed px-4 pt-3 pb-1.5 placeholder:text-muted-foreground/35"
+          className="min-h-20 max-h-64 overflow-y-auto resize-none border-0 bg-transparent px-4 pt-4 pb-2 text-[13px] leading-6 outline-none ring-0 focus-visible:ring-0 focus-visible:outline-none placeholder:text-muted-foreground/55"
           data-testid="multimodal-input"
+          data-hydrated={composerHydrated ? "true" : "false"}
           onChange={handleInput}
           onKeyDown={handleTextareaKeyDown}
           placeholder={
             editingMessage
-              ? "Modifiez votre message…"
-              : "Racontez l’idée que vous voulez transformer…"
+              ? language.startsWith("en") ? "Edit your message…" : language.startsWith("es") ? "Edita tu mensaje…" : "Modifiez votre message…"
+              : input.trim() ? "" : promptPlaceholders[placeholderIndex]
           }
           readOnly={hasLikelySecret && !showSensitiveDraft}
           ref={textareaRef}
@@ -736,8 +833,8 @@ function PureMultimodalInput({
             <PromptInputTools>
               <PromptInputActionMenu>
                 <PromptInputActionMenuTrigger
-                  aria-label="Ajouter des éléments"
-                  className="h-7 w-7 rounded-lg border border-border/40 p-1 text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
+                  aria-label={language.startsWith("en") ? "Add tools" : language.startsWith("es") ? "Añadir herramientas" : "Ajouter des éléments"}
+                  className="h-8 w-8 rounded-xl border border-border/50 bg-background/50 p-1 text-muted-foreground transition-all duration-200 hover:rotate-90 hover:border-primary/40 hover:bg-primary/5 hover:text-foreground active:scale-95"
                 >
                   <PlusIcon className="size-4" />
                 </PromptInputActionMenuTrigger>
@@ -751,19 +848,19 @@ function PureMultimodalInput({
                     }}
                   >
                     <PaperclipIcon size={15} />
-                    <span className="flex-1">Joindre des fichiers</span>
+                    <span className="flex-1">{language.startsWith("en") ? "Attach files" : language.startsWith("es") ? "Adjuntar archivos" : "Joindre des fichiers"}</span>
                   </PromptInputActionMenuItem>
                   <PromptInputActionMenuItem
                     className="gap-2 rounded-lg py-2 text-[12px] cursor-pointer"
                     onSelect={() => router.push("/library")}
                   >
                     <LibraryIcon className="size-3.5" />
-                    <span className="flex-1">Ouvrir la bibliothèque</span>
+                    <span className="flex-1">{language.startsWith("en") ? "Open library" : language.startsWith("es") ? "Abrir biblioteca" : "Ouvrir la bibliothèque"}</span>
                   </PromptInputActionMenuItem>
 
                   <div className="my-1 border-t border-border/50" />
                   <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-                    <span>Connecteurs rapides</span>
+                    <span>{language.startsWith("en") ? "Connectors" : language.startsWith("es") ? "Conectores" : "Connecteurs"}</span>
                     <button
                       type="button"
                       onClick={() => router.push("/plugins")}
@@ -779,15 +876,19 @@ function PureMultimodalInput({
                     { id: "vercel", label: "Vercel" },
                     { id: "slack", label: "Slack" },
                     { id: "canva", label: "Canva" },
+                    { id: "figma", label: "Figma" },
+                    { id: "google-drive", label: "Google Drive" },
                     { id: "postgres", label: "PostgreSQL" },
                   ].map((conn) => {
-                    const isSelected = selectedConnectors.includes(conn.id);
+                    const isConnected = connectedConnectorIds.includes(conn.id);
+                    const isSelected = isConnected && selectedConnectors.includes(conn.id);
                     return (
                       <PromptInputActionMenuItem
                         key={conn.id}
                         className={`gap-2 rounded-lg py-1.5 text-[11.5px] cursor-pointer ${isSelected ? "bg-primary/10 text-primary font-medium" : ""}`}
                         onSelect={(e) => {
                           e.preventDefault();
+                          if (!isConnected) { router.push("/plugins"); return; }
                           toggleConnector(conn.id);
                         }}
                       >
@@ -795,13 +896,16 @@ function PureMultimodalInput({
                           {getConnectorBrandLogo(conn.id, "size-3.5")}
                         </div>
                         <span className="flex-1">{conn.label}</span>
-                        {isSelected && <CheckIcon className="size-3 text-primary" />}
+                        {isSelected ? <CheckIcon className="size-3 text-primary" /> : isConnected ? <span className="text-[9px] text-muted-foreground">{language.startsWith("en") ? "Connected" : language.startsWith("es") ? "Conectado" : "Connecté"}</span> : <span className="text-[9px] text-muted-foreground">{language.startsWith("en") ? "Connect" : language.startsWith("es") ? "Conectar" : "Connecter"}</span>}
                       </PromptInputActionMenuItem>
                     );
                   })}
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
-
+              <ModelSelectorCompact
+                onModelChange={onModelChange}
+                selectedModelId={selectedModelId}
+              />
             </PromptInputTools>
 
           <div className="flex items-center gap-1.5">
@@ -834,14 +938,14 @@ function PureMultimodalInput({
                   ? "border-sky-400/30 bg-sky-400/10 text-sky-400"
                   : "border-border/50 text-muted-foreground hover:border-border hover:bg-muted/70 hover:text-foreground"
               )}
-              disabled={!voice.supported}
+              disabled={!voiceSupported}
               onClick={toggleSpeechRecognition}
               size="icon"
-              title={voice.supported ? (isListening ? "Arrêter la dictée" : "Dicter au micro") : "La dictée n'est pas disponible dans ce navigateur."}
+              title={voiceSupported ? (isListening ? "Arrêter la dictée" : "Dicter au micro") : "La dictée n'est pas disponible dans ce navigateur."}
               type="button"
               variant="ghost"
             >
-              {voice.supported ? <MicIcon className="size-3.5" /> : <MicOffIcon className="size-3.5" />}
+              {voiceSupported ? <MicIcon className="size-3.5" /> : <MicOffIcon className="size-3.5" />}
             </Button>
             {status === "submitted" ? (
               <StopButton setMessages={setMessages} stop={stop} />

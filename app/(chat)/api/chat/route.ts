@@ -44,7 +44,7 @@ import {
   createIdealyMissionPlan,
   updateIdealyMission,
 } from "@/lib/idealy/backend-adapter";
-import { normalizeMissionWay } from "@/lib/idealy/agent-personas";
+import { getMissionAgentRoster, normalizeMissionWay } from "@/lib/idealy/agent-personas";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
 import { getIdealyDirectProviderModel } from "@/lib/idealy/provider-registry";
 import {
@@ -85,7 +85,7 @@ import {
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import { checkIpRateLimit } from "@/lib/ratelimit";
-import type { ChatMessage, WaitingStatusData } from "@/lib/types";
+import type { ChatMessage, IdealyChatToolActivity, WaitingStatusData } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
@@ -178,6 +178,22 @@ function getUserLanguageFromRequest(request: Request): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+type WaitingMessageKey = "connecting" | "preparing" | "thinking" | "analyzing" | "creating" | "planning" | "modelSlow";
+
+function getChatWaitingMessage(language: string | null | undefined, key: WaitingMessageKey, modelName?: string) {
+  const locale = language?.toLowerCase().startsWith("en") ? "en" : language?.toLowerCase().startsWith("es") ? "es" : "fr";
+  if (key === "modelSlow") {
+    return locale === "en" ? (modelName || "The model") + " is taking a little longer than usual…"
+      : locale === "es" ? (modelName || "El modelo") + " está tardando un poco más de lo habitual…"
+      : (modelName || "Le modèle") + " met un peu plus de temps que prévu…";
+  }
+  const messages = {
+    fr: { connecting: "Connexion à l’IA…", preparing: "Préparation de la réponse…", thinking: "L’IA réfléchit…", analyzing: "Analyse de votre mission…", creating: "Création de l’espace de mission…", planning: "Planification de la construction…" },
+    en: { connecting: "Connecting to AI…", preparing: "Preparing the response…", thinking: "Thinking…", analyzing: "Analyzing your mission…", creating: "Creating the mission workspace…", planning: "Planning the build…" },
+    es: { connecting: "Conectando con la IA…", preparing: "Preparando la respuesta…", thinking: "Pensando…", analyzing: "Analizando tu misión…", creating: "Creando el espacio de la misión…", planning: "Planificando la construcción…" },
+  } as const;
+  return messages[locale][key];
+}
 async function streamIdealyEdgeResponse({
   dataStream,
   directModel,
@@ -191,6 +207,7 @@ async function streamIdealyEdgeResponse({
   userTone,
   userDisplayName,
   language,
+  requestedAgent,
 }: {
   dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
   directModel?: ReturnType<typeof getIdealyDirectProviderModel>;
@@ -204,6 +221,7 @@ async function streamIdealyEdgeResponse({
   userTone?: string | null;
   userDisplayName?: string | null;
   language?: string | null;
+  requestedAgent?: string | null;
 }) {
   const supabaseAccessToken = await getSupabaseAccessToken(request);
   if (!supabaseAccessToken) {
@@ -225,6 +243,7 @@ async function streamIdealyEdgeResponse({
       ...(missionId ? { missionId, workspaceStream: true } : {}),
       maxTokens: 8000,
       mode: "auto",
+      language: language ?? "fr",
       prompt: getIdealyPrompt(messages),
       stream: true,
       systemPrompt: `${systemPrompt({
@@ -239,7 +258,7 @@ async function streamIdealyEdgeResponse({
         userDisplayName,
         userTone,
         userWay,
-      })}${designSpecification ? `\n\n${designSpecificationToPrompt(designSpecification)}` : ""}`,
+      })}${designSpecification ? `\n\n${designSpecificationToPrompt(designSpecification)}` : ""}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty in the reply. Keep the explanation clear and user-facing, and never claim that a separate agent ran unless orchestration records show it actually ran.` : ""}`,
     }),
     headers: {
       Authorization: `Bearer ${supabaseAccessToken}`,
@@ -277,9 +296,22 @@ async function streamIdealyEdgeResponse({
         try {
           const parsed = JSON.parse(raw) as {
             choices?: Array<{ delta?: { content?: string } }>;
+            activity?: IdealyChatToolActivity;
             event?: unknown;
             type?: string;
           };
+          if (
+            parsed.type === "idealy_tool_activity" &&
+            parsed.activity &&
+            typeof parsed.activity.toolCallId === "string"
+          ) {
+            dataStream.write({
+              data: parsed.activity,
+              id: parsed.activity.toolCallId,
+              type: "data-idealy-tool-activity",
+            });
+            continue;
+          }
           if (parsed.type === "idealy_file_event" && parsed.event) {
             dataStream.write({
               data: parsed.event as never,
@@ -428,6 +460,12 @@ export async function POST(request: Request) {
 
     const lastUserPrompt =
       message?.role === "user" ? getTextFromMessageParts(message).trim() : "";
+    const requestedAgentCandidate = lastUserPrompt.match(/(?:^|\s)@([A-Za-z0-9_-]{2,40})/)?.[1] ?? null;
+    const requestedAgent = requestedAgentCandidate
+      ? getMissionAgentRoster(userWay).find(
+          (agent) => agent.name.toLowerCase() === requestedAgentCandidate.toLowerCase(),
+        )?.name ?? null
+      : null;
 
     // Fast, resilient interceptor for conversational greetings across all environments
     if (lastUserPrompt && isSimpleGreeting(lastUserPrompt)) {
@@ -658,22 +696,20 @@ export async function POST(request: Request) {
           });
         };
 
-        writeWaitingStatus("waiting", "Connexion à l'IA...");
+        const statusLanguage = getUserLanguageFromRequest(request);
+        writeWaitingStatus("waiting", getChatWaitingMessage(statusLanguage, "connecting"));
 
         healthCheckTimer = setTimeout(() => {
           getModelAvailability(chatModel)
             .then((availability) => {
               if (availability === "impacted") {
-                writeWaitingStatus(
-                  "health",
-                  `${modelName} met un peu de temps à répondre...`
-                );
+                writeWaitingStatus("health", getChatWaitingMessage(statusLanguage, "modelSlow", modelName));
               } else {
-                writeWaitingStatus("still-waiting", "Patience, préparation de la réponse...");
+                writeWaitingStatus("still-waiting", getChatWaitingMessage(statusLanguage, "preparing"));
               }
             })
             .catch(() => {
-              writeWaitingStatus("still-waiting", "Patience, préparation de la réponse...");
+              writeWaitingStatus("still-waiting", getChatWaitingMessage(statusLanguage, "preparing"));
             });
         }, HEALTH_CHECK_DELAY_MS);
 
@@ -683,7 +719,7 @@ export async function POST(request: Request) {
           }
           hasModelActivity = true;
           clearHealthCheckTimer();
-          writeWaitingStatus("thinking", "L'IA réfléchit...");
+          writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "thinking"));
         };
 
         const stopWaitingStatus = () => {
@@ -736,7 +772,7 @@ export async function POST(request: Request) {
             | undefined;
 
           if (idealyPrompt) {
-            writeWaitingStatus("thinking", "Analyse de votre mission...");
+            writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "analyzing"));
             intentCategory = await classifyIdealyIntent(request, idealyPrompt);
             dataStream.write({ data: intentCategory, type: "data-idealy-intent" });
 
@@ -763,7 +799,7 @@ export async function POST(request: Request) {
                 return;
               }
 
-              writeWaitingStatus("thinking", "Création de l'espace de mission...");
+              writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "creating"));
               const activeWay = normalizeMissionWay(userWay);
               const mission = await createIdealyMission({
                 chatId: id,
@@ -775,7 +811,7 @@ export async function POST(request: Request) {
               missionId = mission.id;
               dataStream.write({ data: mission.id, type: "data-idealy-mission" });
 
-              writeWaitingStatus("thinking", "Planification de la construction...");
+              writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "planning"));
               missionPlan = await createIdealyMissionPlan({
                 idempotencyKey: `${idempotencyKey}:plan`,
                 ...(directModel ? { model: directModel.edgeModel } : {}),
@@ -784,10 +820,11 @@ export async function POST(request: Request) {
                 ...(directModel ? { provider: directModel.edgeProvider } : {}),
                 request,
                 way: activeWay,
+                requestedAgent,
               });
               dataStream.write({ data: missionPlan, type: "data-idealy-plan" });
               await updateIdealyMission({
-                dna: { intentCategory, plan: missionPlan, stage: "planned" },
+                dna: { intentCategory, plan: missionPlan, stage: "planned", ...(requestedAgent ? { requestedAgent } : {}) },
                 missionId,
                 request,
                 status: "planned",
@@ -803,8 +840,20 @@ export async function POST(request: Request) {
             if (intentCategory === "EXECUTION" && missionId && missionPlan) {
               const assistantId = generateId();
               dataStream.write({ id: assistantId, type: "text-start" });
+              const agentPrefix = requestedAgent ? "@" + requestedAgent : null;
+              const planMessage = userLanguage?.startsWith("en")
+                ? (agentPrefix
+                  ? agentPrefix + " has prepared a proposed plan for **" + missionPlan.projectKind + "**. The squad has not started yet. Review or edit the plan below, then approve it to start building."
+                  : "Here is the proposed plan for **" + missionPlan.projectKind + "**. The squad has not started yet. Review or edit the plan below, then approve it to start building.")
+                : userLanguage?.startsWith("es")
+                  ? (agentPrefix
+                    ? agentPrefix + " preparó una propuesta para **" + missionPlan.projectKind + "**. El equipo aún no ha empezado. Revisa o modifica el plan y después apruébalo para comenzar."
+                    : "Este es el plan propuesto para **" + missionPlan.projectKind + "**. El equipo aún no ha empezado. Revisa o modifica el plan y después apruébalo para comenzar.")
+                  : (agentPrefix
+                    ? agentPrefix + " a préparé une proposition pour **" + missionPlan.projectKind + "**. L’escouade n’a pas encore démarré. Vérifiez ou modifiez le plan ci-dessous, puis validez-le pour commencer."
+                    : "Plan enregistré pour **" + missionPlan.projectKind + "**. L’escouade n’a pas encore démarré. Vérifiez ou modifiez le plan ci-dessous, puis cliquez sur **Valider et lancer** pour commencer la construction.");
               dataStream.write({
-                delta: `Plan enregistré pour **${missionPlan.projectKind}**. L’escouade n’a pas encore démarré. Consultez le périmètre et les agents ci-dessous, puis cliquez sur **Valider et lancer** pour commencer la construction.`,
+                delta: planMessage,
                 id: assistantId,
                 type: "text-delta",
               });
@@ -823,6 +872,7 @@ export async function POST(request: Request) {
                 userTone,
                 userDisplayName,
                 language: userLanguage,
+                requestedAgent,
               });
             }
             stopWaitingStatus();
@@ -862,14 +912,14 @@ export async function POST(request: Request) {
                     "webSearch",
                     "executeSandbox",
                   ],
-            instructions: systemPrompt({
+            instructions: `${systemPrompt({
               language: userLanguage,
               requestHints,
               supportsTools,
               userDisplayName,
               userTone,
               userWay,
-            }),
+            })}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty and voice in this reply, while remaining truthful about which tools and agents actually executed. Do not claim a separate agent ran unless the orchestration actually invoked it.` : ""}`,
             messages: modelMessages,
             model: getLanguageModel(chatModel),
             onAbort() {
