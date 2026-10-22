@@ -10,14 +10,17 @@ Ce document sépare les **intégrations de l’application Idealy** des **outils
 |---|---|---|---|
 | GitHub | Lire/exporter du code, synchroniser les dépôts et suivre les changements | Flux OAuth et export présents dans le backend | Client OAuth configuré, consentement utilisateur et test réel lecture/écriture sur un dépôt autorisé |
 | Supabase | Base de données, Auth, Storage et Edge Functions des apps générées | Projet Idealy actif; fonctions backend en place | Projet cible sélectionné, droits minimaux et test réel de schéma/données |
-| Vercel | Créer une preview et déployer une application | Flux et fonctions de statut/déploiement présents; projet Idealy lié à GitHub | OAuth ou secret serveur configuré, test de preview, puis confirmation explicite avant production |
+| Vercel | Créer une preview et déployer une application | Flux et fonctions de statut/déploiement présents; projets Idealy liés à GitHub | Configurer les identifiants de l’application OAuth ET autoriser le compte utilisateur dans Idealy; le flux de déploiement actuel exige un jeton OAuth utilisateur actif. Tester la preview avant toute publication en production |
 | Canva | Accéder aux designs et ressources choisis par l'utilisateur | Fournisseur OAuth prévu dans integration-connect | Clés OAuth configurées et test sur un design explicitement choisi |
 | Figma | Lire les fichiers et spécifications de design autorisés | Fournisseur OAuth prévu; compte Figma accessible dans l'environnement de travail avec droits de visualisation | Clés OAuth et scopes nécessaires; ne pas supposer de droits d'édition |
 | Google Drive | Retrouver des documents utiles aux missions | Fournisseur OAuth prévu | Clés OAuth, consentement, puis lecture limitée aux fichiers autorisés |
 | Notion | Lire les pages/documents de projet autorisés | Fournisseur OAuth prévu | Clés OAuth et test de lecture d'une page autorisée |
 | Slack | Lire les canaux autorisés et, si permission explicite, envoyer des messages | Fournisseur OAuth prévu | Clés OAuth, scopes minimaux et confirmation avant tout envoi |
 | Stripe | Checkout, abonnements et portail de facturation | Fonctions backend et webhooks existent; registre indique une configuration serveur | Clés de test d'abord, webhook signé et tests de paiement avant production |
-| Azure | Exécution cloud et fonctions | Adaptateur marqué comme planifié dans le registre | Ne pas présenter comme fonctionnel avant implémentation et test complet |
+| Exa | Recherche web sémantique et récupération de documentation sourcée dans les missions | Connecteur `configured` du registre; adaptateur serveur et variable `EXA_API_KEY` attendus | Tester une vraie requête et confirmer que la clé serveur est configurée; ne pas confondre avec le connecteur Exa disponible séparément dans ChatGPT |
+| Fal.ai Flux.1 | Générer des images à la demande depuis le moteur de missions | Connecteur `configured` du registre; adaptateur serveur présent | Vérifier `FAL_KEY` ou `FAL_AI_API_KEY`, les crédits du compte et un appel réel avant de promettre la génération |
+| PostgreSQL | Lire les données d'une base relationnelle autorisée | Connecteur `configured`, géré côté serveur; `DATABASE_URL` attendue | Tester la connexion et les droits en lecture avec une base explicitement choisie |
+| Google Cloud | Lister ou gérer des ressources cloud prévues, selon les opérations disponibles | Connecteur `planned` dans le registre | Ne pas annoncer comme opérationnel avant la configuration de compte de service, l'implémentation des opérations et les tests réels |
 
 ### Règles de sécurité
 
@@ -38,7 +41,7 @@ Ces outils sont utiles pour fabriquer les livrables du projet, mais leur connexi
 | GitHub | Inspection et modification du code, branches, commits et revues |
 | Supabase | Vérification des fonctions backend, du schéma et des statuts du projet |
 | Vercel | Vérification des projets liés, des déploiements et des journaux disponibles |
-| Exa / Browser | Recherche et lecture de documentation ou de pages de référence |
+| Exa (connecteur ChatGPT) / Browser | Recherche et lecture de documentation ou de pages de référence pour le travail de l'équipe; Exa existe aussi séparément comme fournisseur côté Idealy |
 | HeyGen | Préparer une vidéo explicative avec avatar/voix si ce format est souhaité |
 | AI Music Maker / Vocuno | Composer une musique originale pour une vidéo de présentation, sous réserve des crédits et limites du service |
 | Adobe | Retouche, montage et déclinaisons d'assets existants |
