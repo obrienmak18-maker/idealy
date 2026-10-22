@@ -194,8 +194,8 @@ export function OnboardingFlow() {
         if (!result.ok) throw new Error("status-unavailable");
 
         const status = (await result.json()) as {
-          accountEmail?: unknown; accountName?: unknown; onboardingCompleted?: unknown;
-          experienceLevel?: unknown; primaryGoal?: unknown; projectType?: unknown; way?: unknown;
+          accountEmail?: unknown; accountName?: unknown; firstName?: unknown; lastName?: unknown;
+          onboardingCompleted?: unknown; experienceLevel?: unknown; primaryGoal?: unknown; projectType?: unknown; way?: unknown;
         };
         if (status.onboardingCompleted === true) {
           router.replace(nextPath);
