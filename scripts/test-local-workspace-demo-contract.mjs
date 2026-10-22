@@ -30,8 +30,9 @@ assert.match(nextConfig, /explicitClientDemoMode === "true" \|\| explicitClientD
 assert.match(nextConfig, /NEXT_PUBLIC_DEMO_MODE: clientDemoMode/);
 assert.match(chatLayout, /const isLocalDemo =/);
 assert.match(chatLayout, /isLocalDemo \? Promise\.resolve\(null\) : auth\(\)/);
-assert.match(chatComposer, /<ModelSelectorCompact[\\s\\S]*selectedModelId=\\{selectedModelId\\}/);
-assert.match(cookieNotice, /isChatWorkspace \\? "bottom-44" : "bottom-4"/);
+assert.ok(chatComposer.includes("<ModelSelectorCompact"));
+assert.ok(chatComposer.includes("selectedModelId={selectedModelId}"));
+assert.ok(cookieNotice.includes('isChatWorkspace ? "bottom-44" : "bottom-4"'));
 assert.doesNotMatch(localDemo, /fetch\s*\(/);
 
 console.log("Local workspace demo contract passed.");
