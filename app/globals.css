@@ -1327,119 +1327,120 @@ html.light .welcome-page .welcome-gradient-text {
   background-image: linear-gradient(100deg, #0369a1 0%, #6d28d9 52%, #c2410c 100%);
 }
 
-html.light .welcome-page [class~="text-white"] {
+html.light .welcome-page [class~="text-white"]:not(:hover):not(:focus-visible){
   color: #172338 !important;
 }
-html.light .welcome-page [class~="text-white/95"],
-html.light .welcome-page [class~="text-white/90"] {
+html.light .welcome-page [class~="text-white/95"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/90"]:not(:hover):not(:focus-visible){
   color: #24334a !important;
 }
-html.light .welcome-page [class~="text-white/85"],
-html.light .welcome-page [class~="text-white/80"] {
+html.light .welcome-page [class~="text-white/85"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/80"]:not(:hover):not(:focus-visible){
   color: #34445b !important;
 }
-html.light .welcome-page [class~="text-white/75"],
-html.light .welcome-page [class~="text-white/70"],
-html.light .welcome-page [class~="text-white/65"] {
+html.light .welcome-page [class~="text-white/75"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/70"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/65"]:not(:hover):not(:focus-visible){
   color: #4b5c73 !important;
 }
-html.light .welcome-page [class~="text-white/60"],
-html.light .welcome-page [class~="text-white/55"] {
+html.light .welcome-page [class~="text-white/60"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/55"]:not(:hover):not(:focus-visible){
   color: #586980 !important;
 }
-html.light .welcome-page [class~="text-white/50"],
-html.light .welcome-page [class~="text-white/45"] {
+html.light .welcome-page [class~="text-white/50"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-white/45"]:not(:hover):not(:focus-visible){
   color: #62708a !important;
 }
-html.light .welcome-page [class~="text-white/40"] {
+html.light .welcome-page [class~="text-white/40"]:not(:hover):not(:focus-visible){
   color: #5b6a80 !important;
 }
 
 /* Keep saturated controls legible while shifting small labels to darker brand tones. */
-html.light .welcome-page [class~="text-violet-200"],
-html.light .welcome-page [class~="text-violet-300"],
-html.light .welcome-page [class~="text-violet-400"] {
+html.light .welcome-page [class~="text-violet-200"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-violet-300"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-violet-400"]:not(:hover):not(:focus-visible){
   color: #6840b4 !important;
 }
-html.light .welcome-page [class~="text-sky-300"],
-html.light .welcome-page [class~="text-sky-400"] {
+html.light .welcome-page [class~="text-sky-300"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-sky-400"]:not(:hover):not(:focus-visible){
   color: #116b9f !important;
 }
-html.light .welcome-page [class~="text-orange-300"] {
+html.light .welcome-page [class~="text-orange-300"]:not(:hover):not(:focus-visible){
   color: #a84e16 !important;
 }
-html.light .welcome-page [class~="text-emerald-300"],
-html.light .welcome-page [class~="text-emerald-400"] {
+html.light .welcome-page [class~="text-emerald-300"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="text-emerald-400"]:not(:hover):not(:focus-visible){
   color: #087856 !important;
 }
-html.light .welcome-page [class~="text-amber-300"] {
+html.light .welcome-page [class~="text-amber-300"]:not(:hover):not(:focus-visible){
   color: #926000 !important;
 }
 
 /* Frosted dark-mode panels become crisp, layered light surfaces. */
-html.light .welcome-page [class*="bg-white/[0.03]"],
-html.light .welcome-page [class*="bg-white/[0.04]"],
-html.light .welcome-page [class*="bg-white/[0.055]"],
-html.light .welcome-page [class~="bg-white/5"] {
+html.light .welcome-page [class*="bg-white/[0.03]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="bg-white/[0.04]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="bg-white/[0.055]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="bg-white/5"]:not(:hover):not(:focus-visible){
   background-color: rgba(255, 255, 255, 0.68) !important;
 }
-html.light .welcome-page [class*="bg-white/[0.06]"],
-html.light .welcome-page [class*="bg-white/[0.07]"],
-html.light .welcome-page [class~="bg-white/10"] {
+html.light .welcome-page [class*="bg-white/[0.06]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="bg-white/[0.07]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="bg-white/10"]:not(:hover):not(:focus-visible){
   background-color: rgba(255, 255, 255, 0.84) !important;
 }
-html.light .welcome-page [class*="bg-white/[0.12]"] {
+html.light .welcome-page [class*="bg-white/[0.12]"]:not(:hover):not(:focus-visible){
   background-color: rgba(226, 236, 251, 0.88) !important;
 }
-html.light .welcome-page [class~="bg-white/15"] {
+html.light .welcome-page [class~="bg-white/15"]:not(:hover):not(:focus-visible){
   background-color: rgba(255, 255, 255, 0.82) !important;
 }
-html.light .welcome-page [class~="bg-white/20"] {
+html.light .welcome-page [class~="bg-white/20"]:not(:hover):not(:focus-visible){
   background-color: rgba(224, 232, 242, 0.86) !important;
 }
-html.light .welcome-page [class~="bg-white"] {
+html.light .welcome-page [class~="bg-white"]:not(:hover):not(:focus-visible){
   background-color: #ffffff !important;
 }
-html.light .welcome-page [class*="border-white/"] {
+html.light .welcome-page [class*="border-white/"]:not(:hover):not(:focus-visible){
   border-color: rgba(119, 136, 158, 0.25) !important;
 }
-html.light .welcome-page [class~="border-white/45"] {
+html.light .welcome-page [class~="border-white/45"]:not(:hover):not(:focus-visible){
   border-color: #9dbaf3 !important;
   background-color: #edf3ff !important;
 }
-html.light .welcome-page [class~="border-[#09090f]"] {
+html.light .welcome-page [class~="border-[#09090f]"]:not(:hover):not(:focus-visible){
   border-color: rgba(255, 255, 255, 0.96) !important;
 }
-html.light .welcome-page [class~="bg-[#0b0b12]"],
-html.light .welcome-page [class~="bg-[#14131d]/95"] {
+html.light .welcome-page [class~="bg-[#0b0b12]"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class~="bg-[#14131d]/95"]:not(:hover):not(:focus-visible){
   background-color: #ffffff !important;
   color: #172338 !important;
 }
-html.light .welcome-page [class*="border-violet-"],
-html.light .welcome-page [class*="border-sky-"],
-html.light .welcome-page [class*="border-emerald-"] {
+html.light .welcome-page [class*="border-violet-"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="border-sky-"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="border-emerald-"]:not(:hover):not(:focus-visible){
   border-color: color-mix(in srgb, currentColor 22%, white) !important;
 }
-html.light .welcome-page [class*="shadow-2xl"],
-html.light .welcome-page [class*="shadow-xl"] {
+html.light .welcome-page [class*="shadow-2xl"]:not(:hover):not(:focus-visible),
+html.light .welcome-page [class*="shadow-xl"]:not(:hover):not(:focus-visible){
   --tw-shadow-color: rgba(37, 52, 76, 0.10);
 }
 
 /* The main call to action is deliberately dark on the pale background. */
-html.light .welcome-page a[class~="bg-white"][class~="text-black"] {
+html.light .welcome-page a[class~="bg-white"][class~="text-black"]:not(:hover):not(:focus-visible){
   color: #ffffff !important;
   background-color: #172338 !important;
   box-shadow: 0 10px 28px rgba(23, 35, 56, 0.16) !important;
 }
-html.light .welcome-page a[class*="bg-gradient-to-r"][class~="text-white"] {
+html.light .welcome-page a[class*="bg-gradient-to-r"][class~="text-white"]:not(:hover):not(:focus-visible){
   color: #ffffff !important;
 }
 
 /* Make the selected Way stand out as a selection, not as a glow lost on white. */
-html.light .welcome-page button[class~="border-white/45"] {
+html.light .welcome-page button[class~="border-white/45"]:not(:hover):not(:focus-visible){
   background-color: #edf3ff !important;
   box-shadow: 0 12px 28px rgba(59, 91, 145, 0.10) !important;
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   html.light .welcome-page .welcome-orb {
