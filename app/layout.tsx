@@ -8,6 +8,9 @@ import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
 import { CookieNotice } from "@/components/cookies/cookie-notice";
 import { LanguageProvider } from "@/lib/i18n/provider";
+import { cookies } from "next/headers";
+import { connection } from "next/server";
+import type { SupportedLanguage } from "@/lib/i18n/language-store";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -129,13 +132,20 @@ const jsonLdSchema = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Cookie-based localization must be resolved on the server so the first
+  // HTML render and the first client hydration use the same language.
+  await connection();
+  const localeCookie = (await cookies()).get("NEXT_LOCALE")?.value;
+  const initialLanguage: SupportedLanguage =
+    localeCookie === "en" || localeCookie === "es" ? localeCookie : "fr";
+
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang={initialLanguage} suppressHydrationWarning>
       <head>
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: "Required"
@@ -161,7 +171,7 @@ export default function RootLayout({
           <SessionProvider
             basePath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}
           >
-            <LanguageProvider>
+            <LanguageProvider initialLanguage={initialLanguage}>
               <TooltipProvider>
                 <Toaster
                   closeButton
