@@ -93,7 +93,15 @@ export default function Page() {
     const callbackUrl = getSafeCallbackUrl();
     return callbackUrl || "/";
   };
-  const getOnboardingUrl = () => getDestinationUrl();
+  const getOnboardingUrl = () => {
+    const destination = getDestinationUrl();
+    // Always let the onboarding route decide whether this account still needs
+    // setup; completed accounts are redirected to this safe in-app destination.
+    if (destination === "/onboarding" || destination.startsWith("/onboarding?")) {
+      return destination;
+    }
+    return `/onboarding?next=${encodeURIComponent(destination)}`;
+  };
 
   const handlePasswordReset = async () => {
     const normalizedEmail = email.trim();
@@ -142,7 +150,7 @@ export default function Page() {
       });
     } else if (state.status === "success") {
       setIsSuccessful(true);
-      window.location.replace(getDestinationUrl());
+      window.location.replace(getOnboardingUrl());
     }
   }, [state.status]);
 
@@ -316,7 +324,7 @@ export default function Page() {
         </button>
       ) : null}
       <FirebaseProviderActions
-        nextPath={getDestinationUrl()}
+        nextPath={getOnboardingUrl()}
         turnstileToken={turnstileToken}
         onTurnstileTokenChange={setTurnstileToken}
       />
