@@ -455,6 +455,245 @@ async function streamWorkspaceBuild(
   controller.enqueue(encoder.encode('data: [DONE]\\n\\n'));
 }
 
+
+/**
+ * Use configured server-side providers automatically. The client never needs
+ * to choose a vendor, and one missing secret must not disable every other key.
+ */
+const AUTOMATIC_PROVIDER_ORDER: Provider[] = [
+  "groq",
+  "openrouter",
+  "gemini",
+  "deepseek",
+  "openai",
+  "anthropic",
+  "together",
+  "moonshot",
+];
+
+type ResolvedProvider = Awaited<ReturnType<typeof resolveAIProvider>>;
+
+async function resolveConfiguredAIProvider(
+  userId: string,
+  supabaseAdmin: ReturnType<typeof createClient>,
+  preferredProvider: Provider,
+  preferredModel: string,
+  mode: RequestedMode,
+): Promise<ResolvedProvider> {
+  const candidates = mode === "byok"
+    ? [preferredProvider]
+    : Array.from(new Set([preferredProvider, ...AUTOMATIC_PROVIDER_ORDER]));
+  let lastError: unknown = null;
+
+  for (const candidate of candidates) {
+    if (
+      candidate !== preferredProvider &&
+      !Deno.env.get(PROVIDER_CONFIGS[candidate].envKey)?.trim()
+    ) {
+      continue;
+    }
+    try {
+      return await resolveAIProvider(userId, supabaseAdmin, {
+        provider: candidate,
+        model: candidate === preferredProvider ? preferredModel : DEFAULT_MODELS[candidate],
+        mode,
+      });
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      // Continue only when the selected provider has no configured managed key.
+      // Database failures and invalid encryption settings need real fixes, not masking.
+      if (mode === "byok" || !/API key not configured:/i.test(message)) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError ?? new Error("No configured AI provider is available.");
+}
+
+const RETRYABLE_PROVIDER_STATUSES = new Set([400, 401, 402, 403, 404, 408, 409, 429, 500, 502, 503, 504]);
+const MAX_PROVIDER_ATTEMPTS = 3;
+
+async function adaptAnthropicResponse(response: Response, stream: boolean): Promise<Response> {
+  if (!response.ok) return response;
+
+  if (!stream) {
+    const payload = await response.json().catch(() => null) as
+      | { content?: Array<{ type?: string; text?: string }> }
+      | null;
+    const content = Array.isArray(payload?.content)
+      ? payload.content.filter((part) => part.type === "text").map((part) => part.text ?? "").join("")
+      : "";
+    return new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
+      status: response.status,
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    });
+  }
+
+  if (!response.body) return new Response(null, { status: 502 });
+  const reader = response.body.getReader();
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const transformed = new ReadableStream<Uint8Array>({
+    start(controller) {
+      void (async () => {
+        let pending = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          pending += decoder.decode(value, { stream: true });
+          const lines = pending.split("\n");
+          pending = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const raw = line.slice(6).trim();
+            if (!raw || raw === "[DONE]") continue;
+            let event: { type?: string; delta?: { text?: unknown } };
+            try {
+              event = JSON.parse(raw);
+            } catch {
+              continue;
+            }
+            if (event.type === "content_block_delta" && typeof event.delta?.text === "string") {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: event.delta.text } }] })}\n\n`));
+            }
+            if (event.type === "message_stop") {
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+              await reader.cancel().catch(() => undefined);
+              return;
+            }
+          }
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      })().catch((error) => controller.error(error));
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
+
+  return new Response(transformed, {
+    status: response.status,
+    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+  });
+}
+
+async function fetchProviderWithFallback(input: {
+  primary: ResolvedProvider;
+  messages: Array<{ role: "system" | "user"; content: string }>;
+  maxTokens: number;
+  stream: boolean;
+  signal: AbortSignal;
+}): Promise<{ response: Response; resolution: ResolvedProvider }> {
+  const candidates = input.primary.mode === "byok"
+    ? [input.primary.provider]
+    : Array.from(new Set([input.primary.provider, ...AUTOMATIC_PROVIDER_ORDER]));
+  let attempts = 0;
+  let lastResponse: Response | null = null;
+  let lastResolution = input.primary;
+
+  for (const candidate of candidates) {
+    if (attempts >= MAX_PROVIDER_ATTEMPTS) break;
+    let resolution: ResolvedProvider = input.primary;
+    if (candidate !== input.primary.provider) {
+      const apiKey = Deno.env.get(PROVIDER_CONFIGS[candidate].envKey)?.trim();
+      if (!apiKey) continue;
+      resolution = {
+        ...input.primary,
+        apiKey,
+        provider: candidate,
+        model: DEFAULT_MODELS[candidate],
+      };
+    }
+
+    const config = PROVIDER_CONFIGS[resolution.provider];
+    const isAnthropic = resolution.provider === "anthropic";
+    const providerMessages = input.messages.filter((message) => message.role !== "system");
+    const systemText = input.messages
+      .filter((message) => message.role === "system")
+      .map((message) => message.content)
+      .join("\n\n");
+    const body = isAnthropic
+      ? {
+          model: resolution.model,
+          max_tokens: input.maxTokens,
+          stream: input.stream,
+          ...(systemText ? { system: systemText } : {}),
+          messages: providerMessages.map((message) => ({ role: "user", content: message.content })),
+        }
+      : {
+          model: resolution.model,
+          messages: input.messages,
+          stream: input.stream,
+          max_tokens: input.maxTokens,
+          ...(resolution.provider === "moonshot" && resolution.model === "kimi-k3"
+            ? { reasoning_effort: "high" }
+            : {}),
+          ...(resolution.provider === "moonshot" || resolution.provider === "gemini"
+            ? {}
+            : { temperature: 0.7 }),
+        };
+
+    attempts += 1;
+    lastResolution = resolution;
+    let response: Response;
+    try {
+      response = await fetch(config.url, {
+        method: "POST",
+        headers: isAnthropic
+          ? {
+              "x-api-key": resolution.apiKey,
+              "anthropic-version": "2023-06-01",
+              "Content-Type": "application/json",
+            }
+          : {
+              Authorization: `Bearer ${resolution.apiKey}`,
+              "Content-Type": "application/json",
+              ...(resolution.provider === "openrouter"
+                ? {
+                    "HTTP-Referer": Deno.env.get("APP_ORIGIN") ?? "https://idealy.app",
+                    "X-Title": "Idealy",
+                  }
+                : {}),
+            },
+        body: JSON.stringify(body),
+        signal: input.signal,
+      });
+    } catch (error) {
+      console.warn(`AI provider request failed before a response (provider=${resolution.provider}); checking configured fallback.`);
+      continue;
+    }
+
+    if (response.ok) {
+      return {
+        response: isAnthropic ? await adaptAnthropicResponse(response, input.stream) : response,
+        resolution,
+      };
+    }
+
+    lastResponse = response;
+    if (!RETRYABLE_PROVIDER_STATUSES.has(response.status) || attempts >= MAX_PROVIDER_ATTEMPTS) {
+      return { response, resolution };
+    }
+
+    console.warn(`AI provider returned HTTP ${response.status} (provider=${resolution.provider}); checking configured fallback.`);
+    if (response.body) await response.body.cancel().catch(() => undefined);
+  }
+
+  return {
+    response: lastResponse ?? jsonError(
+      "Aucun fournisseur IA configuré ne peut répondre pour le moment.",
+      503,
+      getCorsHeaders(new Request("https://idealy.invalid")),
+      "AI_PROVIDER_UNAVAILABLE",
+    ),
+    resolution: lastResolution,
+  };
+}
+
 Deno.serve(async (req) => {
   const headers = getCorsHeaders(req);
 
@@ -568,7 +807,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const resolution = await resolveAIProvider(user.id, supabaseAdmin, { provider, model, mode });
+    let resolution = await resolveConfiguredAIProvider(user.id, supabaseAdmin, provider, model, mode);
     const managed = resolution.mode !== 'byok';
     const intentCategory = input.intentCategory ?? 'EXECUTION';
     let energyRemaining: number | null = null;
@@ -611,7 +850,7 @@ Deno.serve(async (req) => {
           missionId: null,
           idempotencyKey,
           amount,
-          reason: `ai:${intentCategory.toLowerCase()}:${provider}:${model}`,
+          reason: `ai:${intentCategory.toLowerCase()}:${resolution.provider}:${resolution.model}`,
         });
         energyRemaining = debit.energyRemaining;
       } catch (error) {
@@ -670,29 +909,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const llmRes = await fetch(config.url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resolution.apiKey}`,
-        'Content-Type': 'application/json',
-        ...(resolution.provider === 'openrouter' ? {
-          'HTTP-Referer': Deno.env.get('APP_ORIGIN') ?? 'https://idealy.app',
-          'X-Title': 'Idealy',
-        } : {}),
-      },
-      body: JSON.stringify({
-        model: resolution.model,
-        messages,
-        stream,
-        ...(provider === 'moonshot' && model === 'kimi-k3'
-          ? { reasoning_effort: 'high' }
-          : {}),
-        max_tokens: maxTokens,
-        ...(provider === 'moonshot' || provider === 'gemini'
-          ? {}
-          : { temperature: 0.7 }),
-      }),
+    const providerAttempt = await fetchProviderWithFallback({
+      primary: resolution,
+      messages,
+      maxTokens,
+      stream,
+      signal: req.signal,
     });
+    const llmRes = providerAttempt.response;
+    resolution = providerAttempt.resolution;
+
 
     if (!llmRes.ok) {
       const err = await llmRes.json().catch(() => ({ error: llmRes.statusText }));
