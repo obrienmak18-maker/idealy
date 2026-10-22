@@ -191,6 +191,11 @@ export function BuildTopBar() {
     setRenameDraft("");
     setRenameOpen(false);
     setProjectMenuOpen(false);
+    setView("preview");
+    setDevice("desktop");
+    setPage({ label: "Accueil", path: "/" });
+    setIsInspectorActive(false);
+    setIsCanvasExpanded(false);
   }, [chatId]);
 
   useEffect(() => {
