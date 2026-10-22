@@ -137,7 +137,7 @@ BEGIN
              task_id = COALESCE(p_task_id, reservation.task_id),
              operation = trim(p_operation),
              reserved_points = p_reserved_points,
-             charged_points = NULL,
+             charged_points = 0,
              status = 'held',
              metadata = v_metadata,
              created_at = now(),
