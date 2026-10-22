@@ -152,7 +152,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   return (
     <main className="relative min-h-dvh bg-background text-foreground overflow-hidden">
       <CosmicHorizon />
-      <div className="relative z-10 mx-auto max-w-5xl px-6 py-10 sm:px-10">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-10 lg:px-10">
         <div className="mb-8">
           <Link
             className="mb-6 inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-container-low hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -188,7 +188,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           <div className="mt-5 flex flex-wrap gap-2">
             <Link
               className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              href="/welcome#tarifs"
+              href="/pricing"
             >
               {copy.viewPlans}
             </Link>
@@ -236,7 +236,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               );
             })}
           </nav>
-          <div className="rounded-2xl border border-outline-variant/70 bg-surface-container-low p-6">{children}</div>
+          <div className="min-w-0 rounded-2xl border border-outline-variant/70 bg-surface-container-low p-6 sm:p-8">{children}</div>
         </div>
       </div>
     </main>

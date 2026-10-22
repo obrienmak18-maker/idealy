@@ -399,7 +399,7 @@ export function PricingExperience({
         </span>
       </div>
 
-      <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {chosenPlans.map((tier, index) => {
           const { id, points, features } = tier;
           const basePrice = tier.price;
@@ -434,7 +434,7 @@ export function PricingExperience({
               aria-current={isSelected ? "true" : undefined}
               aria-label={`${label} — ${priceLabel}`}
               className={cn(
-                "relative flex min-w-0 flex-col rounded-[1.65rem] border p-5 sm:p-5",
+                "relative flex min-w-0 flex-col rounded-[1.65rem] border p-6 sm:p-6",
                 isSelected
                   ? "border-cyan-200/70 bg-cyan-300/[0.08] ring-1 ring-cyan-200/30"
                   : isPopular
