@@ -17,6 +17,22 @@ CREATE TABLE IF NOT EXISTS public.idealy_free_generations (
 CREATE INDEX IF NOT EXISTS idx_idealy_free_generations_user_status
   ON public.idealy_free_generations(user_id, status);
 
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+      FROM pg_constraint
+     WHERE conrelid = 'public.idealy_free_generations'::regclass
+       AND conname = 'idealy_free_generations_status_check'
+  ) THEN
+    ALTER TABLE public.idealy_free_generations
+      ADD CONSTRAINT idealy_free_generations_status_check
+      CHECK (status IN ('reserved', 'completed', 'refunded'));
+  END IF;
+END;
+$;
+
+
 ALTER TABLE public.idealy_free_generations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view their own free generations"
   ON public.idealy_free_generations;
