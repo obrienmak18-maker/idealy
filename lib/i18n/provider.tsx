@@ -31,7 +31,13 @@ const LanguageContext = createContext<LanguageContextType>({
   dict: fr,
 });
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
+export function LanguageProvider({
+  children,
+  initialLanguage = "fr",
+}: {
+  children: React.ReactNode;
+  initialLanguage?: SupportedLanguage;
+}) {
   const { language, setLanguage } = useLanguageStore();
   const [mounted, setMounted] = useState(false);
 
@@ -49,7 +55,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, [setLanguage]);
 
-  const currentLang = mounted ? language : "fr";
+  // Use the server-provided cookie locale during SSR and the first hydration
+  // render. This keeps translated text and <html lang> consistent.
+  const currentLang = mounted ? language : initialLanguage;
   const dict = translations[currentLang] || fr;
 
   useEffect(() => {
