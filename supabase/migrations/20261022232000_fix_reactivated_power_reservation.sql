@@ -120,8 +120,8 @@ BEGIN
   INSERT INTO public.power_reservations (
     user_id, mission_id, task_id, operation, idempotency_key, reserved_points, metadata
   ) VALUES (
-    p_user_id, p_mission_id, p_task_id, trim(p_operation), p_reserved_points,
-    v_metadata
+    p_user_id, p_mission_id, p_task_id, trim(p_operation), trim(p_idempotency_key),
+    p_reserved_points, v_metadata
   )
   RETURNING id INTO v_reservation.id;
 
