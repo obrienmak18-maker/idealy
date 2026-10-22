@@ -2,6 +2,7 @@
 
 import { Cookie, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useTranslation } from "@/lib/i18n/provider";
@@ -31,6 +32,8 @@ const NOTICE_STORAGE_KEY = "idealy:essential-cookie-notice:dismissed:v1";
 
 export function CookieNotice() {
   const { language } = useTranslation();
+  const pathname = usePathname();
+  const isChatWorkspace = pathname === "/" || pathname.startsWith("/chat/");
   const [visible, setVisible] = useState(false);
   const copy = noticeCopy[language] ?? noticeCopy.fr;
 
@@ -56,7 +59,7 @@ export function CookieNotice() {
   return (
     <aside
       aria-label={copy.label}
-      className="fixed inset-x-4 bottom-4 z-[100] mx-auto flex max-w-3xl items-start gap-3 rounded-2xl border border-border/80 bg-card/95 p-4 text-card-foreground shadow-[var(--shadow-float)] backdrop-blur-xl"
+      className={`fixed inset-x-4 ${isChatWorkspace ? "bottom-44" : "bottom-4"} z-[100] mx-auto flex max-w-3xl items-start gap-3 rounded-2xl border border-border/80 bg-card/95 p-4 text-card-foreground shadow-[var(--shadow-float)] backdrop-blur-xl`}
       role="region"
     >
       <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
