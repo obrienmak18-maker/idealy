@@ -57,9 +57,10 @@ test.describe("Authentication Pages", () => {
     await setLocale(page, "fr");
     await page.goto("/login");
 
-    await expect(page.getByRole("alert")).toContainText(
-      "Google n’a pas terminé la connexion.",
-      { timeout: 10_000 }
-    );
+    await expect(
+      page.getByRole("alert").filter({
+        hasText: "Google n’a pas terminé la connexion.",
+      }).first()
+    ).toBeVisible({ timeout: 10_000 });
   });
 });
