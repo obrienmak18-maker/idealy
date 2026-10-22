@@ -5,8 +5,6 @@ import {
   validatePlanJSON,
 } from "@/lib/idealy/orchestrator/plan-schema";
 
-export const runtime = "nodejs";
-
 const FORBIDDEN_WORDS = ["moderne", "optimisé", "réactif"];
 
 /**
@@ -57,7 +55,7 @@ export function critiquePlan(plan: Plan): PlanCritique {
     revisedPlan = {
       ...plan,
       assumptions:
-        plan.assumptions.length > 0
+        (plan.assumptions ?? []).length > 0
           ? plan.assumptions
           : assumptionsToAdd.length > 0
             ? assumptionsToAdd
