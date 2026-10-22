@@ -71,8 +71,6 @@ const discoveryLabels: Record<(typeof idealyDiscoverySources)[number], { fr: str
   youtube: { fr: "YouTube", en: "YouTube", es: "YouTube" },
 };
 
-// Keep the palette consistent between steps to reduce visual flicker.
-
 function getSafeNext(value: string | null) {
   return value && value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/onboarding")
     ? value
@@ -91,6 +89,7 @@ export function OnboardingFlow() {
 
   const nextPath = useMemo(() => getSafeNext(searchParams.get("next")), [searchParams]);
 
+  const [customGoalSelected, setCustomGoalSelected] = useState(false);
   const goalOptions = useMemo(() => {
     if (langKey === "en") return [
       { value: "Launch a web app", label: "Launch a web app" },
@@ -117,9 +116,6 @@ export function OnboardingFlow() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
-
-  // Animation states for the star logo transition onto ocean water
-  const [customGoalSelected, setCustomGoalSelected] = useState(false);
 
   const [draft, setDraft] = useState<OnboardingDraft>({
     discoverySource: "",
@@ -331,9 +327,81 @@ export function OnboardingFlow() {
         </div>
       </header>
 
-      {/* Main Glassmorphic Question Frame */}
+
       <div className="w-full max-w-3xl my-auto py-4 z-10">
         <section className="relative rounded-3xl border border-border/70 dark:border-white/10 bg-card/85 dark:bg-card/75 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-2xl sm:p-8 transition-colors">
+
+          <div className="mb-6 flex items-center justify-between gap-3 border-b border-border/40 pb-4">
+            <ol className="flex items-center gap-2">
+              {steps.map((item, index) => {
+                const Icon = item.icon;
+                const isCurrent = index === step;
+                const isComplete = index < step;
+                return (
+                  <li key={item.key} className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => index < step && setStep(index)}
+                      disabled={index > step}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-all",
+                        isCurrent
+                          ? "bg-primary/15 text-primary font-semibold ring-1 ring-primary/30"
+                          : isComplete
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 cursor-pointer"
+                          : "text-muted-foreground/50 opacity-60 cursor-default"
+                      )}
+                    >
+                      <span className="size-4 grid place-items-center">
+                        {isComplete ? <Check className="size-3" /> : <Icon className="size-3" />}
+                      </span>
+                      <span className="hidden sm:inline text-[11px]">{item.badge}</span>
+                    </button>
+                    {index < steps.length - 1 && (
+                      <span className="mx-1 h-px w-3 bg-border/60" aria-hidden="true" />
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted/60" aria-hidden="true">
+              <motion.div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  step % 2 === 0
+                    ? "bg-gradient-to-r from-teal-400 to-emerald-400"
+                    : "bg-gradient-to-r from-violet-400 to-purple-400"
+                )}
+                style={{ width: `${((step + 1) / steps.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Animated Question Content Cards */}
+          <AnimatePresence mode="wait">
+            {step === 0 && (
+              <motion.div key="step-0" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3 }} className="space-y-5">
+                <div>
+                  <span className="inline-block rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-teal-600 dark:text-teal-400">Question 1 / 4</span>
+                  <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{langKey === "en" ? "Make this space yours" : langKey === "es" ? "Haz tuyo este espacio" : "Personnalisez votre espace"}</h1>
+                  <p className="mt-1 text-xs text-muted-foreground">{langKey === "en" ? "Make Idealy feel like yours. You can change these choices later." : langKey === "es" ? "Haz que Idealy se sienta tuyo. Puedes cambiar estas opciones después." : "Personnalisez votre espace. Vous pourrez modifier ces choix plus tard."}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <Mail className="size-3.5 shrink-0" aria-hidden="true" />
+                  <span className="font-medium text-foreground break-all">{accountEmail || (langKey === "en" ? "Email linked to your account" : langKey === "es" ? "Correo vinculado a tu cuenta" : "E-mail associé à votre compte")}</span>
+                  <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[10px]">{langKey === "en" ? "Account email · read-only" : langKey === "es" ? "Correo de cuenta · solo lectura" : "E-mail du compte · non modifiable"}</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="grid gap-1.5 text-xs font-medium">
+                    {langKey === "en" ? "Display name" : langKey === "es" ? "Nombre visible" : "Nom affiché"} <span className="text-destructive">*</span>
+                    <input value={draft.firstName} onChange={(event) => updateDraft("firstName", event.target.value)} maxLength={80} autoFocus autoComplete="given-name" className="h-10 rounded-xl border border-border/70 bg-background/60 px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20" placeholder={langKey === "en" ? "Your first name or nickname" : langKey === "es" ? "Tu nombre o apodo" : "Votre prénom ou pseudo"} />
+                  </label>
+                  <label className="grid gap-1.5 text-xs font-medium">
+                    {langKey === "en" ? "Last name" : langKey === "es" ? "Apellido" : "Nom"} <span className="font-normal text-muted-foreground">({langKey === "en" ? "optional" : langKey === "es" ? "opcional" : "facultatif"})</span>
+                    <input value={draft.lastName} onChange={(event) => updateDraft("lastName", event.target.value)} maxLength={80} autoComplete="family-name" className="h-10 rounded-xl border border-border/70 bg-background/60 px-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20" placeholder={langKey === "en" ? "Your last name" : langKey === "es" ? "Tu apellido" : "Votre nom"} />
+                  </label>
+                </div>
+              </motion.div>
             )}
 
             {step === 1 && (
@@ -366,24 +434,24 @@ export function OnboardingFlow() {
                       <span className="ml-1 text-destructive">*</span>
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {goalOptions.map((goal) => (
+                      {goalOptions.map((item) => (
                         <button
-                          key={goal.value}
+                          key={item.value}
                           type="button"
-                          aria-pressed={!customGoalSelected && draft.primaryGoal === goal.value}
+                          aria-pressed={!customGoalSelected && draft.primaryGoal === item.value}
                           onClick={() => {
                             setCustomGoalSelected(false);
-                            updateDraft("primaryGoal", goal.value);
+                            updateDraft("primaryGoal", item.value);
                           }}
                           className={cn(
                             "flex min-h-10 items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs transition-colors",
-                            !customGoalSelected && draft.primaryGoal === goal.value
+                            !customGoalSelected && draft.primaryGoal === item.value
                               ? "border-primary bg-primary/10 text-foreground"
                               : "border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
                           )}
                         >
-                          <span>{goal.label}</span>
-                          {!customGoalSelected && draft.primaryGoal === goal.value ? <Check className="size-3.5 text-primary" /> : null}
+                          <span>{item.label}</span>
+                          {!customGoalSelected && draft.primaryGoal === item.value ? <Check className="size-3.5 text-primary" /> : null}
                         </button>
                       ))}
                       <button
@@ -601,7 +669,7 @@ export function OnboardingFlow() {
         <p className="text-[10px] tracking-wide text-muted-foreground/70">
           {langKey === "en" ? "Your preferences can be changed later in Settings." : langKey === "es" ? "Podrás cambiar estas preferencias más adelante en Configuración." : "Vous pourrez modifier ces préférences plus tard dans les paramètres."}
         </p>
-      </footer>ooter>
+      </footer>
     </main>
   );
 }
