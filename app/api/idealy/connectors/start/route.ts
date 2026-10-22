@@ -46,6 +46,15 @@ export async function POST(request: Request) {
     );
   }
 
+  const returnOrigin = new URL(request.url).origin;
+  const suppliedOrigin = request.headers.get("origin");
+  if (suppliedOrigin && suppliedOrigin !== returnOrigin) {
+    return Response.json(
+      { error: "L’origine de cette demande n’est pas autorisée." },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   const response = await fetch(getIdealySupabaseFunctionUrl("integration-connect"), {
     method: "POST",
     headers: {
@@ -53,7 +62,7 @@ export async function POST(request: Request) {
       apikey: anonKey,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ provider }),
+    body: JSON.stringify({ provider, returnOrigin }),
     cache: "no-store",
   }).catch(() => null);
 
