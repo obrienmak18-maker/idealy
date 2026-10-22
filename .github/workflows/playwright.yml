@@ -23,7 +23,9 @@ jobs:
       # E2E only: exercise the real workspace UI with the local test stream
       # and bypass login/database setup. This workflow variable is never used in production.
       DEMO_MODE: "true"
-      NEXT_PUBLIC_DEMO_MODE: "true"
+      # Keep normal client interactions (URL updates, controls); only server-side
+      # authentication/database/AI calls use the local test mode.
+      NEXT_PUBLIC_DEMO_MODE: "false"
 
     steps:
       - uses: actions/checkout@v4
