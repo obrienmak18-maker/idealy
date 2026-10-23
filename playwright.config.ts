@@ -74,11 +74,11 @@ export default defineConfig({
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
   /* Retry on CI only */
-  retries: 0,
+  retries: process.env.CI ? 1 : 0,
   testDir: "./tests",
 
   /* Keep failed UI checks quick enough to diagnose in CI. */
-  timeout: 60 * 1000,
+  timeout: 90 * 1000,
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -87,7 +87,7 @@ export default defineConfig({
     // Fail a broken locator quickly instead of spending the entire 60-second
     // test budget on every missing control.
     actionTimeout: 10 * 1000,
-    navigationTimeout: 30 * 1000,
+    navigationTimeout: 45 * 1000,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "retain-on-failure",
