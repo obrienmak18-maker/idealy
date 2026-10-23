@@ -43,5 +43,7 @@ assert.ok(workspaceBuild.includes("test -s dist/index.html"), "Real builds must 
 assert.ok(squadRoute.includes("runWorkspaceBuildInSandbox"), "Mission launch must run the real isolated build.");
 assert.ok(squadRoute.includes('buildResult.persisted && buildResult.report.status === "passed"'), "A mission may be ready only after a persisted passing build.");
 assert.ok(squadRoute.includes("buildVerification: buildResult.report"), "The response must expose the real build result.");
+assert.ok(squadRoute.includes('status: "building", validation: pendingValidation'), "The persisted mission must stay building during verification.");
+assert.ok(topBar.includes("payload.buildVerificationStatus"), "The UI must wait for real compiler status before terminal readiness.");
 
 console.log("Local workspace demo contract passed.");
