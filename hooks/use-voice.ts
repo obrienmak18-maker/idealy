@@ -240,24 +240,49 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
 
     setState("requesting");
 
-    // Proactively request mic permission to trigger browser prompt if needed
-    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Close tracks immediately after permission check
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-      } catch (mediaErr: any) {
-        if (mediaErr?.name === "NotAllowedError" || mediaErr?.name === "PermissionDeniedError") {
-          setState("idle");
-          onErrorRef.current?.({
-            kind: "PERMISSION_DENIED",
-            message: getFriendlyErrorMessage("PERMISSION_DENIED", language),
-          });
-          return;
-        }
-      }
+    // Require a real browser microphone permission check before speech recognition.
+    // SpeechRecognition alone does not reliably trigger a permission prompt in every browser.
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getUserMedia !== "function"
+    ) {
+      setState("idle");
+      onErrorRef.current?.({
+        kind: "NOT_SUPPORTED",
+        message: getFriendlyErrorMessage("NOT_SUPPORTED", language),
+      });
+      return;
+    }
+
+    let microphoneStream: MediaStream;
+    try {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (mediaErr: unknown) {
+      setState("idle");
+      const errorName =
+        mediaErr instanceof Error ? mediaErr.name : "";
+      const denied =
+        errorName === "NotAllowedError" ||
+        errorName === "PermissionDeniedError" ||
+        errorName === "SecurityError";
+      onErrorRef.current?.({
+        kind: denied ? "PERMISSION_DENIED" : "UNKNOWN",
+        message: denied
+          ? getFriendlyErrorMessage("PERMISSION_DENIED", language)
+          : language.toLowerCase().startsWith("en")
+            ? "The microphone could not be opened. Check that it is connected and not being used exclusively by another app."
+            : language.toLowerCase().startsWith("es")
+              ? "No se pudo abrir el micrófono. Comprueba que esté conectado y que ninguna otra aplicación lo esté usando en exclusiva."
+              : "Impossible d’ouvrir le microphone. Vérifiez qu’il est connecté et qu’aucune autre application ne l’utilise exclusivement.",
+      });
+      return;
+    }
+
+    // Permission was granted. Release this temporary stream before starting
+    // the browser's speech-recognition service.
+    for (const track of microphoneStream.getTracks()) {
+      track.stop();
     }
 
     try {
