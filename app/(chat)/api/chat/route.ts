@@ -31,7 +31,6 @@ import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import {
-  allowedModelIds,
   chatModels,
   DEFAULT_CHAT_MODEL,
   getCapabilities,
@@ -46,7 +45,6 @@ import {
 } from "@/lib/idealy/backend-adapter";
 import { getMissionAgentRoster, normalizeMissionWay } from "@/lib/idealy/agent-personas";
 import { getIdealyAiFunctionUrl } from "@/lib/idealy/config";
-import { getIdealyDirectProviderModel } from "@/lib/idealy/provider-registry";
 import {
   commitFreeGeneration,
   FREE_QUOTA_EXCEEDED_MESSAGE,
@@ -93,7 +91,7 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 export const maxDuration = 60;
 
 function shouldUseIdealyEdgeProvider() {
-  return isProductionEnvironment || process.env.IDEALY_AI_PROVIDER === "supabase-function";
+  return isProductionEnvironment || process.env.VERCEL_ENV === "preview" || process.env.IDEALY_AI_PROVIDER === "supabase-function";
 }
 
 async function getSupabaseAccessToken(request: Request) {
@@ -196,7 +194,6 @@ function getChatWaitingMessage(language: string | null | undefined, key: Waiting
 }
 async function streamIdealyEdgeResponse({
   dataStream,
-  directModel,
   idempotencyKey,
   intentCategory,
   messages,
@@ -210,7 +207,6 @@ async function streamIdealyEdgeResponse({
   requestedAgent,
 }: {
   dataStream: Parameters<Parameters<typeof createUIMessageStream>[0]["execute"]>[0]["writer"];
-  directModel?: ReturnType<typeof getIdealyDirectProviderModel>;
   idempotencyKey: string;
   intentCategory: "CONVERSATION" | "IDEATION" | "EXECUTION";
   messages: ChatMessage[];
@@ -234,12 +230,6 @@ async function streamIdealyEdgeResponse({
     body: JSON.stringify({
       idempotencyKey,
       intentCategory,
-      ...(directModel
-        ? {
-            model: directModel.edgeModel,
-            provider: directModel.edgeProvider,
-          }
-        : {}),
       ...(missionId ? { missionId, workspaceStream: true } : {}),
       maxTokens: 8000,
       mode: "auto",
@@ -367,8 +357,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { id, message, messages, selectedChatModel, selectedVisibilityType } =
-      requestBody;
+    const { id, message, messages, selectedVisibilityType } = requestBody;
 
     if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
       const lastUserPrompt =
@@ -529,9 +518,7 @@ export async function POST(request: Request) {
       return createUIMessageStreamResponse({ stream: greetingStream });
     }
 
-    const chatModel = allowedModelIds.has(selectedChatModel)
-      ? selectedChatModel
-      : DEFAULT_CHAT_MODEL;
+    const chatModel = DEFAULT_CHAT_MODEL;
 
     await checkIpRateLimit(ipAddress(request));
 
@@ -632,7 +619,6 @@ export async function POST(request: Request) {
     }
 
     const modelConfig = chatModels.find((m) => m.id === chatModel);
-    const directModel = getIdealyDirectProviderModel(chatModel);
     const modelCapabilities = await getCapabilities();
     const capabilities = modelCapabilities[chatModel];
     const isReasoningModel = capabilities?.reasoning === true;
@@ -814,10 +800,8 @@ export async function POST(request: Request) {
               writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "planning"));
               missionPlan = await createIdealyMissionPlan({
                 idempotencyKey: `${idempotencyKey}:plan`,
-                ...(directModel ? { model: directModel.edgeModel } : {}),
                 missionId,
                 prompt: idealyPrompt,
-                ...(directModel ? { provider: directModel.edgeProvider } : {}),
                 request,
                 way: activeWay,
                 requestedAgent,
@@ -861,7 +845,6 @@ export async function POST(request: Request) {
             } else {
               await streamIdealyEdgeResponse({
                 dataStream,
-                directModel,
                 idempotencyKey: `${idempotencyKey}:run`,
                 intentCategory,
                 messages: uiMessages,
@@ -937,9 +920,6 @@ export async function POST(request: Request) {
               stopWaitingStatus();
             },
             providerOptions: {
-              ...(modelConfig?.gatewayOrder && {
-                gateway: { order: modelConfig.gatewayOrder },
-              }),
               ...(modelConfig?.reasoningEffort && {
                 openai: { reasoningEffort: modelConfig.reasoningEffort },
               }),
@@ -1036,6 +1016,19 @@ export async function POST(request: Request) {
         }
       },
       onError: (error) => {
+        if (
+          error instanceof Error &&
+          error.message?.includes("Aucun fournisseur IA direct n’est configuré côté Supabase")
+        ) {
+          const locale = (userLanguage ?? "").toLowerCase();
+          if (locale.startsWith("en")) {
+            return "Idealy’s AI provider is not configured on the server. A direct provider key must be configured for Supabase Edge Functions; Vercel AI Gateway billing is not required.";
+          }
+          if (locale.startsWith("es")) {
+            return "El proveedor de IA de Idealy no está configurado en el servidor. Debe configurarse una clave de proveedor directo en las funciones Edge de Supabase; no se necesita facturación de Vercel AI Gateway.";
+          }
+          return "Le moteur IA d’Idealy n’a aucune clé de fournisseur direct configurée côté Supabase. Il faut configurer une clé dans les secrets des Edge Functions ; aucune carte Vercel AI Gateway n’est nécessaire.";
+        }
         if (
           error instanceof Error &&
           error.message?.includes(

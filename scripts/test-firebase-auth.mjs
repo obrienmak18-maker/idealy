@@ -14,6 +14,9 @@ const files = {
   supabase: await readFile("lib/idealy/supabase-auth.ts", "utf8"),
   workspace: await readFile("pnpm-workspace.yaml", "utf8"),
   lockfile: await readFile("pnpm-lock.yaml", "utf8"),
+  runtime: await readFile("scripts/test-firebase-runtime.mjs", "utf8"),
+  backendAdapter: await readFile("lib/idealy/backend-adapter.ts", "utf8"),
+  idealyConfig: await readFile("lib/idealy/config.ts", "utf8"),
 };
 
 assert.match(files.client, /initializeApp/);
@@ -46,6 +49,16 @@ assert.match(
 );
 assert.match(files.supabase, /Authorization: `Bearer \$\{accessToken\}`/);
 assert.match(files.supabase, /signInFirebaseUserThroughSupabase/);
+assert.ok(files.supabase.includes("NEXT_PUBLIC_SUPABASE_URL"), "Auth bridge must support the public Supabase URL alias.");
+assert.ok(files.supabase.includes("NEXT_PUBLIC_SUPABASE_ANON_KEY"), "Auth bridge must support the public anonymous-key alias.");
+assert.ok(files.supabase.includes("SUPABASE_PUBLISHABLE_KEY"), "Auth bridge must support the publishable-key environment variable.");
+assert.ok(files.runtime.includes("NEXT_PUBLIC_SUPABASE_URL"), "Runtime diagnostic must support the public Supabase URL alias.");
+assert.ok(files.runtime.includes("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"), "Runtime diagnostic must support public publishable keys.");
+assert.ok(files.runtime.includes("NEXT_PUBLIC_FIREBASE_PROJECT_ID"), "Runtime diagnostic must use the configured Firebase project alias.");
+assert.ok(files.backendAdapter.includes("NEXT_PUBLIC_SUPABASE_URL"), "The server adapter must support the public Supabase URL alias.");
+assert.ok(files.backendAdapter.includes("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"), "The server adapter must support Supabase publishable keys.");
+assert.ok(files.idealyConfig.includes("NEXT_PUBLIC_SUPABASE_URL"), "Supabase Edge URL resolution must support the public URL alias.");
+assert.ok(!files.runtime.includes("gen-lang-client-0338545186"), "Runtime diagnostic must not silently substitute a hard-coded Firebase project.");
 assert.match(files.auth, /signInFirebaseUserThroughSupabase\(email\)/);
 assert.match(files.auth, /supabaseAccessToken: supabaseAuth\.accessToken/);
 assert.doesNotMatch(files.client, /FIREBASE_PRIVATE_KEY|FIREBASE_CLIENT_EMAIL/);

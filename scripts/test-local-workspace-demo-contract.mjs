@@ -12,6 +12,8 @@ const suggestedActions = await readFile("components/chat/suggested-actions.tsx",
 const nextConfig = await readFile("next.config.ts", "utf8");
 const chatLayout = await readFile("app/(chat)/layout.tsx", "utf8");
 const chatComposer = await readFile("components/chat/multimodal-input.tsx", "utf8");
+const workspaceBuild = await readFile("lib/idealy/runtime/e2b.ts", "utf8");
+const squadRoute = await readFile("app/api/idealy/missions/[missionId]/squad/route.ts", "utf8");
 const cookieNotice = await readFile("components/cookies/cookie-notice.tsx", "utf8");
 
 assert.match(hook, /if \(!isDemoMode\) \{\s*return sendRemoteMessage/);
@@ -30,9 +32,18 @@ assert.match(nextConfig, /explicitClientDemoMode === "true" \|\| explicitClientD
 assert.match(nextConfig, /NEXT_PUBLIC_DEMO_MODE: clientDemoMode/);
 assert.match(chatLayout, /const isLocalDemo =/);
 assert.match(chatLayout, /isLocalDemo \? Promise\.resolve\(null\) : auth\(\)/);
-assert.ok(chatComposer.includes("<ModelSelectorCompact"));
-assert.ok(chatComposer.includes("selectedModelId={selectedModelId}"));
+assert.ok(chatComposer.includes('data-testid="multimodal-input"'), "The real chat composer must remain available.");
+assert.ok(!chatComposer.includes("<ModelSelectorCompact"), "Model selection must stay automatic and hidden.");
+assert.doesNotMatch(chatComposer, /selectedModelId=\{selectedModelId\}/, "The composer must not require a visible model selector.");
 assert.ok(cookieNotice.includes('isChatWorkspace ? "bottom-44" : "bottom-4"'));
 assert.doesNotMatch(localDemo, /fetch\s*\(/);
+assert.match(workspaceBuild, /npm install --ignore-scripts/);
+assert.match(workspaceBuild, /npm run build/);
+assert.ok(workspaceBuild.includes("test -s dist/index.html"), "Real builds must verify Vite output.");
+assert.ok(squadRoute.includes("runWorkspaceBuildInSandbox"), "Mission launch must run the real isolated build.");
+assert.ok(squadRoute.includes('buildResult.persisted && buildResult.report.status === "passed"'), "A mission may be ready only after a persisted passing build.");
+assert.ok(squadRoute.includes("buildVerification: buildResult.report"), "The response must expose the real build result.");
+assert.ok(squadRoute.includes('status: "building", validation: pendingValidation'), "The persisted mission must stay building during verification.");
+assert.ok(topBar.includes("payload.buildVerificationStatus"), "The UI must wait for real compiler status before terminal readiness.");
 
 console.log("Local workspace demo contract passed.");

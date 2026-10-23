@@ -31,7 +31,8 @@ assert.match(schema, /selectedChatModel: z\.string\(\)\.min\(1\)\.max\(160\)/, "
 assert.match(route, /const supportsFileContents =\s*capabilities\?\.vision === true[\s\S]*?mediaType === "application\/pdf"/, "Le serveur ne doit transmettre le contenu que pour les formats réellement lisibles par le modèle sélectionné.");
 assert.match(route, /if \(supportsFileContents\) return \[part\]/, "Les images et PDF restent transmis aux modèles qui annoncent la vision.");
 assert.match(route, /Le modèle choisi ne peut pas lire le contenu de ce format[\s\S]*?L’original reste joint et téléchargeable/, "Les formats non lisibles doivent rester attachés sans prétendre qu’ils ont été analysés.");
-assert.match(input, /capabilities\?\.\[model\.id\]\?\.vision/, "Le sélecteur doit exposer les capacités de vision réelles du modèle.");
+assert.doesNotMatch(input, /data-testid="model-selector"/, "Le modèle doit être sélectionné automatiquement sans sélecteur visible.");
+assert.match(route, /const chatModel = DEFAULT_CHAT_MODEL/, "Le chat doit appliquer le modèle serveur par défaut.");
 assert.match(route, /part\.type !== "file"[\s\S]*?Fichier joint[\s\S]*?contenu binaire[\s\S]*?n’est pas transmis/, "Le moteur de production doit recevoir une description honnête des pièces jointes qu’il ne peut pas lire.");
 
 assert.match(types, /searchImages: searchImagesTool/, "Pexels search results must be part of the chat message type contract.");
@@ -68,6 +69,9 @@ assert.match(edgeToolCalling, /state: "input-available"/, "A real tool call must
 assert.match(edgeToolCalling, /state: finalState/, "A completed tool call must publish its real result state.");
 assert.match(route, /parsed\.type === "idealy_tool_activity"/, "The production stream adapter must forward real tool activity.");
 assert.match(route, /data-idealy-tool-activity/, "Tool activity must enter the typed UI message stream.");
+assert.ok(route.includes("Aucun fournisseur IA direct n’est configuré côté Supabase"), "Missing Edge provider secrets must be distinguishable from generic chat failures.");
+assert.ok(edgeRequest.includes("EMPTY_PROVIDER_RESPONSE"), "The provider proxy must reject empty or unsupported AI responses explicitly.");
+assert.ok(route.includes("aucune carte Vercel AI Gateway n’est nécessaire"), "Provider diagnostics must not direct users back to Gateway billing.");
 assert.match(types, /"idealy-tool-activity": IdealyChatToolActivity/, "The custom stream event must have a typed UI contract.");
 assert.match(message, /type === "data-idealy-tool-activity"/, "The chat must render Edge tool activity cards.");
 assert.match(activityCard, /open=\{isOpen\} onOpenChange=\{setIsOpen\}/, "Tool cards must be manually collapsible after completion.");

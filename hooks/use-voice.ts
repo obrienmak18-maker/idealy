@@ -57,6 +57,7 @@ type SpeechRecognitionResultLike = {
 
 type IdealySpeechRecognitionEvent = Event & {
   results: ArrayLike<SpeechRecognitionResultLike>;
+  resultIndex: number;
 };
 
 type IdealySpeechRecognitionErrorEvent = Event & {
@@ -131,16 +132,38 @@ function mapErrorKind(event: IdealySpeechRecognitionErrorEvent): VoiceErrorKind 
   }
 }
 
-function getFriendlyErrorMessage(kind: VoiceErrorKind): string {
+function getFriendlyErrorMessage(kind: VoiceErrorKind, language: string): string {
+  const locale = language.toLowerCase().split("-")[0];
+  const messages = {
+    fr: {
+      PERMISSION_DENIED: "Accès micro refusé. Autorisez le microphone dans les paramètres du navigateur.",
+      NETWORK: "La reconnaissance vocale a besoin d’une connexion réseau.",
+      NOT_SUPPORTED: "La dictée vocale n’est pas prise en charge ici. Utilisez Chrome, Edge ou Safari.",
+      DEFAULT: "La dictée vocale s’est interrompue. Cliquez à nouveau pour reprendre.",
+    },
+    en: {
+      PERMISSION_DENIED: "Microphone access was denied. Allow microphone access in your browser settings.",
+      NETWORK: "Speech recognition needs a working network connection.",
+      NOT_SUPPORTED: "Speech recognition is not supported here. Try Chrome, Edge or Safari.",
+      DEFAULT: "Speech recognition stopped. Click the microphone to try again.",
+    },
+    es: {
+      PERMISSION_DENIED: "Se denegó el acceso al micrófono. Permítelo en la configuración del navegador.",
+      NETWORK: "El reconocimiento de voz necesita una conexión de red activa.",
+      NOT_SUPPORTED: "Este navegador no admite el reconocimiento de voz. Prueba Chrome, Edge o Safari.",
+      DEFAULT: "El reconocimiento de voz se detuvo. Vuelve a pulsar el micrófono para intentarlo.",
+    },
+  } as const;
+  const copy = locale === "en" ? messages.en : locale === "es" ? messages.es : messages.fr;
   switch (kind) {
     case "PERMISSION_DENIED":
-      return "Accès micro refusé. Veuillez autoriser le microphone dans la barre d'adresse de votre navigateur.";
+      return copy.PERMISSION_DENIED;
     case "NETWORK":
-      return "Connexion réseau insuffisante pour la reconnaissance vocale.";
+      return copy.NETWORK;
     case "NOT_SUPPORTED":
-      return "La reconnaissance vocale n'est pas prise en charge sur ce navigateur. Utilisez Chrome, Edge ou Safari.";
+      return copy.NOT_SUPPORTED;
     default:
-      return "La dictée vocale s'est interrompue. Cliquez à nouveau pour reprendre.";
+      return copy.DEFAULT;
   }
 }
 
@@ -210,31 +233,56 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
     if (!Ctor) {
       onErrorRef.current?.({
         kind: "NOT_SUPPORTED",
-        message: getFriendlyErrorMessage("NOT_SUPPORTED"),
+        message: getFriendlyErrorMessage("NOT_SUPPORTED", language),
       });
       return;
     }
 
     setState("requesting");
 
-    // Proactively request mic permission to trigger browser prompt if needed
-    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Close tracks immediately after permission check
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-      } catch (mediaErr: any) {
-        if (mediaErr?.name === "NotAllowedError" || mediaErr?.name === "PermissionDeniedError") {
-          setState("idle");
-          onErrorRef.current?.({
-            kind: "PERMISSION_DENIED",
-            message: getFriendlyErrorMessage("PERMISSION_DENIED"),
-          });
-          return;
-        }
-      }
+    // Require a real browser microphone permission check before speech recognition.
+    // SpeechRecognition alone does not reliably trigger a permission prompt in every browser.
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getUserMedia !== "function"
+    ) {
+      setState("idle");
+      onErrorRef.current?.({
+        kind: "NOT_SUPPORTED",
+        message: getFriendlyErrorMessage("NOT_SUPPORTED", language),
+      });
+      return;
+    }
+
+    let microphoneStream: MediaStream;
+    try {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (mediaErr: unknown) {
+      setState("idle");
+      const errorName =
+        mediaErr instanceof Error ? mediaErr.name : "";
+      const denied =
+        errorName === "NotAllowedError" ||
+        errorName === "PermissionDeniedError" ||
+        errorName === "SecurityError";
+      onErrorRef.current?.({
+        kind: denied ? "PERMISSION_DENIED" : "UNKNOWN",
+        message: denied
+          ? getFriendlyErrorMessage("PERMISSION_DENIED", language)
+          : language.toLowerCase().startsWith("en")
+            ? "The microphone could not be opened. Check that it is connected and not being used exclusively by another app."
+            : language.toLowerCase().startsWith("es")
+              ? "No se pudo abrir el micrófono. Comprueba que esté conectado y que ninguna otra aplicación lo esté usando en exclusiva."
+              : "Impossible d’ouvrir le microphone. Vérifiez qu’il est connecté et qu’aucune autre application ne l’utilise exclusivement.",
+      });
+      return;
+    }
+
+    // Permission was granted. Release this temporary stream before starting
+    // the browser's speech-recognition service.
+    for (const track of microphoneStream.getTracks()) {
+      track.stop();
     }
 
     try {
@@ -253,7 +301,8 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
         resetSilenceTimer();
         let finalPart = "";
         let interimPart = "";
-        for (const res of Array.from(event.results)) {
+        for (let resultIndex = event.resultIndex; resultIndex < event.results.length; resultIndex += 1) {
+          const res = event.results[resultIndex];
           const text = res[0]?.transcript ?? "";
           if (res.isFinal) {
             finalPart += `${text} `;
@@ -282,7 +331,7 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
         if (kind !== "ABORTED" && kind !== "NO_SPEECH") {
           onErrorRef.current?.({
             kind,
-            message: getFriendlyErrorMessage(kind),
+            message: getFriendlyErrorMessage(kind, language),
           });
         }
         recognitionRef.current = null;

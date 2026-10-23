@@ -236,6 +236,14 @@ export default function SettingsIndex() {
 
   async function chooseWay(nextWay: IdealyWay) {
     if (nextWay === selectedWay || savingWay) return;
+    const confirmed = window.confirm(
+      lang === "en"
+        ? "Change your default Way for future missions? Existing files, missions and Power points will remain unchanged."
+        : lang === "es"
+          ? "¿Cambiar la vía predeterminada para las próximas misiones? Los archivos, las misiones existentes y los puntos de Power no cambiarán."
+          : "Changer votre voie par défaut pour les prochaines missions ? Les fichiers, missions existantes et points de Power resteront inchangés."
+    );
+    if (!confirmed) return;
     setSavingWay(nextWay);
     try {
       await updatePreferences({ way: nextWay });

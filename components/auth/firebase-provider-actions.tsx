@@ -16,7 +16,6 @@ import {
   prepareFirebaseIdTokenForSupabase,
   sendPhoneCodeFirebase,
   signInWithGoogleFirebase,
-  signInWithGoogleRedirectFirebase,
 } from "@/lib/firebase/client";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/provider";
@@ -68,23 +67,11 @@ export function FirebaseProviderActions({
   const [confirmationResult, setConfirmationResult] =
     useState<ConfirmationResult | null>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-  const [showRedirectOption, setShowRedirectOption] = useState(false);
   const [pendingRedirectIdToken, setPendingRedirectIdToken] = useState<string | null>(null);
   const turnstileClientEnabled = Boolean(
     process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY?.trim()
   );
   const phoneAuthEnabled = false;
-
-  const handleGoogleRedirectSignIn = useCallback(() => {
-    setProviderError(null);
-    startTransition(async () => {
-      try {
-        await signInWithGoogleRedirectFirebase();
-      } catch {
-        setProviderError("La redirection Google n’a pas pu démarrer. Utilisez votre adresse e-mail.");
-      }
-    });
-  }, []);
 
   const completeAuth = useCallback(
     async (idToken: string, challengeToken: string) => {
@@ -240,8 +227,12 @@ export function FirebaseProviderActions({
           message.includes("popup-closed-by-user") ||
           message.includes("cancelled")
         ) {
-          setShowRedirectOption(true);
-          toast.info(t("auth.googleCancelled", "Google sign-in was cancelled. You can try again."));
+          const cancelledMessage = t(
+            "auth.googleCancelled",
+            "Connexion Google annulée. Cliquez sur le même bouton pour réessayer."
+          );
+          setProviderError(cancelledMessage);
+          toast.info(cancelledMessage);
           return;
         }
 
@@ -375,27 +366,6 @@ export function FirebaseProviderActions({
           ? "Connexion avec Google en cours…"
           : (t("auth.googleButton") || "Continuer avec Google")}
       </button>
-
-      {showRedirectOption ? (
-        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3 text-xs text-sky-300 flex flex-col gap-2">
-          <p className="leading-relaxed">
-            La fenêtre pop-up Google s’est refermée. Si votre navigateur bloque les fenêtres surgissantes, vous pouvez utiliser la redirection pleine page :
-          </p>
-          <button
-            type="button"
-            onClick={handleGoogleRedirectSignIn}
-            disabled={isPending}
-            className="w-full h-9 rounded-lg bg-sky-600/30 hover:bg-sky-600/50 border border-sky-400/40 text-white font-medium transition cursor-pointer text-xs flex items-center justify-center gap-2"
-          >
-            {isPending ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <GoogleIcon />
-            )}
-            {isPending ? "Redirection vers Google…" : "Connexion Google (pleine page sans pop-up)"}
-          </button>
-        </div>
-      ) : null}
 
       {providerError ? (
         <div

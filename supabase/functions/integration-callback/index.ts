@@ -18,10 +18,48 @@ const APP_ORIGIN = (
   "https://idealy-ai.vercel.app"
 );
 
-function redirect(query: string) {
-  const target = new URL("/connectors", APP_ORIGIN);
+function redirect(query: string, origin = APP_ORIGIN) {
+  const target = new URL("/connectors", origin);
   target.search = query;
   return Response.redirect(target.toString());
+}
+
+function isTrustedReturnOrigin(value: unknown): value is string {
+  if (typeof value !== "string" || value.length > 500) return false;
+  const candidate = value.trim();
+  if (!candidate) return false;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    return false;
+  }
+  if (parsed.origin !== candidate || parsed.username || parsed.password || (parsed.pathname !== "/" && parsed.pathname !== "")) {
+    return false;
+  }
+  if (parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname)) return true;
+  if (parsed.protocol !== "https:") return false;
+
+  const configured = [
+    Deno.env.get("IDEALY_ALLOWED_ORIGINS") ?? "",
+    Deno.env.get("APP_ORIGIN") ?? "",
+    Deno.env.get("APP_URL") ?? "",
+    Deno.env.get("NEXT_PUBLIC_SITE_URL") ?? "",
+    Deno.env.get("URL") ?? "",
+  ].flatMap((item) => item.split(","))
+    .map((item) => item.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  if (configured.some((item) => {
+    try { return new URL(item).origin === parsed.origin; } catch { return false; }
+  })) return true;
+
+  const hostname = parsed.hostname.toLowerCase();
+  return hostname === "idealy.app" ||
+    hostname === "idealy-ai.vercel.app" ||
+    hostname === "idealy-ai.netlify.app" ||
+    (hostname.startsWith("idealy-") && hostname.endsWith("-obrien-s-projects.vercel.app")) ||
+    /^deploy-preview-\d+--idealy-ai\.netlify\.app$/.test(hostname);
 }
 
 function env(name: string) {
@@ -225,7 +263,9 @@ async function identityFor(provider: string, token: TokenResult, accessToken: st
 }
 
 Deno.serve(async (request) => {
-  if (request.method !== "GET") return redirect("error=method_not_allowed");
+  let callbackOrigin = APP_ORIGIN;
+  const redirectToApp = (query: string) => redirect(query, callbackOrigin);
+  if (request.method !== "GET") return redirectToApp("error=method_not_allowed");
 
   try {
     const url = new URL(request.url);
@@ -233,12 +273,15 @@ Deno.serve(async (request) => {
     const state = url.searchParams.get("state");
     const providerError = url.searchParams.get("error");
 
-    if (providerError) return redirect("error=" + encodeURIComponent(providerError));
-    if (!code || !state) return redirect("error=missing_code_or_state");
+    if (!state) {
+      return redirectToApp(providerError
+        ? "error=" + encodeURIComponent(providerError)
+        : "error=missing_code_or_state");
+    }
 
     const supabaseUrl = env("SUPABASE_URL");
     const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) return redirect("error=oauth_server_not_configured");
+    if (!supabaseUrl || !serviceRoleKey) return redirectToApp("error=oauth_server_not_configured");
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const stateHash = await sha256(state);
@@ -253,16 +296,22 @@ Deno.serve(async (request) => {
       !oauthState ||
       oauthState.consumed_at ||
       new Date(oauthState.expires_at).getTime() <= Date.now()
-    ) return redirect("error=invalid_or_expired_state");
-
-    const provider = oauthState.provider as string;
-    const config = providerConfig(provider);
-    if (!config || !config.clientId || !config.clientSecret) return redirect("error=provider_not_configured");
+    ) return redirectToApp("error=invalid_or_expired_state");
 
     const metadata =
       oauthState.metadata && typeof oauthState.metadata === "object"
         ? oauthState.metadata as Record<string, unknown>
         : {};
+    if (isTrustedReturnOrigin(metadata.return_origin)) {
+      callbackOrigin = metadata.return_origin;
+    }
+
+    if (providerError) return redirectToApp("error=" + encodeURIComponent(providerError));
+    if (!code) return redirectToApp("error=missing_code_or_state");
+
+    const provider = oauthState.provider as string;
+    const config = providerConfig(provider);
+    if (!config || !config.clientId || !config.clientSecret) return redirectToApp("error=provider_not_configured");
 
     const body = new URLSearchParams({
       grant_type: "authorization_code",
@@ -280,7 +329,7 @@ Deno.serve(async (request) => {
       provider === "vercel"
     ) {
       const verifier = typeof metadata.code_verifier === "string" ? metadata.code_verifier : "";
-      if (!verifier) return redirect("error=missing_pkce_state");
+      if (!verifier) return redirectToApp("error=missing_pkce_state");
       body.set("code_verifier", verifier);
     }
 
@@ -301,7 +350,7 @@ Deno.serve(async (request) => {
         : tokenData?.access_token ?? "";
     if (!tokenResponse.ok || !tokenData || !accessToken) {
       console.error("OAuth token exchange failed", provider, tokenResponse.status, tokenData?.error);
-      return redirect("error=token_exchange_failed");
+      return redirectToApp("error=token_exchange_failed");
     }
 
     const identity = await identityFor(provider, tokenData, accessToken);
@@ -344,7 +393,7 @@ Deno.serve(async (request) => {
       .select("id")
       .single();
 
-    if (integrationError || !integration) return redirect("error=storage_failed");
+    if (integrationError || !integration) return redirectToApp("error=storage_failed");
 
     const { error: credentialError } = await admin
       .from("integration_credentials")
@@ -359,7 +408,7 @@ Deno.serve(async (request) => {
 
     if (credentialError) {
       await admin.from("user_integrations").update({ status: "error" }).eq("id", integration.id);
-      return redirect("error=credential_storage_failed");
+      return redirectToApp("error=credential_storage_failed");
     }
 
     // A successful OAuth consent also activates the matching connector plugin
@@ -394,7 +443,7 @@ Deno.serve(async (request) => {
 
       if (pluginInstallError || !pluginInstallation) {
         console.error("Plugin installation bootstrap failed", pluginId, pluginInstallError);
-        return redirect("error=plugin_activation_failed");
+        return redirectToApp("error=plugin_activation_failed");
       }
 
       await admin.from("plugin_events").insert({
@@ -413,14 +462,14 @@ Deno.serve(async (request) => {
       .eq("user_id", oauthState.user_id)
       .is("consumed_at", null);
 
-    if (consumeStateError) return redirect("error=state_consume_failed");
+    if (consumeStateError) return redirectToApp("error=state_consume_failed");
 
-    return redirect(
+    return redirectToApp(
       "connected=" + encodeURIComponent(provider) +
       "&display=" + encodeURIComponent(identity.displayName),
     );
   } catch (error) {
     console.error("integration-callback failed", error);
-    return redirect("error=integration_callback_failed");
+    return redirectToApp("error=integration_callback_failed");
   }
 });

@@ -31,9 +31,11 @@ export function getIdealySupabaseFunctionUrl(functionName: string) {
     }
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL?.trim();
+  const supabaseUrl =
+    process.env.SUPABASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   if (supabaseUrl) {
-    return `${supabaseUrl.replace(/\/$/, "")}/functions/v1/${functionName}`;
+    return `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/${functionName}`;
   }
 
   return `${getIdealyApiUrl()}/functions/v1/${functionName}`.replace(

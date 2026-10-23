@@ -3,11 +3,9 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import {
   AlertTriangle,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Clock,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 import type { Vote } from "@/lib/db/schema";
 import { useTranslation } from "@/lib/i18n/provider";
@@ -170,7 +168,6 @@ function ProgressiveTextMessage({
   isLoading: boolean;
   onSelectPlanOption?: (option: PlanOption) => void;
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const { language } = useTranslation();
   const locale = language === "en" || language === "es" ? language : "fr";
   const labels = {
@@ -180,12 +177,7 @@ function ProgressiveTextMessage({
   }[locale];
   const planOptions = isAssistant ? extractPlanOptionsFromText(text) : null;
   const displayText = planOptions ? textBeforePlanOptions(text) : text;
-  const { conclusion, status, lineCount, isLong } =
-    parseProgressiveSections(displayText);
-
-  const handleToggleExpand = useCallback(() => {
-    setIsExpanded((prev) => !prev);
-  }, []);
+  const { status } = parseProgressiveSections(displayText);
 
   const handleSelectPlanOption = useCallback(
     (option: PlanOption) => {
@@ -194,18 +186,10 @@ function ProgressiveTextMessage({
     [onSelectPlanOption]
   );
 
-  const shouldCollapse = isAssistant && isLong && !isLoading && !isExpanded;
+  const shouldCollapse = false;
 
   return (
     <div className="w-full space-y-2">
-      {/* ① Conclusion en une phrase visible immédiatement */}
-      {isAssistant && conclusion && isLong && !isLoading && (
-        <div className="rounded-lg bg-surface-container-lowest/80 border border-border/50 px-3 py-2 text-[13px] font-medium text-foreground/90 shadow-xs">
-          <span className="text-primary font-semibold mr-1.5">{labels.summary}</span>
-          {conclusion}
-        </div>
-      )}
-
       {displayText.trim().length > 0 && (
         <>
           <div
@@ -232,27 +216,6 @@ function ProgressiveTextMessage({
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
             )}
           </div>
-
-          {isAssistant && isLong && !isLoading && (
-            <button
-              aria-expanded={isExpanded}
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
-              onClick={handleToggleExpand}
-              type="button"
-            >
-              {isExpanded ? (
-                <>
-                  <ChevronUp className="size-3.5" />
-                  <span>{labels.collapse}</span>
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="size-3.5" />
-                  <span>{labels.expand} ({lineCount} {locale === "en" ? "lines" : locale === "es" ? "líneas" : "lignes"})</span>
-                </>
-              )}
-            </button>
-          )}
 
           {isAssistant && status && (
             <div className="mt-2.5 rounded-lg border border-border/60 bg-muted/20 p-2.5 text-xs space-y-1.5">

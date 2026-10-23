@@ -21,6 +21,44 @@ function randomString(byteLength = 48) {
   return encodeBase64Url(crypto.getRandomValues(new Uint8Array(byteLength)));
 }
 
+function isTrustedReturnOrigin(value: unknown): value is string {
+  if (typeof value !== "string" || value.length > 500) return false;
+  const candidate = value.trim();
+  if (!candidate) return false;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    return false;
+  }
+  if (parsed.origin !== candidate || parsed.username || parsed.password || parsed.pathname !== "/" && parsed.pathname !== "") {
+    return false;
+  }
+  if (parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname)) return true;
+  if (parsed.protocol !== "https:") return false;
+
+  const configured = [
+    Deno.env.get("IDEALY_ALLOWED_ORIGINS") ?? "",
+    Deno.env.get("APP_ORIGIN") ?? "",
+    Deno.env.get("APP_URL") ?? "",
+    Deno.env.get("NEXT_PUBLIC_SITE_URL") ?? "",
+    Deno.env.get("URL") ?? "",
+  ].flatMap((item) => item.split(","))
+    .map((item) => item.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  if (configured.some((item) => {
+    try { return new URL(item).origin === parsed.origin; } catch { return false; }
+  })) return true;
+
+  const hostname = parsed.hostname.toLowerCase();
+  return hostname === "idealy.app" ||
+    hostname === "idealy-ai.vercel.app" ||
+    hostname === "idealy-ai.netlify.app" ||
+    (hostname.startsWith("idealy-") && hostname.endsWith("-obrien-s-projects.vercel.app")) ||
+    /^deploy-preview-\d+--idealy-ai\.netlify\.app$/.test(hostname);
+}
+
 function env(name: string) {
   return Deno.env.get(name)?.trim() ?? "";
 }
@@ -122,7 +160,7 @@ Deno.serve(async (request) => {
     return corsResponse({ error: auth.error }, auth.status, request);
   }
 
-  const body = await request.json().catch(() => null) as { provider?: unknown } | null;
+  const body = await request.json().catch(() => null) as { provider?: unknown; returnOrigin?: unknown } | null;
   const requestedProvider =
     typeof body?.provider === "string" ? body.provider.trim().toLowerCase() : "github";
 
@@ -170,6 +208,9 @@ Deno.serve(async (request) => {
           requested_provider: requestedProvider,
           code_verifier: codeVerifier,
           code_challenge: codeChallenge,
+          ...(isTrustedReturnOrigin(body?.returnOrigin)
+            ? { return_origin: body.returnOrigin }
+            : {}),
         },
       });
 

@@ -539,18 +539,29 @@ export function BuildTopBar() {
                     nextSquadStatus = "building";
                   }
                 } else if (event.event_type === "mission_completed") {
-                  const finalStatus = payload.finalStatus;
-                  nextSquadStatus = normalizedMissionStatus(finalStatus);
-                  nextAgentName = null;
-                  nextAgentRole = null;
-                  activeAgentName = null;
-                  activeAgentRole = null;
-                  nextError =
-                    nextSquadStatus === "ready"
-                      ? null
-                      : "La mission a fini son cycle de vérification, mais nécessite une correction ou une décision.";
-                  reachedTerminalEvent = true;
-                  refreshPower = true;
+                  const buildVerificationStatus = payload.buildVerificationStatus;
+                  if (typeof buildVerificationStatus !== "string") {
+                    // Reviewer completion is not final until the real npm build reports its result.
+                    nextSquadStatus = "building";
+                    nextAgentName = null;
+                    nextAgentRole = null;
+                    activeAgentName = null;
+                    activeAgentRole = null;
+                    nextError = null;
+                  } else {
+                    const finalStatus = payload.finalStatus;
+                    nextSquadStatus = normalizedMissionStatus(finalStatus);
+                    nextAgentName = null;
+                    nextAgentRole = null;
+                    activeAgentName = null;
+                    activeAgentRole = null;
+                    nextError =
+                      nextSquadStatus === "ready"
+                        ? null
+                        : "La mission a fini son cycle de vérification, mais nécessite une correction ou une décision.";
+                    reachedTerminalEvent = true;
+                    refreshPower = true;
+                  }
                 } else if (event.event_type === "mission_error") {
                   nextSquadStatus = "needs-fix";
                   nextAgentName = null;

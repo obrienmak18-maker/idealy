@@ -48,6 +48,7 @@ export async function proxy(request: NextRequest) {
         "/docs",
         "/privacy",
         "/terms",
+        "/verify-email",
       ].includes(pathname) ||
       pathname.startsWith("/images/agents/")
     ) {

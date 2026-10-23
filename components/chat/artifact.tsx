@@ -286,6 +286,18 @@ function PureArtifact({
     };
 
     const handleIframeMessage = (event: MessageEvent) => {
+      if (
+        event.data?.type === "idealy:preview-navigate" &&
+        event.source === previewIframeRef.current?.contentWindow
+      ) {
+        const nextPath = event.data.path;
+        setPreviewPath(
+          typeof nextPath === "string" && nextPath.startsWith("/")
+            ? nextPath
+            : "/"
+        );
+        return;
+      }
       if (event.data?.type === "idealy:element-inspected") {
         setInspectedElement({
           classes: event.data.classes,
@@ -828,10 +840,14 @@ function PureArtifact({
   const previewHtmlForFrame = previewHtml.includes("</head>")
     ? previewHtml.replace("</head>", `${previewScrollbarStyle}</head>`)
     : `${previewScrollbarStyle}${previewHtml}`;
+  // A srcDoc document resolves links against the parent page, so a generated
+  // <a href="/pricing"> would load the host app (Next.js 404) inside the
+  // preview. Keep navigation inside the preview and report it to the parent.
+  const previewNavigationGuardScript = `<script id="idealy-preview-navigation-guard">(function(){function toPath(h){try{var u=new URL(h,"http://idealy.preview");return u.origin==="http://idealy.preview"?u.pathname+u.search:null}catch(e){return null}}document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(!a)return;var h=a.getAttribute("href")||"";if(h.charAt(0)==="#"||/^(mailto:|tel:|javascript:)/i.test(h))return;e.preventDefault();var p=toPath(h);if(p!==null){window.parent.postMessage({type:"idealy:preview-navigate",path:p},"*")}else if(/^https?:/i.test(h)){window.open(h,"_blank","noopener,noreferrer")}},true);document.addEventListener("submit",function(e){e.preventDefault()},true)})();</script>`;
   const previewPathScript = `<script>try{history.replaceState({},'',${JSON.stringify(previewPath)});document.documentElement.dataset.idealyPath=${JSON.stringify(previewPath)};document.title=${JSON.stringify(`${previewPath === "/" ? "Home" : previewPath.slice(1)} · Idealy workspace`)};}catch{}</script>`;
   const previewHtmlForFrameWithPath = previewHtmlForFrame.includes("</body>")
-    ? previewHtmlForFrame.replace("</body>", `${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}</body>`)
-    : `${previewHtmlForFrame}${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}`;
+    ? previewHtmlForFrame.replace("</body>", `${previewNavigationGuardScript}${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}</body>`)
+    : `${previewHtmlForFrame}${previewNavigationGuardScript}${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}`;
   previewHtmlForFrameRef.current = previewHtmlForFrameWithPath;
 
   if (!artifact.isVisible && !isMobile) {

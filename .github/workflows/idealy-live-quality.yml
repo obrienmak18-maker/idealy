@@ -58,6 +58,9 @@ jobs:
       - name: Authentication outcome contract
         run: pnpm test:auth-outcome
 
+      - name: Firebase and Supabase auth bridge contract
+        run: pnpm test:firebase-auth
+
       - name: Demo multi-agent program contract
         run: pnpm test:demo-program
 

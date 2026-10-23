@@ -120,7 +120,11 @@ export async function sendEmailVerificationFirebase(): Promise<void> {
   if (!user) {
     throw new Error("firebase_user_not_found");
   }
-  await sendEmailVerification(user);
+  const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://idealy-ai.vercel.app").replace(/\/+$/, "");
+  await sendEmailVerification(user, {
+    url: new URL("/verify-email?verified=1", siteOrigin).toString(),
+    handleCodeInApp: false,
+  });
 }
 
 /** Ensure Supabase's third-party auth role claim is present on a fresh token.

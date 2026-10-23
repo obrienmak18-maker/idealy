@@ -95,7 +95,7 @@ const WORKSPACE_SYSTEM_PROMPT = `
 Tu es le Builder d’Idealy. Pour une mission EXECUTION, réponds uniquement avec des lignes NDJSON valides, sans markdown ni texte autour. Une ligne par événement, dans cet ordre pour chaque fichier :
 {"type":"file_started","path":"src/App.tsx","language":"tsx"}
 {"type":"file_content","path":"src/App.tsx","content":"contenu complet du fichier"}
-Tu peux émettre {"type":"build_log","message":"..."} entre les fichiers. N’émets jamais file_saved : le serveur calcule le checksum et confirme l’écriture. Inclus au minimum package.json, index.html, src/main.tsx, src/App.tsx et src/App.css pour une application web. Chaque chemin doit être relatif, sûr, unique ; chaque contenu doit être complet ; aucun secret, chemin absolu ou segment .. n’est autorisé.`;
+Tu peux émettre {"type":"build_log","message":"..."} entre les fichiers. N’émets jamais file_saved : le serveur calcule le checksum et confirme l’écriture. Pour chaque application web, construis un projet Vite + React réellement compilable : package.json doit définir un scripts.build non vide utilisant vite build, contenir les dépendances React/React DOM/Vite et le plugin React nécessaires, et inclure un script dev valide. index.html doit charger /src/main.tsx. Inclus au minimum package.json, index.html, src/main.tsx, src/App.tsx et src/App.css. Le serveur exécutera npm install, npm run build et vérifiera dist/index.html ; n’affirme pas que la compilation a réussi avant ce résultat réel. Chaque chemin doit être relatif, sûr et unique ; chaque contenu doit être complet ; aucun secret, fichier .env, chemin absolu ou segment .. n’est autorisé.`;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getCorsHeaders(req: Request): Record<string, string> {
@@ -304,7 +304,7 @@ async function emitMissionFileEvent(
   controller.enqueue(encoder.encode(`data: ${JSON.stringify({
     event: { ...event, idempotencyKey: undefined, sequence },
     type: 'idealy_file_event',
-  })}\\n\\n`));
+  })}\n\n`));
 }
 
 async function streamWorkspaceBuild(
@@ -451,11 +451,252 @@ async function streamWorkspaceBuild(
   });
 
   const assistantMessage = 'La première version de votre application a été générée et enregistrée dans le workspace. Les fichiers sont disponibles dans l’onglet Code.';
-  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: assistantMessage } }] })}\\n\\n`));
-  controller.enqueue(encoder.encode('data: [DONE]\\n\\n'));
+  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: assistantMessage } }] })}\n\n`));
+  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
 }
 
-serve(async (req) => {
+
+/**
+ * Use configured server-side providers automatically. The client never needs
+ * to choose a vendor, and one missing secret must not disable every other key.
+ */
+const AUTOMATIC_PROVIDER_ORDER: Provider[] = [
+  "groq",
+  "openrouter",
+  "gemini",
+  "deepseek",
+  "openai",
+  "anthropic",
+  "together",
+  "moonshot",
+];
+
+type ResolvedProvider = Awaited<ReturnType<typeof resolveAIProvider>>;
+
+async function resolveConfiguredAIProvider(
+  userId: string,
+  supabaseAdmin: ReturnType<typeof createClient>,
+  preferredProvider: Provider,
+  preferredModel: string,
+  mode: RequestedMode,
+): Promise<ResolvedProvider> {
+  const candidates = mode === "byok"
+    ? [preferredProvider]
+    : Array.from(new Set([preferredProvider, ...AUTOMATIC_PROVIDER_ORDER]));
+  let lastError: unknown = null;
+
+  for (const candidate of candidates) {
+    if (
+      candidate !== preferredProvider &&
+      !Deno.env.get(PROVIDER_CONFIGS[candidate].envKey)?.trim()
+    ) {
+      continue;
+    }
+    try {
+      return await resolveAIProvider(userId, supabaseAdmin, {
+        provider: candidate,
+        model: candidate === preferredProvider ? preferredModel : DEFAULT_MODELS[candidate],
+        mode,
+      });
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      // Continue only when the selected provider has no configured managed key.
+      // Database failures and invalid encryption settings need real fixes, not masking.
+      if (mode === "byok" || !/API key not configured:/i.test(message)) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError ?? new Error("No configured AI provider is available.");
+}
+
+const RETRYABLE_PROVIDER_STATUSES = new Set([400, 401, 402, 403, 404, 408, 409, 429, 500, 502, 503, 504]);
+const MAX_PROVIDER_ATTEMPTS = 3;
+
+async function adaptAnthropicResponse(response: Response, stream: boolean): Promise<Response> {
+  if (!response.ok) return response;
+
+  if (!stream) {
+    const payload = await response.json().catch(() => null) as
+      | { content?: Array<{ type?: string; text?: string }> }
+      | null;
+    const content = Array.isArray(payload?.content)
+      ? payload.content.filter((part) => part.type === "text").map((part) => part.text ?? "").join("")
+      : "";
+    return new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
+      status: response.status,
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    });
+  }
+
+  if (!response.body) return new Response(null, { status: 502 });
+  const reader = response.body.getReader();
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const transformed = new ReadableStream<Uint8Array>({
+    start(controller) {
+      void (async () => {
+        let pending = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          pending += decoder.decode(value, { stream: true });
+          const lines = pending.split("\n");
+          pending = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const raw = line.slice(6).trim();
+            if (!raw || raw === "[DONE]") continue;
+            let event: { type?: string; delta?: { text?: unknown } };
+            try {
+              event = JSON.parse(raw);
+            } catch {
+              continue;
+            }
+            if (event.type === "content_block_delta" && typeof event.delta?.text === "string") {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: event.delta.text } }] })}\n\n`));
+            }
+            if (event.type === "message_stop") {
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+              await reader.cancel().catch(() => undefined);
+              return;
+            }
+          }
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      })().catch((error) => controller.error(error));
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
+
+  return new Response(transformed, {
+    status: response.status,
+    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+  });
+}
+
+async function fetchProviderWithFallback(input: {
+  primary: ResolvedProvider;
+  messages: Array<{ role: "system" | "user"; content: string }>;
+  maxTokens: number;
+  stream: boolean;
+  signal: AbortSignal;
+  responseHeaders: Record<string, string>;
+}): Promise<{ response: Response; resolution: ResolvedProvider }> {
+  const candidates = input.primary.mode === "byok"
+    ? [input.primary.provider]
+    : Array.from(new Set([input.primary.provider, ...AUTOMATIC_PROVIDER_ORDER]));
+  let attempts = 0;
+  let lastResponse: Response | null = null;
+  let lastResolution = input.primary;
+
+  for (const candidate of candidates) {
+    if (attempts >= MAX_PROVIDER_ATTEMPTS) break;
+    let resolution: ResolvedProvider = input.primary;
+    if (candidate !== input.primary.provider) {
+      const apiKey = Deno.env.get(PROVIDER_CONFIGS[candidate].envKey)?.trim();
+      if (!apiKey) continue;
+      resolution = {
+        ...input.primary,
+        apiKey,
+        provider: candidate,
+        model: DEFAULT_MODELS[candidate],
+      };
+    }
+
+    const config = PROVIDER_CONFIGS[resolution.provider];
+    const isAnthropic = resolution.provider === "anthropic";
+    const providerMessages = input.messages.filter((message) => message.role !== "system");
+    const systemText = input.messages
+      .filter((message) => message.role === "system")
+      .map((message) => message.content)
+      .join("\n\n");
+    const body = isAnthropic
+      ? {
+          model: resolution.model,
+          max_tokens: input.maxTokens,
+          stream: input.stream,
+          ...(systemText ? { system: systemText } : {}),
+          messages: providerMessages.map((message) => ({ role: "user", content: message.content })),
+        }
+      : {
+          model: resolution.model,
+          messages: input.messages,
+          stream: input.stream,
+          max_tokens: input.maxTokens,
+          ...(resolution.provider === "moonshot" && resolution.model === "kimi-k3"
+            ? { reasoning_effort: "high" }
+            : {}),
+          ...(resolution.provider === "moonshot" || resolution.provider === "gemini"
+            ? {}
+            : { temperature: 0.7 }),
+        };
+
+    attempts += 1;
+    lastResolution = resolution;
+    let response: Response;
+    try {
+      response = await fetch(config.url, {
+        method: "POST",
+        headers: isAnthropic
+          ? {
+              "x-api-key": resolution.apiKey,
+              "anthropic-version": "2023-06-01",
+              "Content-Type": "application/json",
+            }
+          : {
+              Authorization: `Bearer ${resolution.apiKey}`,
+              "Content-Type": "application/json",
+              ...(resolution.provider === "openrouter"
+                ? {
+                    "HTTP-Referer": Deno.env.get("APP_ORIGIN") ?? "https://idealy.app",
+                    "X-Title": "Idealy",
+                  }
+                : {}),
+            },
+        body: JSON.stringify(body),
+        signal: input.signal,
+      });
+    } catch (error) {
+      if (input.signal.aborted) throw error;
+      console.warn(`AI provider request failed before a response (provider=${resolution.provider}); checking configured fallback.`);
+      continue;
+    }
+
+    if (response.ok) {
+      return {
+        response: isAnthropic ? await adaptAnthropicResponse(response, input.stream) : response,
+        resolution,
+      };
+    }
+
+    lastResponse = response;
+    if (!RETRYABLE_PROVIDER_STATUSES.has(response.status) || attempts >= MAX_PROVIDER_ATTEMPTS) {
+      return { response, resolution };
+    }
+
+    console.warn(`AI provider returned HTTP ${response.status} (provider=${resolution.provider}); checking configured fallback.`);
+    if (response.body) await response.body.cancel().catch(() => undefined);
+  }
+
+  return {
+    response: lastResponse ?? jsonError(
+      "Aucun fournisseur IA configuré ne peut répondre pour le moment.",
+      503,
+      input.responseHeaders,
+      "AI_PROVIDER_UNAVAILABLE",
+    ),
+    resolution: lastResolution,
+  };
+}
+
+Deno.serve(async (req) => {
   const headers = getCorsHeaders(req);
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers });
@@ -568,36 +809,21 @@ serve(async (req) => {
       }
     }
 
-    const resolution = await resolveAIProvider(user.id, supabaseAdmin, { provider, model, mode });
+    let resolution = await resolveConfiguredAIProvider(user.id, supabaseAdmin, provider, model, mode);
     const managed = resolution.mode !== 'byok';
     const intentCategory = input.intentCategory ?? 'EXECUTION';
     let energyRemaining: number | null = null;
 
-    // Any mission runtime is billed by the canonical Power contract:
-    // - simple mission: consume_power_points once here
-    // - squad mission: reserve -> execute -> settle/release in orchestrate-mission
-    // Legacy user_credits must never be charged in parallel for mission work.
+    // Mission execution is billed by the canonical Power contract.
+    // Simple runs reserve points immediately before the provider call and settle
+    // them only after a provider returns HTTP success. Squad runs have their own
+    // reserve -> execute -> settle/release lifecycle in orchestrate-mission.
     const isSimpleMission =
       Boolean(input.missionId) &&
       input.squadRun !== true &&
       intentCategory === 'EXECUTION' &&
       input.workspaceStream !== true;
     const isMissionRuntime = Boolean(input.missionId);
-    if (managed && isSimpleMission) {
-      const powerKey = input.idempotencyKey?.trim() || `${user.id}:mission-simple:${input.missionId}`;
-      const { error: powerError } = await supabaseAdmin.rpc('consume_power_points', {
-        p_action_type: 'mission_simple',
-        p_idempotency_key: powerKey,
-        p_mission_id: input.missionId,
-        p_user_id: user.id,
-      });
-      if (powerError) {
-        if (/insufficient|power/i.test(powerError.message)) {
-          return jsonError('Power insuffisant pour cette mission.', 402, headers, 'POWER_REQUIRED');
-        }
-        throw new Error(`Power debit failed: ${powerError.message}`);
-      }
-    }
 
     // Legacy managed credits remain only for non-mission chat/ideation.
     // Mission execution is already accounted for by Power and must not debit
@@ -611,7 +837,7 @@ serve(async (req) => {
           missionId: null,
           idempotencyKey,
           amount,
-          reason: `ai:${intentCategory.toLowerCase()}:${provider}:${model}`,
+          reason: `ai:${intentCategory.toLowerCase()}:${resolution.provider}:${resolution.model}`,
         });
         energyRemaining = debit.energyRemaining;
       } catch (error) {
@@ -670,33 +896,100 @@ serve(async (req) => {
       });
     }
 
-    const llmRes = await fetch(config.url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resolution.apiKey}`,
-        'Content-Type': 'application/json',
-        ...(resolution.provider === 'openrouter' ? {
-          'HTTP-Referer': Deno.env.get('APP_ORIGIN') ?? 'https://idealy.app',
-          'X-Title': 'Idealy',
-        } : {}),
-      },
-      body: JSON.stringify({
-        model: resolution.model,
+    let simplePowerReservationKey: string | null = null;
+    let simplePowerReservedPoints = 0;
+    if (managed && isSimpleMission && input.missionId) {
+      const { data: policy, error: policyError } = await supabaseAdmin
+        .from('power_action_policies')
+        .select('cost_points')
+        .eq('action_type', 'mission_simple')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      const policyCost = Number(policy?.cost_points);
+      if (policyError || !Number.isInteger(policyCost) || policyCost <= 0) {
+        console.error('Simple mission Power policy unavailable.');
+        return jsonError('Le calcul Power est momentanément indisponible. Aucun point n’a été débité.', 503, headers, 'POWER_POLICY_UNAVAILABLE');
+      }
+
+      simplePowerReservedPoints = policyCost;
+      const basePowerKey = input.idempotencyKey?.trim() || `${user.id}:mission-simple:${input.missionId}`;
+      simplePowerReservationKey = `${basePowerKey}:power:simple`;
+      if (simplePowerReservationKey.length > 200) {
+        return jsonError('La clé de mission est trop longue pour réserver Power.', 400, headers, 'INVALID_POWER_KEY');
+      }
+
+      const { data: reservation, error: reserveError } = await supabaseAdmin.rpc('reserve_power_points', {
+        p_user_id: user.id,
+        p_operation: 'mission_simple',
+        p_reserved_points: simplePowerReservedPoints,
+        p_idempotency_key: simplePowerReservationKey,
+        p_mission_id: input.missionId,
+        p_task_id: null,
+        p_metadata: { source: 'process-ai-request', providerMode: resolution.mode },
+      });
+
+      if (reserveError || !Array.isArray(reservation) || !reservation[0]?.reservation_id) {
+        const message = reserveError?.message ?? 'Power reservation returned no result.';
+        if (/insufficient|power/i.test(message)) {
+          return jsonError('Power insuffisant pour cette mission.', 402, headers, 'POWER_REQUIRED');
+        }
+        console.error('Simple mission Power reservation failed.');
+        return jsonError('La réservation Power a échoué. Réessayez sans relancer plusieurs fois.', 503, headers, 'POWER_RESERVATION_FAILED');
+      }
+    }
+
+    let providerAttempt: { response: Response; resolution: ResolvedProvider };
+    try {
+      providerAttempt = await fetchProviderWithFallback({
+        primary: resolution,
         messages,
+        maxTokens,
         stream,
-        ...(provider === 'moonshot' && model === 'kimi-k3'
-          ? { reasoning_effort: 'high' }
-          : {}),
-        max_tokens: maxTokens,
-        ...(provider === 'moonshot' || provider === 'gemini'
-          ? {}
-          : { temperature: 0.7 }),
-      }),
-    });
+        signal: req.signal,
+        responseHeaders: headers,
+      });
+    } catch (error) {
+      if (simplePowerReservationKey) {
+        const { error: releaseError } = await supabaseAdmin.rpc('release_power_reservation', {
+          p_idempotency_key: simplePowerReservationKey,
+          p_reason: 'AI provider request failed before a response',
+        });
+        if (releaseError) console.error('Simple mission Power release failed after provider error.');
+      }
+      throw error;
+    }
+    const llmRes = providerAttempt.response;
+    resolution = providerAttempt.resolution;
 
     if (!llmRes.ok) {
+      if (simplePowerReservationKey) {
+        const { error: releaseError } = await supabaseAdmin.rpc('release_power_reservation', {
+          p_idempotency_key: simplePowerReservationKey,
+          p_reason: `AI provider returned HTTP ${llmRes.status}`,
+        });
+        if (releaseError) {
+          console.error('Simple mission Power reservation remains held after provider failure.');
+        }
+      }
       const err = await llmRes.json().catch(() => ({ error: llmRes.statusText }));
       return jsonError(err.error?.message ?? err.error ?? 'LLM error.', llmRes.status, headers);
+    }
+
+    if (simplePowerReservationKey) {
+      const { error: settleError } = await supabaseAdmin.rpc('settle_power_reservation', {
+        p_idempotency_key: simplePowerReservationKey,
+        p_actual_points: simplePowerReservedPoints,
+      });
+      if (settleError) {
+        await llmRes.body?.cancel().catch(() => undefined);
+        const { error: releaseError } = await supabaseAdmin.rpc('release_power_reservation', {
+          p_idempotency_key: simplePowerReservationKey,
+          p_reason: 'Power settlement failed before output was returned',
+        });
+        if (releaseError) console.error('Simple mission Power reservation remains held after settlement failure.');
+        return jsonError('La génération n’a pas pu être confirmée dans Power. Réessayez dans un instant.', 503, headers, 'POWER_SETTLEMENT_FAILED');
+      }
     }
 
     if (stream) {
@@ -713,7 +1006,7 @@ serve(async (req) => {
               .then(() => controller.close())
               .catch((error) => {
                 const message = error instanceof Error ? error.message : String(error);
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'idealy_file_event', event: { eventType: 'mission_error', missionId: input.missionId, path: undefined, payload: { code: 'WORKSPACE_BUILD_FAILED', message }, sequence: 0 } })}\\n\\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'idealy_file_event', event: { eventType: 'mission_error', missionId: input.missionId, path: undefined, payload: { code: 'WORKSPACE_BUILD_FAILED', message }, sequence: 0 } })}\n\n`));
                 controller.close();
               });
           },
@@ -739,8 +1032,39 @@ serve(async (req) => {
       });
     }
 
-    const result = await llmRes.json();
-    const message = result.choices?.[0]?.message?.content ?? '';
+    const result: unknown = await llmRes.json().catch(() => null);
+    const resultObject =
+      result && typeof result === 'object'
+        ? result as {
+          choices?: Array<{ message?: { content?: unknown } }>;
+          error?: unknown;
+        }
+        : null;
+    const rawMessage = resultObject?.choices?.[0]?.message?.content;
+    const message = typeof rawMessage === 'string' ? rawMessage.trim() : '';
+    if (!message) {
+      const providerError = resultObject?.error;
+      const detail =
+        typeof providerError === 'string'
+          ? providerError
+          : providerError && typeof providerError === 'object' &&
+              'message' in providerError &&
+              typeof providerError.message === 'string'
+            ? providerError.message
+            : 'The provider returned an empty or unsupported response.';
+      console.error('AI provider returned no usable message', {
+        provider: resolution.provider,
+        model: resolution.model,
+        status: llmRes.status,
+        detail,
+      });
+      return jsonError(
+        'Le fournisseur IA n’a renvoyé aucune réponse exploitable. Vérifie le fournisseur, le modèle et sa configuration.',
+        502,
+        headers,
+        'EMPTY_PROVIDER_RESPONSE',
+      );
+    }
     if (input.planOnly === true) {
       const plan = parseMissionPlan(message);
       if (!plan) return jsonError('Le fournisseur IA a renvoyé un plan de mission invalide.', 502, headers, 'INVALID_MISSION_PLAN');
@@ -770,6 +1094,14 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : String(error);
     if (/No BYOK key configured/i.test(message)) return jsonError('No BYOK key is configured for this provider.', 409, headers, 'BYOK_NOT_CONFIGURED');
     if (/AI_KEY_ENCRYPTION_SECRET/i.test(message)) return jsonError('BYOK server encryption is not configured.', 500, headers, 'BYOK_CONFIG_ERROR');
+    if (/API key not configured:/i.test(message)) {
+      return jsonError(
+        'Aucun fournisseur IA direct n’est configuré côté Supabase. Ajoutez au moins une clé de fournisseur dans les secrets des Edge Functions.',
+        503,
+        headers,
+        'AI_PROVIDER_NOT_CONFIGURED',
+      );
+    }
     return jsonError('Unexpected AI proxy error.', 500, headers);
   }
 });

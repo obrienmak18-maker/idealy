@@ -14,7 +14,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IdealyLogo, IdealyMark } from "@/components/branding/idealy-logo";
+import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { useTranslation } from "@/lib/i18n/provider";
 import {
   idealyDiscoverySources,
@@ -71,35 +71,6 @@ const discoveryLabels: Record<(typeof idealyDiscoverySources)[number], { fr: str
   youtube: { fr: "YouTube", en: "YouTube", es: "YouTube" },
 };
 
-// Ocean light modes per step: Alternating between Emerald/Teal and Violet/Purple
-
-const stepAuras = [
-  {
-    glow: "rgba(20, 184, 166, 0.35)",
-    beam: "from-teal-500/25 via-emerald-500/15 to-transparent",
-    waterColor: "#14b8a6",
-    label: "Teal Emerald Glow",
-  },
-  {
-    glow: "rgba(168, 85, 247, 0.38)",
-    beam: "from-purple-500/25 via-violet-500/15 to-transparent",
-    waterColor: "#a855f7",
-    label: "Cosmic Violet Glow",
-  },
-  {
-    glow: "rgba(56, 189, 248, 0.35)",
-    beam: "from-cyan-500/25 via-teal-500/15 to-transparent",
-    waterColor: "#38bdf8",
-    label: "Cyan Ocean Glow",
-  },
-  {
-    glow: "rgba(168, 85, 247, 0.4)",
-    beam: "from-violet-500/30 via-teal-400/20 to-transparent",
-    waterColor: "#c084fc",
-    label: "Aurora Luminous Blend",
-  },
-];
-
 function getSafeNext(value: string | null) {
   return value && value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/onboarding")
     ? value
@@ -110,6 +81,27 @@ function getInitialWay(value: string | null): IdealyWay {
   return isIdealyWay(value) ? value : "professional";
 }
 
+const wayCopy: Record<"fr" | "en" | "es", Record<IdealyWay, { label: string; description: string }>> = {
+  fr: {
+    mage: { label: "Voie du Mage", description: "Créer, explorer et tester des solutions originales avec méthode." },
+    ninja: { label: "Voie du Ninja", description: "Avancer vite, précisément et avec le moins de friction possible." },
+    hunter: { label: "Voie du Hunter", description: "Rechercher, comparer et choisir la meilleure prochaine étape." },
+    professional: { label: "Voie du Pro", description: "Concevoir une base robuste, maintenable et prête à durer." },
+  },
+  en: {
+    mage: { label: "Mage Path", description: "Create, explore and test original solutions with a clear method." },
+    ninja: { label: "Ninja Path", description: "Move quickly and precisely with as little friction as possible." },
+    hunter: { label: "Hunter Path", description: "Research, compare and choose the best next step." },
+    professional: { label: "Pro Path", description: "Build a robust, maintainable foundation that lasts." },
+  },
+  es: {
+    mage: { label: "Vía del Mago", description: "Crear, explorar y probar soluciones originales con método." },
+    ninja: { label: "Vía del Ninja", description: "Avanzar rápido y con precisión, con la menor fricción posible." },
+    hunter: { label: "Vía del Hunter", description: "Investigar, comparar y elegir el siguiente paso más adecuado." },
+    professional: { label: "Vía Pro", description: "Crear una base sólida, mantenible y preparada para crecer." },
+  },
+};
+
 export function OnboardingFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -117,15 +109,34 @@ export function OnboardingFlow() {
   const langKey = (language === "en" ? "en" : language === "es" ? "es" : "fr") as "fr" | "en" | "es";
 
   const nextPath = useMemo(() => getSafeNext(searchParams.get("next")), [searchParams]);
+
+  const [customGoalSelected, setCustomGoalSelected] = useState(false);
+  const goalOptions = useMemo(() => {
+    if (langKey === "en") return [
+      { value: "Launch a web app", label: "Launch a web app" },
+      { value: "Build a SaaS product", label: "Build a SaaS product" },
+      { value: "Create a mobile app", label: "Create a mobile app" },
+      { value: "Automate a task", label: "Automate a task" },
+    ];
+    if (langKey === "es") return [
+      { value: "Lanzar una aplicación web", label: "Lanzar una aplicación web" },
+      { value: "Crear un producto SaaS", label: "Crear un producto SaaS" },
+      { value: "Crear una aplicación móvil", label: "Crear una aplicación móvil" },
+      { value: "Automatizar una tarea", label: "Automatizar una tarea" },
+    ];
+    return [
+      { value: "Lancer une application web", label: "Lancer une application web" },
+      { value: "Créer un produit SaaS", label: "Créer un produit SaaS" },
+      { value: "Créer une application mobile", label: "Créer une application mobile" },
+      { value: "Automatiser une tâche", label: "Automatiser une tâche" },
+    ];
+  }, [langKey]);
   const initialWay = useMemo(() => getInitialWay(searchParams.get("way")), [searchParams]);
   const [step, setStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
-
-  // Animation states for the star logo transition onto ocean water
-  const [starSettled, setStarSettled] = useState(false);
 
   const [draft, setDraft] = useState<OnboardingDraft>({
     discoverySource: "",
@@ -152,7 +163,7 @@ export function OnboardingFlow() {
         icon: Lightbulb,
         key: "goal",
         label: t("onboarding.steps.goal") || "Vision & Projet",
-        badge: langKey === "en" ? "Vision" : "Intention",
+        badge: langKey === "en" ? "Vision" : langKey === "es" ? "Visión" : "Intention",
       },
       {
         icon: Compass,
@@ -164,18 +175,11 @@ export function OnboardingFlow() {
         icon: Sparkles,
         key: "discovery",
         label: t("onboarding.steps.discovery") || "Découverte & Lancement",
-        badge: langKey === "en" ? "Ready" : "Prêt",
+        badge: langKey === "en" ? "Ready" : langKey === "es" ? "Listo" : "Prêt",
       },
     ],
     [t, langKey]
   );
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setStarSettled(true);
-    }, 1100);
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -203,6 +207,7 @@ export function OnboardingFlow() {
         }
         const email = typeof status.accountEmail === "string" && status.accountEmail.trim() ? status.accountEmail.trim() : null;
         setAccountEmail(email);
+        setCustomGoalSelected(typeof status.primaryGoal === "string" && status.primaryGoal.trim().length > 0);
         const accountName = typeof status.accountName === "string" && status.accountName.trim()
           ? status.accountName.trim() : email?.split("@")[0] || "";
         const nameParts = accountName.split(/\s+/).filter(Boolean);
@@ -308,7 +313,6 @@ export function OnboardingFlow() {
 
   const currentStep = steps[step];
   const StepIcon = currentStep.icon;
-  const currentAura = stepAuras[step % stepAuras.length];
 
   if (isLoading) {
     return <main className="min-h-dvh bg-background" aria-busy="true" />;
@@ -316,97 +320,38 @@ export function OnboardingFlow() {
 
   return (
     <main className="idealy-app-background relative flex min-h-dvh w-full flex-col items-center justify-between overflow-x-hidden p-4 sm:p-6 lg:p-8 text-foreground selection:bg-teal-500/20">
-      {/* Dynamic Ambient Background Lights */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <motion.div
-          animate={{
-            background:
-              step % 2 === 0
-                ? "radial-gradient(circle at 50% 20%, rgba(20, 184, 166, 0.15), transparent 60%)"
-                : "radial-gradient(circle at 50% 20%, rgba(168, 85, 247, 0.16), transparent 60%)",
-          }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          className="absolute inset-0"
-        />
-        <div className="welcome-grid opacity-30" />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.24, x: "22vw", y: -360, rotate: -40 }}
-          animate={{
-            opacity: starSettled ? 0.12 : 0.8,
-            scale: starSettled ? 3.1 : 0.72,
-            x: starSettled ? 0 : "22vw",
-            y: starSettled ? 72 : -28,
-            rotate: starSettled ? 160 + step * 180 : 0,
-          }}
-          transition={{ duration: starSettled ? 1.8 : 1.1, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute left-1/2 top-[38%] grid -translate-x-1/2 -translate-y-1/2 place-items-center"
-        >
-          <motion.div
-            animate={{ background: step % 2 === 0
-              ? "radial-gradient(circle, rgba(20,184,166,0.48) 0%, rgba(20,184,166,0.16) 35%, transparent 72%)"
-              : "radial-gradient(circle, rgba(168,85,247,0.48) 0%, rgba(20,184,166,0.13) 38%, transparent 72%)" }}
-            transition={{ duration: 0.9, ease: "easeInOut" }}
-            className="absolute size-[25rem] rounded-full blur-2xl sm:size-[34rem]"
-          />
-          <IdealyMark size={188} animated={true} className="relative drop-shadow-[0_0_30px_rgba(20,184,166,0.45)]" />
-        </motion.div>
+      <div
+        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.08),transparent_58%)]"
+        aria-hidden="true"
+      >
+        <div className="welcome-grid opacity-20" />
       </div>
 
-      {/* Top Header */}
-      <header className="w-full max-w-4xl flex items-center justify-between py-2 z-10">
-        <div className="flex items-center gap-3">
-          <AnimatePresence>
-            {!starSettled ? (
-              <motion.div
-                initial={{ opacity: 1, scale: 1, y: 0 }}
-                animate={{ opacity: 0, scale: 0.8, y: 20 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              >
-                <IdealyLogo compact size={32} />
-              </motion.div>
-            ) : (
-              <div className="size-8 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center">
-                <span className="size-2 rounded-full bg-teal-400 animate-pulse" />
-              </div>
-            )}
-          </AnimatePresence>
-          <div>
+      <header className="relative z-10 w-full max-w-4xl flex items-center justify-between gap-4 py-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <IdealyLogo compact size={32} />
+          <div className="min-w-0">
             <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
               {t("onboarding.badge") || "Studio Idealy"}
             </span>
             <p className="text-xs font-semibold text-foreground">
-              {langKey === "en" ? "Initial Workspace Onboarding" : "Configuration de mission"}
+              {langKey === "en" ? "Workspace setup" : langKey === "es" ? "Configuración del espacio" : "Configuration de l’espace"}
             </p>
           </div>
         </div>
-
-        {/* Contract token: Step progress counter */}
-        <div className="flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1 text-xs backdrop-blur-md">
+        <div className="flex shrink-0 items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-2 text-xs">
           <StepIcon className="size-3.5 text-primary" aria-hidden="true" />
           <span className="text-xs font-medium text-muted-foreground">
-            Étape {step + 1} sur {steps.length} —{" "}
-            <strong className="text-foreground font-semibold">{currentStep.label}</strong>
+            {langKey === "en" ? "Step" : langKey === "es" ? "Paso" : "Étape"} {step + 1} / {steps.length} —{" "}
+            <strong className="font-semibold text-foreground">{currentStep.label}</strong>
           </span>
         </div>
       </header>
 
-      {/* Main Glassmorphic Question Frame */}
+
       <div className="w-full max-w-3xl my-auto py-4 z-10">
         <section className="relative rounded-3xl border border-border/70 dark:border-white/10 bg-card/85 dark:bg-card/75 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-2xl sm:p-8 transition-colors">
-          {/* Subtle top iridescent beam */}
-          <motion.div
-            aria-hidden="true"
-            className={cn(
-              "absolute inset-x-8 top-0 h-[2px] bg-gradient-to-r",
-              step % 2 === 0
-                ? "from-transparent via-teal-400/80 via-emerald-400/60 to-transparent"
-                : "from-transparent via-purple-400/80 via-violet-400/60 to-transparent"
-            )}
-            animate={{ opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          />
 
-          {/* Stepper Progress bar */}
           <div className="mb-6 flex items-center justify-between gap-3 border-b border-border/40 pb-4">
             <ol className="flex items-center gap-2">
               {steps.map((item, index) => {
@@ -458,7 +403,7 @@ export function OnboardingFlow() {
             {step === 0 && (
               <motion.div key="step-0" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3 }} className="space-y-5">
                 <div>
-                  <span className="inline-block rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-teal-600 dark:text-teal-400">Question 1 / 4</span>
+                  <span className="inline-block rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-teal-600 dark:text-teal-400">{langKey === "en" ? "Question 1 / 4" : langKey === "es" ? "Pregunta 1 / 4" : "Question 1 / 4"}</span>
                   <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{langKey === "en" ? "Make this space yours" : langKey === "es" ? "Haz tuyo este espacio" : "Personnalisez votre espace"}</h1>
                   <p className="mt-1 text-xs text-muted-foreground">{langKey === "en" ? "Make Idealy feel like yours. You can change these choices later." : langKey === "es" ? "Haz que Idealy se sienta tuyo. Puedes cambiar estas opciones después." : "Personnalisez votre espace. Vous pourrez modifier ces choix plus tard."}</p>
                 </div>
@@ -491,45 +436,90 @@ export function OnboardingFlow() {
               >
                 <div>
                   <span className="inline-block rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400">
-                    Question 2 / 4
+                    {langKey === "es" ? "Pregunta 2 / 4" : "Question 2 / 4"}
                   </span>
                   <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                    {langKey === "en" ? "What would you like to build?" : "Qu’aimeriez-vous rendre possible ?"}
+                    {langKey === "en" ? "What would you like to build?" : langKey === "es" ? "¿Qué te gustaría crear?" : "Qu’aimeriez-vous rendre possible ?"}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {langKey === "en"
                       ? "A short phrase helps your agents orient their analysis."
-                      : "Une phrase suffit pour orienter l’analyse de vos 5 agents d’escouade."}
+                      : langKey === "es"
+                        ? "Una frase breve ayuda a tus agentes a orientar el análisis."
+                        : "Une phrase suffit pour orienter l’analyse de vos agents."}
                   </p>
                 </div>
 
                 <div className="space-y-4">
-                  <label className="grid gap-1.5 text-xs font-medium">
-                    {langKey === "en" ? "Your goal or project vision" : "Votre intention ou projet"} <span className="text-destructive">*</span>
-                    <textarea
-                      value={draft.primaryGoal}
-                      onChange={(event) => updateDraft("primaryGoal", event.target.value)}
-                      maxLength={400}
-                      rows={3}
-                      autoFocus
-                      className="resize-none rounded-xl border border-border/70 bg-background/60 px-3.5 py-2.5 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
-                      placeholder={
-                        langKey === "en"
-                          ? "E.g. Build a modern web application for project management with real-time updates..."
-                          : "Ex. Concevoir une application web moderne pour gérer mes projets scolaires..."
-                      }
-                    />
-                  </label>
+                  <div className="space-y-2.5">
+                    <p className="text-xs font-medium">
+                      {langKey === "en" ? "What do you want to do first?" : langKey === "es" ? "¿Qué quieres hacer primero?" : "Que voulez-vous faire en premier ?"}
+                      <span className="ml-1 text-destructive">*</span>
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {goalOptions.map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          aria-pressed={!customGoalSelected && draft.primaryGoal === item.value}
+                          onClick={() => {
+                            setCustomGoalSelected(false);
+                            updateDraft("primaryGoal", item.value);
+                          }}
+                          className={cn(
+                            "flex min-h-10 items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs transition-colors",
+                            !customGoalSelected && draft.primaryGoal === item.value
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                          )}
+                        >
+                          <span>{item.label}</span>
+                          {!customGoalSelected && draft.primaryGoal === item.value ? <Check className="size-3.5 text-primary" /> : null}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        aria-pressed={customGoalSelected}
+                        onClick={() => {
+                          setCustomGoalSelected(true);
+                          updateDraft("primaryGoal", "");
+                        }}
+                        className={cn(
+                          "flex min-h-10 items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs transition-colors",
+                          customGoalSelected
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                        )}
+                      >
+                        <span>{langKey === "en" ? "Other — I’ll describe it" : langKey === "es" ? "Otro — lo describiré" : "Autre — je le décrirai"}</span>
+                        {customGoalSelected ? <Check className="size-3.5 text-primary" /> : null}
+                      </button>
+                    </div>
+                    {customGoalSelected ? (
+                      <label className="grid gap-1.5 text-xs font-medium">
+                        {langKey === "en" ? "Describe it in a few words" : langKey === "es" ? "Descríbelo en pocas palabras" : "Décrivez-le en quelques mots"}
+                        <textarea
+                          value={draft.primaryGoal}
+                          onChange={(event) => updateDraft("primaryGoal", event.target.value)}
+                          maxLength={400}
+                          rows={2}
+                          autoFocus
+                          className="resize-none rounded-xl border border-border/70 bg-background/60 px-3.5 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                          placeholder={langKey === "en" ? "A short description is enough…" : langKey === "es" ? "Una breve descripción es suficiente…" : "Une courte description suffit…"}
+                        />
+                      </label>
+                    ) : null}
+                  </div>
 
                   <label className="grid gap-1.5 text-xs font-medium">
-                    {langKey === "en" ? "Project type" : "Type de projet"} <span className="text-destructive">*</span>
+                    {langKey === "en" ? "Project type" : langKey === "es" ? "Tipo de proyecto" : "Type de projet"} <span className="text-destructive">*</span>
                     <select
                       value={draft.projectType}
                       onChange={(event) => updateDraft("projectType", event.target.value)}
                       className="h-11 rounded-xl border border-border/70 bg-background/60 px-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 cursor-pointer"
                     >
                       <option value="">
-                        {langKey === "en" ? "Select a creation type" : "Sélectionnez un type de création"}
+                        {langKey === "en" ? "Choose a project type" : langKey === "es" ? "Elige un tipo de proyecto" : "Sélectionnez un type de création"}
                       </option>
                       {idealyProjectTypes.map((value) => (
                         <option key={value} value={value}>
@@ -545,7 +535,7 @@ export function OnboardingFlow() {
             {step === 2 && (
               <motion.div key="step-2" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.3 }} className="space-y-5">
                 <div>
-                  <span className="inline-block rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">Question 3 / 4</span>
+                  <span className="inline-block rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">{langKey === "es" ? "Pregunta 3 / 4" : "Question 3 / 4"}</span>
                   <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{langKey === "en" ? "How do you like to work?" : langKey === "es" ? "¿Cómo te gusta trabajar?" : "Comment aimez-vous travailler ?"}</h2>
                   <p className="mt-1 text-xs text-muted-foreground">{langKey === "en" ? "This helps Idealy adapt its guidance and workflow to you." : langKey === "es" ? "Idealy adapta su guía y su flujo de trabajo a ti." : "Idealy adapte ses explications et sa manière de travailler à votre niveau."}</p>
                 </div>
@@ -554,7 +544,7 @@ export function OnboardingFlow() {
                     <button type="button" key={value} onClick={() => updateDraft("experienceLevel", value)} className={cn("group flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-left text-xs transition-all cursor-pointer", draft.experienceLevel === value ? "border-cyan-500 bg-cyan-500/10 text-foreground ring-1 ring-cyan-500/30" : "border-border/60 bg-background/40 hover:border-cyan-500/40 hover:bg-muted/30")}>
                       <span className="min-w-0">
                         <span className="block font-semibold text-xs text-foreground">{experienceLabels[value][langKey] || experienceLabels[value].fr}</span>
-                        <span className="block text-[10px] text-muted-foreground">{value === "non_coder" ? (langKey === "en" ? "Visual guidance from the start" : "Guidage visuel complet") : value === "beginner" ? (langKey === "en" ? "Step-by-step explanations" : "Explications pas-à-pas") : value === "intermediate" ? (langKey === "en" ? "A balance of detail and speed" : "Équilibre et efficacité") : (langKey === "en" ? "Direct code and architecture" : "Code direct & architectures")}</span>
+                        <span className="block text-[10px] text-muted-foreground">{value === "non_coder" ? (langKey === "en" ? "Visual guidance from the start" : langKey === "es" ? "Guía visual desde el inicio" : "Guidage visuel complet") : value === "beginner" ? (langKey === "en" ? "Step-by-step explanations" : langKey === "es" ? "Explicaciones paso a paso" : "Explications pas-à-pas") : value === "intermediate" ? (langKey === "en" ? "A balance of detail and speed" : langKey === "es" ? "Equilibrio entre detalle y rapidez" : "Équilibre et efficacité") : (langKey === "en" ? "Direct code and architecture" : langKey === "es" ? "Código y arquitectura directos" : "Code direct & architectures")}</span>
                       </span>
                       {draft.experienceLevel === value && <Check className="ml-2 size-3.5 shrink-0 text-cyan-500" aria-hidden="true" />}
                     </button>
@@ -566,12 +556,12 @@ export function OnboardingFlow() {
                     {Object.values(wayPresentations).map((way) => (
                       <button type="button" key={way.id} aria-pressed={draft.way === way.id} onClick={() => updateDraft("way", way.id)} className={cn("inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors", draft.way === way.id ? "border-primary/70 bg-primary/10 text-foreground" : "border-border/60 bg-transparent text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
                         <span className={cn("size-2 rounded-full bg-gradient-to-br", way.accentClassName)} aria-hidden="true" />
-                        <span>{way.label}</span>
+                        <span>{wayCopy[langKey][way.id].label}</span>
                         {draft.way === way.id && <Check className="size-3 text-primary" aria-hidden="true" />}
                       </button>
                     ))}
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">{wayPresentations[draft.way].description}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{wayCopy[langKey][draft.way].description}</p>
                 </div>
               </motion.div>
             )}
@@ -587,15 +577,17 @@ export function OnboardingFlow() {
               >
                 <div>
                   <span className="inline-block rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400">
-                    Question 4 / 4 — Prêt pour le studio
+                    {langKey === "en" ? "Question 4 / 4 — Ready for your workspace" : langKey === "es" ? "Pregunta 4 / 4 — Listo para tu espacio" : "Question 4 / 4 — Prêt pour le studio"}
                   </span>
                   <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                    {langKey === "en" ? "How did you hear about Idealy?" : "Comment avez-vous connu Idealy ?"}
+                    {langKey === "en" ? "How did you hear about Idealy?" : langKey === "es" ? "¿Cómo conociste Idealy?" : "Comment avez-vous connu Idealy ?"}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {langKey === "en"
-                      ? "Optional canal — helps our team understand your arrival."
-                      : "Facultatif — aide notre équipe à savoir par quel canal vous êtes arrivé."}
+                      ? "Optional — helps our team understand how you found us."
+                      : langKey === "es"
+                        ? "Opcional: ayuda a nuestro equipo a saber cómo nos encontraste."
+                        : "Facultatif — aide notre équipe à savoir par quel canal vous êtes arrivé."}
                   </p>
                 </div>
 
@@ -621,25 +613,25 @@ export function OnboardingFlow() {
                 {/* Profile Summary Card */}
                 <div className="rounded-2xl border border-border/70 bg-background/50 p-4">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                    {langKey === "en" ? "Your Studio Configuration" : "Configuration de votre studio"}
+                    {langKey === "en" ? "Your workspace setup" : langKey === "es" ? "Configuración de tu espacio" : "Configuration de votre espace"}
                   </h3>
                   <dl className="grid gap-2 text-xs sm:grid-cols-3">
                     <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                      <dt className="text-muted-foreground">{langKey === "en" ? "Profile" : "Profil"}</dt>
+                      <dt className="text-muted-foreground">{langKey === "en" ? "Profile" : langKey === "es" ? "Perfil" : "Profil"}</dt>
                       <dd className="mt-0.5 font-semibold text-sm text-foreground">
-                        {[draft.firstName, draft.lastName].filter(Boolean).join(" ") || "Créateur Idealy"}
+                        {[draft.firstName, draft.lastName].filter(Boolean).join(" ") || (langKey === "en" ? "Idealy creator" : langKey === "es" ? "Creador de Idealy" : "Créateur Idealy")}
                       </dd>
                     </div>
                     <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                      <dt className="text-muted-foreground">{langKey === "en" ? "Master Way" : "Voie choisie"}</dt>
+                      <dt className="text-muted-foreground">{langKey === "en" ? "Chosen Way" : langKey === "es" ? "Vía elegida" : "Voie choisie"}</dt>
                       <dd className="mt-0.5 font-semibold text-sm text-foreground">
-                        {wayPresentations[draft.way].label}
+                        {wayCopy[langKey][draft.way].label}
                       </dd>
                     </div>
                     <div className="rounded-lg bg-card/60 p-2.5 border border-border/40">
-                      <dt className="text-muted-foreground">{langKey === "en" ? "Project type" : "Type de projet"}</dt>
+                      <dt className="text-muted-foreground">{langKey === "en" ? "Project type" : langKey === "es" ? "Tipo de proyecto" : "Type de projet"}</dt>
                       <dd className="mt-0.5 font-medium text-foreground">
-                        {draft.projectType ? projectLabels[draft.projectType as keyof typeof projectLabels]?.[langKey] || draft.projectType : "Application web"}
+                        {draft.projectType ? projectLabels[draft.projectType as keyof typeof projectLabels]?.[langKey] || draft.projectType : (langKey === "en" ? "Web application" : langKey === "es" ? "Aplicación web" : "Application web")}
                       </dd>
                     </div>
                   </dl>
@@ -664,7 +656,7 @@ export function OnboardingFlow() {
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-medium text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40 cursor-pointer"
             >
               <ArrowLeft className="size-3.5" aria-hidden="true" />
-              {langKey === "en" ? "Back" : "Retour"}
+              {langKey === "en" ? "Back" : langKey === "es" ? "Atrás" : "Retour"}
             </button>
 
             {step < steps.length - 1 ? (
@@ -678,7 +670,7 @@ export function OnboardingFlow() {
                     : "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 shadow-purple-500/20"
                 )}
               >
-                {langKey === "en" ? "Continue" : "Continuer"}
+                {langKey === "en" ? "Continue" : langKey === "es" ? "Continuar" : "Continuer"}
                 <ArrowRight className="size-3.5" aria-hidden="true" />
               </button>
             ) : (
@@ -689,8 +681,8 @@ export function OnboardingFlow() {
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 via-purple-600 to-violet-600 px-6 text-xs font-bold text-white shadow-lg shadow-purple-500/25 transition hover:opacity-95 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
               >
                 {isSubmitting
-                  ? (langKey === "en" ? "Opening workspace…" : "Ouverture du workspace…")
-                  : (langKey === "en" ? "Open my workspace" : "Ouvrir mon workspace")}
+                  ? (langKey === "en" ? "Opening workspace…" : langKey === "es" ? "Abriendo el espacio…" : "Ouverture du workspace…")
+                  : (langKey === "en" ? "Open my workspace" : langKey === "es" ? "Abrir mi espacio" : "Ouvrir mon workspace")}
                 <Rocket className="size-3.5" aria-hidden="true" />
               </button>
             )}
@@ -698,72 +690,10 @@ export function OnboardingFlow() {
         </section>
       </div>
 
-      {/* Spectacular Aquatic Reflection & Floating Bioluminescent Star Deck */}
-      <footer className="w-full max-w-2xl flex flex-col items-center justify-center relative mt-auto pt-6 pb-2 z-10">
-        {/* Ocean Light Cone projecting upward */}
-        <motion.div
-          animate={{
-            background:
-              step % 2 === 0
-                ? "radial-gradient(ellipse at 50% 100%, rgba(20, 184, 166, 0.3) 0%, transparent 70%)"
-                : "radial-gradient(ellipse at 50% 100%, rgba(168, 85, 247, 0.35) 0%, transparent 70%)",
-          }}
-          transition={{ duration: 0.8 }}
-          className="absolute bottom-0 inset-x-0 h-40 pointer-events-none -z-10 blur-xl"
-        />
-
-        {/* Ocean Surface Waves */}
-        <div className="relative w-full flex flex-col items-center">
-          {/* Subtle animated water ripple ring */}
-          <motion.div
-            key={`ripple-${step}`}
-            initial={{ scale: 0.8, opacity: 0.8 }}
-            animate={{ scale: [1, 1.35, 1.6], opacity: [0.7, 0.3, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeOut" }}
-            className={cn(
-              "absolute -bottom-2 size-28 rounded-full border pointer-events-none",
-              step % 2 === 0 ? "border-teal-400/50" : "border-purple-400/50"
-            )}
-          />
-
-          {/* The Spinning Idealy Star sitting on the ocean reflection */}
-          <motion.div
-            animate={{
-              rotate: step * 360,
-              scale: [1, 1.08, 1],
-              filter: step % 2 === 0 ? "hue-rotate(0deg)" : "hue-rotate(62deg)",
-            }}
-            transition={{
-              rotate: { duration: 0.9, ease: [0.22, 1, 0.36, 1] },
-              scale: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
-            }}
-            className="relative cursor-pointer select-none"
-            title="Idealy Mark on Ocean Reflection"
-          >
-            <IdealyMark animated={true} size={48} />
-          </motion.div>
-
-          {/* Symmetrical Inverted Water Reflection */}
-          <div
-            className="pointer-events-none -mt-3 opacity-30 blur-[2px] transform scale-y-[-0.6]"
-            aria-hidden="true"
-          >
-            <IdealyMark animated={false} size={48} />
-          </div>
-
-          {/* Ambient wave horizon bar */}
-          <div
-            className={cn(
-              "mt-1 h-[1.5px] w-48 rounded-full bg-gradient-to-r transition-all duration-700",
-              step % 2 === 0
-                ? "from-transparent via-teal-400/80 to-transparent shadow-[0_0_12px_rgba(20,184,166,0.8)]"
-                : "from-transparent via-purple-400/80 to-transparent shadow-[0_0_12px_rgba(168,85,247,0.8)]"
-            )}
-          />
-          <p className="mt-2 text-[10px] tracking-widest uppercase text-muted-foreground/75 font-mono">
-            {step % 2 === 0 ? "Aura Émeraude & Sarcelle" : "Aura Violette & Stellaire"}
-          </p>
-        </div>
+      <footer className="relative z-10 w-full max-w-2xl pt-5 pb-1 text-center">
+        <p className="text-[10px] tracking-wide text-muted-foreground/70">
+          {langKey === "en" ? "Your preferences can be changed later in Settings." : langKey === "es" ? "Podrás cambiar estas preferencias más adelante en Configuración." : "Vous pourrez modifier ces préférences plus tard dans les paramètres."}
+        </p>
       </footer>
     </main>
   );

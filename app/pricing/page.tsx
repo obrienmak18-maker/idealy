@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PricingExperience } from "@/components/billing/pricing-experience";
@@ -18,7 +19,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const cookieStore = await cookies();
+  const savedLocale = cookieStore.get("NEXT_LOCALE")?.value;
+  const locale = savedLocale === "en" || savedLocale === "es" ? savedLocale : "fr";
+  const savedWay = cookieStore.get("idealy_user_way")?.value;
+  const way = savedWay === "mage" || savedWay === "hunter" || savedWay === "professional" || savedWay === "ninja" ? savedWay : "professional";
+  const backLabel = locale === "en" ? "Back to workspace" : locale === "es" ? "Volver al workspace" : "Retour à l’espace de travail";
   return (
     <main className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
       <CosmicHorizon />
@@ -28,7 +35,7 @@ export default function PricingPage() {
           className="inline-flex items-center gap-2.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 text-xs font-medium text-foreground backdrop-blur-md transition-all hover:bg-card hover:border-border"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Retour à l&apos;espace de travail</span>
+          <span>{backLabel}</span>
         </Link>
         <div className="flex items-center gap-2">
           <IdealyMark className="size-6 text-primary" size={24} />
@@ -36,8 +43,8 @@ export default function PricingPage() {
         </div>
       </header>
 
-      <div className="relative z-10 pb-20">
-        <PricingExperience way="ninja" locale="fr" />
+      <div className="relative z-10 w-full pb-20">
+        <PricingExperience way={way} locale={locale} />
       </div>
     </main>
   );

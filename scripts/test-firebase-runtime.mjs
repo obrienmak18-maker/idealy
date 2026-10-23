@@ -1,18 +1,32 @@
 import assert from "node:assert/strict";
 import { createClient } from "@supabase/supabase-js";
 
-const required = ["FIREBASE_ID_TOKEN", "SUPABASE_URL", "SUPABASE_ANON_KEY"];
-const missing = required.filter((name) => !process.env[name]?.trim());
+const token = process.env.FIREBASE_ID_TOKEN?.trim() ?? "";
+const supabaseUrlValue =
+  process.env.SUPABASE_URL?.trim() ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+  "";
+const supabaseAnonKey =
+  process.env.SUPABASE_ANON_KEY?.trim() ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+  process.env.SUPABASE_PUBLISHABLE_KEY?.trim() ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+  "";
+const projectId =
+  process.env.FIREBASE_PROJECT_ID?.trim() ||
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim() ||
+  "";
+const missing = [
+  !token ? "FIREBASE_ID_TOKEN" : null,
+  !supabaseUrlValue ? "SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL" : null,
+  !supabaseAnonKey ? "Supabase anon/publishable key" : null,
+  !projectId ? "FIREBASE_PROJECT_ID or NEXT_PUBLIC_FIREBASE_PROJECT_ID" : null,
+].filter(Boolean);
 
 if (missing.length > 0) {
-  console.log(`NOT RUN: missing runtime configuration (${missing.join(", ")}).`);
+  console.log("NOT RUN: missing runtime configuration (" + missing.join(", ") + ").");
   process.exit(0);
 }
-
-const token = process.env.FIREBASE_ID_TOKEN.trim();
-const projectId =
-  process.env.FIREBASE_PROJECT_ID?.trim() ??
-  "gen-lang-client-0338545186";
 
 function decodeJwtPayload(value) {
   const parts = value.split(".");
@@ -54,8 +68,8 @@ for (const [name, passed] of Object.entries(claimChecks)) {
   }
 }
 
-const supabaseUrl = process.env.SUPABASE_URL.trim().replace(/\/$/, "");
-const supabase = createClient(supabaseUrl, process.env.SUPABASE_ANON_KEY.trim(), {
+const supabaseUrl = supabaseUrlValue.replace(/\/+$/, "");
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   accessToken: async () => token,
 });
 

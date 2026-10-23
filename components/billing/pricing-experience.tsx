@@ -63,6 +63,7 @@ const copy = {
       ],
     } as Record<IdealyWay, string[]>,
     save: "2 months free on Pro and Business",
+    saveCompact: "Save 2 months",
     starts: "The essentials to create and guide a mission.",
     subtitle:
       "Every Way keeps the same Idealy tools. Your level changes capacity, pace and support.",
@@ -117,6 +118,7 @@ const copy = {
       ],
     } as Record<IdealyWay, string[]>,
     save: "2 meses gratis en Pro y Business",
+    saveCompact: "Ahorra 2 meses",
     starts: "Lo esencial para crear y guiar una misión.",
     subtitle:
       "Todas las Vías conservan las herramientas de Idealy. El nivel cambia tu capacidad, ritmo y acompañamiento.",
@@ -165,6 +167,7 @@ const copy = {
       professional: ["Starter", "Pro", "Team", "Enterprise"],
     } as Record<IdealyWay, string[]>,
     save: "2 mois offerts sur Pro et Business",
+    saveCompact: "Économisez 2 mois",
     starts: "Inclut les outils essentiels pour créer et piloter une mission.",
     subtitle:
       "Chaque Voie garde les mêmes outils Idealy. Le niveau change votre capacité, votre cadence et votre accompagnement.",
@@ -266,14 +269,17 @@ export function PricingExperience({
   selectedLevel,
   selectedCycle,
   selectedPower,
+  presentation = "page",
 }: {
   way: IdealyWay;
   locale: Locale;
+  presentation?: "page" | "dialog";
   selectedLevel?: string | null;
   selectedCycle?: string | null;
   selectedPower?: string | null;
 }) {
   const text = copy[locale];
+  const isDialog = presentation === "dialog";
   const { data: session, status: sessionStatus } = useSession();
   const [checkoutPending, setCheckoutPending] = useState<TierId | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -329,21 +335,26 @@ export function PricingExperience({
 
   return (
     <section
-      className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-20 lg:px-10"
+      className={cn(
+        "relative z-10 mx-auto w-full scroll-mt-24",
+        isDialog
+          ? "max-w-none px-3 py-5 sm:px-5 sm:py-6"
+          : "max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:px-10"
+      )}
       id="plans"
     >
-      <header className="mx-auto mb-9 max-w-3xl text-center sm:mb-12">
+      <header className={cn("mx-auto max-w-3xl text-center", isDialog ? "mb-5 sm:mb-6" : "mb-9 sm:mb-12")}>
         <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-xs text-white/70">
           <Sparkles aria-hidden="true" className="size-3.5 text-violet-300" />{" "}
           {text.tag}
         </div>
-        <h2 className="mt-4 text-balance text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+        <h2 className={cn("mt-3 text-balance font-semibold tracking-[-0.04em] text-white", isDialog ? "text-2xl sm:text-3xl" : "mt-4 text-3xl sm:text-4xl")}>
           {text.title}
         </h2>
-        <p className="mx-auto mt-3 max-w-2xl text-pretty text-sm leading-6 text-white/60 sm:text-base">
+        <p className={cn("mx-auto mt-2 max-w-2xl text-pretty text-white/60", isDialog ? "text-xs leading-5 sm:text-sm sm:leading-6" : "mt-3 text-sm leading-6 sm:text-base")}>
           {text.subtitle}
         </p>
-        <fieldset className="mt-6 min-w-0 border-0 p-0">
+        <fieldset className={cn("min-w-0 border-0 p-0", isDialog ? "mt-4" : "mt-6")}>
           <legend className="sr-only">
             {locale === "fr"
               ? "Période de facturation"
@@ -355,7 +366,7 @@ export function PricingExperience({
             <button
               aria-pressed={!annual}
               className={cn(
-                "rounded-full px-4 py-2 text-sm transition-colors",
+                cn("rounded-full py-2 text-sm transition-colors", isDialog ? "px-3 sm:px-4" : "px-4"),
                 annual
                   ? "text-white/65 hover:text-white"
                   : "bg-white text-[#11111a]"
@@ -368,7 +379,7 @@ export function PricingExperience({
             <button
               aria-pressed={annual}
               className={cn(
-                "flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors",
+                cn("flex items-center gap-2 rounded-full py-2 text-sm transition-colors", isDialog ? "px-3 sm:px-4" : "px-4"),
                 annual
                   ? "bg-white text-[#11111a]"
                   : "text-white/65 hover:text-white"
@@ -383,14 +394,14 @@ export function PricingExperience({
                   annual ? "text-emerald-700" : "text-emerald-300"
                 )}
               >
-                {text.save}
+                {isDialog ? text.saveCompact : text.save}
               </span>
             </button>
           </div>
         </fieldset>
       </header>
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-2 text-sm text-white/55">
+      <div className={cn("flex flex-wrap items-center justify-between gap-2 text-sm text-white/55", isDialog ? "mb-4" : "mb-5")}>
         <span className="font-medium text-white/80">
           {wayNames[way][locale]}
         </span>
@@ -399,7 +410,7 @@ export function PricingExperience({
         </span>
       </div>
 
-      <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={cn("grid items-stretch gap-4", isDialog ? "grid-cols-1 sm:grid-cols-2" : "sm:grid-cols-2 xl:grid-cols-4")}>
         {chosenPlans.map((tier, index) => {
           const { id, points, features } = tier;
           const basePrice = tier.price;
@@ -434,7 +445,7 @@ export function PricingExperience({
               aria-current={isSelected ? "true" : undefined}
               aria-label={`${label} — ${priceLabel}`}
               className={cn(
-                "relative flex min-w-0 flex-col rounded-[1.65rem] border p-5 sm:p-5",
+                cn("relative flex min-w-0 flex-col rounded-[1.65rem] border", isDialog ? "p-4 sm:p-5" : "p-6"),
                 isSelected
                   ? "border-cyan-200/70 bg-cyan-300/[0.08] ring-1 ring-cyan-200/30"
                   : isPopular
@@ -466,7 +477,7 @@ export function PricingExperience({
                   ? `Niveau 0${index + 1}`
                   : `Level 0${index + 1}`}
               </p>
-              <h3 className="mt-1 text-xl font-semibold tracking-tight text-white">
+              <h3 className={cn("mt-1 font-semibold tracking-tight text-white", isDialog ? "text-lg sm:text-xl" : "text-xl")}>
                 {label}
               </h3>
               <p className="mt-2 min-h-10 text-xs leading-5 text-white/55">
@@ -479,7 +490,7 @@ export function PricingExperience({
                   </span>
                 ) : (
                   <>
-                    <span className="text-3xl font-semibold tracking-[-.04em] text-white">
+                    <span className={cn("font-semibold tracking-[-.04em] text-white", isDialog ? "text-2xl sm:text-3xl" : "text-3xl")}>
                       {shownPrice.toFixed(2)} €
                     </span>
                     <span className="ml-1 text-xs text-white/45">
@@ -545,7 +556,7 @@ export function PricingExperience({
               <p className="mb-2 text-[10px] font-medium uppercase tracking-[.12em] text-white/40">
                 {index > 1 ? text.all : text.starts}
               </p>
-              <ul className="mb-6 flex-1 space-y-2.5 text-xs leading-5 text-white/75">
+              <ul className={cn("mb-6 flex-1 space-y-2.5 leading-5 text-white/75", isDialog ? "text-sm" : "text-xs")}>
                 {features.map((feature) => (
                   <li className="flex gap-2" key={feature}>
                     <Check
@@ -558,7 +569,7 @@ export function PricingExperience({
               </ul>
               {id === "free" ? (
                 <Link
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 px-3 text-center text-xs font-medium text-white/80 transition hover:bg-white/[0.07]"
+                  className={cn("inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 px-3 text-center font-medium text-white/80 transition hover:bg-white/[0.07]", isDialog ? "text-sm" : "text-xs")}
                   href={href}
                 >
                   {locale === "fr"
@@ -573,7 +584,7 @@ export function PricingExperience({
                 session?.user?.type !== "guest" ? (
                   <button
                     className={cn(
-                      "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-3 text-center text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
+                      cn("inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-3 text-center font-semibold transition disabled:cursor-not-allowed disabled:opacity-50", isDialog ? "text-sm" : "text-xs"),
                       isPopular
                         ? "bg-white text-[#11111a] hover:bg-white/90"
                         : "border border-white/15 text-white/80 hover:bg-white/[0.07]"
@@ -598,7 +609,7 @@ export function PricingExperience({
                 ) : (
                   <Link
                     className={cn(
-                      "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-3 text-center text-xs font-semibold transition",
+                      cn("inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-3 text-center font-semibold transition", isDialog ? "text-sm" : "text-xs"),
                       isPopular
                         ? "bg-white text-[#11111a] hover:bg-white/90"
                         : "border border-white/15 text-white/80 hover:bg-white/[0.07]"
@@ -615,7 +626,7 @@ export function PricingExperience({
                 )
               ) : (
                 <button
-                  className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/10 px-3 text-center text-xs font-medium text-white/40"
+                  className={cn("inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/10 px-3 text-center font-medium text-white/40", isDialog ? "text-sm" : "text-xs")}
                   disabled
                   title={text.unavailable}
                   type="button"
@@ -635,7 +646,7 @@ export function PricingExperience({
           {checkoutError}
         </p>
       ) : null}
-      <p className="mx-auto mt-5 max-w-3xl text-center text-[11px] leading-5 text-white/35">
+      <p className={cn("mx-auto max-w-3xl text-center leading-5 text-white/35", isDialog ? "mt-4 text-xs" : "mt-5 text-[11px]")}>
         {text.footer}
       </p>
     </section>
