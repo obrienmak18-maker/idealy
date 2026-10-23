@@ -69,6 +69,8 @@ assert.match(edgeToolCalling, /state: "input-available"/, "A real tool call must
 assert.match(edgeToolCalling, /state: finalState/, "A completed tool call must publish its real result state.");
 assert.match(route, /parsed\.type === "idealy_tool_activity"/, "The production stream adapter must forward real tool activity.");
 assert.match(route, /data-idealy-tool-activity/, "Tool activity must enter the typed UI message stream.");
+assert.ok(route.includes("Aucun fournisseur IA direct n’est configuré côté Supabase"), "Missing Edge provider secrets must be distinguishable from generic chat failures.");
+assert.ok(route.includes("aucune carte Vercel AI Gateway n’est nécessaire"), "Provider diagnostics must not direct users back to Gateway billing.");
 assert.match(types, /"idealy-tool-activity": IdealyChatToolActivity/, "The custom stream event must have a typed UI contract.");
 assert.match(message, /type === "data-idealy-tool-activity"/, "The chat must render Edge tool activity cards.");
 assert.match(activityCard, /open=\{isOpen\} onOpenChange=\{setIsOpen\}/, "Tool cards must be manually collapsible after completion.");
