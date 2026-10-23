@@ -274,6 +274,60 @@ async function verifyMissionBuild({
     .limit(500);
 
   let report: WorkspaceBuildResult;
+  const pendingValidation = {
+    ...validation,
+    buildVerification: {
+      startedAt: new Date().toISOString(),
+      status: "building",
+    },
+    status: "building",
+  };
+  const { error: markBuildingError } = await admin
+    .from("missions")
+    .update({ status: "building", validation: pendingValidation })
+    .eq("id", missionId)
+    .eq("user_id", supabaseUserId);
+
+  if (markBuildingError) {
+    const report = failedReport("The mission could not enter its real build-verification state.");
+    const failedValidation = {
+      ...pendingValidation,
+      buildVerification: report,
+      errors: [
+        ...(Array.isArray(validation.errors) ? validation.errors : []),
+        buildDiagnostic(report),
+      ],
+      status: "needs-fix",
+    };
+    await admin
+      .from("missions")
+      .update({ status: "needs-fix", validation: failedValidation })
+      .eq("id", missionId)
+      .eq("user_id", supabaseUserId);
+    return {
+      report,
+      persisted: false,
+      finalStatus: "needs-fix",
+      validation: failedValidation,
+    };
+  }
+
+  const { error: buildStartedEventError } = await admin.rpc("append_mission_file_event", {
+    p_event_type: "build_log",
+    p_file_version: null,
+    p_idempotency_key: (idempotencyKey + ":build-started").slice(0, 180),
+    p_mission_id: missionId,
+    p_path: null,
+    p_payload: {
+      level: "info",
+      message: "Compilation réelle en sandbox : npm install puis npm run build.",
+      status: "building",
+    },
+  });
+  if (buildStartedEventError) {
+    console.warn("Mission build-start event persistence failed.", { missionId });
+  }
+
   if (filesError || !files) {
     report = failedReport("Saved workspace files could not be loaded for compilation.");
   } else {
