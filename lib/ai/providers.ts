@@ -1,8 +1,7 @@
-import { customProvider, gateway } from "ai";
+import { customProvider } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { isTestEnvironment } from "../constants";
-import { titleModel } from "./models";
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -100,6 +99,7 @@ function getAnyAvailableDirectModel() {
   if (google) return google("gemini-3.8-flash");
   if (openai) return openai.chat("gpt-4o-mini");
   if (deepseek) return deepseek.chat("deepseek-chat");
+  if (mistral) return mistral.chat("mistral-large-latest");
   return null;
 }
 
@@ -139,13 +139,13 @@ export function getLanguageModel(modelId: string) {
     return mistral.chat("mistral-large-latest");
   }
 
-  // En local ou si Gateway non configuré, toujours utiliser le modèle direct qui fonctionne
+  // Utiliser un fournisseur direct configuré. Ne jamais basculer vers un Gateway payant implicite.
   const fallback = getAnyAvailableDirectModel();
   if (fallback) {
     return fallback;
   }
 
-  return gateway.languageModel(modelId);
+  throw new Error("Aucun fournisseur IA direct n’est configuré. Le chat doit utiliser le backend Supabase d’Idealy ou disposer d’une clé fournisseur côté serveur.");
 }
 
 export function getTitleModel() {
@@ -163,5 +163,5 @@ export function getTitleModel() {
   const direct = getAnyAvailableDirectModel();
   if (direct) return direct;
 
-  return gateway.languageModel(titleModel.id);
+  throw new Error("Aucun fournisseur IA direct n’est configuré pour générer le titre.");
 }
