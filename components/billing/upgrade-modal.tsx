@@ -38,10 +38,10 @@ export function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex max-h-[92dvh] w-[calc(100vw-1rem)] max-w-5xl flex-col gap-0 overflow-hidden rounded-2xl border border-white/10 bg-[#090a11] p-0 text-white shadow-2xl shadow-black/40 sm:w-[calc(100vw-2rem)] sm:rounded-3xl"
+        className="flex max-h-[92dvh] w-[calc(100vw-1rem)] max-w-6xl flex-col gap-0 overflow-hidden rounded-2xl border border-white/10 bg-[#090a11] p-0 text-white shadow-2xl shadow-black/40 sm:w-[calc(100vw-2rem)] sm:rounded-3xl"
         data-testid="upgrade-modal"
       >
-        <DialogHeader className="shrink-0 border-b border-white/10 bg-[#0b0d16] px-4 py-3 pr-12 sm:px-6 sm:py-4">
+        <DialogHeader className="shrink-0 border-b border-white/10 bg-[#0b0d16] px-4 py-3 pr-12 sm:px-7 sm:py-5">
           <DialogTitle className="text-sm font-semibold tracking-tight text-white sm:text-base">
             {heading}
           </DialogTitle>
