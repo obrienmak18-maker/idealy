@@ -19,6 +19,7 @@ import {
 import { useFreeQuota } from "@/hooks/use-free-quota";
 import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useTheme } from "next-themes";
 import {
   type ChangeEvent,
@@ -664,7 +665,7 @@ function PureMultimodalInput({
             <p className="px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{language.startsWith("en") ? "Choose an agent" : language.startsWith("es") ? "Elegir un agente" : "Choisir un agent"}</p>
             {filteredAgents.length ? filteredAgents.map((agent, index) => (
               <button key={agent.name} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => handleAgentMentionSelect(agent.name)} className={cn("flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs transition-colors", index === agentMentionIndex ? "bg-primary/10 text-foreground" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground")}>
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/20 to-cyan-500/20 text-[10px] font-bold text-foreground">{agent.name.slice(0, 2).toUpperCase()}</span>
+                <span className="relative size-8 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br from-violet-500/20 to-cyan-500/20"><Image src={agent.avatarUrl} alt={agent.name} fill sizes="32px" className="object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /><span aria-hidden="true" className="absolute inset-0 -z-0 flex items-center justify-center text-[10px] font-bold text-foreground">{agent.name.slice(0, 2).toUpperCase()}</span></span>
                 <span className="min-w-0 flex-1"><span className="block font-semibold">{agent.name}</span><span className="block truncate text-[10px] opacity-70">{agent.role}</span></span>
                 {agent.isChief ? <span className="text-[9px] text-primary">Lead</span> : null}
               </button>
