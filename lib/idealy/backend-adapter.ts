@@ -205,10 +205,16 @@ async function getSupabaseServerContext(
     // Graceful token extraction fallback
   }
 
-  const url = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
+  const url = (
+    process.env.SUPABASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    ""
+  ).replace(/\/+$/, "");
   const anonKey =
     process.env.SUPABASE_ANON_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    process.env.SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
   let accessToken =
     override?.accessToken?.trim() ||
     (typeof token?.supabaseAccessToken === "string"
