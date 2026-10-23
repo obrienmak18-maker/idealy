@@ -739,8 +739,34 @@ serve(async (req) => {
       });
     }
 
-    const result = await llmRes.json();
-    const message = result.choices?.[0]?.message?.content ?? '';
+    const result: unknown = await llmRes.json().catch(() => null);
+    const resultObject =
+      result && typeof result === 'object'
+        ? result as { choices?: Array<{ message?: { content?: unknown } }>; error?: unknown }
+        : null;
+    const rawMessage = resultObject?.choices?.[0]?.message?.content;
+    const message = typeof rawMessage === 'string' ? rawMessage.trim() : '';
+    if (!message) {
+      const providerError = resultObject?.error;
+      const detail =
+        typeof providerError === 'string'
+          ? providerError
+          : providerError && typeof providerError === 'object' && 'message' in providerError &&
+              typeof providerError.message === 'string'
+            ? providerError.message
+            : 'The provider returned an empty or unsupported response.';
+      console.error('AI provider returned no usable message', {
+        provider: resolution.provider,
+        model: resolution.model,
+        detail,
+      });
+      return jsonError(
+        'Le fournisseur IA n’a renvoyé aucune réponse exploitable. Vérifie le fournisseur, le modèle et sa configuration.',
+        502,
+        headers,
+        'EMPTY_PROVIDER_RESPONSE',
+      );
+    }
     if (input.planOnly === true) {
       const plan = parseMissionPlan(message);
       if (!plan) return jsonError('Le fournisseur IA a renvoyé un plan de mission invalide.', 502, headers, 'INVALID_MISSION_PLAN');
@@ -770,6 +796,15 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : String(error);
     if (/No BYOK key configured/i.test(message)) return jsonError('No BYOK key is configured for this provider.', 409, headers, 'BYOK_NOT_CONFIGURED');
     if (/AI_KEY_ENCRYPTION_SECRET/i.test(message)) return jsonError('BYOK server encryption is not configured.', 500, headers, 'BYOK_CONFIG_ERROR');
+    const missingProviderKey = message.match(/API key not configured:\s*([A-Z0-9_]+)/i);
+    if (missingProviderKey) {
+      return jsonError(
+        `Le secret serveur ${missingProviderKey[1]} n’est pas configuré dans Supabase Edge Functions.`,
+        503,
+        headers,
+        'AI_PROVIDER_NOT_CONFIGURED',
+      );
+    }
     return jsonError('Unexpected AI proxy error.', 500, headers);
   }
 });
