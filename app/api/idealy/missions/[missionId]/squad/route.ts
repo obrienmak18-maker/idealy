@@ -53,7 +53,12 @@ async function persistBuildVerification({
   supabaseUserId: string;
   report: WorkspaceBuildResult;
   validation: JsonRecord;
-}) {
+}): Promise<{
+  persisted: boolean;
+  error?: string;
+  finalStatus?: string;
+  validation?: JsonRecord;
+}> {
   const supabaseUrl = (
     process.env.SUPABASE_URL ??
     process.env.NEXT_PUBLIC_SUPABASE_URL ??
@@ -491,7 +496,7 @@ export async function POST(
       { status: response.status, headers: responseHeaders },
     );
   } catch (error) {
-    if (!orchestratorSucceeded && !quotaCommitted) {
+    if (!quotaCommitted) {
       await refundFreeGeneration({
         idempotencyKey: input.idempotencyKey,
         userId,
