@@ -31,7 +31,8 @@ assert.match(schema, /selectedChatModel: z\.string\(\)\.min\(1\)\.max\(160\)/, "
 assert.match(route, /const supportsFileContents =\s*capabilities\?\.vision === true[\s\S]*?mediaType === "application\/pdf"/, "Le serveur ne doit transmettre le contenu que pour les formats réellement lisibles par le modèle sélectionné.");
 assert.match(route, /if \(supportsFileContents\) return \[part\]/, "Les images et PDF restent transmis aux modèles qui annoncent la vision.");
 assert.match(route, /Le modèle choisi ne peut pas lire le contenu de ce format[\s\S]*?L’original reste joint et téléchargeable/, "Les formats non lisibles doivent rester attachés sans prétendre qu’ils ont été analysés.");
-assert.match(input, /capabilities\?\.\[model\.id\]\?\.vision/, "Le sélecteur doit exposer les capacités de vision réelles du modèle.");
+assert.doesNotMatch(input, /data-testid="model-selector"/, "Le modèle doit être sélectionné automatiquement sans sélecteur visible.");
+assert.match(route, /const chatModel = DEFAULT_CHAT_MODEL/, "Le chat doit appliquer le modèle serveur par défaut.");
 assert.match(route, /part\.type !== "file"[\s\S]*?Fichier joint[\s\S]*?contenu binaire[\s\S]*?n’est pas transmis/, "Le moteur de production doit recevoir une description honnête des pièces jointes qu’il ne peut pas lire.");
 
 assert.match(types, /searchImages: searchImagesTool/, "Pexels search results must be part of the chat message type contract.");
