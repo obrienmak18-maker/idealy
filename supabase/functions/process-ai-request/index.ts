@@ -1032,8 +1032,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    const result = await llmRes.json();
-    const message = result.choices?.[0]?.message?.content ?? '';
+    const result: unknown = await llmRes.json().catch(() => null);
+    const resultObject =
+      result && typeof result === 'object'
+        ? result as {
+          choices?: Array<{ message?: { content?: unknown } }>;
+          error?: unknown;
+        }
+        : null;
+    const rawMessage = resultObject?.choices?.[0]?.message?.content;
+    const message = typeof rawMessage === 'string' ? rawMessage.trim() : '';
+    if (!message) {
+      const providerError = resultObject?.error;
+      const detail =
+        typeof providerError === 'string'
+          ? providerError
+          : providerError && typeof providerError === 'object' &&
+              'message' in providerError &&
+              typeof providerError.message === 'string'
+            ? providerError.message
+            : 'The provider returned an empty or unsupported response.';
+      console.error('AI provider returned no usable message', {
+        provider: resolution.provider,
+        model: resolution.model,
+        status: llmRes.status,
+        detail,
+      });
+      return jsonError(
+        'Le fournisseur IA n’a renvoyé aucune réponse exploitable. Vérifie le fournisseur, le modèle et sa configuration.',
+        502,
+        headers,
+        'EMPTY_PROVIDER_RESPONSE',
+      );
+    }
     if (input.planOnly === true) {
       const plan = parseMissionPlan(message);
       if (!plan) return jsonError('Le fournisseur IA a renvoyé un plan de mission invalide.', 502, headers, 'INVALID_MISSION_PLAN');
