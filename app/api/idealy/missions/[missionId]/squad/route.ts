@@ -267,10 +267,11 @@ async function verifyMissionBuild({
 
   const { data: files, error: filesError } = await admin
     .from("mission_files")
-    .select("path,content")
+    .select("path,content,version")
     .eq("mission_id", missionId)
     .eq("status", "saved")
     .order("path", { ascending: true })
+    .order("version", { ascending: false })
     .limit(500);
 
   let report: WorkspaceBuildResult;
@@ -332,8 +333,26 @@ async function verifyMissionBuild({
     report = failedReport("Saved workspace files could not be loaded for compilation.");
   } else {
     try {
+      const latestFilesByPath = new Map<
+        string,
+        { path: string; content: string; version: number }
+      >();
+      for (const item of files) {
+        const previous = latestFilesByPath.get(item.path);
+        const version = Number(item.version) || 1;
+        if (!previous || version > previous.version) {
+          latestFilesByPath.set(item.path, {
+            path: item.path,
+            content: item.content,
+            version,
+          });
+        }
+      }
       report = await runWorkspaceBuildInSandbox(
-        files.map((item) => ({ path: item.path, content: item.content })),
+        Array.from(latestFilesByPath.values()).map(({ path, content }) => ({
+          path,
+          content,
+        })),
       );
     } catch (error: unknown) {
       report = failedReport(
