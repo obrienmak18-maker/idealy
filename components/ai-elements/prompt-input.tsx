@@ -804,7 +804,7 @@ export const PromptInput = ({
         ref={formRef}
         {...props}
       >
-        <InputGroup className="overflow-hidden border border-border/60 bg-background/95 transition-colors duration-200 focus-within:!border-border/60 focus-within:!shadow-none has-[[data-slot=input-group-control]:focus-visible]:!border-border/60 has-[[data-slot=input-group-control]:focus-visible]:!ring-0">{children}</InputGroup>
+        <InputGroup className="overflow-hidden border border-violet-400/20 bg-background/95 shadow-[0_0_0_1px_rgba(139,92,246,0.035)] transition-[border-color,box-shadow] duration-200 focus-within:!border-violet-400/40 focus-within:!shadow-[0_0_0_1px_rgba(139,92,246,0.08)] has-[[data-slot=input-group-control]:focus-visible]:!border-violet-400/40 has-[[data-slot=input-group-control]:focus-visible]:!ring-0">{children}</InputGroup>
       </form>
     </>
   );
