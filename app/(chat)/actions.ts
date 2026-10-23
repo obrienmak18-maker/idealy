@@ -20,7 +20,7 @@ export async function saveChatModelAsCookie(model: string) {
 }
 
 function fallbackTitleFromMessage(message: UIMessage): string {
-  const text = getTextFromMessage(message).replace(/\\s+/g, " ").trim();
+  const text = getTextFromMessage(message).replace(/\s+/g, " ").trim();
   if (!text) return "Nouvelle discussion";
   return text.length > 64 ? `${text.slice(0, 61).trimEnd()}…` : text;
 }
@@ -38,7 +38,7 @@ export async function generateTitleFromUserMessage({
       prompt: getTextFromMessage(message),
     });
     const title = text
-      .replace(/^[#*"\\s]+/, "")
+      .replace(/^[#*"\s]+/, "")
       .replace(/["]+$/, "")
       .trim();
     return title || fallback;
