@@ -219,6 +219,7 @@ export async function runWorkspaceBuildInSandbox(
       path.length > 240 ||
       path.includes("\0") ||
       segments.some((segment) => !segment || segment === "." || segment === "..") ||
+      segments.some((segment) => segment === "node_modules" || segment === ".git" || segment === ".npmrc" || (segment.startsWith(".env") && segment !== ".env.example")) ||
       /^[A-Za-z]:/.test(path)
     ) {
       return result("failed", { error: "A workspace file has an unsafe path." });
@@ -290,11 +291,12 @@ export async function runWorkspaceBuildInSandbox(
       "npm --version",
       "npm install --ignore-scripts --no-audit --no-fund --no-package-lock",
       "npm run build",
+      "test -s dist/index.html",
     ].join("\n");
     const execution = await sandbox.commands.run(command, {
       cwd: workdir,
-      requestTimeoutMs: 160_000,
-      timeoutMs: 150_000,
+      requestTimeoutMs: 220_000,
+      timeoutMs: 210_000,
     });
     const stdout = clippedBuildOutput(execution.stdout);
     const stderr = clippedBuildOutput(execution.stderr);
@@ -307,7 +309,9 @@ export async function runWorkspaceBuildInSandbox(
     });
   } catch (error: unknown) {
     return result("failed", {
-      error: error instanceof Error ? error.message : "Workspace build execution failed.",
+      error: error instanceof Error
+        ? clippedBuildOutput(error.message, 1200)
+        : "Workspace build execution failed.",
     });
   } finally {
     if (sandbox) {
