@@ -1063,6 +1063,14 @@ Deno.serve(async (req) => {
     const message = error instanceof Error ? error.message : String(error);
     if (/No BYOK key configured/i.test(message)) return jsonError('No BYOK key is configured for this provider.', 409, headers, 'BYOK_NOT_CONFIGURED');
     if (/AI_KEY_ENCRYPTION_SECRET/i.test(message)) return jsonError('BYOK server encryption is not configured.', 500, headers, 'BYOK_CONFIG_ERROR');
+    if (/API key not configured:/i.test(message)) {
+      return jsonError(
+        'Aucun fournisseur IA direct n’est configuré côté Supabase. Ajoutez au moins une clé de fournisseur dans les secrets des Edge Functions.',
+        503,
+        headers,
+        'AI_PROVIDER_NOT_CONFIGURED',
+      );
+    }
     return jsonError('Unexpected AI proxy error.', 500, headers);
   }
 });
