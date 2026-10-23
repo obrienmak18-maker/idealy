@@ -39,9 +39,9 @@ assert.ok(cookieNotice.includes('isChatWorkspace ? "bottom-44" : "bottom-4"'));
 assert.doesNotMatch(localDemo, /fetch\s*\(/);
 assert.match(workspaceBuild, /npm install --ignore-scripts/);
 assert.match(workspaceBuild, /npm run build/);
-assert.match(workspaceBuild, /test -s dist\\/index\\.html/);
-assert.match(squadRoute, /runWorkspaceBuildInSandbox/);
-assert.match(squadRoute, /buildResult\.persisted && buildResult\.report\.status === "passed"/);
-assert.match(squadRoute, /buildVerification: buildResult\.report/);
+assert.ok(workspaceBuild.includes("test -s dist/index.html"), "Real builds must verify Vite output.");
+assert.ok(squadRoute.includes("runWorkspaceBuildInSandbox"), "Mission launch must run the real isolated build.");
+assert.ok(squadRoute.includes('buildResult.persisted && buildResult.report.status === "passed"'), "A mission may be ready only after a persisted passing build.");
+assert.ok(squadRoute.includes("buildVerification: buildResult.report"), "The response must expose the real build result.");
 
 console.log("Local workspace demo contract passed.");
