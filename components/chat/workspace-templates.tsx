@@ -19,6 +19,11 @@ interface WorkspaceTemplatesProps {
 export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps) {
   const { t, language } = useTranslation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const implementationRules = language.startsWith("en")
+    ? "Build a working app, not a static mockup or written plan. Every visible action must work and records must persist in the connected backend, or in localStorage if no backend is configured. Use honest empty states instead of invented metrics. Never claim an external service or payment succeeded unless the configured service confirms it."
+    : language.startsWith("es")
+      ? "Construye una aplicación funcional, no una maqueta estática ni un plan escrito. Todas las acciones visibles deben funcionar y los registros deben guardarse en el backend conectado o en localStorage si no hay backend. Usa estados vacíos honestos en lugar de métricas inventadas. No afirmes que un servicio externo o un pago funcionó sin confirmación del servicio configurado."
+      : "Construis une application fonctionnelle, pas une maquette statique ni un plan écrit. Toutes les actions visibles doivent fonctionner et les données doivent être sauvegardées dans le backend connecté, ou dans localStorage si aucun backend n’est configuré. Affiche un état vide honnête plutôt que des métriques inventées. Ne prétends pas qu’un service externe ou un paiement a réussi sans confirmation du service configuré.";
 
   const templates = [
     {
@@ -58,7 +63,7 @@ export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps
         "Modules de formation interactifs, quiz et suivi de progression des élèves."
       ),
       prompt:
-        language.startsWith("en") ? "Build a school management web app with student records, attendance, tuition payments, class results, parent access and a dashboard for school administrators. Start with a polished responsive frontend and realistic sample data." : language.startsWith("es") ? "Crea una aplicación web de gestión escolar con fichas de alumnos, asistencia, pagos, resultados, acceso para padres y un panel para la dirección. Empieza con una interfaz adaptable y datos de ejemplo realistas." : "Crée une application web de gestion scolaire avec dossiers des élèves, présences, paiements, résultats, accès des parents et tableau de bord de la direction. Commence par une interface responsive soignée et des données d’exemple réalistes.",
+        language.startsWith("en") ? "Build a school management web app with student records, attendance, tuition payments, class results, parent access and a dashboard for school administrators. Build real create/edit/delete flows for students, attendance, fees and grades; start with an honest empty state instead of fabricated records." : language.startsWith("es") ? "Crea una aplicación web de gestión escolar con fichas de alumnos, asistencia, pagos, resultados, acceso para padres y un panel para la dirección. Implementa creación, edición y eliminación de alumnos, asistencia, cuotas y notas; muestra un estado vacío honesto en vez de registros inventados." : "Crée une application web de gestion scolaire avec dossiers des élèves, présences, paiements, résultats, accès des parents et tableau de bord de la direction. Implémente la création, la modification et la suppression des élèves, présences, frais et notes ; affiche un état vide honnête plutôt que des dossiers inventés.",
     },
     {
       id: "marketplace",
@@ -71,7 +76,7 @@ export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps
         "Authentification multi-rôles, paiements récurrents et catalogue de produits."
       ),
       prompt:
-        language.startsWith("en") ? "Build a modern marketplace with searchable listings, category filters, seller profiles, favorites, a shopping cart, order summary and a simulated checkout. Make it feel like a real product, not a document." : language.startsWith("es") ? "Crea un marketplace moderno con catálogo filtrable, perfiles de vendedores, favoritos, carrito, resumen del pedido y pago simulado. Debe parecer un producto real, no un documento." : "Crée une marketplace moderne avec catalogue filtrable, profils vendeurs, favoris, panier, récapitulatif de commande et paiement simulé. Le résultat doit ressembler à un vrai produit, pas à un document.",
+        language.startsWith("en") ? "Build a modern marketplace with searchable listings, category filters, seller profiles, favorites, a shopping cart, order summary and order creation and a clear pending-payment state unless a real payment provider is connected. Make it feel like a real product, not a document." : language.startsWith("es") ? "Crea un marketplace moderno con catálogo filtrable, perfiles de vendedores, favoritos, carrito, resumen del pedido y creación de pedidos y un estado de pago pendiente claramente indicado si no hay un proveedor de pago real conectado. Debe parecer un producto real, no un documento." : "Crée une marketplace moderne avec catalogue filtrable, profils vendeurs, favoris, panier, récapitulatif de commande et création de commandes et un statut de paiement en attente clairement indiqué si aucun prestataire de paiement réel n’est connecté. Le résultat doit ressembler à un vrai produit, pas à un document.",
     },
   ];
 
@@ -101,7 +106,7 @@ export function WorkspaceTemplates({ onSelectTemplate }: WorkspaceTemplatesProps
                 <ArrowRight className={`size-3 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90 text-primary" : ""}`} />
               </button>
               <AnimatePresence initial={false}>
-                {expanded ? <motion.div key="details" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className="overflow-hidden"><div className="border-t border-border/40 px-3 pb-3 pt-2.5"><p className="text-[11px] leading-relaxed text-muted-foreground">{tpl.description}</p><button type="button" onClick={() => onSelectTemplate(tpl.prompt)} className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-foreground px-2.5 text-[11px] font-medium text-background transition hover:opacity-85">{language.startsWith("en") ? "Use this idea" : language.startsWith("es") ? "Usar esta idea" : "Utiliser cette idée"}<ArrowRight className="size-3" /></button></div></motion.div> : null}
+                {expanded ? <motion.div key="details" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className="overflow-hidden"><div className="border-t border-border/40 px-3 pb-3 pt-2.5"><p className="text-[11px] leading-relaxed text-muted-foreground">{tpl.description}</p><button type="button" onClick={() => onSelectTemplate(`${tpl.prompt}\n\n${implementationRules}`)} className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-foreground px-2.5 text-[11px] font-medium text-background transition hover:opacity-85">{language.startsWith("en") ? "Use this idea" : language.startsWith("es") ? "Usar esta idea" : "Utiliser cette idée"}<ArrowRight className="size-3" /></button></div></motion.div> : null}
               </AnimatePresence>
             </motion.div>
           );
