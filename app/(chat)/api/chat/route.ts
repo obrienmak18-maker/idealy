@@ -1018,6 +1018,19 @@ export async function POST(request: Request) {
       onError: (error) => {
         if (
           error instanceof Error &&
+          error.message?.includes("Aucun fournisseur IA direct n’est configuré côté Supabase")
+        ) {
+          const locale = (userLanguage ?? "").toLowerCase();
+          if (locale.startsWith("en")) {
+            return "Idealy’s AI provider is not configured on the server. A direct provider key must be configured for Supabase Edge Functions; Vercel AI Gateway billing is not required.";
+          }
+          if (locale.startsWith("es")) {
+            return "El proveedor de IA de Idealy no está configurado en el servidor. Debe configurarse una clave de proveedor directo en las funciones Edge de Supabase; no se necesita facturación de Vercel AI Gateway.";
+          }
+          return "Le moteur IA d’Idealy n’a aucune clé de fournisseur direct configurée côté Supabase. Il faut configurer une clé dans les secrets des Edge Functions ; aucune carte Vercel AI Gateway n’est nécessaire.";
+        }
+        if (
+          error instanceof Error &&
           error.message?.includes(
             "AI Gateway requires a valid credit card on file to service requests"
           )
