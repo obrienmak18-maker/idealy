@@ -12,6 +12,8 @@ const suggestedActions = await readFile("components/chat/suggested-actions.tsx",
 const nextConfig = await readFile("next.config.ts", "utf8");
 const chatLayout = await readFile("app/(chat)/layout.tsx", "utf8");
 const chatComposer = await readFile("components/chat/multimodal-input.tsx", "utf8");
+const workspaceBuild = await readFile("lib/idealy/runtime/e2b.ts", "utf8");
+const squadRoute = await readFile("app/api/idealy/missions/[missionId]/squad/route.ts", "utf8");
 const cookieNotice = await readFile("components/cookies/cookie-notice.tsx", "utf8");
 
 assert.match(hook, /if \(!isDemoMode\) \{\s*return sendRemoteMessage/);
@@ -35,5 +37,11 @@ assert.ok(!chatComposer.includes("<ModelSelectorCompact"), "Model selection must
 assert.doesNotMatch(chatComposer, /selectedModelId=\{selectedModelId\}/, "The composer must not require a visible model selector.");
 assert.ok(cookieNotice.includes('isChatWorkspace ? "bottom-44" : "bottom-4"'));
 assert.doesNotMatch(localDemo, /fetch\s*\(/);
+assert.match(workspaceBuild, /npm install --ignore-scripts/);
+assert.match(workspaceBuild, /npm run build/);
+assert.match(workspaceBuild, /test -s dist\\/index\\.html/);
+assert.match(squadRoute, /runWorkspaceBuildInSandbox/);
+assert.match(squadRoute, /buildResult\.persisted && buildResult\.report\.status === "passed"/);
+assert.match(squadRoute, /buildVerification: buildResult\.report/);
 
 console.log("Local workspace demo contract passed.");
