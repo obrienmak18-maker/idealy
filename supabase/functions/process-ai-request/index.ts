@@ -304,7 +304,7 @@ async function emitMissionFileEvent(
   controller.enqueue(encoder.encode(`data: ${JSON.stringify({
     event: { ...event, idempotencyKey: undefined, sequence },
     type: 'idealy_file_event',
-  })}\\n\\n`));
+  })}\n\n`));
 }
 
 async function streamWorkspaceBuild(
@@ -451,8 +451,8 @@ async function streamWorkspaceBuild(
   });
 
   const assistantMessage = 'La première version de votre application a été générée et enregistrée dans le workspace. Les fichiers sont disponibles dans l’onglet Code.';
-  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: assistantMessage } }] })}\\n\\n`));
-  controller.enqueue(encoder.encode('data: [DONE]\\n\\n'));
+  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: assistantMessage } }] })}\n\n`));
+  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
 }
 
 
@@ -1006,7 +1006,7 @@ Deno.serve(async (req) => {
               .then(() => controller.close())
               .catch((error) => {
                 const message = error instanceof Error ? error.message : String(error);
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'idealy_file_event', event: { eventType: 'mission_error', missionId: input.missionId, path: undefined, payload: { code: 'WORKSPACE_BUILD_FAILED', message }, sequence: 0 } })}\\n\\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'idealy_file_event', event: { eventType: 'mission_error', missionId: input.missionId, path: undefined, payload: { code: 'WORKSPACE_BUILD_FAILED', message }, sequence: 0 } })}\n\n`));
                 controller.close();
               });
           },
