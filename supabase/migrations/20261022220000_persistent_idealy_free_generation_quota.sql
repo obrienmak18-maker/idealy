@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.idealy_free_generations (
 CREATE INDEX IF NOT EXISTS idx_idealy_free_generations_user_status
   ON public.idealy_free_generations(user_id, status);
 
-DO $
+DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
@@ -30,7 +30,7 @@ BEGIN
       CHECK (status IN ('reserved', 'completed', 'refunded'));
   END IF;
 END;
-$;
+$$;
 
 
 ALTER TABLE public.idealy_free_generations ENABLE ROW LEVEL SECURITY;
