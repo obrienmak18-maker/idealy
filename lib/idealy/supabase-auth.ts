@@ -32,8 +32,21 @@ export type SupabasePasswordAuthResult = {
 };
 
 function getSupabaseAuthConfig() {
-  const url = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
-  const anonKey = process.env.SUPABASE_ANON_KEY?.trim();
+  // Reuse the project's public aliases when a deployment has only the newer
+  // publishable-key names configured. These are public client keys, never
+  // service-role credentials.
+  const url = (
+    process.env.SUPABASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    ""
+  ).replace(/\/+$/, "");
+  const anonKey = (
+    process.env.SUPABASE_ANON_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    process.env.SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    ""
+  );
 
   if (!url || !anonKey) {
     return null;
