@@ -17,3 +17,5 @@ CREATE INDEX IF NOT EXISTS vercel_webhook_events_received_at_idx
 
 ALTER TABLE public.vercel_webhook_events ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.vercel_webhook_events FROM anon, authenticated;
+GRANT ALL ON TABLE public.vercel_webhook_events TO service_role;
+GRANT USAGE, SELECT ON SEQUENCE public.vercel_webhook_events_id_seq TO service_role;
