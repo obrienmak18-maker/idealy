@@ -843,20 +843,118 @@ export async function POST(request: Request) {
               });
               dataStream.write({ id: assistantId, type: "text-end" });
             } else {
-              await streamIdealyEdgeResponse({
-                dataStream,
-                idempotencyKey: `${idempotencyKey}:run`,
-                intentCategory,
-                messages: uiMessages,
-                missionId,
-                designSpecification: missionPlan?.design,
-                request,
-                userWay,
-                userTone,
-                userDisplayName,
-                language: userLanguage,
-                requestedAgent,
-              });
+              try {
+                await streamIdealyEdgeResponse({
+                  dataStream,
+                  idempotencyKey: `${idempotencyKey}:run`,
+                  intentCategory,
+                  messages: uiMessages,
+                  missionId,
+                  designSpecification: missionPlan?.design,
+                  request,
+                  userWay,
+                  userTone,
+                  userDisplayName,
+                  language: userLanguage,
+                  requestedAgent,
+                });
+              } catch (edgeError) {
+                let directModel: ReturnType<typeof getLanguageModel> | null = null;
+                try {
+                  directModel = getLanguageModel(chatModel);
+                } catch {
+                  // Direct provider not configured
+                }
+
+                if (directModel) {
+                  console.warn(
+                    "Edge provider failed, falling back to direct server AI model:",
+                    edgeError instanceof Error ? edgeError.message : String(edgeError)
+                  );
+                  const result = streamText({
+                    activeTools:
+                      isReasoningModel && !supportsTools
+                        ? []
+                        : [
+                            "getWeather",
+                            "createDocument",
+                            "editDocument",
+                            "updateDocument",
+                            "requestSuggestions",
+                            "searchImages",
+                            "generateImage",
+                            "webSearch",
+                            "executeSandbox",
+                          ],
+                    instructions: `${systemPrompt({
+                      language: userLanguage,
+                      requestHints,
+                      supportsTools,
+                      userDisplayName,
+                      userTone,
+                      userWay,
+                    })}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty and voice in this reply, while remaining truthful about which tools and agents actually executed. Do not claim a separate agent ran unless the orchestration actually invoked it.` : ""}`,
+                    messages: modelMessages,
+                    model: directModel,
+                    onAbort() {
+                      stopWaitingStatus();
+                    },
+                    onChunk({ chunk }) {
+                      if (isModelStreamActivity(chunk)) {
+                        markModelActive();
+                      }
+                    },
+                    onEnd() {
+                      stopWaitingStatus();
+                    },
+                    onError() {
+                      stopWaitingStatus();
+                    },
+                    providerOptions: {
+                      ...(modelConfig?.reasoningEffort && {
+                        openai: { reasoningEffort: modelConfig.reasoningEffort },
+                      }),
+                    },
+                    stopWhen: isStepCount(5),
+                    telemetry: {
+                      functionId: "stream-text",
+                      isEnabled: isProductionEnvironment,
+                    },
+                    tools: {
+                      createDocument: createDocument({
+                        dataStream,
+                        modelId: chatModel,
+                        session: effectiveSession,
+                      }),
+                      editDocument: editDocument({ dataStream, session: effectiveSession }),
+                      getWeather,
+                      requestSuggestions: requestSuggestions({
+                        dataStream,
+                        modelId: chatModel,
+                        session: effectiveSession,
+                      }),
+                      searchImages: searchImages(),
+                      generateImage: generateImage(),
+                      updateDocument: updateDocument({
+                        dataStream,
+                        modelId: chatModel,
+                        session: effectiveSession,
+                      }),
+                      webSearch: webSearch(),
+                      executeSandbox: executeSandbox(),
+                    },
+                  });
+
+                  dataStream.merge(
+                    toUIMessageStream({
+                      sendReasoning: isReasoningModel,
+                      stream: result.stream,
+                    })
+                  );
+                } else {
+                  throw edgeError;
+                }
+              }
             }
             stopWaitingStatus();
           } catch (error) {

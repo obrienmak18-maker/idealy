@@ -5,7 +5,7 @@ function getDefaultModelId(): string {
   if (getEnv("GROQ_API_KEY")) return "groq/openai/gpt-oss-120b";
   if (getEnv("OPENROUTER_API_KEY")) return "openrouter/meta-llama/llama-3.3-70b-instruct";
   if (getEnv("GOOGLE_GENERATIVE_AI_API_KEY") || getEnv("GEMINI_API_KEY"))
-    return "google/gemini-3.8-flash";
+    return "google/gemini-3.7-flash";
   if (getEnv("DEEPSEEK_API_KEY")) return "deepseek/deepseek-v3.2";
   if (getEnv("OPENAI_API_KEY")) return "openai/gpt-oss-120b";
   return "groq/openai/gpt-oss-120b";
@@ -56,9 +56,9 @@ const gatewayChatModels: ChatModel[] = [
   },
   {
     capabilities: { reasoning: false, tools: true, vision: true },
-    description: "Modèle Google Gemini 3.8 rapide et multimodal",
-    id: "google/gemini-3.8-flash",
-    name: "Gemini 3.8 Flash",
+    description: "Modèle Google Gemini 3.7 rapide et multimodal",
+    id: "google/gemini-3.7-flash",
+    name: "Gemini 3.7 Flash",
     provider: "google",
   },
   {

@@ -30,3 +30,6 @@ _quarantine/
 STRIPE_TEST_SETUP.md
 *.patch
 *.zip
+
+workspace.tar
+_workspace_review/
