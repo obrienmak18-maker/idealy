@@ -40,6 +40,8 @@ export function ProfessionalPage({ eyebrow, title, intro, sections }: Profession
             <Link className="hover:text-foreground" href="/docs">Documentation</Link>
             <Link className="hover:text-foreground" href="/privacy">Confidentialité</Link>
             <Link className="hover:text-foreground" href="/terms">Conditions</Link>
+            <Link className="hover:text-foreground" href="/eula">EULA</Link>
+            <Link className="hover:text-foreground" href="/support">Support</Link>
             <a className="inline-flex items-center gap-2 hover:text-foreground" href="mailto:contact@idealy.app"><MailIcon className="size-4" /> Contact</a>
           </nav>
         </footer>
