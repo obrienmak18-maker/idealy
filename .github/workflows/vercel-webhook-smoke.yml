@@ -1,0 +1,71 @@
+name: Vercel webhook smoke test
+
+on:
+  push:
+    branches:
+      - feat/idealy-live-backend
+    paths:
+      - "supabase/functions/vercel-webhook/**"
+      - ".github/workflows/vercel-webhook-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-webhook:
+    name: Verify public webhook endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check endpoint readiness
+        shell: bash
+        env:
+          WEBHOOK_URL: https://vhucjkyktdflwocrmzhe.supabase.co/functions/v1/vercel-webhook
+        run: |
+          set -euo pipefail
+          body_file="$(mktemp)"
+          status="$(curl --connect-timeout 10 --max-time 20 --silent --show-error --output "$body_file" --write-out '%{http_code}' "$WEBHOOK_URL")"
+          if [[ "$status" != "200" ]]; then
+            echo "Webhook readiness returned HTTP $status."
+            cat "$body_file"
+            exit 1
+          fi
+          node - "$body_file" <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const payload = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          assert.equal(payload.service, 'idealy-vercel-webhook');
+          assert.equal(payload.status, 'ready-for-signed-events');
+          console.log('Webhook endpoint is public and configured.');
+          NODE
+
+      - name: Reject an unsigned deployment event
+        shell: bash
+        env:
+          WEBHOOK_URL: https://vhucjkyktdflwocrmzhe.supabase.co/functions/v1/vercel-webhook
+        run: |
+          set -euo pipefail
+          body_file="$(mktemp)"
+          payload='{"id":"idealy-unsigned-smoke-test","type":"deployment.created","createdAt":1792840000000,"payload":{}}'
+          status="$(curl --connect-timeout 10 --max-time 20 --silent --show-error --output "$body_file" --write-out '%{http_code}' \
+            --request POST \
+            --header 'content-type: application/json' \
+            --header 'x-vercel-signature: 0000000000000000000000000000000000000000' \
+            --data-binary "$payload" \
+            "$WEBHOOK_URL")"
+          if [[ "$status" != "401" ]]; then
+            echo "Expected unsigned webhook to return HTTP 401, got HTTP $status."
+            cat "$body_file"
+            exit 1
+          fi
+          node - "$body_file" <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const payload = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          assert.ok(
+            payload.error === 'invalid_signature' || payload.error === 'missing_or_invalid_signature',
+            `Unexpected rejection response: ${JSON.stringify(payload)}`,
+          );
+          console.log('Unsigned webhook event correctly rejected with HTTP 401.');
+          NODE
