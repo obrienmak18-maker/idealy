@@ -40,15 +40,23 @@ function safeId(value: unknown): string | null {
 }
 
 Deno.serve(async (request) => {
-  if (request.method === "GET") {
-    return json({ service: "idealy-vercel-webhook", status: "ready-for-signed-events" });
-  }
-  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-
   const secret = Deno.env.get("VERCEL_APP_CLIENT_SECRET")?.trim();
   const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
-  if (!secret || !supabaseUrl || !serviceRoleKey) {
+  const configured = Boolean(secret && supabaseUrl && serviceRoleKey);
+
+  if (request.method === "GET") {
+    return json(
+      {
+        service: "idealy-vercel-webhook",
+        status: configured ? "ready-for-signed-events" : "not_configured",
+      },
+      configured ? 200 : 503,
+    );
+  }
+  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+  if (!configured || !secret || !supabaseUrl || !serviceRoleKey) {
     console.error("vercel-webhook unavailable: required server configuration is missing");
     return json({ error: "webhook_not_configured" }, 503);
   }
