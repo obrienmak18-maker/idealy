@@ -91,7 +91,7 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 export const maxDuration = 60;
 
 function shouldUseIdealyEdgeProvider() {
-  return isProductionEnvironment || process.env.VERCEL_ENV === "preview" || process.env.IDEALY_AI_PROVIDER === "supabase-function";
+  return process.env.IDEALY_AI_PROVIDER === "supabase-function";
 }
 
 async function getSupabaseAccessToken(request: Request) {
@@ -759,7 +759,12 @@ export async function POST(request: Request) {
 
           if (idealyPrompt) {
             writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "analyzing"));
-            intentCategory = await classifyIdealyIntent(request, idealyPrompt);
+            try {
+              intentCategory = await classifyIdealyIntent(request, idealyPrompt);
+            } catch (intentErr) {
+              console.warn("Intent classification fallback to CONVERSATION:", intentErr);
+              intentCategory = "CONVERSATION";
+            }
             dataStream.write({ data: intentCategory, type: "data-idealy-intent" });
 
             // Une discussion ou une idéation restent sans effet de bord : elles

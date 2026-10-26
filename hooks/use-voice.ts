@@ -185,6 +185,7 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
   const [transcript, setTranscript] = useState("");
 
   const recognitionRef = useRef<IdealySpeechRecognition | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep callbacks stable via refs
@@ -214,6 +215,12 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
 
   const stop = useCallback(() => {
     clearSilenceTimer();
+    if (mediaStreamRef.current) {
+      for (const track of mediaStreamRef.current.getTracks()) {
+        track.stop();
+      }
+      mediaStreamRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -279,11 +286,9 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
       return;
     }
 
-    // Permission was granted. Release this temporary stream before starting
-    // the browser's speech-recognition service.
-    for (const track of microphoneStream.getTracks()) {
-      track.stop();
-    }
+    // Permission was granted. Keep the stream active during listening to prevent
+    // premature microphone release by the operating system.
+    mediaStreamRef.current = microphoneStream;
 
     try {
       const recognition = new Ctor();
@@ -326,6 +331,12 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
 
       recognition.onerror = (event: IdealySpeechRecognitionErrorEvent) => {
         clearSilenceTimer();
+        if (mediaStreamRef.current) {
+          for (const track of mediaStreamRef.current.getTracks()) {
+            track.stop();
+          }
+          mediaStreamRef.current = null;
+        }
         const kind = mapErrorKind(event);
         // "aborted" and "no-speech" are expected quiet events — don't show alarm toast
         if (kind !== "ABORTED" && kind !== "NO_SPEECH") {
@@ -341,6 +352,12 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
 
       recognition.onend = () => {
         clearSilenceTimer();
+        if (mediaStreamRef.current) {
+          for (const track of mediaStreamRef.current.getTracks()) {
+            track.stop();
+          }
+          mediaStreamRef.current = null;
+        }
         recognitionRef.current = null;
         setState("idle");
         setInterim("");
@@ -369,6 +386,12 @@ export function useVoice(options: UseVoiceOptions = {}): UseVoiceReturn {
   useEffect(() => {
     return () => {
       clearSilenceTimer();
+      if (mediaStreamRef.current) {
+        for (const track of mediaStreamRef.current.getTracks()) {
+          track.stop();
+        }
+        mediaStreamRef.current = null;
+      }
       recognitionRef.current?.abort();
     };
   }, [clearSilenceTimer]);

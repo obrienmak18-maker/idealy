@@ -640,20 +640,39 @@ export async function restoreIdealyMissionCheckpoint({
   );
 }
 
+function classifyIntentLocally(prompt: string): IdealyIntentCategory {
+  const lower = prompt.toLowerCase().trim();
+  const buildPattern = /\b(app|application|site|page|dashboard|composant|interface|ui|ux|code|projet|react|next|vue)\b/i;
+  const execPattern = /\b(crée|creer|créer|génère|generer|générer|construis|construire|implémente|code|lance|lancer|build|make)\b/i;
+  const ideationPattern = /\b(idée|idee|propose|proposer|brainstorm|concept|suggestion|roadmap)\b/i;
+
+  if (execPattern.test(lower) && buildPattern.test(lower)) {
+    return "EXECUTION";
+  }
+  if (ideationPattern.test(lower)) {
+    return "IDEATION";
+  }
+  return "CONVERSATION";
+}
+
 export async function classifyIdealyIntent(
   request: Request,
   prompt: string
 ): Promise<IdealyIntentCategory> {
-  const payload = await callProcessAIRequest<IdealyIntentResponse>(request, {
-    intentOnly: true,
-    prompt,
-  });
+  try {
+    const payload = await callProcessAIRequest<IdealyIntentResponse>(request, {
+      intentOnly: true,
+      prompt,
+    });
 
-  if (!isIntentCategory(payload.intent)) {
-    throw new Error("Le backend Idealy a renvoyé une intention invalide.");
+    if (isIntentCategory(payload.intent)) {
+      return payload.intent;
+    }
+  } catch (error) {
+    console.warn("Classification distante indisponible, repli local:", error);
   }
 
-  return payload.intent;
+  return classifyIntentLocally(prompt);
 }
 
 export async function createIdealyMission({
