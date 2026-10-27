@@ -386,26 +386,12 @@ function PureMessages({
               messages.at(-1)?.role !== "assistant" && (
                 <ThinkingMessage
                   agentAvatar={
-                    messages.some((message) => message.role === "assistant") &&
-                    !/(?:^|\s)@alvin\b|^\s*alvin\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\s+(?:à\s+)?alvin\b|je\s+veux\s+(?:parler\s+à|appeler)\s+alvin/i.test(
-                      messages
-                        .at(-1)
-                        ?.parts.filter((part) => part.type === "text")
-                        .map((part) => part.text)
-                        .join(" ") ?? ""
-                    )
+                    (missionIsActive || !!missionId)
                       ? chiefAgent?.avatarUrl ?? alvinMessenger.avatarUrl
                       : alvinMessenger.avatarUrl
                   }
                   agentName={
-                    messages.some((message) => message.role === "assistant") &&
-                    !/(?:^|\s)@alvin\b|^\s*alvin\s*[,!:]|(?:appelle|appeler|sollicite|solliciter|parle|parler|demande|demander)\s+(?:à\s+)?alvin\b|je\s+veux\s+(?:parler\s+à|appeler)\s+alvin/i.test(
-                      messages
-                        .at(-1)
-                        ?.parts.filter((part) => part.type === "text")
-                        .map((part) => part.text)
-                        .join(" ") ?? ""
-                    )
+                    (missionIsActive || !!missionId)
                       ? chiefAgent?.name ?? "Chef d'équipe"
                       : alvinMessenger.name
                   }

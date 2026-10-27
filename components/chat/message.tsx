@@ -276,7 +276,7 @@ const PurePreviewMessage = ({
   isReadonly,
   requiresScrollPadding: _requiresScrollPadding,
   onEdit,
-  isFirstAssistantMessage = false,
+  isFirstAssistantMessage: _isFirstAssistantMessage = false,
   isAlvinRequested = false,
   requestedAgentName,
   onPlanSelection,
@@ -310,15 +310,21 @@ const PurePreviewMessage = ({
     activeWayData?.agents?.find((agent) => agent.isChief) ??
     activeWayData?.agents?.[0];
 
-  // Alvin introduces the first response or returns only when explicitly called.
-  // Individual builder/reviewer identities are not inferred from natural-language
-  // text; the live progress pill is driven by persisted backend mission events.
+  // Alvin is the messenger who greets and clarifies requirements until the squad begins execution.
+  // When tools (such as createDocument, plan, mission) are invoked, the squad chief takes over execution.
   const explicitlyRequestedAgent = requestedAgentName
     ? activeWayData.agents.find((agent) => agent.name === requestedAgentName)
     : undefined;
+  const hasExecutionArtifacts = message.parts?.some(
+    (part) =>
+      part.type.startsWith("tool-") ||
+      part.type === "data-idealy-mission" ||
+      part.type === "data-idealy-plan"
+  );
   const activeAgent = isAlvinRequested
     ? alvinMessenger
-    : explicitlyRequestedAgent ?? (isFirstAssistantMessage ? alvinMessenger : (chiefAgent ?? alvinMessenger));
+    : explicitlyRequestedAgent ??
+      (hasExecutionArtifacts ? (chiefAgent ?? alvinMessenger) : alvinMessenger);
   const agentName = activeAgent.name;
   const agentRole = activeAgent.role;
   const agentAvatar = activeAgent.avatarUrl;

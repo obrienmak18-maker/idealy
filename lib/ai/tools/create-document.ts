@@ -21,8 +21,8 @@ export const createDocument = ({
 }: CreateDocumentProps) =>
   tool({
     description:
-      "Create an artifact. You MUST specify kind: use 'code' for any programming/algorithm request (creates a script), 'text' for essays/writing (creates a document), 'sheet' for spreadsheets/data.",
-    execute: async ({ title, kind }) => {
+      "Create an artifact. You MUST specify kind: use 'code' for any website, landing page, app, or programming request; 'text' for essays/writing; 'sheet' for spreadsheets/data.",
+    execute: async ({ title, kind, prompt }) => {
       const id = generateUUID();
 
       dataStream.write({
@@ -62,6 +62,7 @@ export const createDocument = ({
         dataStream,
         id,
         modelId,
+        prompt,
         session,
         title,
       });
@@ -82,8 +83,12 @@ export const createDocument = ({
       kind: z
         .enum(artifactKinds)
         .describe(
-          "REQUIRED. 'code' for programming/algorithms, 'text' for essays/writing, 'sheet' for spreadsheets"
+          "REQUIRED. 'code' for applications, landing pages, websites, components, or scripts; 'text' for documents/essays; 'sheet' for spreadsheets"
         ),
-      title: z.string().describe("The title of the artifact"),
+      title: z.string().describe("A concise descriptive title for the artifact"),
+      prompt: z
+        .string()
+        .optional()
+        .describe("Detailed specifications, tech stack, desired sections, and features for the artifact"),
     }),
   });

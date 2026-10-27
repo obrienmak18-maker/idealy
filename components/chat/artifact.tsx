@@ -199,20 +199,52 @@ function PureArtifact({
         byPath.set(file.path, file);
       }
     }
+    // If no multi-file mission was dispatched yet, but code was generated, synthesize the primary file
+    if (byPath.size === 0 && artifact.kind === "code" && artifact.content && artifact.content.trim().length > 0) {
+      const isHtml =
+        artifact.content.includes("<!DOCTYPE") ||
+        artifact.content.includes("<html") ||
+        artifact.content.includes("<head");
+      const defaultPath = isHtml ? "index.html" : "src/App.tsx";
+      byPath.set(defaultPath, {
+        content: artifact.content,
+        missionId: missionId || artifact.documentId || "workspace",
+        path: defaultPath,
+        status: artifact.status === "streaming" ? "writing" : "validated",
+        version: 1,
+      });
+    }
     return Array.from(byPath.values()).sort((left, right) =>
       left.path.localeCompare(right.path)
     );
-  }, [missionFiles]);
+  }, [missionFiles, artifact.kind, artifact.content, artifact.status, missionId, artifact.documentId]);
+
+  // Auto-select first file if none is explicitly selected
+  useEffect(() => {
+    if (!selectedMissionFilePath && latestMissionFiles.length > 0) {
+      setSelectedMissionFilePath(latestMissionFiles[0].path);
+    }
+  }, [selectedMissionFilePath, latestMissionFiles]);
+
   const selectedMissionFile = latestMissionFiles.find(
     (file) => file.path === selectedMissionFilePath
   );
-  const selectedMissionFileContent = missionFiles
-    .filter(
-      (file) =>
-        file.path === selectedMissionFilePath &&
-        typeof file.content === "string"
-    )
-    .sort((left, right) => right.version - left.version)[0]?.content;
+  const selectedMissionFileContent = useMemo(() => {
+    if (!selectedMissionFilePath) {
+      return undefined;
+    }
+    const matching = missionFiles
+      .filter(
+        (file) =>
+          file.path === selectedMissionFilePath &&
+          typeof file.content === "string"
+      )
+      .sort((left, right) => right.version - left.version)[0]?.content;
+    if (matching !== undefined) {
+      return matching;
+    }
+    return latestMissionFiles.find((file) => file.path === selectedMissionFilePath)?.content;
+  }, [selectedMissionFilePath, missionFiles, latestMissionFiles]);
 
   const [isInspectorActive, setIsInspectorActive] = useState(false);
   const [inspectedElement, setInspectedElement] = useState<InspectedElement | null>(null);
@@ -1109,9 +1141,9 @@ function PureArtifact({
           />
         ) : (
           <div className="flex h-full min-h-0 overflow-hidden">
-            <aside className="hidden w-56 shrink-0 overflow-y-auto border-r border-sidebar-border/60 bg-sidebar/70 p-3 sm:block overscroll-contain">
-              <div className="mb-3 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"><span>Files</span><Folder className="size-3.5" /></div>
-              <div className="space-y-1 text-xs">
+            <aside className="hidden w-48 shrink-0 overflow-y-auto border-r border-sidebar-border/60 bg-sidebar/70 p-2.5 sm:block overscroll-contain">
+              <div className="mb-2.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"><span>Fichiers</span><Folder className="size-3.5" /></div>
+              <div className="space-y-0.5 text-xs">
                 {latestMissionFiles.length > 0 ? latestMissionFiles.map((file) => {
                   const isActive = file.path === selectedMissionFilePath;
                   const isJson = file.path.endsWith(".json");
@@ -1122,23 +1154,23 @@ function PureArtifact({
                       : "text-sky-300";
                   return (
                     <button
-                      className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"}`}
+                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors text-xs ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"}`}
                       key={`${file.path}:${file.version}`}
                       onClick={() => setSelectedMissionFilePath(file.path)}
                       type="button"
                     >
-                      {isJson ? <FileJson className={`size-3.5 ${fileColor}`} /> : <FileCode2 className={`size-3.5 ${fileColor}`} />}
-                      <span className="min-w-0 flex-1 truncate">{file.path}</span>
+                      {isJson ? <FileJson className={`size-3.5 shrink-0 ${fileColor}`} /> : <FileCode2 className={`size-3.5 shrink-0 ${fileColor}`} />}
+                      <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{file.path}</span>
                       <span
-                        aria-label={`Statut du fichier : ${missionFileStatusLabel(file.status)}`}
-                        className="shrink-0 text-[9px] uppercase tracking-[0.08em] opacity-80"
+                        aria-label={`Statut : ${missionFileStatusLabel(file.status)}`}
+                        className="shrink-0 text-[8px] uppercase tracking-[0.08em] opacity-75 font-semibold"
                         title={missionFileStatusLabel(file.status)}
                       >{missionFileStatusLabel(file.status)}</span>
                     </button>
                   );
                 }) : (
                   <div className="rounded-md border border-dashed border-sidebar-border/70 px-2.5 py-3 text-[11px] leading-5 text-muted-foreground">
-                    Les fichiers réels apparaîtront ici dès que le Builder les aura enregistrés.
+                    Les fichiers créés s'afficheront ici en direct.
                   </div>
                 )}
               </div>

@@ -5,15 +5,18 @@ import { createDocumentHandler } from "@/lib/artifacts/server";
 
 export const textDocumentHandler = createDocumentHandler<"text">({
   kind: "text",
-  onCreateDocument: async ({ title, dataStream, modelId }) => {
+  onCreateDocument: async ({ title, prompt: userPrompt, dataStream, modelId }) => {
     let draftContent = "";
+    const generationPrompt = userPrompt && userPrompt.trim().length > 0
+      ? `${title}\n\nSpecifications:\n${userPrompt}`
+      : title;
 
     const { stream } = streamText({
       experimental_transform: smoothStream({ chunking: "word" }),
       instructions:
         "Write about the given topic. Markdown is supported. Use headings wherever appropriate.",
       model: getLanguageModel(modelId),
-      prompt: title,
+      prompt: generationPrompt,
     });
 
     for await (const delta of stream) {

@@ -12,13 +12,16 @@ function stripFences(code: string): string {
 
 export const codeDocumentHandler = createDocumentHandler<"code">({
   kind: "code",
-  onCreateDocument: async ({ title, dataStream, modelId }) => {
+  onCreateDocument: async ({ title, prompt: userPrompt, dataStream, modelId }) => {
     let draftContent = "";
+    const generationPrompt = userPrompt && userPrompt.trim().length > 0
+      ? `Project: ${title}\n\nUser Specifications & Detailed Requirements:\n${userPrompt}\n\nGenerate the complete, modern, production-ready, fully styled and interactive code now.`
+      : `Project: ${title}\n\nGenerate a complete, modern, production-ready, fully styled and interactive web application or landing page for this project.`;
 
     const { stream } = streamText({
-      instructions: `${codePrompt}\n\nOutput ONLY the code. No explanations, no markdown fences, no wrapping.`,
+      instructions: `${codePrompt}\n\nOutput ONLY the clean code. Do NOT wrap in markdown \`\`\` fences. No introductory explanations, no trailing notes.`,
       model: getLanguageModel(modelId),
-      prompt: title,
+      prompt: generationPrompt,
     });
 
     for await (const delta of stream) {

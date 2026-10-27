@@ -877,9 +877,11 @@ export function BuildTopBar() {
         ) : null}
       </div>
 
-      <div className="flex min-w-0 items-center justify-end gap-1">
-        <PowerStatusBadge compact />
-        <FreeQuotaBadge compact />
+      <div className="flex min-w-0 items-center justify-end gap-1.5 shrink-0">
+        <div className="hidden 2xl:flex items-center gap-1 shrink-0">
+          <PowerStatusBadge compact />
+          <FreeQuotaBadge compact />
+        </div>
         {/* Squad status — derived from real missionSquadStatus, never fabricated */}
         <div
           aria-live="polite"
@@ -1156,7 +1158,7 @@ export function BuildTopBar() {
         </div>
         <button
           aria-label="Configurer le déploiement"
-          className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
+          className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98] shrink-0"
           onClick={() => {
             if (isDemoMode) {
               toast.info(

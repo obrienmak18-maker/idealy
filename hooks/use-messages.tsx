@@ -1,3 +1,5 @@
+"use client";
+
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useEffect, useState } from "react";
 import type { ChatMessage } from "@/lib/types";
@@ -16,7 +18,7 @@ export function useMessages({
     onViewportEnter,
     onViewportLeave,
     reset,
-  } = useScrollToBottom();
+  } = useScrollToBottom({ status });
 
   const [hasSentMessage, setHasSentMessage] = useState(false);
 

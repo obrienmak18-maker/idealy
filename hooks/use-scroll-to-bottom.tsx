@@ -1,32 +1,35 @@
+"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export function useScrollToBottom() {
+export function useScrollToBottom({
+  status,
+}: {
+  status?: string;
+} = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const isAtBottomRef = useRef(true);
-  const isUserScrollingRef = useRef(false);
+  const userScrolledUpRef = useRef(false);
+  const isProgrammaticScrollRef = useRef(false);
 
   useEffect(() => {
     isAtBottomRef.current = isAtBottom;
   }, [isAtBottom]);
 
-  const checkIfAtBottom = useCallback(() => {
-    if (!containerRef.current) {
-      return true;
-    }
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    return scrollTop + clientHeight >= scrollHeight - 100;
-  }, []);
-
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     if (!containerRef.current) {
       return;
     }
+    isProgrammaticScrollRef.current = true;
     containerRef.current.scrollTo({
       behavior,
       top: containerRef.current.scrollHeight,
     });
+    userScrolledUpRef.current = false;
+    setIsAtBottom(true);
+    isAtBottomRef.current = true;
   }, []);
 
   useEffect(() => {
@@ -35,28 +38,56 @@ export function useScrollToBottom() {
       return;
     }
 
-    let scrollTimeout: ReturnType<typeof setTimeout>;
-
     const handleScroll = () => {
-      isUserScrollingRef.current = true;
-      clearTimeout(scrollTimeout);
+      // If triggered programmatically, do not treat as user scroll
+      if (isProgrammaticScrollRef.current) {
+        isProgrammaticScrollRef.current = false;
+        return;
+      }
 
-      const atBottom = checkIfAtBottom();
-      setIsAtBottom(atBottom);
-      isAtBottomRef.current = atBottom;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
-      scrollTimeout = setTimeout(() => {
-        isUserScrollingRef.current = false;
-      }, 150);
+      // If user scrolls up more than 150px from bottom, honor user reading intent
+      if (distanceFromBottom > 150) {
+        userScrolledUpRef.current = true;
+        setIsAtBottom(false);
+        isAtBottomRef.current = false;
+      } else {
+        userScrolledUpRef.current = false;
+        setIsAtBottom(true);
+        isAtBottomRef.current = true;
+      }
     };
 
     container.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       container.removeEventListener("scroll", handleScroll);
-      clearTimeout(scrollTimeout);
     };
-  }, [checkIfAtBottom]);
+  }, []);
 
+  // When status changes to submitted, reset scroll to bottom immediately
+  useEffect(() => {
+    if (status === "submitted") {
+      userScrolledUpRef.current = false;
+      setIsAtBottom(true);
+      isAtBottomRef.current = true;
+      scrollToBottom("instant");
+    }
+  }, [status, scrollToBottom]);
+
+  // When status finishes streaming (ready), smooth scroll to bottom so user sees final content
+  const prevStatusRef = useRef(status);
+  useEffect(() => {
+    if (prevStatusRef.current === "streaming" && (status === "ready" || !status)) {
+      if (!userScrolledUpRef.current) {
+        scrollToBottom("smooth");
+      }
+    }
+    prevStatusRef.current = status;
+  }, [status, scrollToBottom]);
+
+  // Aggressive tracking during streaming or content mutation
   useEffect(() => {
     const container = containerRef.current;
     if (!container) {
@@ -64,16 +95,22 @@ export function useScrollToBottom() {
     }
 
     const scrollIfNeeded = () => {
-      if (isAtBottomRef.current && !isUserScrollingRef.current) {
-        requestAnimationFrame(() => {
-          container.scrollTo({
-            behavior: "instant",
-            top: container.scrollHeight,
-          });
-          setIsAtBottom(true);
-          isAtBottomRef.current = true;
-        });
+      // If user has actively scrolled up, don't hijack scroll
+      if (userScrolledUpRef.current) {
+        return;
       }
+
+      // During streaming or if user was at bottom, follow content down
+      isProgrammaticScrollRef.current = true;
+      requestAnimationFrame(() => {
+        if (!container) return;
+        container.scrollTo({
+          behavior: "instant",
+          top: container.scrollHeight,
+        });
+        setIsAtBottom(true);
+        isAtBottomRef.current = true;
+      });
     };
 
     const mutationObserver = new MutationObserver(scrollIfNeeded);
@@ -99,6 +136,7 @@ export function useScrollToBottom() {
   function onViewportEnter() {
     setIsAtBottom(true);
     isAtBottomRef.current = true;
+    userScrolledUpRef.current = false;
   }
 
   function onViewportLeave() {
@@ -107,10 +145,11 @@ export function useScrollToBottom() {
   }
 
   const reset = useCallback(() => {
+    userScrolledUpRef.current = false;
     setIsAtBottom(true);
     isAtBottomRef.current = true;
-    isUserScrollingRef.current = false;
-  }, []);
+    scrollToBottom("instant");
+  }, [scrollToBottom]);
 
   return {
     containerRef,
