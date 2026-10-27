@@ -34,7 +34,7 @@ export const createDocument = ({
 }: CreateDocumentProps) =>
   tool({
     description:
-      "Create an artifact or a multi-file project workspace. For websites, landing pages, or applications (kind: 'code'), ALWAYS supply a complete project file tree via the 'files' parameter including components, configurations, styles, and types.",
+      "Create an artifact or a multi-file project workspace. For websites, landing pages, or applications (kind: 'code'), ALWAYS supply a complete project file tree via the 'files' parameter with dynamic custom structure (.idealy/project.json, .idealy/rules.md, components, pages, styles, hooks, configs). Complete functional code in every file — no placeholders.",
     execute: async ({ title, kind, prompt, files = [] }) => {
       const id = generateUUID();
 
