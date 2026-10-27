@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
 import {
   isFirebaseConfigured,
+  prepareFirebaseIdTokenForSupabase,
   sendEmailVerificationFirebase,
   signUpWithEmailFirebase,
 } from "@/lib/firebase/client";
@@ -192,7 +193,8 @@ export default function Page() {
     }
 
     try {
-      await signUpWithEmailFirebase(emailValue, passwordValue);
+      const idToken = await signUpWithEmailFirebase(emailValue, passwordValue);
+      await prepareFirebaseIdTokenForSupabase(idToken);
       try {
         await sendEmailVerificationFirebase();
       } catch {

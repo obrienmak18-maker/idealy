@@ -1,5 +1,6 @@
 import { auth } from "@/app/(auth)/auth";
 import { getToken } from "next-auth/jwt";
+import { getSafeToken } from "@/lib/auth/session-token";
 import {
   completeMyIdealyOnboarding,
   getMyIdealyOnboardingStatus,
@@ -24,11 +25,8 @@ function response(
 }
 
 async function getAuthToken(request: Request) {
-  return getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  // Session extraction using getToken under the hood with robust HTTP/HTTPS handling
+  return getSafeToken(request);
 }
 
 async function resolveSupabaseToken(

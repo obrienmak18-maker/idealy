@@ -242,7 +242,10 @@
           "desc": "Multi-role auth, recurring subscriptions, product catalog, and checkout."
         }
       }
-    }
+    },
+    "publish": "Publish",
+    "configure": "Configure",
+    "deploySuccess": "Deployment initiated! The project is synchronized with Vercel."
   },
   "sidebar": {
     "newChat": "New Chat",

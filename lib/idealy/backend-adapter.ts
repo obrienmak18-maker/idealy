@@ -1,4 +1,4 @@
-import { getToken } from "next-auth/jwt";
+import { getSafeToken } from "@/lib/auth/session-token";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import {
   getMissionPersona,
@@ -196,11 +196,7 @@ async function getSupabaseServerContext(
 ) {
   let token = null;
   try {
-    token = await getToken({
-      req: request,
-      secret: process.env.AUTH_SECRET,
-      secureCookie: !isDevelopmentEnvironment,
-    });
+    token = await getSafeToken(request);
   } catch {
     // Graceful token extraction fallback
   }

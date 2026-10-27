@@ -242,7 +242,10 @@
           "desc": "Authentification multi-rôles, paiements récurrents et catalogue de produits."
         }
       }
-    }
+    },
+    "publish": "Publier",
+    "configure": "Configurer",
+    "deploySuccess": "Publication initiée ! Le projet est synchronisé avec Vercel."
   },
   "sidebar": {
     "newChat": "Nouvelle discussion",

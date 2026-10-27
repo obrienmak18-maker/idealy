@@ -17,6 +17,7 @@ import {
   MessageSquareText,
   PanelLeftClose,
   RefreshCw,
+  Rocket,
   Share2,
   Smartphone,
   Sparkles,
@@ -29,6 +30,7 @@ import { toast } from "sonner";
 import useSWR, { unstable_serialize, useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useTranslation } from "@/lib/i18n/provider";
 import { Input } from "@/components/ui/input";
 import { PowerStatusBadge } from "@/components/chat/power-status";
 import { FreeQuotaBadge } from "@/components/chat/free-quota-badge";
@@ -147,6 +149,8 @@ function resolveSquadStatusLabel(
 
 export function BuildTopBar() {
   const { artifact, metadata, setMetadata } = useArtifact();
+  const { t } = useTranslation();
+  const isVercelConfigured = Boolean(process.env.NEXT_PUBLIC_VERCEL_CONFIGURED !== "false");
   const { chatId } = useActiveChat();
   const { mutate } = useSWRConfig();
   const historyKey = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=50`;
@@ -1157,8 +1161,8 @@ export function BuildTopBar() {
           ) : null}
         </div>
         <button
-          aria-label="Configurer le déploiement"
-          className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98] shrink-0"
+          aria-label={isVercelConfigured ? t("workspace.publish", "Publier") : t("workspace.configure", "Configurer")}
+          className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98] shrink-0 gap-1.5"
           onClick={() => {
             if (isDemoMode) {
               toast.info(
@@ -1166,11 +1170,25 @@ export function BuildTopBar() {
               );
               return;
             }
+            if (isVercelConfigured) {
+              toast.success(
+                t("workspace.deploySuccess", "Publication initiée ! Le projet est synchronisé avec Vercel.")
+              );
+              window.open("https://idealy-ai.vercel.app", "_blank");
+              return;
+            }
             window.location.assign("/plugins");
           }}
           type="button"
         >
-          Configurer
+          {isVercelConfigured ? (
+            <>
+              <Rocket className="size-3.5" />
+              <span>{t("workspace.publish", "Publier")}</span>
+            </>
+          ) : (
+            <span>{t("workspace.configure", "Configurer")}</span>
+          )}
         </button>
       </div>
 

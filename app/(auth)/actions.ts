@@ -63,9 +63,9 @@ async function establishCredentialsSession(
   try {
     const result = await signIn("credentials", {
       email,
+      ...(turnstileProof ? { turnstileProof } : {}),
       intent,
       password,
-      ...(turnstileProof ? { turnstileProof } : {}),
       redirect: false,
     });
 

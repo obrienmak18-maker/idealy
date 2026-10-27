@@ -296,13 +296,15 @@ export function DataStreamHandler() {
           let nextAgentRole: string | null | undefined;
 
           if (eventType === "mission_completed") {
-            nextSquadStatus =
-              eventPayload.finalStatus === "ready"
-                ? "ready"
-                : eventPayload.finalStatus === "blocked" ||
-                    eventPayload.finalStatus === "needs-user-input"
-                  ? "needs-user-input"
-                  : "needs-fix";
+            nextSquadStatus = "ready";
+            if (
+              eventPayload.finalStatus === "blocked" ||
+              eventPayload.finalStatus === "needs-user-input"
+            ) {
+              nextSquadStatus = "needs-user-input";
+            } else if (eventPayload.finalStatus && eventPayload.finalStatus !== "ready") {
+              nextSquadStatus = "needs-fix";
+            }
             nextAgentName = null;
             nextAgentRole = null;
           } else if (eventType === "mission_error") {
@@ -442,6 +444,13 @@ export function DataStreamHandler() {
       }
       if (delta.type === "data-finish") {
         window.dispatchEvent(new Event("idealy:power-updated"));
+        // Automatically activate live interactive preview once generation finishes
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("idealy:set-view", { detail: "preview" })
+          );
+          window.dispatchEvent(new Event("idealy:refresh-preview"));
+        }, 120);
       }
       const streamKind =
         delta.type === "data-kind" && typeof delta.data === "string"
@@ -511,11 +520,16 @@ export function DataStreamHandler() {
               status: "streaming",
             };
 
-          case "data-finish":
+          case "data-finish": {
+            const hasGeneratedCode = Boolean(
+              draftArtifact.content && draftArtifact.content.trim().length > 0
+            );
             return {
               ...draftArtifact,
+              isVisible: hasGeneratedCode ? true : draftArtifact.isVisible,
               status: "idle",
             };
+          }
 
           default:
             return draftArtifact;

@@ -108,7 +108,7 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
     category: "deploy",
     auth: "oauth2",
     runtime: "idealy-server",
-    availability: "planned",
+    availability: "configured",
     docsUrl: "https://vercel.com/docs/integrations",
     scopes: [],
     operations: [
@@ -118,7 +118,7 @@ export const connectorCatalog: readonly ConnectorDefinition[] = [
       writeOperation("deploy-production", "Déployer en production", "deployment-production", "publish"),
     ],
     dataBoundary: "metadata-only",
-    secretEnvNames: ["VERCEL_APP_CLIENT_ID", "VERCEL_APP_CLIENT_SECRET"],
+    secretEnvNames: ["VERCEL_APP_CLIENT_ID", "VERCEL_INTEGRATION_CLIENT_ID", "VERCEL_TOKEN", "VERCEL-CLIENT-ID"],
     notes: [
       "Le bouton de publication doit rester distinct du flux de conversation et demander une confirmation.",
     ],

@@ -90,7 +90,8 @@ export function FirebaseProviderActions({
         }
 
         toast.success(t("auth.loginSuccess", "Connexion réussie ! Chargement de votre espace…"));
-        window.location.replace(nextPath);
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        window.location.replace(nextPath || "/");
       } catch (err: unknown) {
         console.error("[Firebase completeAuth error]:", err);
         throw err;

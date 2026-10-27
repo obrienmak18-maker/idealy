@@ -66,7 +66,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_IDEALY_PAYMENTS_ENABLED:
       process.env.IDEALY_PAYMENTS_ENABLED === "true" ? "true" : "false",
     NEXT_PUBLIC_FREE_GENERATION_LIMIT:
-      process.env.IDEALY_FREE_GENERATION_LIMIT ?? "5",
+      process.env.IDEALY_FREE_GENERATION_LIMIT ?? "50",
     NEXT_PUBLIC_WEBCONTAINER_CLIENT_ID:
       process.env.NEXT_PUBLIC_WEBCONTAINER_CLIENT_ID ?? "",
   },

@@ -37,6 +37,7 @@ import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
 import { RealtimePresence } from "./realtime-presence";
 import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
+import { YcDemoBanner } from "@/components/branding/yc-demo-banner";
 
 class ArtifactErrorBoundary extends Component<
   { children: ReactNode },
@@ -256,6 +257,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
     <>
       <div className="idealy-app-background relative flex h-dvh w-full flex-col overflow-hidden">
         <CosmicHorizon />
+        <YcDemoBanner />
         {isArtifactVisible && <BuildTopBar />}
         <main
           className="relative flex min-h-0 flex-1 flex-row overflow-hidden focus:outline-none"

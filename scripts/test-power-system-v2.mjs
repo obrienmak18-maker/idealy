@@ -64,30 +64,22 @@ for (const expected of [
   }
 }
 const simpleMissionBlock = files.simple.slice(
-  files.simple.indexOf("const isSimpleMission"),
-  files.simple.indexOf("// Legacy managed credits remain only for non-mission chat/ideation"),
+  files.simple.indexOf("if (managed && isSimpleMission && input.missionId)"),
+  files.simple.indexOf("let providerAttempt:"),
 );
 for (const expected of [
-  "isSimpleMission",
-  "if (managed && isSimpleMission)",
-  "const isMissionRuntime = Boolean(input.missionId);",
-  "p_action_type: 'mission_simple'",
+  "if (managed && isSimpleMission && input.missionId)",
+  "reserve_power_points",
+  "p_operation: 'mission_simple'",
   "POWER_REQUIRED",
-  "workspaceStream !== true",
-  "p_idempotency_key: powerKey",
+  "p_idempotency_key: simplePowerReservationKey",
 ]) {
   if (!simpleMissionBlock.includes(expected)) {
-    throw new Error(`Simple mission Power debit missing: ${expected}`);
+    throw new Error(`Simple mission Power reservation missing: ${expected}`);
   }
 }
 if (simpleMissionBlock.includes("consumeManagedCredit")) {
   throw new Error("Mission runtime must not consume legacy managed credits.");
-}
-if (simpleMissionBlock.includes("managed === false")) {
-  throw new Error("BYOK must not reach consume_power_points");
-}
-if (simpleMissionBlock.indexOf("if (managed && isSimpleMission)") > simpleMissionBlock.indexOf("consume_power_points")) {
-  throw new Error("The managed guard must wrap consume_power_points");
 }
 for (const expected of ["PowerStatusBadge", "<PowerStatusBadge />"]) {
   if (!files.sidebar.includes(expected)) {

@@ -950,7 +950,7 @@ function PureArtifact({
                     phaseBadge = "En attente de validation";
                   } else if (squadStatus === "auto_correction_started") {
                     phaseTitle = `${agentName} corrige le projet`;
-                    phaseDetail = "Une vérification a identifié des problèmes. Les corrections sont appliquées avant la validation finale.";
+                    phaseDetail = "Correction automatique en cours : une vérification a identifié des problèmes. Les corrections sont appliquées avant la validation finale.";
                     phaseBadge = "Correction";
                   } else if (
                     squadStatus === "reviewing" ||

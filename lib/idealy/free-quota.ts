@@ -21,9 +21,9 @@ type QuotaRpcRow = {
 
 export function getFreeGenerationLimit(): number {
   const envVal = process.env.IDEALY_FREE_GENERATION_LIMIT;
-  const parsed = envVal ? Number.parseInt(envVal, 10) : 5;
-  // A configuration mistake must not silently grant an unbounded quota.
-  return Number.isInteger(parsed) && parsed > 0 && parsed <= 100 ? parsed : 5;
+  const parsed = envVal ? Number.parseInt(envVal, 10) : 50;
+  // Allow up to 500 generations for demo / evaluation headroom.
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= 500 ? parsed : 50;
 }
 
 async function callQuotaRpc(
@@ -89,7 +89,7 @@ function parseQuotaStatus(payload: unknown, fallbackLimit: number): FreeQuotaSta
   const remaining = Number(row.remaining);
   const used = Number(row.used);
   if (
-    !Number.isInteger(limit) || limit < 1 || limit > 100 ||
+    !Number.isInteger(limit) || limit < 1 || limit > 500 ||
     !Number.isInteger(remaining) || remaining < 0 ||
     !Number.isInteger(used) || used < 0 ||
     remaining > limit
