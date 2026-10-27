@@ -231,6 +231,7 @@ export function DataStreamHandler() {
 
         if (isTerminalEvent || isPowerEvent) {
           window.dispatchEvent(new Event("idealy:power-updated"));
+          window.dispatchEvent(new Event("idealy:quota-updated"));
         }
         if (isTerminalEvent && readIdealyNotificationPreferences().squad) {
           if (missionSucceeded) {
@@ -442,8 +443,25 @@ export function DataStreamHandler() {
         }));
         continue;
       }
+      if (delta.type === "data-idealy-tree") {
+        const treeData = Array.isArray(delta.data) ? delta.data : [];
+        if (treeData.length > 0) {
+          setMetadata((currentMetadata: Record<string, unknown> | null) => ({
+            ...(currentMetadata ?? {}),
+            projectTree: treeData,
+          }));
+          setArtifact((current) => ({
+            ...current,
+            isVisible: true,
+            status: "streaming",
+          }));
+        }
+        continue;
+      }
+
       if (delta.type === "data-finish") {
         window.dispatchEvent(new Event("idealy:power-updated"));
+        window.dispatchEvent(new Event("idealy:quota-updated"));
         // Automatically activate live interactive preview once generation finishes
         setTimeout(() => {
           window.dispatchEvent(

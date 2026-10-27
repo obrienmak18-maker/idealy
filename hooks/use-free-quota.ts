@@ -30,7 +30,11 @@ export function useFreeQuota() {
       mutate();
     };
     window.addEventListener("idealy:quota-updated", handleUpdate);
-    return () => window.removeEventListener("idealy:quota-updated", handleUpdate);
+    window.addEventListener("idealy:power-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("idealy:quota-updated", handleUpdate);
+      window.removeEventListener("idealy:power-updated", handleUpdate);
+    };
   }, [mutate]);
 
   return {

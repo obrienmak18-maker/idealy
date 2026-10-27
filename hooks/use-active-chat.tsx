@@ -220,22 +220,6 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     }
   }, [status, setWaitingStatus]);
 
-  const loadedChatIds = useRef(new Set<string>());
-
-  if (isNewChat && !loadedChatIds.current.has(newChatIdRef.current)) {
-    loadedChatIds.current.add(newChatIdRef.current);
-  }
-
-  useEffect(() => {
-    if (loadedChatIds.current.has(chatId)) {
-      return;
-    }
-    if (chatData?.messages) {
-      loadedChatIds.current.add(chatId);
-      setMessages(chatData.messages);
-    }
-  }, [chatId, chatData?.messages, setMessages]);
-
   const prevChatIdRef = useRef(chatId);
   useEffect(() => {
     if (prevChatIdRef.current !== chatId) {
@@ -245,6 +229,15 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [chatId, isNewChat, setMessages]);
+
+  useEffect(() => {
+    if (isNewChat) {
+      return;
+    }
+    if (chatData?.messages) {
+      setMessages(chatData.messages);
+    }
+  }, [chatId, chatData?.messages, isNewChat, setMessages]);
 
   useEffect(() => {
     if (chatData && !isNewChat) {

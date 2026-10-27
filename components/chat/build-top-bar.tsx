@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CheckCircle2,
   ChevronDown,
   Code2,
   Crosshair,
@@ -12,12 +11,11 @@ import {
   History,
   Laptop,
   Maximize2,
+  MessageSquareText,
   Minimize2,
   MoreHorizontal,
-  MessageSquareText,
   PanelLeftClose,
   RefreshCw,
-  Rocket,
   Share2,
   Smartphone,
   Sparkles,
@@ -28,21 +26,27 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import useSWR, { unstable_serialize, useSWRConfig } from "swr";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useTranslation } from "@/lib/i18n/provider";
-import { Input } from "@/components/ui/input";
-import { PowerStatusBadge } from "@/components/chat/power-status";
-import { FreeQuotaBadge } from "@/components/chat/free-quota-badge";
 import { CheckpointModal } from "@/components/chat/checkpoint-modal";
+import { FreeQuotaBadge } from "@/components/chat/free-quota-badge";
+import { PowerStatusBadge } from "@/components/chat/power-status";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { useArtifact } from "@/hooks/use-artifact";
-import { fetcher } from "@/lib/utils";
-import { downloadZip } from "@/lib/export/zip";
-import { localWorkspaceMetadata } from "@/lib/idealy/local-workspace-demo";
 import { getChatHistoryPaginationKey } from "@/lib/chat-history-key";
-import { extractAvailableRoutes } from "@/lib/idealy/preview-compiler";
+import { downloadZip } from "@/lib/export/zip";
+import { useTranslation } from "@/lib/i18n/provider";
 import type { MissionFile } from "@/lib/idealy/mission-files";
+import { extractAvailableRoutes } from "@/lib/idealy/preview-compiler";
+import { fetcher } from "@/lib/utils";
 
 type WorkspaceView = "preview" | "code" | "database";
 type Device = "desktop" | "tablet" | "mobile";
@@ -91,11 +95,15 @@ function missionFilesFromSnapshot(
 }
 
 function normalizedMissionStatus(value: unknown): string {
-  if (value === "ready") return "ready";
+  if (value === "ready") {
+    return "ready";
+  }
   if (value === "blocked" || value === "needs-user-input") {
     return "needs-user-input";
   }
-  if (value === "needs-fix" || value === "failed") return "needs-fix";
+  if (value === "needs-fix" || value === "failed") {
+    return "needs-fix";
+  }
   return "building";
 }
 
@@ -147,24 +155,49 @@ function resolveSquadStatusLabel(
   }
 }
 
+function VercelLogo({ className = "size-3.5" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 1L24 22H0L12 1Z" />
+    </svg>
+  );
+}
+
 export function BuildTopBar() {
   const { artifact, metadata, setMetadata } = useArtifact();
   const { t } = useTranslation();
-  const isVercelConfigured = Boolean(process.env.NEXT_PUBLIC_VERCEL_CONFIGURED !== "false");
+  const isVercelConfigured = Boolean(
+    process.env.NEXT_PUBLIC_VERCEL_CONFIGURED !== "false"
+  );
   const { chatId } = useActiveChat();
   const { mutate } = useSWRConfig();
   const historyKey = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=50`;
   const { data: recentHistory } = useSWR<{
     chats: Array<{ id: string; title: string }>;
-  }>(process.env.NEXT_PUBLIC_DEMO_MODE === "true" ? null : historyKey, fetcher, {
-    revalidateOnFocus: false,
-  });
+  }>(
+    process.env.NEXT_PUBLIC_DEMO_MODE === "true" ? null : historyKey,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+    }
+  );
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   const missionFiles = useMemo(
-    () => (Array.isArray(metadata?.missionFiles) ? (metadata.missionFiles as MissionFile[]) : []),
+    () =>
+      Array.isArray(metadata?.missionFiles)
+        ? (metadata.missionFiles as MissionFile[])
+        : [],
     [metadata?.missionFiles]
   );
-  const dynamicPages = useMemo(() => extractAvailableRoutes(missionFiles), [missionFiles]);
+  const dynamicPages = useMemo(
+    () => extractAvailableRoutes(missionFiles),
+    [missionFiles]
+  );
 
   const [title, setTitle] = useState("Projet Idealy");
   const [renameDraft, setRenameDraft] = useState("");
@@ -173,11 +206,14 @@ export function BuildTopBar() {
   const [favorite, setFavorite] = useState(false);
   const [view, setView] = useState<WorkspaceView>("preview");
   const [device, setDevice] = useState<Device>("desktop");
-  const [page, setPage] = useState<PreviewPage>({ label: "Accueil", path: "/" });
-  const activePreviewPage =
-    dynamicPages.find((candidate) => candidate.path === page.path) ??
-    dynamicPages[0] ??
-    { label: "Accueil", path: "/" };
+  const [page, setPage] = useState<PreviewPage>({
+    label: "Accueil",
+    path: "/",
+  });
+  const activePreviewPage = dynamicPages.find(
+    (candidate) => candidate.path === page.path
+  ) ??
+    dynamicPages[0] ?? { label: "Accueil", path: "/" };
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -200,13 +236,15 @@ export function BuildTopBar() {
     setPage({ label: "Accueil", path: "/" });
     setIsInspectorActive(false);
     setIsCanvasExpanded(false);
-  }, [chatId]);
+  }, []);
 
   useEffect(() => {
     if (artifact?.title && artifact.title !== "init") {
       setTitle(artifact.title);
     } else {
-      const currentChat = recentHistory?.chats?.find((chat) => chat.id === chatId);
+      const currentChat = recentHistory?.chats?.find(
+        (chat) => chat.id === chatId
+      );
       if (currentChat?.title) {
         setTitle(currentChat.title);
       } else if (typeof metadata?.title === "string" && metadata.title) {
@@ -218,9 +256,13 @@ export function BuildTopBar() {
   }, [chatId, artifact?.title, recentHistory, metadata]);
 
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId) {
+      return;
+    }
     try {
-      setFavorite(window.localStorage.getItem(`idealy:favorite:${chatId}`) === "true");
+      setFavorite(
+        window.localStorage.getItem(`idealy:favorite:${chatId}`) === "true"
+      );
     } catch {
       setFavorite(false);
     }
@@ -229,9 +271,13 @@ export function BuildTopBar() {
   // Keep the visible page picker synchronized with routes as files stream in.
   // If a project's root route does not exist, select the first real route.
   useEffect(() => {
-    const matchingPage = dynamicPages.find((candidate) => candidate.path === page.path);
+    const matchingPage = dynamicPages.find(
+      (candidate) => candidate.path === page.path
+    );
     if (matchingPage) {
-      if (matchingPage.label !== page.label) setPage(matchingPage);
+      if (matchingPage.label !== page.label) {
+        setPage(matchingPage);
+      }
       return;
     }
 
@@ -258,16 +304,25 @@ export function BuildTopBar() {
     const handleInspectorClosed = () => setIsInspectorActive(false);
     window.addEventListener("idealy:inspector-closed", handleInspectorClosed);
     return () => {
-      window.removeEventListener("idealy:inspector-closed", handleInspectorClosed);
+      window.removeEventListener(
+        "idealy:inspector-closed",
+        handleInspectorClosed
+      );
     };
   }, []);
 
   // Command palette integration: checkpoint modal
   useEffect(() => {
     const handleOpenCheckpoint = () => setIsCheckpointModalOpen(true);
-    window.addEventListener("idealy:open-checkpoint-modal", handleOpenCheckpoint);
+    window.addEventListener(
+      "idealy:open-checkpoint-modal",
+      handleOpenCheckpoint
+    );
     return () =>
-      window.removeEventListener("idealy:open-checkpoint-modal", handleOpenCheckpoint);
+      window.removeEventListener(
+        "idealy:open-checkpoint-modal",
+        handleOpenCheckpoint
+      );
   }, []);
 
   // Command palette integration: toggle visual inspector
@@ -283,9 +338,15 @@ export function BuildTopBar() {
         return next;
       });
     };
-    window.addEventListener("idealy:toggle-visual-inspector", handleToggleInspector);
+    window.addEventListener(
+      "idealy:toggle-visual-inspector",
+      handleToggleInspector
+    );
     return () =>
-      window.removeEventListener("idealy:toggle-visual-inspector", handleToggleInspector);
+      window.removeEventListener(
+        "idealy:toggle-visual-inspector",
+        handleToggleInspector
+      );
   }, []);
 
   // Command palette integration: switch workspace view
@@ -301,7 +362,10 @@ export function BuildTopBar() {
     };
     window.addEventListener("idealy:switch-workspace-view", handleSwitchView);
     return () =>
-      window.removeEventListener("idealy:switch-workspace-view", handleSwitchView);
+      window.removeEventListener(
+        "idealy:switch-workspace-view",
+        handleSwitchView
+      );
   }, []);
 
   const toggleInspector = () => {
@@ -387,17 +451,24 @@ export function BuildTopBar() {
     }
     setIsSavingTitle(true);
     try {
-      const response = await fetch(`/api/chat?id=${encodeURIComponent(chatId)}`, {
-        body: JSON.stringify({ title: nextTitle }),
-        headers: { "Content-Type": "application/json" },
-        method: "PATCH",
-      });
-      if (!response.ok) throw new Error("Le titre n’a pas pu être enregistré.");
+      const response = await fetch(
+        `/api/chat?id=${encodeURIComponent(chatId)}`,
+        {
+          body: JSON.stringify({ title: nextTitle }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Le titre n’a pas pu être enregistré.");
+      }
       setTitle(nextTitle);
       setRenameOpen(false);
       await mutate(
         historyKey,
-        (current: { chats: Array<{ id: string; title: string }> } | undefined) =>
+        (
+          current: { chats: Array<{ id: string; title: string }> } | undefined
+        ) =>
           current
             ? {
                 ...current,
@@ -411,7 +482,9 @@ export function BuildTopBar() {
       await mutate(unstable_serialize(getChatHistoryPaginationKey));
       toast.success("Titre du projet mis à jour.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erreur de connexion.");
+      toast.error(
+        error instanceof Error ? error.message : "Erreur de connexion."
+      );
     } finally {
       setIsSavingTitle(false);
     }
@@ -448,7 +521,10 @@ export function BuildTopBar() {
           ...(Array.isArray(current?.outputs) ? current.outputs : []),
           {
             contents: [
-              { type: "text", value: "[local demo] No remote squad execution was started." },
+              {
+                type: "text",
+                value: "[local demo] No remote squad execution was started.",
+              },
             ],
             id: `local-squad-${Date.now()}`,
             status: "info",
@@ -456,7 +532,9 @@ export function BuildTopBar() {
         ],
       }));
       setIsSquadRunning(false);
-      toast.info("Mode démo local : aucune mission distante ni dépense de Power n’a été exécutée.");
+      toast.info(
+        "Mode démo local : aucune mission distante ni dépense de Power n’a été exécutée."
+      );
       return;
     }
 
@@ -499,23 +577,36 @@ export function BuildTopBar() {
 
               for (const event of events) {
                 const payload = event.payload ?? {};
-                if (event.event_type === "power_reserved" ||
-                    event.event_type === "power_consumed" ||
-                    event.event_type === "power_released") {
+                if (
+                  event.event_type === "power_reserved" ||
+                  event.event_type === "power_consumed" ||
+                  event.event_type === "power_released"
+                ) {
                   refreshPower = true;
                 }
 
                 if (event.event_type === "mission_started") {
                   nextSquadStatus = "building";
                 } else if (event.event_type === "agent_started") {
-                  const agent = typeof payload.agent === "string" ? payload.agent : "";
-                  nextAgentName = typeof payload.agentName === "string" ? payload.agentName : null;
-                  nextAgentRole = typeof payload.agentRole === "string" ? payload.agentRole : null;
+                  const agent =
+                    typeof payload.agent === "string" ? payload.agent : "";
+                  nextAgentName =
+                    typeof payload.agentName === "string"
+                      ? payload.agentName
+                      : null;
+                  nextAgentRole =
+                    typeof payload.agentRole === "string"
+                      ? payload.agentRole
+                      : null;
                   activeAgentName = nextAgentName;
                   activeAgentRole = nextAgentRole;
-                  nextSquadStatus = agent === "reviewer" ? "reviewing" : "building";
+                  nextSquadStatus =
+                    agent === "reviewer" ? "reviewing" : "building";
                 } else if (event.event_type === "agent_completed") {
-                  const completedName = typeof payload.agentName === "string" ? payload.agentName : null;
+                  const completedName =
+                    typeof payload.agentName === "string"
+                      ? payload.agentName
+                      : null;
                   if (!completedName || completedName === activeAgentName) {
                     nextAgentName = null;
                     nextAgentRole = null;
@@ -527,7 +618,7 @@ export function BuildTopBar() {
                   nextAgentName =
                     typeof payload.correctionOwner === "string"
                       ? payload.correctionOwner
-                      : nextAgentName ?? null;
+                      : (nextAgentName ?? null);
                   nextAgentRole = "Correction des fichiers après revue";
                   activeAgentName = nextAgentName;
                   activeAgentRole = nextAgentRole;
@@ -543,16 +634,9 @@ export function BuildTopBar() {
                     nextSquadStatus = "building";
                   }
                 } else if (event.event_type === "mission_completed") {
-                  const buildVerificationStatus = payload.buildVerificationStatus;
-                  if (typeof buildVerificationStatus !== "string") {
-                    // Reviewer completion is not final until the real npm build reports its result.
-                    nextSquadStatus = "building";
-                    nextAgentName = null;
-                    nextAgentRole = null;
-                    activeAgentName = null;
-                    activeAgentRole = null;
-                    nextError = null;
-                  } else {
+                  const buildVerificationStatus =
+                    payload.buildVerificationStatus;
+                  if (typeof buildVerificationStatus === "string") {
                     const finalStatus = payload.finalStatus;
                     nextSquadStatus = normalizedMissionStatus(finalStatus);
                     nextAgentName = null;
@@ -565,6 +649,14 @@ export function BuildTopBar() {
                         : "La mission a fini son cycle de vérification, mais nécessite une correction ou une décision.";
                     reachedTerminalEvent = true;
                     refreshPower = true;
+                  } else {
+                    // Reviewer completion is not final until the real npm build reports its result.
+                    nextSquadStatus = "building";
+                    nextAgentName = null;
+                    nextAgentRole = null;
+                    activeAgentName = null;
+                    activeAgentRole = null;
+                    nextError = null;
                   }
                 } else if (event.event_type === "mission_error") {
                   nextSquadStatus = "needs-fix";
@@ -588,29 +680,43 @@ export function BuildTopBar() {
 
               latestSequence = Math.max(latestSequence, replay.lastSequence);
               setMetadata((current: Record<string, unknown> | null) => {
-                if (current?.missionId !== missionId) return current;
-                const currentSequence = Number(current?.missionFileLastSequence ?? 0);
-                if (currentSequence > replay.lastSequence) return current;
+                if (current?.missionId !== missionId) {
+                  return current;
+                }
+                const currentSequence = Number(
+                  current?.missionFileLastSequence ?? 0
+                );
+                if (currentSequence > replay.lastSequence) {
+                  return current;
+                }
                 return {
                   ...(current ?? {}),
                   missionFileLastSequence: replay.lastSequence,
                   missionFiles: normalizedFiles,
                   ...(fileStatus ? { missionFileStatus: fileStatus } : {}),
-                  ...(nextSquadStatus ? { missionSquadStatus: nextSquadStatus } : {}),
+                  ...(nextSquadStatus
+                    ? { missionSquadStatus: nextSquadStatus }
+                    : {}),
                   missionActiveAgentName: activeAgentName,
                   missionActiveAgentRole: activeAgentRole,
-                  ...(nextError !== undefined ? { missionSquadError: nextError } : {}),
+                  ...(nextError === undefined
+                    ? {}
+                    : { missionSquadError: nextError }),
                 };
               });
 
               if (refreshPower) {
                 window.dispatchEvent(new Event("idealy:power-updated"));
               }
-              if (reachedTerminalEvent) return;
+              if (reachedTerminalEvent) {
+                return;
+              }
             }
           }
         } catch (error) {
-          if (controller.signal.aborted) return;
+          if (controller.signal.aborted) {
+            return;
+          }
           console.warn("Mission progress polling failed; retrying.", error);
         }
 
@@ -636,7 +742,9 @@ export function BuildTopBar() {
         throw new Error(payload?.error ?? "L’escouade n’a pas pu démarrer.");
       }
       if (!payload || typeof payload.status !== "string") {
-        throw new Error("Le backend n’a pas renvoyé un statut de mission vérifiable.");
+        throw new Error(
+          "Le backend n’a pas renvoyé un statut de mission vérifiable."
+        );
       }
 
       const finalStatus = normalizedMissionStatus(payload.status);
@@ -653,17 +761,25 @@ export function BuildTopBar() {
       }));
       if (finalStatus === "ready") {
         selectView("preview");
-        toast.success("L’escouade a terminé la mission et validé le workspace.");
+        toast.success(
+          "L’escouade a terminé la mission et validé le workspace."
+        );
       } else {
         selectView("code");
-        toast.warning("Le cycle multi-agents est terminé, mais la mission nécessite une vérification.", {
-          description: "Consulte les fichiers et le journal de build avant de poursuivre.",
-        });
+        toast.warning(
+          "Le cycle multi-agents est terminé, mais la mission nécessite une vérification.",
+          {
+            description:
+              "Consulte les fichiers et le journal de build avant de poursuivre.",
+          }
+        );
       }
     } catch (error) {
       console.error("Mission squad launch failed", error);
       const errorMessage =
-        error instanceof Error ? error.message : "L’escouade n’a pas pu démarrer.";
+        error instanceof Error
+          ? error.message
+          : "L’escouade n’a pas pu démarrer.";
       setMetadata((current: Record<string, unknown> | null) => ({
         ...(current ?? {}),
         missionSquadError: errorMessage,
@@ -689,7 +805,11 @@ export function BuildTopBar() {
   runSquadRef.current = runSquad;
 
   useEffect(() => {
-    if (metadata?.missionRunRequested !== true || !missionId || isSquadRunning) {
+    if (
+      metadata?.missionRunRequested !== true ||
+      !missionId ||
+      isSquadRunning
+    ) {
       return;
     }
     setMetadata((current: Record<string, unknown> | null) => ({
@@ -701,31 +821,41 @@ export function BuildTopBar() {
 
   // Map tone to Tailwind classes
   const toneClasses: Record<typeof squadTone, string> = {
-    emerald: "text-emerald-400",
-    sky: "text-sky-300",
     amber: "text-amber-300",
-    rose: "text-rose-300",
+    emerald: "text-emerald-400",
     muted: "text-muted-foreground",
+    rose: "text-rose-300",
+    sky: "text-sky-300",
   };
   const dotClasses: Record<typeof squadTone, string> = {
-    emerald: "bg-emerald-400",
-    sky: "bg-sky-400",
     amber: "bg-amber-400",
-    rose: "bg-rose-400",
+    emerald: "bg-emerald-400",
     muted: "bg-muted-foreground/40",
+    rose: "bg-rose-400",
+    sky: "bg-sky-400",
   };
 
   return (
     <header className="relative z-30 grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-sidebar-border/70 bg-sidebar/95 px-2.5 text-sidebar-foreground shadow-[0_1px_0_oklch(1_0_0_/_0.03)] backdrop-blur-xl md:px-3">
       <div className="flex min-w-0 items-center gap-1.5">
         <button
-          aria-label={isCanvasExpanded ? "Afficher la conversation" : "Masquer la conversation"}
+          aria-label={
+            isCanvasExpanded
+              ? "Afficher la conversation"
+              : "Masquer la conversation"
+          }
           className={`${controlClass} size-8 shrink-0`}
           onClick={toggleCanvasFullscreen}
+          title={
+            isCanvasExpanded
+              ? "Afficher la conversation"
+              : "Masquer la conversation"
+          }
           type="button"
-          title={isCanvasExpanded ? "Afficher la conversation" : "Masquer la conversation"}
         >
-          <PanelLeftClose className={`size-4 transition-transform ${isCanvasExpanded ? "rotate-180" : ""}`} />
+          <PanelLeftClose
+            className={`size-4 transition-transform ${isCanvasExpanded ? "rotate-180" : ""}`}
+          />
         </button>
         <span aria-hidden="true" className="h-4 w-px bg-sidebar-border/70" />
 
@@ -764,20 +894,29 @@ export function BuildTopBar() {
                     const next = !value;
                     if (chatId) {
                       try {
-                        window.localStorage.setItem(`idealy:favorite:${chatId}`, String(next));
+                        window.localStorage.setItem(
+                          `idealy:favorite:${chatId}`,
+                          String(next)
+                        );
                       } catch {
                         /* Storage can be unavailable in private contexts. */
                       }
                     }
-                    toast.success(next ? "Ajouté aux favoris" : "Retiré des favoris");
+                    toast.success(
+                      next ? "Ajouté aux favoris" : "Retiré des favoris"
+                    );
                     return next;
                   });
                 }}
                 type="button"
               >
                 <div className="flex items-center gap-2">
-                  <Star className={`size-3.5 ${favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
-                  <span>{favorite ? "Dans les favoris" : "Ajouter aux favoris"}</span>
+                  <Star
+                    className={`size-3.5 ${favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`}
+                  />
+                  <span>
+                    {favorite ? "Dans les favoris" : "Ajouter aux favoris"}
+                  </span>
                 </div>
               </button>
               <button
@@ -787,12 +926,12 @@ export function BuildTopBar() {
                   if (missionFiles.length > 0) {
                     const entries = missionFiles
                       .filter((f) => typeof f.content === "string")
-                      .map((f) => ({ path: f.path, content: f.content! }));
+                      .map((f) => ({ content: f.content!, path: f.path }));
                     downloadZip(title || "projet-idealy", entries);
                     toast.success("Archive ZIP du projet téléchargée.");
                   } else if (artifact.content) {
                     downloadZip(title || "projet-idealy", [
-                      { path: "index.html", content: artifact.content },
+                      { content: artifact.content, path: "index.html" },
                     ]);
                     toast.success("Fichier exporté.");
                   } else {
@@ -826,11 +965,13 @@ export function BuildTopBar() {
           className="flex items-center gap-0.5 rounded-xl border border-sidebar-border/70 bg-background/20 p-1 shadow-sm"
           role="group"
         >
-          {([
-            ["preview", "Aperçu", Globe2],
-            ["code", "Code", Code2],
-            ["database", "Données", Database],
-          ] as const).map(([nextView, label, Icon]) => (
+          {(
+            [
+              ["preview", "Aperçu", Globe2],
+              ["code", "Code", Code2],
+              ["database", "Données", Database],
+            ] as const
+          ).map(([nextView, label, Icon]) => (
             <button
               aria-label={label}
               aria-pressed={view === nextView}
@@ -850,13 +991,20 @@ export function BuildTopBar() {
         </div>
         {view === "preview" ? (
           <div className="flex min-w-0 items-center gap-1 rounded-xl border border-sidebar-border/70 bg-background/20 p-1">
-            <Globe2 aria-hidden="true" className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
+            <Globe2
+              aria-hidden="true"
+              className="ml-1 size-3.5 shrink-0 text-muted-foreground"
+            />
             <select
               aria-label="Page affichée dans l’aperçu"
               className="h-7 min-w-0 max-w-[145px] cursor-pointer appearance-none rounded-md bg-transparent px-1.5 text-[11px] font-medium text-sidebar-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring xl:max-w-[170px]"
               onChange={(event) => {
-                const nextPage = dynamicPages.find((candidate) => candidate.path === event.target.value);
-                if (nextPage) selectPage(nextPage);
+                const nextPage = dynamicPages.find(
+                  (candidate) => candidate.path === event.target.value
+                );
+                if (nextPage) {
+                  selectPage(nextPage);
+                }
               }}
               title={`${activePreviewPage.label} — ${activePreviewPage.path}`}
               value={activePreviewPage.path}
@@ -871,7 +1019,9 @@ export function BuildTopBar() {
               aria-label="Ouvrir l’aperçu dans un nouvel onglet"
               className={`${controlClass} size-7`}
               disabled={artifact.kind !== "code"}
-              onClick={() => window.dispatchEvent(new Event("idealy:open-preview"))}
+              onClick={() =>
+                window.dispatchEvent(new Event("idealy:open-preview"))
+              }
               title="Ouvrir l’aperçu dans un nouvel onglet"
               type="button"
             >
@@ -909,7 +1059,9 @@ export function BuildTopBar() {
           {moreOpen ? (
             <div className="absolute right-0 top-10 z-50 max-h-[calc(100dvh-5rem)] w-60 overflow-y-auto overscroll-contain rounded-2xl border border-outline-variant/70 bg-surface-container-high p-2 text-xs text-popover-foreground shadow-lg">
               <div className="md:hidden">
-                <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Vue du workspace</p>
+                <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">
+                  Vue du workspace
+                </p>
                 <button
                   className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                   onClick={() => {
@@ -921,11 +1073,13 @@ export function BuildTopBar() {
                   <MessageSquareText aria-hidden="true" className="size-3.5" />
                   Conversation
                 </button>
-                {([
-                  ["preview", "Aperçu"],
-                  ["code", "Code"],
-                  ["database", "Données"],
-                ] as const).map(([nextView, frenchLabel]) => (
+                {(
+                  [
+                    ["preview", "Aperçu"],
+                    ["code", "Code"],
+                    ["database", "Données"],
+                  ] as const
+                ).map(([nextView, frenchLabel]) => (
                   <button
                     aria-pressed={view === nextView}
                     className={`flex min-h-9 w-full items-center justify-between rounded-lg px-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground ${view === nextView ? "bg-accent/70 font-medium" : ""}`}
@@ -937,7 +1091,11 @@ export function BuildTopBar() {
                     type="button"
                   >
                     <span>{frenchLabel}</span>
-                    {view === nextView ? <span className="text-[10px] text-muted-foreground">Actif</span> : null}
+                    {view === nextView ? (
+                      <span className="text-[10px] text-muted-foreground">
+                        Actif
+                      </span>
+                    ) : null}
                   </button>
                 ))}
                 <div className="my-2 border-t border-border/60" />
@@ -945,7 +1103,10 @@ export function BuildTopBar() {
               {view === "preview" && dynamicPages.length > 1 ? (
                 <>
                   <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">
-                    <Globe2 aria-hidden="true" className="mr-1 inline size-3.5" />
+                    <Globe2
+                      aria-hidden="true"
+                      className="mr-1 inline size-3.5"
+                    />
                     Page de l’aperçu
                   </p>
                   {dynamicPages.map((previewPage) => (
@@ -957,19 +1118,25 @@ export function BuildTopBar() {
                       type="button"
                     >
                       <span className="truncate">{previewPage.label}</span>
-                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{previewPage.path}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                        {previewPage.path}
+                      </span>
                     </button>
                   ))}
                   <div className="my-2 border-t border-border/60" />
                 </>
               ) : null}
-              <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Taille de l’aperçu</p>
+              <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">
+                Taille de l’aperçu
+              </p>
               <div className="grid grid-cols-3 gap-1">
-                {([
-                  ["desktop", "Ordinateur", Laptop],
-                  ["tablet", "Tablette", Tablet],
-                  ["mobile", "Téléphone", Smartphone],
-                ] as const).map(([nextDevice, label, Icon]) => (
+                {(
+                  [
+                    ["desktop", "Ordinateur", Laptop],
+                    ["tablet", "Tablette", Tablet],
+                    ["mobile", "Téléphone", Smartphone],
+                  ] as const
+                ).map(([nextDevice, label, Icon]) => (
                   <button
                     aria-label={label}
                     aria-pressed={device === nextDevice}
@@ -994,7 +1161,10 @@ export function BuildTopBar() {
                 }}
                 type="button"
               >
-                <RefreshCw aria-hidden="true" className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  aria-hidden="true"
+                  className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
+                />
                 {refreshing ? "Actualisation…" : "Actualiser l’aperçu"}
               </button>
               {view === "preview" ? (
@@ -1046,7 +1216,9 @@ export function BuildTopBar() {
                     await navigator.clipboard.writeText(window.location.href);
                     toast.success("Lien de cette discussion copié.");
                   } catch {
-                    toast.info("Le navigateur n’autorise pas la copie du lien.");
+                    toast.info(
+                      "Le navigateur n’autorise pas la copie du lien."
+                    );
                   }
                 }}
                 type="button"
@@ -1057,7 +1229,8 @@ export function BuildTopBar() {
               <div className="my-2 border-t border-border/60" />
               {missionId ? (
                 <div className="rounded-lg border border-border/60 bg-background/40 px-2.5 py-2 text-[11px] leading-5 text-muted-foreground lg:hidden">
-                  Pour lancer l’escouade, valide d’abord le plan dans la conversation.
+                  Pour lancer l’escouade, valide d’abord le plan dans la
+                  conversation.
                 </div>
               ) : null}
               <div className="my-2 border-t border-border/60" />
@@ -1073,8 +1246,8 @@ export function BuildTopBar() {
                     for (const f of metadata.missionFiles) {
                       if (f?.path) {
                         files.push({
-                          path: f.path,
                           content: f.content || "",
+                          path: f.path,
                         });
                       }
                     }
@@ -1087,15 +1260,14 @@ export function BuildTopBar() {
                           ? "csv"
                           : "txt";
                     files.push({
-                      path: `src/App.${ext}`,
                       content: artifact.content,
+                      path: `src/App.${ext}`,
                     });
                     files.push({
-                      path: "README.md",
                       content: `# ${title || "Idealy Project"}\n\nGenerated with Idealy Studio.`,
+                      path: "README.md",
                     });
                     files.push({
-                      path: "package.json",
                       content: JSON.stringify(
                         {
                           name: (title || "idealy-project")
@@ -1107,6 +1279,7 @@ export function BuildTopBar() {
                         null,
                         2
                       ),
+                      path: "package.json",
                     });
                   }
                   if (files.length === 0) {
@@ -1161,8 +1334,12 @@ export function BuildTopBar() {
           ) : null}
         </div>
         <button
-          aria-label={isVercelConfigured ? t("workspace.publish", "Publier") : t("workspace.configure", "Configurer")}
-          className="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98] shrink-0 gap-1.5"
+          aria-label={
+            isVercelConfigured
+              ? t("workspace.publish", "Publier")
+              : t("workspace.configure", "Configurer")
+          }
+          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 sm:px-3 text-[11px] font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98] shrink-0 gap-1.5"
           onClick={() => {
             if (isDemoMode) {
               toast.info(
@@ -1172,7 +1349,10 @@ export function BuildTopBar() {
             }
             if (isVercelConfigured) {
               toast.success(
-                t("workspace.deploySuccess", "Publication initiée ! Le projet est synchronisé avec Vercel.")
+                t(
+                  "workspace.deploySuccess",
+                  "Publication initiée ! Le projet est synchronisé avec Vercel."
+                )
               );
               window.open("https://idealy-ai.vercel.app", "_blank");
               return;
@@ -1181,14 +1361,12 @@ export function BuildTopBar() {
           }}
           type="button"
         >
-          {isVercelConfigured ? (
-            <>
-              <Rocket className="size-3.5" />
-              <span>{t("workspace.publish", "Publier")}</span>
-            </>
-          ) : (
-            <span>{t("workspace.configure", "Configurer")}</span>
-          )}
+          <VercelLogo className="size-3.5 shrink-0" />
+          <span className="hidden sm:inline transition-all">
+            {isVercelConfigured
+              ? t("workspace.publish", "Publier")
+              : t("workspace.configure", "Configurer")}
+          </span>
         </button>
       </div>
 
@@ -1208,12 +1386,35 @@ export function BuildTopBar() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Renommer le projet</DialogTitle>
-            <DialogDescription>Choisissez un nom facile à retrouver dans votre historique.</DialogDescription>
+            <DialogDescription>
+              Choisissez un nom facile à retrouver dans votre historique.
+            </DialogDescription>
           </DialogHeader>
-          <Input autoFocus maxLength={120} onChange={(event) => setRenameDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveTitle(); }} value={renameDraft} />
+          <Input
+            autoFocus
+            maxLength={120}
+            onChange={(event) => setRenameDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                void saveTitle();
+              }
+            }}
+            value={renameDraft}
+          />
           <DialogFooter>
-            <Button disabled={isSavingTitle} onClick={() => setRenameOpen(false)} variant="outline">Annuler</Button>
-            <Button disabled={isSavingTitle || !renameDraft.trim()} onClick={() => void saveTitle()}>{isSavingTitle ? "Enregistrement…" : "Enregistrer"}</Button>
+            <Button
+              disabled={isSavingTitle}
+              onClick={() => setRenameOpen(false)}
+              variant="outline"
+            >
+              Annuler
+            </Button>
+            <Button
+              disabled={isSavingTitle || !renameDraft.trim()}
+              onClick={() => void saveTitle()}
+            >
+              {isSavingTitle ? "Enregistrement…" : "Enregistrer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

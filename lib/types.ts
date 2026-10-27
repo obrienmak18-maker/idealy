@@ -83,6 +83,7 @@ export type CustomUIDataTypes = {
   "idealy-plan": MissionPlan;
   "idealy-file-event": MissionFileEvent;
   "idealy-tool-activity": IdealyChatToolActivity;
+  "idealy-tree": Array<{ path: string; type?: string }>;
 };
 
 export type ChatMessage = UIMessage<

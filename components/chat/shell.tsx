@@ -221,7 +221,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
       }
       event.preventDefault();
       setChatPaneWidth((current) =>
-        Math.min(65, Math.max(25, current + delta))
+        Math.min(78, Math.max(20, current + delta))
       );
     },
     [isArtifactVisible]
@@ -231,19 +231,27 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
     if (!isResizing) {
       return;
     }
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
 
     const handlePointerMove = (event: PointerEvent) => {
       const delta =
         ((event.clientX - resizeStartRef.current.x) / window.innerWidth) * 100;
       setChatPaneWidth(
-        Math.min(65, Math.max(25, resizeStartRef.current.startWidth + delta))
+        Math.min(78, Math.max(20, resizeStartRef.current.startWidth + delta))
       );
     };
-    const handlePointerUp = () => setIsResizing(false);
+    const handlePointerUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
 
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
     return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
@@ -257,7 +265,6 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
     <>
       <div className="idealy-app-background relative flex h-dvh w-full flex-col overflow-hidden">
         <CosmicHorizon />
-        <YcDemoBanner />
         {isArtifactVisible && <BuildTopBar />}
         <main
           className="relative flex min-h-0 flex-1 flex-row overflow-hidden focus:outline-none"
@@ -335,11 +342,12 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
           {isArtifactVisible ? (
             <div
               aria-label="Redimensionner le chat et la preview"
-              aria-valuemax={65}
-              aria-valuemin={25}
+              aria-valuemax={78}
+              aria-valuemin={20}
               aria-valuenow={Math.round(chatPaneWidth)}
               className={cn(
-                "idealy-split-divider group relative z-20 hidden w-3 shrink-0 cursor-col-resize touch-none items-center justify-center md:flex",
+                "idealy-split-divider group relative z-20 hidden w-3.5 shrink-0 cursor-col-resize touch-none items-center justify-center transition-colors hover:bg-primary/40 md:flex before:absolute before:inset-y-0 before:-left-2 before:-right-2 before:w-auto before:content-['']",
+                isResizing && "bg-primary/50 is-resizing",
                 isResizing && "is-resizing"
               )}
               onKeyDown={handleResizeKeyDown}
@@ -354,6 +362,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
           <div
             className={cn(
               "relative min-h-0 min-w-0 flex-1",
+              isResizing && "pointer-events-none select-none",
               isArtifactVisible
                 ? isMobileCanvasOpen
                   ? "fixed inset-0 z-40 flex flex-col bg-background md:relative md:inset-auto md:z-auto md:flex-1 md:bg-transparent"
@@ -424,6 +433,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <YcDemoBanner />
     </>
   );
 }

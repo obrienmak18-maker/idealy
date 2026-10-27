@@ -106,40 +106,193 @@ export function compileProjectPreview({
   singleCodeContent,
   activePath = "/",
   isStreaming = false,
+  projectTitle = "Application",
 }: {
   files: MissionFile[];
   singleCodeContent?: string;
   activePath?: string;
   isStreaming?: boolean;
+  projectTitle?: string;
 }): PreviewCompilationResult {
   const availableRoutes = extractAvailableRoutes(files);
 
-  // 1. If currently streaming and no usable content yet
-  if (isStreaming && (!files || files.length === 0) && (!singleCodeContent || singleCodeContent.trim().length === 0)) {
+  // 1. If currently streaming: show live, high-tech animated construction view so it never flashes blank white
+  if (isStreaming) {
     return {
       status: "building",
       availableRoutes,
       html: `<!doctype html>
-<html lang="fr">
+<html lang="fr" class="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${projectTitle} — Construction en direct</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><rect width='24' height='24' rx='6' fill='%230f172a'/><path d='M12 4L20 20H4L12 4Z' fill='%2338bdf8'/></svg>">
   <style>
-    body { margin: 0; background: #07090e; color: #f8fafc; font-family: Inter, system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
-    .box { max-width: 380px; padding: 32px 24px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); background: rgba(15,23,42,0.6); backdrop-filter: blur(16px); }
-    .pulse { width: 44px; height: 44px; margin: 0 auto 16px; border-radius: 12px; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite ease-in-out; }
-    h2 { font-size: 16px; font-weight: 600; margin: 0 0 8px; color: #fff; }
-    p { font-size: 13px; color: #94a3b8; margin: 0; line-height: 1.5; }
-    @keyframes pulse { 0%, 100% { opacity: 0.6; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.04); } }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #030712;
+      color: #f8fafc;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+    .mesh-glow {
+      position: absolute;
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, rgba(99, 102, 241, 0.06) 50%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .box {
+      position: relative;
+      z-index: 10;
+      max-width: 440px;
+      width: 90%;
+      padding: 36px 28px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(24px);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      text-align: center;
+    }
+    .spinner-ring {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 20px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .spinner-ring svg {
+      animation: spin 1.5s linear infinite;
+    }
+    .spinner-ring .core {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #38bdf8;
+      opacity: 0.3;
+      animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    h2 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 0 0 8px;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+    }
+    p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 14px;
+      padding: 14px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .step.active {
+      color: #38bdf8;
+      font-weight: 500;
+    }
+    .step-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #475569;
+    }
+    .step.active .step-dot {
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      animation: pulse 1.5s infinite;
+    }
+    .step.done .step-dot {
+      background: #10b981;
+    }
+    .progress-bar-bg {
+      margin-top: 18px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      width: 65%;
+      border-radius: 9999px;
+      animation: progress-flow 2s infinite ease-in-out;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    @keyframes progress-flow {
+      0% { width: 30%; transform: translateX(-20%); }
+      50% { width: 75%; transform: translateX(10%); }
+      100% { width: 95%; transform: translateX(5%); }
+    }
   </style>
 </head>
 <body>
+  <div class="mesh-glow"></div>
   <div class="box">
-    <div class="pulse">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+    <div class="spinner-ring">
+      <div class="core"></div>
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="20" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
+        <path d="M44 24C44 12.9543 35.0457 4 24 4" stroke="url(#spinner-gradient)" stroke-width="3" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="spinner-gradient" x1="24" y1="4" x2="44" y2="24" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#38bdf8"/>
+            <stop offset="1" stop-color="#818cf8"/>
+          </linearGradient>
+        </defs>
+      </svg>
     </div>
-    <h2>Génération de l'application…</h2>
-    <p>L'escouade Idealy structure et compile les fichiers de votre projet.</p>
+    <h2>Votre application se fait construire…</h2>
+    <p>L'escouade Idealy structure les composants et prépare l'environnement interactif.</p>
+    <div class="steps">
+      <div class="step done">
+        <span class="step-dot"></span>
+        <span>Initialisation de l'espace de travail</span>
+      </div>
+      <div class="step active">
+        <span class="step-dot"></span>
+        <span>Génération des fichiers et composants React…</span>
+      </div>
+      <div class="step">
+        <span class="step-dot"></span>
+        <span>Compilation du rendu en direct</span>
+      </div>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill"></div>
+    </div>
   </div>
 </body>
 </html>`,
@@ -241,11 +394,12 @@ export function compileProjectPreview({
     .replace(/^export\s+default\s+/gm, "window.__IDEALY_DEFAULT_COMPONENT = ");
 
   const reactHarness = `<!doctype html>
-<html lang="fr">
+<html lang="fr" class="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Idealy Live Preview</title>
+  <title>${projectTitle}</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><rect width='24' height='24' rx='6' fill='%230f172a'/><path d='M12 4L20 20H4L12 4Z' fill='%2338bdf8'/></svg>">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React 18 & Babel Standalone -->
@@ -256,10 +410,10 @@ export function compileProjectPreview({
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; background: #ffffff; color: #0f172a; font-family: Inter, system-ui, -apple-system, sans-serif; }
-    .error-card { padding: 24px; margin: 24px auto; max-width: 600px; border-radius: 16px; border: 1px solid rgba(239, 68, 68, 0.3); background: #fef2f2; color: #991b1b; }
-    .error-card h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
-    .error-card pre { margin: 12px 0 0; padding: 12px; background: rgba(0,0,0,0.05); border-radius: 8px; font-size: 12px; overflow-x: auto; }
+    body { margin: 0; background: #030712; color: #f8fafc; font-family: Inter, system-ui, -apple-system, sans-serif; }
+    .error-card { padding: 24px; margin: 24px auto; max-width: 600px; border-radius: 16px; border: 1px solid rgba(239, 68, 68, 0.3); background: #180d0d; color: #fca5a5; }
+    .error-card h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; color: #f87171; }
+    .error-card pre { margin: 12px 0 0; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 12px; overflow-x: auto; color: #fecaca; }
   </style>
 </head>
 <body>
@@ -267,6 +421,46 @@ export function compileProjectPreview({
 
   <script type="text/babel">
     const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+    // Universal Icon Proxy for Lucide icons
+    function createDynamicIcon(name) {
+      return function DynamicIcon(props) {
+        const p = props || {};
+        const size = p.size || 18;
+        return React.createElement('svg', {
+          xmlns: 'http://www.w3.org/2000/svg',
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          className: p.className || '',
+          style: p.style || {},
+          ...p
+        }, React.createElement('circle', { cx: 12, cy: 12, r: 8, opacity: 0.25 }));
+      };
+    }
+
+    const commonLucideIcons = [
+      'ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'ChevronRight', 'ChevronLeft', 'ChevronDown', 'ChevronUp',
+      'Check', 'CheckCircle', 'CheckCircle2', 'X', 'XCircle', 'AlertCircle', 'AlertTriangle', 'Info',
+      'Github', 'Twitter', 'Linkedin', 'Mail', 'Globe', 'ExternalLink', 'Search', 'Menu', 'Terminal',
+      'Code', 'Code2', 'Folder', 'File', 'FileCode', 'FileText', 'Database', 'Server', 'Cpu', 'Layers',
+      'Shield', 'ShieldCheck', 'Zap', 'Sparkles', 'Star', 'Heart', 'Eye', 'EyeOff', 'Lock', 'Unlock',
+      'User', 'Users', 'Settings', 'HelpCircle', 'Bell', 'Compass', 'Play', 'Pause', 'Copy', 'Download',
+      'Upload', 'RefreshCw', 'Clock', 'Calendar', 'Filter', 'Sliders', 'BarChart', 'BarChart2', 'TrendingUp',
+      'Activity', 'Box', 'Package', 'Cloud', 'Sun', 'Moon', 'Monitor', 'Smartphone', 'Laptop', 'Maximize',
+      'Minimize', 'Plus', 'Minus', 'Trash', 'Edit', 'Edit2', 'Save', 'Share2', 'Send', 'Link', 'Paperclip',
+      'GitBranch', 'GitCommit', 'GitPullRequest', 'Workflow', 'Rocket', 'Home', 'LogOut', 'LogIn', 'Radio'
+    ];
+    commonLucideIcons.forEach(icon => {
+      if (typeof window[icon] === 'undefined') {
+        window[icon] = createDynamicIcon(icon);
+      }
+    });
 
     // Error Boundary
     class ErrorBoundary extends React.Component {
