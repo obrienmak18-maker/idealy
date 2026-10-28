@@ -92,174 +92,6 @@ function missionFileStatusLabel(status: MissionFile["status"]) {
   }
 }
 
-function synthesizeProjectStructure({
-  content,
-  title,
-  missionId,
-  status,
-}: {
-  content: string;
-  title: string;
-  missionId: string;
-  status: string;
-}): MissionFile[] {
-  const isHtml =
-    content.includes("<!DOCTYPE") ||
-    content.includes("<!doctype") ||
-    content.includes("<html") ||
-    content.includes("<head");
-  const slug = (title || "idealy-project")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const fileStatus = status === "streaming" ? ("writing" as const) : ("validated" as const);
-
-  const result: MissionFile[] = [];
-
-  if (isHtml) {
-    result.push({
-      content,
-      missionId,
-      path: "index.html",
-      status: fileStatus,
-      version: 1,
-    });
-    result.push({
-      content: JSON.stringify(
-        {
-          name: slug,
-          version: "1.0.0",
-          description: title || "Application web Idealy",
-          scripts: { start: "serve ." },
-        },
-        null,
-        2
-      ),
-      missionId,
-      path: "package.json",
-      status: "validated",
-      version: 1,
-    });
-    result.push({
-      content: `/* Styles globaux pour ${title || "l'application"} */\n@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\nbody {\n  margin: 0;\n  font-family: Inter, system-ui, sans-serif;\n}`,
-      missionId,
-      path: "src/styles.css",
-      status: "validated",
-      version: 1,
-    });
-    result.push({
-      content: `# ${title || "Application Web"}\n\nApplication générée par Idealy.\n\nOuvrez \`index.html\` dans votre navigateur pour tester.\n`,
-      missionId,
-      path: "README.md",
-      status: "validated",
-      version: 1,
-    });
-  } else {
-    // React / TypeScript Full Project Structure
-    result.push({
-      content,
-      missionId,
-      path: "src/App.tsx",
-      status: fileStatus,
-      version: 1,
-    });
-    result.push({
-      content: `import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\nimport './styles/globals.css';\n\nconst root = document.getElementById('root');\nif (root) {\n  ReactDOM.createRoot(root).render(\n    <React.StrictMode>\n      <App />\n    </React.StrictMode>\n  );\n}`,
-      missionId,
-      path: "src/main.tsx",
-      status: "validated",
-      version: 1,
-    });
-    result.push({
-      content: `import React from 'react';\nimport { Sparkles, Shield } from 'lucide-react';\n\nexport function Header({ title }: { title?: string }) {\n  return (\n    <header className="sticky top-0 z-50 flex h-16 w-full items-center justify-between border-b border-border/40 bg-background/80 px-6 backdrop-blur-md">\n      <div className="flex items-center gap-3">\n        <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">\n          <Sparkles className="size-4" />\n        </div>\n        <div>\n          <h1 className="text-sm font-semibold text-foreground tracking-tight">{title || "Application"}</h1>\n          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono">\n            <span className="size-1.5 rounded-full bg-emerald-400" />\n            Opérationnel · v1.0.0\n          </span>\n        </div>\n      </div>\n      <div className="flex items-center gap-2">
-        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-          <Shield className="size-3 text-emerald-400" />
-          Sécurisé
-        </span>
-      </div>\n    </header>\n  );\n}`,
-      missionId,
-      path: "src/components/Header.tsx",
-      status: "validated",
-      version: 1,
-    });
-    result.push({
-      content: `import React from 'react';\nimport { Activity, Layers, Server, Zap } from 'lucide-react';\n\nexport function DashboardView() {\n  return (\n    <section className="space-y-6">\n      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">\n        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm">\n          <div className="flex items-center justify-between text-muted-foreground">\n            <span className="text-xs font-medium">Déploiements actifs</span>\n            <Server className="size-4 text-primary" />\n          </div>\n          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground">12</div>\n          <p className="mt-1 text-[11px] text-emerald-400">100% disponibles</p>\n        </div>\n        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm">\n          <div className="flex items-center justify-between text-muted-foreground">\n            <span className="text-xs font-medium">Requêtes / min</span>\n            <Activity className="size-4 text-sky-400" />\n          </div>\n          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground">1.4k</div>\n          <p className="mt-1 text-[11px] text-muted-foreground">+14% cette semaine</p>\n        </div>\n        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm">\n          <div className="flex items-center justify-between text-muted-foreground">\n            <span className="text-xs font-medium">Temps de réponse</span>\n            <Zap className="size-4 text-amber-400" />\n          </div>\n          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground">38ms</div>\n          <p className="mt-1 text-[11px] text-emerald-400">Optimal</p>\n        </div>\n        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm">\n          <div className="flex items-center justify-between text-muted-foreground">\n            <span className="text-xs font-medium">Régions</span>\n            <Layers className="size-4 text-purple-400" />\n          </div>\n          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground">Global</div>\n          <p className="mt-1 text-[11px] text-muted-foreground">Edge Network</p>\n        </div>\n      </div>\n    </section>\n  );\n}`,
-      missionId,
-      path: "src/components/Dashboard.tsx",
-      status: "validated",
-      version: 1,
-    });
-    result.push({
-      content: `@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n:root {\n  --background: #030712;\n  --foreground: #f9fafb;\n  --primary: #3b82f6;\n  --card: #0b0f19;\n  --border: #1f2937;\n}\n\nbody {\n  margin: 0;\n  padding: 0;\n  background-color: var(--background);\n  color: var(--foreground);\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n  -webkit-font-smoothing: antialiased;\n}`,
-      missionId,
-      path: "src/styles/globals.css",
-      status: "validated",
-      version: 1,
-    });
-    result.push({
-      content: `export interface Project {\n  id: string;\n  name: string;\n  framework: string;\n  status: "ready" | "building" | "error";\n  updatedAt: string;\n}\n\nexport interface Deployment {\n  id: string;\n  commit: string;\n  branch: string;\n  createdAt: string;\n}`,
-      missionId,
-      path: "src/types/index.ts",
-      status: "validated",
-      version: 1,
-    });
-    result.push({
-      content: JSON.stringify(
-        {
-          name: slug,
-          version: "1.0.0",
-          private: true,
-          type: "module",
-          scripts: {
-            dev: "vite",
-            build: "tsc && vite build",
-            preview: "vite preview",
-          },
-          dependencies: {
-            clsx: "^2.1.1",
-            "lucide-react": "^0.460.0",
-            react: "^18.3.1",
-            "react-dom": "^18.3.1",
-            "tailwind-merge": "^2.5.4",
-          },
-          devDependencies: {
-            "@types/react": "^18.3.12",
-            "@types/react-dom": "^18.3.1",
-            "@vitejs/plugin-react": "^4.3.3",
-            autoprefixer: "^10.4.20",
-            postcss: "^8.4.49",
-            tailwindcss: "^3.4.15",
-            typescript: "^5.6.3",
-            vite: "^5.4.11",
-          },
-        },
-        null,
-        2
-      ),
-      missionId,
-      path: "package.json",
-      status: "validated",
-      version: 1,
-    });
-    result.push({
-      content: `<!DOCTYPE html>\n<html lang="fr" class="dark">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>${title || "Application"}</title>\n    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><rect width='24' height='24' rx='6' fill='%230f172a'/><path d='M12 4L20 20H4L12 4Z' fill='%2338bdf8'/></svg>">\n  </head>\n  <body class="bg-slate-950 text-slate-50 antialiased">\n    <div id="root"></div>\n    <script type="module" src="/src/main.tsx"></script>\n  </body>\n</html>`,
-      missionId,
-      path: "index.html",
-      status: "validated",
-      version: 1,
-    });
-    result.push({
-      content: `# ${title || "Application Web"}\n\nApplication web moderne créée et orchestrée par Idealy.\n\n## Démarrage\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n\n## Architecture\n- \`src/App.tsx\` : Point d'entrée applicatif et états interactifs\n- \`src/components/\` : Composants modulaires (Header, Dashboard)\n- \`src/styles/\` : Styles globaux Tailwind CSS\n- \`src/types/\` : Schémas et interfaces TypeScript\n- \`package.json\` : Dépendances et scripts de build\n`,
-      missionId,
-      path: "README.md",
-      status: "validated",
-      version: 1,
-    });
-  }
-
-  return result;
-}
-
 function PureArtifact({
   addToolApprovalResponse: _addToolApprovalResponse,
   chatId: _chatId,
@@ -367,18 +199,8 @@ function PureArtifact({
         byPath.set(file.path, file);
       }
     }
-    // If no multi-file mission was dispatched yet, synthesize a full, modern multi-file project structure
-    if (byPath.size === 0 && artifact.kind === "code" && artifact.content && artifact.content.trim().length > 0) {
-      const synthesized = synthesizeProjectStructure({
-        content: artifact.content,
-        title: artifact.title || "Application",
-        missionId: missionId || artifact.documentId || "workspace",
-        status: artifact.status,
-      });
-      for (const file of synthesized) {
-        byPath.set(file.path, file);
-      }
-    }
+    // Only list files returned by the persisted mission workspace. The live preview can still
+    // render a single streamed artifact, but it must not invent a package, README or components.
     return Array.from(byPath.values()).sort((left, right) =>
       left.path.localeCompare(right.path)
     );
@@ -1070,7 +892,7 @@ function PureArtifact({
   if (!artifact.isVisible && !isMobile) {
     return (
       <div
-        className="h-dvh w-0 shrink-0 overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+        className="h-dvh w-0 shrink-0 overflow-hidden transition-[width] duration-150 ease-out"
         data-testid="artifact"
       />
     );
