@@ -374,8 +374,8 @@ function PureMessages({
                       ? "correcting"
                       : "building"
                 }
-                currentAgentAvatar={missionActiveAgent?.avatarUrl}
-                currentAgentName={missionActiveAgent?.name ?? (missionAgentName || chiefAgent?.name || alvinMessenger.name)}
+                currentAgentAvatar={missionAgentName ? missionActiveAgent?.avatarUrl : undefined}
+                currentAgentName={missionAgentName || ""}
                 currentAgentRole={missionAgentRole}
                 currentWay={currentWay}
                 filesCount={missionFileCount}
