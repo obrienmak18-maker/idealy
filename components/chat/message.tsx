@@ -418,7 +418,8 @@ const PurePreviewMessage = ({
         !activity ||
         (activity.kind !== "webSearch" &&
           activity.kind !== "searchImages" &&
-          activity.kind !== "generateImage")
+          activity.kind !== "generateImage" &&
+          activity.kind !== "dispatchSubAgents")
       ) {
         return null;
       }
@@ -444,7 +445,9 @@ const PurePreviewMessage = ({
             ? "generateImage"
             : type === "tool-executeSandbox"
               ? "executeSandbox"
-              : null;
+              : type === "tool-dispatchSubAgents"
+                ? "dispatchSubAgents"
+                : null;
     if (activityTool) {
       const activityPart = part as unknown as {
         toolCallId: string;

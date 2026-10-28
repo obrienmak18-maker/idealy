@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n/provider";
-import { CheckCircle2, ExternalLink, LoaderCircle, AlertCircle } from "lucide-react";
+import { CheckCircle2, ExternalLink, LoaderCircle, AlertCircle, Users } from "lucide-react";
 import { Tool, ToolContent, ToolHeader, type ToolPart } from "@/components/ai-elements/tool";
 
-type ToolKind = "webSearch" | "searchImages" | "generateImage" | "executeSandbox";
+type ToolKind = "webSearch" | "searchImages" | "generateImage" | "executeSandbox" | "dispatchSubAgents";
 
 type ToolActivityCardProps = {
   toolCallId: string;
@@ -47,8 +47,9 @@ const toolCopy = {
     runningImages: "Recherche des visuels…",
     generating: "Création du visuel…",
     runningCode: "Exécution dans un environnement isolé…",
-    noResults: "Aucun résultat exploitable n’a été renvoyé.",
-    unavailable: "Cette action n’est pas disponible pour le moment.",
+    dispatchingAgents: "Mobilisation de l'escouade…",
+    noResults: "Aucun résultat exploitable n'a été renvoyé.",
+    unavailable: "Cette action n'est pas disponible pour le moment.",
     sources: "Sources",
     photos: "Photos de Pexels",
     generated: "Visuels générés",
@@ -57,18 +58,23 @@ const toolCopy = {
     open: "Ouvrir la source",
     output: "Sortie",
     errors: "Erreurs",
-    notConfigured: "Le fournisseur n’est pas configuré côté serveur. Aucun résultat n’a été inventé.",
-    creditNeeded: "Le fournisseur demande des crédits. Aucun visuel n’a été généré.",
+    notConfigured: "Le fournisseur n'est pas configuré côté serveur. Aucun résultat n'a été inventé.",
+    creditNeeded: "Le fournisseur demande des crédits. Aucun visuel n'a été généré.",
     completed: "Terminé",
     failed: "Échec",
     seconds: "ms",
     query: "Recherche",
+    squadObjective: "Objectif",
+    agentTask: "Tâche",
+    agentSummary: "Résultat",
+    agentStatus: { queued: "En attente", running: "En cours", completed: "Terminé", failed: "Échec" },
   },
   en: {
     runningSearch: "Searching relevant sources…",
     runningImages: "Finding images…",
     generating: "Generating the visual…",
     runningCode: "Running in an isolated environment…",
+    dispatchingAgents: "Mobilizing the squad…",
     noResults: "No usable results were returned.",
     unavailable: "This action is unavailable right now.",
     sources: "Sources",
@@ -85,12 +91,17 @@ const toolCopy = {
     failed: "Failed",
     seconds: "ms",
     query: "Search",
+    squadObjective: "Objective",
+    agentTask: "Task",
+    agentSummary: "Result",
+    agentStatus: { queued: "Queued", running: "Running", completed: "Completed", failed: "Failed" },
   },
   es: {
     runningSearch: "Buscando fuentes relevantes…",
     runningImages: "Buscando imágenes…",
     generating: "Generando el visual…",
     runningCode: "Ejecutando en un entorno aislado…",
+    dispatchingAgents: "Movilizando el escuadrón…",
     noResults: "No se devolvieron resultados utilizables.",
     unavailable: "Esta acción no está disponible en este momento.",
     sources: "Fuentes",
@@ -107,14 +118,25 @@ const toolCopy = {
     failed: "Error",
     seconds: "ms",
     query: "Búsqueda",
+    squadObjective: "Objetivo",
+    agentTask: "Tarea",
+    agentSummary: "Resultado",
+    agentStatus: { queued: "En cola", running: "En curso", completed: "Completado", failed: "Error" },
   },
 } as const;
 
-const toolTitles = {
-  fr: { webSearch: "Recherche sur le Web", searchImages: "Recherche d’images", generateImage: "Génération d’image", executeSandbox: "Exécution du code" },
-  en: { webSearch: "Web search", searchImages: "Image search", generateImage: "Image generation", executeSandbox: "Code execution" },
-  es: { webSearch: "Búsqueda web", searchImages: "Búsqueda de imágenes", generateImage: "Generación de imágenes", executeSandbox: "Ejecución de código" },
-} as const;
+const toolTitles: Record<string, Record<ToolKind, string>> = {
+  fr: { webSearch: "Recherche sur le Web", searchImages: "Recherche d'images", generateImage: "Génération d'image", executeSandbox: "Exécution du code", dispatchSubAgents: "Escouade de sous-agents" },
+  en: { webSearch: "Web search", searchImages: "Image search", generateImage: "Image generation", executeSandbox: "Code execution", dispatchSubAgents: "Sub-agent squad" },
+  es: { webSearch: "Búsqueda web", searchImages: "Búsqueda de imágenes", generateImage: "Generación de imágenes", executeSandbox: "Ejecución de código", dispatchSubAgents: "Escuadrón de sub-agentes" },
+};
+
+const agentStatusColors: Record<string, string> = {
+  queued: "bg-muted text-muted-foreground",
+  running: "bg-primary/10 text-primary",
+  completed: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  failed: "bg-red-500/10 text-red-600 dark:text-red-400",
+};
 
 function ResultLink({ url, title, description }: { url: string; title: string; description?: string }) {
   return (
@@ -157,11 +179,40 @@ function ImageGrid({ images, credits, sourceLabel, creditPrefix, creditSuffix }:
   );
 }
 
+function SubAgentCard({ agent, locale }: { agent: Record<string, unknown>; locale: "fr" | "en" | "es" }) {
+  const text = toolCopy[locale];
+  const name = stringValue(agent.name) || "Agent";
+  const role = stringValue(agent.role);
+  const task = stringValue(agent.task);
+  const summary = stringValue(agent.summary);
+  const status = stringValue(agent.status) || "completed";
+  const statusLabel = text.agentStatus[status as keyof typeof text.agentStatus] ?? status;
+  const colorClass = agentStatusColors[status] ?? agentStatusColors.completed;
+
+  return (
+    <div className="flex items-start gap-2.5 rounded-lg border border-border/40 bg-background/60 px-3 py-2.5 transition-colors hover:bg-muted/30">
+      <div className="relative mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+        <Users className="size-3.5" aria-hidden="true" />
+        <span className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full border border-background ${status === "completed" ? "bg-emerald-500" : status === "running" ? "bg-primary" : status === "failed" ? "bg-red-500" : "bg-muted-foreground"}`} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-foreground">{name}</span>
+          {role ? <span className="text-[10px] text-muted-foreground">{role}</span> : null}
+          <span className={`ml-auto inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium ${colorClass}`}>{statusLabel}</span>
+        </div>
+        {task ? <p className="mt-1 text-[11px] leading-4 text-muted-foreground"><span className="font-medium text-foreground/80">{text.agentTask}:</span> {task}</p> : null}
+        {summary ? <p className="mt-1 text-[11px] leading-4 text-muted-foreground"><span className="font-medium text-foreground/80">{text.agentSummary}:</span> {summary}</p> : null}
+      </div>
+    </div>
+  );
+}
+
 export function ToolActivityCard({ toolCallId, kind, state, input, output, errorText }: ToolActivityCardProps) {
   const { language } = useTranslation();
   const locale = language === "en" || language === "es" ? language : "fr";
   const text = toolCopy[locale];
-  const title = toolTitles[locale][kind];
+  const title = toolTitles[locale]?.[kind] ?? kind;
   const inputData = asRecord(input);
   const result = asRecord(output);
   const status = stringValue(result?.status);
@@ -182,6 +233,7 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
   const isSearch = kind === "webSearch";
   const isPexels = kind === "searchImages";
   const isGeneration = kind === "generateImage";
+  const isSubAgents = kind === "dispatchSubAgents";
   const sources = arrayRecords(result?.results);
   const photos = arrayRecords(result?.photos);
   const generatedImages = arrayRecords(result?.images);
@@ -194,6 +246,13 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
   const executionError = stringValue(result?.error);
   const executionTime = typeof result?.executionTimeMs === "number" ? result.executionTimeMs : null;
 
+  // Sub-agent squad data
+  const subAgents = arrayRecords(result?.agents);
+  const squadObjective = stringValue(result?.objective) || stringValue(inputData?.objective);
+  const squadName = stringValue(result?.squad) || stringValue(inputData?.squad);
+  const completedAgents = typeof result?.completedCount === "number" ? result.completedCount : subAgents.filter((a) => stringValue(a.status) === "completed").length;
+  const executionReport = stringValue(result?.executionReport);
+
   return (
     <Tool className="w-[min(100%,560px)] overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-xs" open={isOpen} onOpenChange={setIsOpen} key={toolCallId}>
       <ToolHeader className="px-3 py-2.5" state={state} title={title} toolName={kind} type="dynamic-tool" />
@@ -201,7 +260,7 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
         {isRunning ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <LoaderCircle className="size-3.5 animate-spin text-primary" />
-            <span>{kind === "webSearch" ? text.runningSearch : kind === "searchImages" ? text.runningImages : kind === "generateImage" ? text.generating : text.runningCode}</span>
+            <span>{kind === "webSearch" ? text.runningSearch : kind === "searchImages" ? text.runningImages : kind === "generateImage" ? text.generating : kind === "dispatchSubAgents" ? text.dispatchingAgents : text.runningCode}</span>
           </div>
         ) : null}
 
@@ -260,6 +319,30 @@ export function ToolActivityCard({ toolCallId, kind, state, input, output, error
                 <pre className="max-h-36 overflow-auto whitespace-pre-wrap break-words bg-background/60 p-2.5 text-[11px] leading-5 text-muted-foreground">{stderr || executionError || friendlyMessage}</pre>
               </details>
             ) : null}
+          </div>
+        ) : null}
+
+        {isSubAgents && isTerminal ? (
+          <div className="space-y-3">
+            {squadObjective ? (
+              <div className="rounded-lg bg-primary/5 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/70">{text.squadObjective}</p>
+                <p className="mt-1 text-xs leading-5 text-foreground">{squadObjective}</p>
+              </div>
+            ) : null}
+            <div className="flex items-center gap-2 text-xs">
+              {isSuccessful ? <CheckCircle2 className="size-3.5 text-emerald-600" /> : <AlertCircle className="size-3.5 text-amber-600" />}
+              <span className="font-medium text-foreground">{completedAgents}/{subAgents.length} {text.completed.toLowerCase()}</span>
+              {squadName ? <span className="ml-auto rounded-full border border-border/60 bg-background/65 px-2 py-0.5 text-[10px] text-muted-foreground">{squadName.toUpperCase()}</span> : null}
+            </div>
+            {subAgents.length > 0 ? (
+              <div className="space-y-1.5">
+                {subAgents.map((agent, index) => (
+                  <SubAgentCard key={stringValue(agent.id) || `agent-${index}`} agent={agent} locale={locale} />
+                ))}
+              </div>
+            ) : null}
+            {executionReport ? <p className="rounded-lg bg-muted/40 px-3 py-2 text-[11px] leading-5 text-muted-foreground">{executionReport}</p> : null}
           </div>
         ) : null}
       </ToolContent>

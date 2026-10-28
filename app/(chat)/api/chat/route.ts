@@ -65,6 +65,7 @@ import { updateDocument } from "@/lib/ai/tools/update-document";
 import { webSearch } from "@/lib/ai/tools/web-search";
 import { generateImage } from "@/lib/ai/tools/generate-image";
 import { executeSandbox } from "@/lib/ai/tools/execute-sandbox";
+import { dispatchSubAgents } from "@/lib/ai/tools/dispatch-subagents";
 import {
   isDevelopmentEnvironment,
   isProductionEnvironment,
@@ -890,6 +891,7 @@ export async function POST(request: Request) {
                             "generateImage",
                             "webSearch",
                             "executeSandbox",
+                            "dispatchSubAgents",
                           ],
                     instructions: `${systemPrompt({
                       language: userLanguage,
@@ -947,6 +949,7 @@ export async function POST(request: Request) {
                       }),
                       webSearch: webSearch(),
                       executeSandbox: executeSandbox(),
+                      dispatchSubAgents: dispatchSubAgents({ dataStream }),
                     },
                   });
 
@@ -997,6 +1000,7 @@ export async function POST(request: Request) {
                     "generateImage",
                     "webSearch",
                     "executeSandbox",
+                    "dispatchSubAgents",
                   ],
             instructions: `${systemPrompt({
               language: userLanguage,
@@ -1054,6 +1058,7 @@ export async function POST(request: Request) {
               }),
               webSearch: webSearch(),
               executeSandbox: executeSandbox(),
+              dispatchSubAgents: dispatchSubAgents({ dataStream }),
             },
           });
 

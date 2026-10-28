@@ -42,7 +42,7 @@ export function isFirebaseAdminConfigured(): boolean {
   return getAdminConfig() !== null;
 }
 
-function getAdminApp(): App {
+export function getAdminApp(): App {
   const existingDefaultApp = getApps().find((app) => app.name === "[DEFAULT]");
   if (existingDefaultApp) return existingDefaultApp;
 

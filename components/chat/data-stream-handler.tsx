@@ -459,6 +459,20 @@ export function DataStreamHandler() {
         continue;
       }
 
+      if (delta.type === "data-idealy-subagent") {
+        const subagentData = delta.data;
+        if (subagentData) {
+          setMetadata((currentMetadata: Record<string, unknown> | null) => ({
+            ...(currentMetadata ?? {}),
+            subAgentSquad: subagentData,
+          }));
+          window.dispatchEvent(
+            new CustomEvent("idealy:subagents-updated", { detail: subagentData })
+          );
+        }
+        continue;
+      }
+
       if (delta.type === "data-finish") {
         window.dispatchEvent(new Event("idealy:power-updated"));
         window.dispatchEvent(new Event("idealy:quota-updated"));

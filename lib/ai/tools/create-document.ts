@@ -154,6 +154,21 @@ export const createDocument = ({
 
       dataStream.write({ data: null, transient: true, type: "data-finish" });
 
+      // Additive Cloud Firestore sync (non-blocking)
+      if (updatedFiles.length > 0) {
+        import("@/lib/firebase/firestore-sync")
+          .then(({ syncProjectToFirestoreServer }) =>
+            syncProjectToFirestoreServer({
+              files: updatedFiles,
+              metadata: { framework: "react-tailwind", modelId },
+              projectId: id,
+              title: effectiveTitle,
+              userId: session.user?.id,
+            })
+          )
+          .catch(() => {});
+      }
+
       return {
         content:
           effectiveKind === "code"

@@ -10,6 +10,7 @@ import type { webSearch } from "./ai/tools/web-search";
 import type { getWeather } from "./ai/tools/get-weather";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
 import type { updateDocument } from "./ai/tools/update-document";
+import type { dispatchSubAgents } from "./ai/tools/dispatch-subagents";
 import type { Suggestion } from "./db/schema";
 import type {
   IdealyIntentCategory,
@@ -31,6 +32,7 @@ type generateImageTool = InferUITool<ReturnType<typeof generateImage>>;
 type searchImagesTool = InferUITool<ReturnType<typeof searchImages>>;
 type webSearchTool = InferUITool<ReturnType<typeof webSearch>>;
 type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
+type dispatchSubAgentsTool = InferUITool<ReturnType<typeof dispatchSubAgents>>;
 type requestSuggestionsTool = InferUITool<
   ReturnType<typeof requestSuggestions>
 >;
@@ -45,15 +47,30 @@ export type ChatTools = {
   generateImage: generateImageTool;
   webSearch: webSearchTool;
   executeSandbox: executeSandboxTool;
+  dispatchSubAgents: dispatchSubAgentsTool;
 };
 
 export type IdealyChatToolActivity = {
   toolCallId: string;
-  kind: "webSearch" | "searchImages" | "generateImage";
+  kind: "webSearch" | "searchImages" | "generateImage" | "dispatchSubAgents";
   state: "input-available" | "output-available" | "output-error";
   input: Record<string, unknown>;
   output?: Record<string, unknown>;
   errorText?: string | null;
+};
+
+export type IdealySubAgentEvent = {
+  squad: string;
+  objective: string;
+  agents: Array<{
+    id: string;
+    name: string;
+    role: string;
+    task: string;
+    status: "queued" | "running" | "completed" | "failed";
+    summary?: string;
+  }>;
+  timestamp: number;
 };
 
 export type WaitingStatusData = {
@@ -84,6 +101,7 @@ export type CustomUIDataTypes = {
   "idealy-file-event": MissionFileEvent;
   "idealy-tool-activity": IdealyChatToolActivity;
   "idealy-tree": Array<{ path: string; type?: string }>;
+  "idealy-subagent": IdealySubAgentEvent;
 };
 
 export type ChatMessage = UIMessage<
