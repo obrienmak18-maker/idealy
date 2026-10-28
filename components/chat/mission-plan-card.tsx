@@ -256,15 +256,70 @@ export function MissionPlanCard() {
     }
   }
 
-  function handleLaunch() {
-    if (isSubmitting || isActive || requestAlreadyQueued || isValidated || needsUserInput || isEditing || isSaving) return;
+  async function handleLaunch() {
+    if (!missionId || isSubmitting || isActive || requestAlreadyQueued || isValidated || needsUserInput || isEditing || isSaving) return;
     setIsSubmitting(true);
     openWorkspace("code");
     setMetadata((current: Record<string, unknown> | null) => ({
       ...(current ?? {}),
       missionRunRequested: true,
       missionSquadError: null,
+      missionSquadStatus: "building",
     }));
+
+    const idempotencyKey = crypto.randomUUID();
+    try {
+      const response = await fetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/squad`, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idempotencyKey }),
+      });
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        status?: string;
+        validation?: unknown;
+        buildVerification?: unknown;
+        generationWasCompleted?: boolean;
+      } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? `Le lancement de la mission a échoué (HTTP ${response.status}).`);
+      }
+
+      const finalStatus = ["ready", "needs-fix", "needs-user-input"].includes(payload?.status ?? "")
+        ? payload!.status!
+        : "needs-fix";
+      setMetadata((current: Record<string, unknown> | null) => ({
+        ...(current ?? {}),
+        missionRunRequested: false,
+        missionSquadError: finalStatus === "needs-fix" ? (payload?.error ?? null) : null,
+        missionSquadStatus: finalStatus,
+        missionValidation: payload?.validation ?? null,
+        missionBuildVerification: payload?.buildVerification ?? null,
+        missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
+      }));
+
+      if (finalStatus === "ready") {
+        toast.success("Mission compilée et vérifiée");
+      } else if (finalStatus === "needs-user-input") {
+        toast.info("La mission nécessite une décision");
+      } else {
+        toast.error(payload?.error ?? "La vérification a détecté un problème. Consultez les détails du build.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Impossible de lancer l’escouade.";
+      setMetadata((current: Record<string, unknown> | null) => ({
+        ...(current ?? {}),
+        missionRunRequested: false,
+        missionSquadError: message,
+        missionSquadStatus: "needs-fix",
+        missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
+      }));
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const statusText = isValidated
