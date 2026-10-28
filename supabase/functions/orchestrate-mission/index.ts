@@ -414,6 +414,7 @@ Deno.serve(async (request) => {
         intentCategory: options?.planOnly ? "IDEATION" : "EXECUTION",
         iteration,
         missionId,
+        maxTokens: options?.workspaceStream ? 30_000 : 8_000,
         mode: "auto",
         planOnly: options?.planOnly === true,
         prompt,
