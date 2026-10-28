@@ -57,6 +57,21 @@ const gatewayChatModels: ChatModel[] = [
   {
     capabilities: { reasoning: false, tools: true, vision: true },
     description: "Modèle Google Gemini 3.7 rapide et multimodal",
+    id: "google/gemini-3.8-flash",
+    name: "Gemini 3.8 Flash",
+    provider: "google",
+  },
+  {
+    capabilities: { reasoning: true, tools: true, vision: true },
+    description: "Google Gemini 4 Argon — Architecture d'élite et fenêtre de contexte 1M tokens",
+    id: "google/gemini-4-argon",
+    name: "Gemini 4 Argon",
+    provider: "google",
+    reasoningEffort: "high",
+  },
+  {
+    capabilities: { reasoning: false, tools: true, vision: true },
+    description: "Modèle Google Gemini 3.7 rapide et multimodal",
     id: "google/gemini-3.7-flash",
     name: "Gemini 3.7 Flash",
     provider: "google",

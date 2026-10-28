@@ -38,6 +38,7 @@ import { MultimodalInput } from "./multimodal-input";
 import { RealtimePresence } from "./realtime-presence";
 import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 import { YcDemoBanner } from "@/components/branding/yc-demo-banner";
+import { LiveVoiceDialog } from "./live-voice-dialog";
 
 class ArtifactErrorBoundary extends Component<
   { children: ReactNode },
@@ -123,6 +124,14 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
   const [chatPaneWidth, setChatPaneWidth] = useState(42);
   const [isResizing, setIsResizing] = useState(false);
   const [isMobileCanvasOpen, setIsMobileCanvasOpen] = useState(false);
+  const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenVoice = () => setIsLiveVoiceOpen(true);
+    window.addEventListener("idealy:open-live-voice", handleOpenVoice);
+    return () =>
+      window.removeEventListener("idealy:open-live-voice", handleOpenVoice);
+  }, []);
   const resizeStartRef = useRef({ startWidth: 42, x: 0 });
 
   const stopRef = useRef(stop);
@@ -433,6 +442,10 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <LiveVoiceDialog
+        isOpen={isLiveVoiceOpen}
+        onClose={() => setIsLiveVoiceOpen(false)}
+      />
       <YcDemoBanner />
     </>
   );

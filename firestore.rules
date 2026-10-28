@@ -1,0 +1,82 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    function isCreatingForSelf() {
+      return isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User profiles & settings
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) 
+        && request.resource.data.keys().hasOnly(['id', 'email', 'name', 'avatarUrl', 'createdAt', 'updatedAt', 'preferences'])
+        && isValidString(request.resource.data.email, 3, 255);
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatarUrl', 'preferences', 'updatedAt']);
+      allow delete: if isOwner(userId);
+    }
+
+    // Idealy Projects (Multi-file workspaces, trees, rules)
+    match /idealy_projects/{projectId} {
+      // Owners can read their projects, or public projects if marked public
+      allow read: if isDocOwner() 
+        || (resource.data.metadata != null && resource.data.metadata.isPublic == true);
+
+      // Authenticated users can create projects for themselves
+      allow create: if isCreatingForSelf()
+        && isValidString(request.resource.data.title, 1, 300)
+        && request.resource.data.projectId == projectId
+        && request.resource.data.fileCount is int
+        && request.resource.data.fileCount >= 0
+        && request.resource.data.fileCount <= 500;
+
+      // Owners can update their projects (cannot change userId or projectId)
+      allow update: if isDocOwner()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.projectId == resource.data.projectId
+        && request.resource.data.fileCount is int;
+
+      // Owners can delete their projects
+      allow delete: if isDocOwner();
+    }
+
+    // Idealy Chats (Conversations, execution plans, sub-agent traces)
+    match /idealy_chats/{chatId} {
+      allow read: if isDocOwner();
+
+      allow create: if isCreatingForSelf()
+        && request.resource.data.chatId == chatId
+        && request.resource.data.messagesCount is int;
+
+      allow update: if isDocOwner()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.chatId == resource.data.chatId;
+
+      allow delete: if isDocOwner();
+    }
+  }
+}

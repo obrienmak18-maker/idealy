@@ -8,6 +8,7 @@ import {
   HistoryIcon,
   LayoutDashboardIcon,
   MicIcon,
+  RadioIcon,
   MoonIcon,
   PenSquareIcon,
   PlugZapIcon,
@@ -235,6 +236,18 @@ export function CommandPalette() {
                 new CustomEvent("idealy:set-chat-input", {
                   detail: "/deploy ",
                 })
+              );
+              close();
+            },
+          },
+          {
+            id: "ai-live-voice",
+            label: "Mode Vocal Live (Gemini Live API)",
+            icon: <RadioIcon className="size-4 text-emerald-500" />,
+            keywords: "live voice appel vocal temps reel gemini websocket micro",
+            onSelect: () => {
+              window.dispatchEvent(
+                new CustomEvent("idealy:open-live-voice")
               );
               close();
             },

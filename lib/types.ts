@@ -11,6 +11,8 @@ import type { getWeather } from "./ai/tools/get-weather";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
 import type { updateDocument } from "./ai/tools/update-document";
 import type { dispatchSubAgents } from "./ai/tools/dispatch-subagents";
+import type { generateVideo } from "./ai/tools/generate-video";
+import type { renderWidget } from "./ai/tools/render-widget";
 import type { Suggestion } from "./db/schema";
 import type {
   IdealyIntentCategory,
@@ -33,6 +35,8 @@ type searchImagesTool = InferUITool<ReturnType<typeof searchImages>>;
 type webSearchTool = InferUITool<ReturnType<typeof webSearch>>;
 type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
 type dispatchSubAgentsTool = InferUITool<ReturnType<typeof dispatchSubAgents>>;
+type generateVideoTool = InferUITool<ReturnType<typeof generateVideo>>;
+type renderWidgetTool = InferUITool<ReturnType<typeof renderWidget>>;
 type requestSuggestionsTool = InferUITool<
   ReturnType<typeof requestSuggestions>
 >;
@@ -48,11 +52,19 @@ export type ChatTools = {
   webSearch: webSearchTool;
   executeSandbox: executeSandboxTool;
   dispatchSubAgents: dispatchSubAgentsTool;
+  generateVideo: generateVideoTool;
+  renderWidget: renderWidgetTool;
 };
 
 export type IdealyChatToolActivity = {
   toolCallId: string;
-  kind: "webSearch" | "searchImages" | "generateImage" | "dispatchSubAgents";
+  kind:
+    | "webSearch"
+    | "searchImages"
+    | "generateImage"
+    | "dispatchSubAgents"
+    | "generateVideo"
+    | "renderWidget";
   state: "input-available" | "output-available" | "output-error";
   input: Record<string, unknown>;
   output?: Record<string, unknown>;

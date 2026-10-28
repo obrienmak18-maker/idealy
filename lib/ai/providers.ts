@@ -82,15 +82,10 @@ const google = googleApiKey
   : null;
 
 function resolveGeminiModelName(modelId: string): string {
-  const clean = modelId
-    .replace(/^google\//, "")
-    .replace(/^gemini\//, "")
-    .toLowerCase();
-
-  if (clean.includes("pro")) {
-    return "gemini-3.7-flash";
-  }
-  return "gemini-3.7-flash";
+  const clean = modelId.replace(/^google\//, '').replace(/^gemini\//, '').toLowerCase();
+  if (clean.includes('pro')) return 'gemini-1.5-pro';
+  if (clean.includes('3.8') || clean.includes('argon')) return clean;
+  return 'gemini-2.0-flash';
 }
 
 function getAnyAvailableDirectModel() {

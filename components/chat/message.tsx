@@ -419,7 +419,9 @@ const PurePreviewMessage = ({
         (activity.kind !== "webSearch" &&
           activity.kind !== "searchImages" &&
           activity.kind !== "generateImage" &&
-          activity.kind !== "dispatchSubAgents")
+          activity.kind !== "dispatchSubAgents" &&
+          activity.kind !== "generateVideo" &&
+          activity.kind !== "renderWidget")
       ) {
         return null;
       }
@@ -447,7 +449,11 @@ const PurePreviewMessage = ({
               ? "executeSandbox"
               : type === "tool-dispatchSubAgents"
                 ? "dispatchSubAgents"
-                : null;
+                : type === "tool-generateVideo"
+                  ? "generateVideo"
+                  : type === "tool-renderWidget"
+                    ? "renderWidget"
+                    : null;
     if (activityTool) {
       const activityPart = part as unknown as {
         toolCallId: string;
