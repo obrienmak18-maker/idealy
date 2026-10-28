@@ -20,7 +20,6 @@ import { WorkspaceTemplates } from "./workspace-templates";
 import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import type { PlanOption } from "./plan-choices";
-import { MultiAgentRelay } from "./multi-agent-relay";
 import { MissionBuildProgress } from "./mission-build-progress";
 
 type MessagesProps = {
@@ -71,23 +70,6 @@ function PureMessages({
     missionSquadStatus === "building" ||
     missionSquadStatus === "reviewing" ||
     missionSquadStatus === "auto_correction_started";
-  const missionAgentName =
-    typeof metadata?.missionActiveAgentName === "string" && metadata.missionActiveAgentName.trim()
-      ? metadata.missionActiveAgentName.trim()
-      : "";
-  const missionActiveAgent = missionAgentName
-    ? activeWayData.agents.find((agent) => agent.name.toLowerCase() === missionAgentName.toLowerCase())
-    : undefined;
-  const missionAgentRole =
-    typeof metadata?.missionActiveAgentRole === "string" && metadata.missionActiveAgentRole.trim()
-      ? metadata.missionActiveAgentRole.trim()
-      : missionActiveAgent?.role ?? "";
-  const missionFileCount = Array.isArray(metadata?.missionFiles)
-    ? metadata.missionFiles.filter((file: unknown) =>
-        Boolean(file && typeof file === "object" &&
-          "status" in file && (file.status === "saved" || file.status === "validated"))
-      ).length
-    : 0;
   const [activeHomeTab, setActiveHomeTab] = useState<
     "suggestions" | "templates" | "specification"
   >("suggestions");
@@ -370,22 +352,6 @@ function PureMessages({
               <MissionBuildProgress missionId={missionId} status={missionSquadStatus} />
             ) : null}
 
-            {missionId && missionIsActive ? (
-              <MultiAgentRelay
-                activityState={
-                  missionSquadStatus === "reviewing"
-                    ? "reviewing"
-                    : missionSquadStatus === "auto_correction_started"
-                      ? "correcting"
-                      : "building"
-                }
-                currentAgentAvatar={missionAgentName ? missionActiveAgent?.avatarUrl : undefined}
-                currentAgentName={missionAgentName || ""}
-                currentAgentRole={missionAgentRole}
-                currentWay={currentWay}
-                filesCount={missionFileCount}
-              />
-            ) : null}
 
             {status === "submitted" &&
               messages.at(-1)?.role !== "assistant" && (
