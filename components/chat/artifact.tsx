@@ -861,19 +861,6 @@ function PureArtifact({
   }, [artifact.kind, artifact.preview, artifact.content, artifact.status, missionFiles, previewPath]);
 
   const previewHtml = compiledPreview.html;
-  const isMissionBuildActive =
-    Boolean(missionId) &&
-    artifact.kind === "code" &&
-    ["building", "reviewing", "auto_correction_started"].includes(
-      missionSquadStatus ?? ""
-    );
-  const showMissionStatusOverlay =
-    Boolean(missionId) &&
-    artifact.kind === "code" &&
-    ["planned", "building", "reviewing", "auto_correction_started"].includes(
-      missionSquadStatus ?? ""
-    );
-
   const previewScrollbarStyle =
     '<style>html{scrollbar-width:none;-ms-overflow-style:none}html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}body{overflow-x:hidden}</style>';
   const previewHtmlForFrame = previewHtml.includes("</head>")
