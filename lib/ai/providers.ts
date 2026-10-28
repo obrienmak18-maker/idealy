@@ -94,8 +94,8 @@ function resolveGeminiModelName(modelId: string): string {
 }
 
 function getAnyAvailableDirectModel() {
-  if (groq) return groq.chat("openai/gpt-oss-120b");
   if (openrouter) return openrouter.chat("meta-llama/llama-3.3-70b-instruct");
+  if (groq) return groq.chat("openai/gpt-oss-120b");
   if (google) return google("gemini-3.7-flash");
   if (openai) return openai.chat("gpt-4o-mini");
   if (deepseek) return deepseek.chat("deepseek-chat");

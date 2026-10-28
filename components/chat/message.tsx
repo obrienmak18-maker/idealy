@@ -539,14 +539,14 @@ const PurePreviewMessage = ({
     if (type === "tool-createDocument") {
       const { toolCallId } = part;
 
-      if (part.output && "error" in part.output) {
+      if (part.output && typeof part.output === "object" && "error" in part.output) {
         return (
           <div
             className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
             key={toolCallId}
           >
             {t("chat.toolApproval.errorCreatingDocument", {
-              error: String(part.output.error),
+              error: String((part.output as { error?: unknown }).error),
             })}
           </div>
         );
@@ -556,7 +556,7 @@ const PurePreviewMessage = ({
         <DocumentPreview
           isReadonly={isReadonly}
           key={toolCallId}
-          result={part.output}
+          result={part.output as React.ComponentProps<typeof DocumentPreview>["result"]}
         />
       );
     }

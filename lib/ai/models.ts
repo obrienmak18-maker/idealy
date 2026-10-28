@@ -2,8 +2,8 @@ function getDefaultModelId(): string {
   const getEnv = (name: string) =>
     process.env[name]?.trim() || process.env[`VITE_${name}`]?.trim() || "";
 
-  if (getEnv("GROQ_API_KEY")) return "groq/openai/gpt-oss-120b";
   if (getEnv("OPENROUTER_API_KEY")) return "openrouter/meta-llama/llama-3.3-70b-instruct";
+  if (getEnv("GROQ_API_KEY")) return "groq/openai/gpt-oss-120b";
   if (getEnv("GOOGLE_GENERATIVE_AI_API_KEY") || getEnv("GEMINI_API_KEY"))
     return "google/gemini-3.7-flash";
   if (getEnv("DEEPSEEK_API_KEY")) return "deepseek/deepseek-v3.2";
