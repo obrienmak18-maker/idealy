@@ -89,7 +89,7 @@ function getAllowedModels(): Record<Provider, readonly string[]> {
 
 const MAX_PROMPT_CHARS = 120_000;
 const MAX_SYSTEM_PROMPT_CHARS = 20_000;
-const MAX_OUTPUT_TOKENS = 8_000;
+const MAX_OUTPUT_TOKENS = 30_000;
 const MAX_IDEMPOTENCY_KEY_CHARS = 180;
 const WORKSPACE_SYSTEM_PROMPT = `
 Tu es le Builder d’Idealy. Pour une mission EXECUTION, réponds uniquement avec des lignes NDJSON valides, sans markdown ni texte autour. Une ligne par événement, dans cet ordre pour chaque fichier :
@@ -513,7 +513,7 @@ async function resolveConfiguredAIProvider(
 }
 
 const RETRYABLE_PROVIDER_STATUSES = new Set([400, 401, 402, 403, 404, 408, 409, 429, 500, 502, 503, 504]);
-const MAX_PROVIDER_ATTEMPTS = 3;
+const MAX_PROVIDER_ATTEMPTS = AUTOMATIC_PROVIDER_ORDER.length;
 
 async function adaptAnthropicResponse(response: Response, stream: boolean): Promise<Response> {
   if (!response.ok) return response;
