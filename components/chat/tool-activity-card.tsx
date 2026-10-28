@@ -368,6 +368,9 @@ export function ToolActivityCard({
   const isVideo = kind === "generateVideo";
   const isWidget = kind === "renderWidget";
 
+  // Legacy sub-agent cards only echoed model-authored statuses; they did not run the mission builder.
+  if (isSubAgents) return null;
+
   const sources = arrayRecords(result?.results);
   const photos = arrayRecords(result?.photos);
   const generatedImages = arrayRecords(result?.images);
