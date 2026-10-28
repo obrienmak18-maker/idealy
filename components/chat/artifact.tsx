@@ -1136,7 +1136,7 @@ function PureArtifact({
                       ) : null}
                     </div>
                   );
-                })()) : consoleEntries.length > 0 ? (
+                })() : consoleEntries.length > 0 ? (
                 <div className="space-y-2">
                   {consoleEntries.map((entry: { id: string; status: string; contents: { type: string; value: string }[] }) => (
                     <div className="rounded-md border border-sidebar-border/50 bg-background/20 px-3 py-2" key={entry.id}>
