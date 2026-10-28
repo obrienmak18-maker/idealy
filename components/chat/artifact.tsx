@@ -1079,49 +1079,64 @@ function PureArtifact({
                     Le preview est isolé dans un document local. Les requêtes réseau du runtime apparaîtront ici lorsqu&apos;elles seront disponibles.
                   </p>
                 </div>
-              ) : consoleTab === "build" ? (() => {
-                  // Build a truthful lifecycle log from real metadata signals.
-                  // Each entry appears only after its corresponding event has been received.
+               ) : consoleTab === "build" ? (() => {
                   const squadStatus = typeof metadata?.missionSquadStatus === "string"
                     ? metadata.missionSquadStatus as string : undefined;
                   const fileStatus = typeof metadata?.missionFileStatus === "string"
                     ? metadata.missionFileStatus as string : undefined;
-                  const fileCount = missionFiles.length;
-                  const hasPlan = !!metadata?.missionPlan || squadStatus === "planned" || squadStatus === "building" || squadStatus === "ready" || squadStatus === "needs-fix";
-                  const hasBuilderStarted = fileCount > 0 || fileStatus === "file_started" || fileStatus === "file_content" || fileStatus === "file_saved";
-                  const hasFileSaved = fileStatus === "file_saved" || fileStatus === "file_validated" || squadStatus === "ready" || squadStatus === "needs-fix" || squadStatus === "auto_correction_started";
-                  const hasReviewerRun = squadStatus === "ready" || squadStatus === "needs-fix" || squadStatus === "auto_correction_started";
-                  const hasCorrectionStarted = squadStatus === "auto_correction_started";
+                  const fileCount = latestMissionFiles.length;
+                  const hasPlan = !!metadata?.missionPlan || ["planned", "building", "reviewing", "ready", "needs-fix", "auto_correction_started"].includes(squadStatus ?? "");
+                  const hasBuilderStarted = fileCount > 0 || ["file_started", "file_content", "file_saved", "file_validated"].includes(fileStatus ?? "");
+                  const buildReport = metadata?.missionBuildVerification && typeof metadata.missionBuildVerification === "object"
+                    ? metadata.missionBuildVerification as { status?: string; stdout?: string; stderr?: string; error?: string; durationMs?: number }
+                    : null;
                   const isComplete = squadStatus === "ready";
                   const isFailed = squadStatus === "needs-fix";
                   type Phase = { iconType: "check" | "chevron" | "cross"; text: string };
                   const phases: Phase[] = [
-                    { iconType: "check", text: "Preview viewport monté" },
-                    ...(hasPlan ? [{ iconType: "check" as const, text: "Plan Architecte établi" }] : [{ iconType: "chevron" as const, text: "Architecte analyse la demande…" }]),
-                    ...(hasBuilderStarted ? [{ iconType: hasFileSaved ? ("check" as const) : ("chevron" as const), text: hasFileSaved ? `Builder — ${fileCount} fichier${fileCount !== 1 ? "s" : ""} générés` : "Builder génère les fichiers…" }] : []),
-                    ...(hasFileSaved ? [{ iconType: hasReviewerRun ? ("check" as const) : ("chevron" as const), text: hasReviewerRun ? "Reviewer — validation structurelle" : "Reviewer inspecte les fichiers…" }] : []),
-                    ...(hasCorrectionStarted ? [{ iconType: isComplete ? ("check" as const) : ("chevron" as const), text: "Correction automatique appliquée" }] : []),
-                    ...(isComplete ? [{ iconType: "check" as const, text: "Mission terminée — workspace prêt" }] : []),
-                    ...(isFailed && !isComplete ? [{ iconType: "cross" as const, text: "Correction requise — votre retour est nécessaire" }] : []),
-                    ...(!hasPlan && !isComplete && !isFailed ? [{ iconType: "chevron" as const, text: artifact.status === "streaming" ? "Génération en cours…" : "Build prêt" }] : []),
+                    ...(hasPlan ? [{ iconType: "check" as const, text: "Plan de mission enregistré" }] : []),
+                    ...(hasBuilderStarted ? [{
+                      iconType: (fileStatus === "file_saved" || fileStatus === "file_validated" || fileCount > 0) ? "check" as const : "chevron" as const,
+                      text: `${fileCount} fichier${fileCount === 1 ? "" : "s"} réellement reçu${fileCount === 1 ? "" : "s"}`,
+                    }] : []),
+                    ...(squadStatus === "reviewing" ? [{ iconType: "chevron" as const, text: "Vérification en cours" }] : []),
+                    ...(squadStatus === "auto_correction_started" ? [{ iconType: "chevron" as const, text: "Correction automatique en cours" }] : []),
+                    ...(buildReport ? [{
+                      iconType: buildReport.status === "passed" ? "check" as const : "cross" as const,
+                      text: buildReport.status === "passed"
+                        ? `Compilation réelle réussie${typeof buildReport.durationMs === "number" ? ` · ${(buildReport.durationMs / 1000).toFixed(1)} s` : ""}`
+                        : "Compilation réelle échouée",
+                    }] : []),
+                    ...(isComplete && !buildReport ? [{ iconType: "check" as const, text: "Mission marquée comme terminée par le backend" }] : []),
+                    ...(isFailed && !buildReport ? [{ iconType: "cross" as const, text: "Le backend demande une correction" }] : []),
+                    ...(!hasPlan && !hasBuilderStarted && !buildReport ? [{ iconType: "chevron" as const, text: "En attente des premiers événements de mission…" }] : []),
                   ];
+                  const logs = [buildReport?.stdout, buildReport?.stderr, buildReport?.error].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
                   return (
-                    <div className="space-y-2 text-[11px] text-muted-foreground">
-                      {phases.map((phase, i) => (
-                        <p key={i} className="flex items-center gap-1.5">
-                          {phase.iconType === "check" ? (
-                            <Check className="size-3.5 shrink-0 text-emerald-400" strokeWidth={1.5} />
-                          ) : phase.iconType === "cross" ? (
-                            <X className="size-3.5 shrink-0 text-rose-400" strokeWidth={1.5} />
-                          ) : (
-                            <ChevronRight className="size-3.5 shrink-0 text-sky-400" strokeWidth={1.5} />
-                          )}
-                          <span>{phase.text}</span>
-                        </p>
-                      ))}
+                    <div className="space-y-3 text-[11px] text-muted-foreground">
+                      <div className="space-y-2">
+                        {phases.map((phase, i) => (
+                          <p key={i} className="flex items-center gap-1.5">
+                            {phase.iconType === "check" ? (
+                              <Check className="size-3.5 shrink-0 text-emerald-400" strokeWidth={1.5} />
+                            ) : phase.iconType === "cross" ? (
+                              <X className="size-3.5 shrink-0 text-rose-400" strokeWidth={1.5} />
+                            ) : (
+                              <ChevronRight className="size-3.5 shrink-0 text-sky-400" strokeWidth={1.5} />
+                            )}
+                            <span>{phase.text}</span>
+                          </p>
+                        ))}
+                      </div>
+                      {logs.length > 0 ? (
+                        <div className="border-t border-sidebar-border/50 pt-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Sortie réelle du build</p>
+                          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md bg-background/50 p-3 font-mono text-[10px] leading-5 text-sidebar-foreground/80">{logs.join("\n\n")}</pre>
+                        </div>
+                      ) : null}
                     </div>
                   );
-                })() : consoleEntries.length > 0 ? (
+                })()) : consoleEntries.length > 0 ? (
                 <div className="space-y-2">
                   {consoleEntries.map((entry: { id: string; status: string; contents: { type: string; value: string }[] }) => (
                     <div className="rounded-md border border-sidebar-border/50 bg-background/20 px-3 py-2" key={entry.id}>
