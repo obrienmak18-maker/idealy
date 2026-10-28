@@ -44,6 +44,7 @@ async function requestSupabase<T>(
     method?: "GET" | "POST" | "PATCH" | "DELETE";
     query?: Record<string, string>;
     body?: unknown;
+    prefer?: string;
   } = {}
 ): Promise<T> {
   const config = ensureDatabaseConfigured();
@@ -61,7 +62,7 @@ async function requestSupabase<T>(
       Authorization: `Bearer ${config.serviceRoleKey}`,
       "Content-Type": "application/json",
       apikey: config.serviceRoleKey,
-      Prefer: "return=representation",
+      Prefer: options.prefer ?? "return=representation",
     },
     body:
       options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -581,6 +582,9 @@ export async function saveMessages({ messages }: { messages: DBMessage[] }) {
   if (!messages.length) return [];
   const rows = await requestSupabase<JsonObject[]>("Message_v2", {
     method: "POST",
+    // A retried chat request can submit the same UI message ID twice.
+    // Ignore only that primary-key conflict instead of failing the whole stream.
+    prefer: "resolution=ignore-duplicates,return=representation",
     body: messages.map((message) => ({
       attachments: message.attachments,
       chatId: message.chatId,
