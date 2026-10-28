@@ -636,10 +636,10 @@ export async function restoreIdealyMissionCheckpoint({
   );
 }
 
-function classifyIntentLocally(prompt: string): IdealyIntentCategory {
+export function classifyIntentLocally(prompt: string): IdealyIntentCategory {
   const lower = prompt.toLowerCase().trim();
-  const buildPattern = /\b(app|application|site|page|dashboard|composant|interface|ui|ux|code|projet|react|next|vue)\b/i;
-  const execPattern = /\b(crée|creer|créer|génère|generer|générer|construis|construire|implémente|code|lance|lancer|build|make)\b/i;
+  const buildPattern = /\b(app|application|web app|mobile app|website|site web|site|page|dashboard|composant|interface|ui|ux|code|projet|react|next|vue|frontend|front-end|fullstack|full-stack|software|logiciel)\b/i;
+  const execPattern = /\b(crée|creer|créer|génère|generer|générer|construis|construire|implémente|implémenter|code|lance|lancer|build|make|create|generate|develop|developpe|développe|implement|write|scaffold)\b/i;
   const ideationPattern = /\b(idée|idee|propose|proposer|brainstorm|concept|suggestion|roadmap)\b/i;
 
   if (execPattern.test(lower) && buildPattern.test(lower)) {
