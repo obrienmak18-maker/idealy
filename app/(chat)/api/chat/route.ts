@@ -1142,15 +1142,26 @@ export async function POST(request: Request) {
           }
           return "Le moteur IA d’Idealy n’a aucune clé de fournisseur direct configurée côté Supabase. Il faut configurer une clé dans les secrets des Edge Functions ; aucune carte Vercel AI Gateway n’est nécessaire.";
         }
-        if (
-          error instanceof Error &&
-          error.message?.includes(
-            "AI Gateway requires a valid credit card on file to service requests"
-          )
-        ) {
-          return "Le moteur IA d’Idealy est temporairement indisponible. Réessayez dans un instant.";
+        const detail = error instanceof Error ? error.message : String(error);
+        if (detail.includes("AI Gateway requires a valid credit card on file to service requests")) {
+          return "Le moteur IA est indisponible pour cette requête. Vérifiez le fournisseur configuré, puis réessayez.";
         }
-        return "Une erreur est survenue. Réessayez dans un instant.";
+        if (/AI_PROVIDER_NOT_CONFIGURED|Aucun fournisseur IA direct n’est configuré/i.test(detail)) {
+          return "Aucun fournisseur IA utilisable n’est configuré côté serveur. Configurez une clé de fournisseur dans les secrets Supabase.";
+        }
+        if (/CHIEF_INVALID_PLAN|INVALID_MISSION_PLAN|plan de mission invalide/i.test(detail)) {
+          return "Le moteur a renvoyé un plan incomplet. Relancez la demande avec un périmètre plus précis ; aucun build n’a été déclaré terminé.";
+        }
+        if (/BUILDER_WORKSPACE_FAILED|WORKSPACE_BUILD_FAILED|no valid files|invalid workspace frame/i.test(detail)) {
+          return "La génération n’a pas produit de fichiers exploitables. Le workspace n’est pas validé ; réessayez avec une première version plus ciblée.";
+        }
+        if (/AGENT_UPSTREAM_401|AGENT_UPSTREAM_403|API key not configured|BYOK_NOT_CONFIGURED/i.test(detail)) {
+          return "Le fournisseur IA a refusé la requête. Vérifiez les clés et autorisations du fournisseur côté serveur.";
+        }
+        if (/AGENT_UPSTREAM_429|rate.?limit|quota/i.test(detail)) {
+          return "Le fournisseur IA a atteint sa limite de requêtes ou de quota. Attendez un peu ou vérifiez le quota du fournisseur.";
+        }
+        return "La requête IA a échoué avant d’aboutir. Consultez les journaux du serveur pour identifier l’étape exacte, puis réessayez.";
       },
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
     });
