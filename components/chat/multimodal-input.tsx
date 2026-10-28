@@ -750,12 +750,14 @@ function PureMultimodalInput({
           </div>
         ) : null}
         {input.length > 3000 ? (
-          <div className="mx-3 mt-3 overflow-hidden rounded-2xl border border-border/60 bg-muted/20 shadow-inner">
-            <div className="flex items-center justify-between gap-3 border-b border-border/50 bg-background/70 px-3 py-2.5">
-              <div className="flex min-w-0 items-center gap-2"><FileTextIcon className="size-4 shrink-0 text-primary" /><span className="truncate text-xs font-semibold">{language.startsWith("en") ? "Prompt document" : language.startsWith("es") ? "Documento del prompt" : "Document du prompt"}</span></div>
-              <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{inputWordCount} {language.startsWith("en") ? "words" : language.startsWith("es") ? "palabras" : "mots"} · {input.length.toLocaleString()} {language.startsWith("en") ? "chars" : language.startsWith("es") ? "caracteres" : "caractères"}</span>
-            </div>
-            <div className="max-h-28 overflow-auto px-3 py-2.5"><pre className="whitespace-pre-wrap break-words font-sans text-[11px] leading-relaxed text-muted-foreground">{redactLikelySecrets(input)}</pre></div>
+          <div className="mx-3 mt-2 flex min-w-0 items-center gap-2.5 rounded-xl border border-border/50 bg-muted/20 px-3 py-2">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background/70 text-primary">
+              <FileTextIcon className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-medium">{language.startsWith("en") ? "Long prompt attached" : language.startsWith("es") ? "Prompt largo adjunto" : "Prompt long joint"}</span>
+              <span className="block truncate text-[10px] text-muted-foreground">{inputWordCount} {language.startsWith("en") ? "words" : language.startsWith("es") ? "palabras" : "mots"} · {input.length.toLocaleString()} {language.startsWith("en") ? "characters" : language.startsWith("es") ? "caracteres" : "caractères"} · {language.startsWith("en") ? "Full text preserved" : language.startsWith("es") ? "Texto completo conservado" : "Texte intégral conservé"}</span>
+            </span>
           </div>
         ) : null}
         {selectedConnectors.length > 0 && (
