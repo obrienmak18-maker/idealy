@@ -21,6 +21,7 @@ import { alvinMessenger, voiesCatalog } from "@/lib/idealy/voies-catalog";
 import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import type { PlanOption } from "./plan-choices";
 import { MultiAgentRelay } from "./multi-agent-relay";
+import { MissionBuildProgress } from "./mission-build-progress";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -364,6 +365,10 @@ function PureMessages({
                 </Fragment>
               );
             })}
+
+            {missionId && missionSquadStatus && missionSquadStatus !== "planned" ? (
+              <MissionBuildProgress missionId={missionId} status={missionSquadStatus} />
+            ) : null}
 
             {missionId && missionIsActive ? (
               <MultiAgentRelay
