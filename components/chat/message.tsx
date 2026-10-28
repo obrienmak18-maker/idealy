@@ -199,7 +199,7 @@ function ProgressiveTextMessage({
           >
             <MessageContent
               className={cn("text-[14px] leading-[1.75] md:text-[15px]", {
-                "idealy-bubble-user w-fit max-w-[min(80%,56ch)] overflow-hidden break-words rounded-2xl rounded-br-sm px-3.5 py-2.5 shadow-sm":
+                "idealy-bubble-user w-fit max-w-[min(92%,68ch)] overflow-hidden break-words rounded-2xl rounded-bl-sm px-3.5 py-2.5 shadow-sm":
                   !isAssistant,
               })}
               data-testid="message-content"
@@ -344,7 +344,7 @@ const PurePreviewMessage = ({
 
   const attachments = attachmentsFromMessage.length > 0 && (
     <div
-      className="flex flex-row justify-end gap-2"
+      className="flex w-full flex-row justify-start gap-2"
       data-testid={"message-attachments"}
     >
       {attachmentsFromMessage.map((attachment) => (
@@ -696,7 +696,7 @@ const PurePreviewMessage = ({
     >
       <div
         className={cn(
-          isUser ? "flex flex-col items-end gap-2" : "flex items-start gap-3"
+          isUser ? "flex w-full flex-col items-start gap-2" : "flex items-start gap-3"
         )}
       >
         {isAssistant ? (
