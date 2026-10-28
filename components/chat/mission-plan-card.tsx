@@ -277,6 +277,7 @@ export function MissionPlanCard() {
       });
       const payload = await response.json().catch(() => null) as {
         error?: string;
+        code?: string;
         status?: string;
         validation?: unknown;
         buildVerification?: unknown;
@@ -284,7 +285,9 @@ export function MissionPlanCard() {
       } | null;
 
       if (!response.ok) {
-        throw new Error(payload?.error ?? `Le lancement de la mission a échoué (HTTP ${response.status}).`);
+        const reason = payload?.error ?? `Le lancement de la mission a échoué (HTTP ${response.status}).`;
+        const code = typeof payload?.code === "string" ? ` [${payload.code}]` : "";
+        throw new Error(`${reason}${code}`);
       }
 
       const finalStatus = ["ready", "needs-fix", "needs-user-input"].includes(payload?.status ?? "")
