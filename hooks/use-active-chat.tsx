@@ -91,6 +91,9 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
 
   const [input, setInput] = useState("");
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
+  // Once this tab has sent a user message, persisted-message hydration must not
+  // overwrite the live useChat stream while the first /chat/[id] URL is loading.
+  const hasSentUserMessageRef = useRef(false);
 
   const { data: chatData, isLoading } = useSWR(
     shouldLoadPersistedChat
@@ -187,6 +190,9 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const sendMessage: UseChatHelpers<ChatMessage>["sendMessage"] = useCallback(
     async (message, options) => {
       if (!isDemoMode) {
+        if (message && typeof message === "object" && message.role === "user") {
+          hasSentUserMessageRef.current = true;
+        }
         return sendRemoteMessage(message, options);
       }
 
@@ -224,6 +230,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (prevChatIdRef.current !== chatId) {
       prevChatIdRef.current = chatId;
+      hasSentUserMessageRef.current = false;
       if (isNewChat) {
         setMessages([]);
       }
@@ -231,7 +238,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   }, [chatId, isNewChat, setMessages]);
 
   useEffect(() => {
-    if (isNewChat) {
+    if (isNewChat || hasSentUserMessageRef.current) {
       return;
     }
     if (chatData?.messages) {
