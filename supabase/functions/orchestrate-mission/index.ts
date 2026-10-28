@@ -465,15 +465,22 @@ Deno.serve(async (request) => {
         ? (mission.dna as { plan?: unknown }).plan
         : undefined;
 
-    const chiefResult = await runAgent(
-      chief,
-      1,
-      `Agis comme ${chief.name}, chef de mission de la Way active. Tu es le coordinateur réel de cette mission Idealy. Cadre l’objectif, les hypothèses, les dépendances et les critères de réussite. Prépare un plan exploitable par les quatre autres agents : ${builder.name} (construction), ${designer.name} (UI/UX), ${specialist.name} (architecture/risques) et ${reviewer.name} (QA/finalisation). Le plan doit rester strictement dans le périmètre de la mission et ne doit déclencher aucun connecteur, aucune publication ni aucune action sur un compte tiers. ${missionVoice} ${persistedPlan ? `Plan précédemment enregistré à utiliser comme contexte, pas comme vérité : ${JSON.stringify(persistedPlan).slice(0, 8000)}` : ""} Contexte mission : ${missionContext}`,
-      { planOnly: true },
-    );
-
-    const plan = chiefResult.plan as MissionPlan | undefined;
-    if (!isMissionPlan(plan)) throw new Error("CHIEF_INVALID_PLAN");
+    // The user already approved this plan in the chat. Reuse it as the source of truth
+    // instead of asking the chief to silently replace the approved scope.
+    let plan: MissionPlan;
+    if (isMissionPlan(persistedPlan)) {
+      plan = persistedPlan as MissionPlan;
+    } else {
+      const chiefResult = await runAgent(
+        chief,
+        1,
+        `Agis comme ${chief.name}, chef de mission de la Way active. Tu es le coordinateur réel de cette mission Idealy. Cadre l’objectif, les hypothèses, les dépendances et les critères de réussite. Prépare un plan exploitable par les quatre autres agents : ${builder.name} (construction), ${designer.name} (UI/UX), ${specialist.name} (architecture/risques) et ${reviewer.name} (QA/finalisation). Le plan doit rester strictement dans le périmètre de la mission et ne doit déclencher aucun connecteur, aucune publication ni aucune action sur un compte tiers. ${missionVoice} Contexte mission : ${missionContext}`,
+        { planOnly: true },
+      );
+      const generatedPlan = chiefResult.plan as MissionPlan | undefined;
+      if (!isMissionPlan(generatedPlan)) throw new Error("CHIEF_INVALID_PLAN");
+      plan = generatedPlan;
+    }
 
     let iteration = 1;
     let currentValidation: ReturnType<typeof validateWorkspaceStructure> | null = null;
@@ -673,8 +680,8 @@ Deno.serve(async (request) => {
         .update({ completed_at: new Date().toISOString(), error_code: code, status: "failed" })
         .eq("mission_id", missionId)
         .eq("run_key", runKey)
-        .eq("agent_key", activeAgent);
-      await appendEvent(admin, "agent_failed", missionId, `${runKey}:${activeAgent}:failed`, { agent: activeAgent, code, runKey }).catch(() => undefined);
+        .eq("agent_key", activeAgent.key);
+      await appendEvent(admin, "agent_failed", missionId, `${runKey}:${activeAgent.key}:failed`, { agent: activeAgent.key, code, runKey }).catch(() => undefined);
     }
     await admin.from("missions").update({ status: "needs-fix" }).eq("id", missionId).eq("user_id", auth.user.id);
     return corsResponse({ error: "Mission squad failed safely.", code }, 502, request);
