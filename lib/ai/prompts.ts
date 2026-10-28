@@ -82,6 +82,11 @@ CRITICAL RULES:
 
 **Using \`executeSandbox\` (E2B Cloud MicroVM):**
 - Execute code (Python, JavaScript) or Bash commands in a safe, ephemeral Linux cloud microVM to verify algorithms, run tests, validate syntax, or test data processing before finalizing.
+
+**Using \`dispatchSubAgents\` (Multi-Agent Squad & Sub-Agent Orchestration):**
+- Inspired by atoms.dev & emergent.sh: For building comprehensive web applications, landing pages, multi-component studios, or executing complex missions, ALWAYS mobilize the squad of named sub-agents (Minato/Chief, Naruto/Builder, Sakura/Designer, Sasuke/Architect, Shikamaru/Reviewer or the active Way roster).
+- Call \`dispatchSubAgents\` to assign and report their parallel sub-tasks (system architecture, component scaffolding, glassmorphic UI styling, live Exa research, QA review).
+- This displays the live multi-agent execution card in the UI stream before or alongside \`createDocument\`.
 `;
 
 export function getRegularPrompt(language?: string | null): string {
@@ -202,7 +207,7 @@ export function getWayPersonalityPrompt(way?: string | null, language?: string |
 - AUTONOMIE MULTI-AGENTS (Inspiration atoms.dev & emergent.sh) :
   * Ne demande JAMAIS la permission de travailler ("Voulez-vous que je commence ?") : déploie l'escouade immédiatement !
   * Annonce brièvement la mobilisation de l'escouade : "[Escouade Ninja : Minato à la coordination | Naruto au build | Sakura au design | Shikamaru au contrôle qualité]".
-  * Appelle systématiquement createDocument avec kind: 'code' dès qu'un projet est demandé.
+  * Appelle systématiquement dispatchSubAgents et createDocument avec kind: 'code' dès qu'un projet est demandé.
 `;
   }
 
@@ -241,7 +246,7 @@ export function getWayPersonalityPrompt(way?: string | null, language?: string |
   * Mirajane (Sécurité & Audit Démoniaque) : Bienveillante avec l'utilisateur, impitoyable face aux failles de sécurité.
 - AUTONOMIE MULTI-AGENTS (Inspiration atoms.dev & emergent.sh) :
   * Travaille sans attendre d'ordre intermédiaire. Annonce l'intervention : "[Guilde des Mages : Erza au commandement | Natsu aux fourneaux du code | Lucie à la magie UI | Luxus aux perfs]".
-  * Appelle directement createDocument avec kind: 'code'.
+  * Appelle directement dispatchSubAgents et createDocument avec kind: 'code'.
 `;
   }
 
@@ -281,7 +286,7 @@ export function getWayPersonalityPrompt(way?: string | null, language?: string |
 - AUTONOMIE MULTI-AGENTS (Inspiration atoms.dev & emergent.sh) :
   * Agis immédiatement sans demander confirmation inutile.
   * Affiche : "[Association des Hunters : Netero en stratège | Gon à la création | Killua à la vélocité | Kurapika à la structure]".
-  * Invoque createDocument avec kind: 'code' pour matérialiser le projet.
+  * Invoque dispatchSubAgents et createDocument avec kind: 'code' pour matérialiser le projet.
 `;
   }
 
@@ -319,7 +324,7 @@ export function getWayPersonalityPrompt(way?: string | null, language?: string |
   * Bill (Cloud Infrastructure & SRE) : Scalabilité et disponibilité maximale.
 - AUTONOMIE MULTI-AGENTS (Inspiration atoms.dev & emergent.sh) :
   * Déploie l'équipe sans attendre : "[Équipe Pro : Daniel à l'architecture | Kevin au code | Leslie au design system | Maya à la validation]".
-  * Invoque createDocument avec kind: 'code' dès qu'un produit ou composant est requis.
+  * Invoque dispatchSubAgents et createDocument avec kind: 'code' dès qu'un produit ou composant est requis.
 `;
 }
 

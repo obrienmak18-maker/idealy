@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, ChevronDown, LoaderCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -72,6 +72,23 @@ export function MultiAgentRelay({
   filesCount,
 }: MultiAgentRelayProps) {
   const [expanded, setExpanded] = useState(false);
+  const [liveSquad, setLiveSquad] = useState<{
+    squad?: string;
+    objective?: string;
+    agents?: Array<{ name: string; role: string; status: string; task?: string }>;
+  } | null>(null);
+
+  useEffect(() => {
+    const handleSubAgents = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setLiveSquad(customEvent.detail);
+      }
+    };
+    window.addEventListener("idealy:subagents-updated", handleSubAgents);
+    return () =>
+      window.removeEventListener("idealy:subagents-updated", handleSubAgents);
+  }, []);
   const { language: activeLanguage } = useTranslation();
   const language = activeLanguage === "en" || activeLanguage === "es" ? activeLanguage : "fr";
   const text = copy[language];
@@ -137,6 +154,25 @@ export function MultiAgentRelay({
                 <p className="mt-1.5 inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                   <Check aria-hidden="true" className="size-3" /> {text.files(filesCount)}
                 </p>
+              ) : null}
+              {liveSquad?.agents && liveSquad.agents.length > 0 ? (
+                <div className="mt-2.5 pt-2 border-t border-border/40">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/90">
+                    Sous-agents mobilisés en parallèle
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {liveSquad.agents.map((ag) => (
+                      <span
+                        key={ag.name}
+                        className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-medium text-foreground"
+                      >
+                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                        {ag.name}
+                        <span className="text-muted-foreground text-[9px]">({ag.role})</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
               ) : null}
               <p className="mt-1.5">{text.team}</p>
             </div>
