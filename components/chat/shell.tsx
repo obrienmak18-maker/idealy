@@ -39,6 +39,7 @@ import { RealtimePresence } from "./realtime-presence";
 import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 import { YcDemoBanner } from "@/components/branding/yc-demo-banner";
 import { LiveVoiceDialog } from "./live-voice-dialog";
+import { BuildWorkspace } from "./build-workspace";
 
 class ArtifactErrorBoundary extends Component<
   { children: ReactNode },
@@ -124,6 +125,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
   const [chatPaneWidth, setChatPaneWidth] = useState(42);
   const [isResizing, setIsResizing] = useState(false);
   const [isMobileCanvasOpen, setIsMobileCanvasOpen] = useState(false);
+  const [activeWorkspacePanel, setActiveWorkspacePanel] = useState<"plan" | "chat" | "preview">("chat");
   const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
 
   useEffect(() => {
@@ -280,10 +282,17 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
           id="main-content"
           tabIndex={-1}
         >
+          <BuildWorkspace
+            activePanel={activeWorkspacePanel}
+            onPanelChange={(panel) => {
+              setActiveWorkspacePanel(panel);
+              setIsMobileCanvasOpen(panel === "preview");
+            }}
+          />
           <div
             className={cn(
               "relative z-10 min-w-0 flex-col bg-background",
-              isMobileCanvasOpen ? "hidden md:flex" : "flex",
+              activeWorkspacePanel === "chat" ? "flex" : "hidden md:flex",
               !isResizing &&
                 "transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
               "w-full md:w-[var(--idealy-chat-pane-width)]"
@@ -371,6 +380,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
           <div
             className={cn(
               "relative min-h-0 min-w-0 flex-1",
+              activeWorkspacePanel === "preview" ? "flex" : "hidden md:flex",
               isResizing && "pointer-events-none select-none",
               isArtifactVisible
                 ? isMobileCanvasOpen
