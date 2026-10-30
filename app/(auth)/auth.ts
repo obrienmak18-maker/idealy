@@ -128,6 +128,18 @@ export const {
         }
       }
 
+      // Older sessions may contain a valid access token but predate the
+      // persisted Supabase user id. Recover the canonical id from Supabase
+      // instead of allowing mission builds to fail after the agents finish.
+      if (token.supabaseAccessToken && !token.supabaseUserId) {
+        try {
+          const supabaseUser = await getSupabaseUserWithAccessToken(token.supabaseAccessToken);
+          if (supabaseUser?.id) token.supabaseUserId = supabaseUser.id;
+        } catch (err) {
+          console.error("Supabase user id recovery failed in JWT callback:", err);
+        }
+      }
+
       if (!token.supabaseAccessToken) {
         let email =
           typeof token.email === "string" && token.email.trim()
