@@ -399,13 +399,24 @@ function PureArtifact({
     }
     setMetadata((current: Record<string, unknown> | null) => {
       const currentSequence = Number(current?.missionFileLastSequence ?? 0);
-      if (currentSequence >= missionWorkspace.lastSequence && Array.isArray(current?.missionFiles)) {
+      const currentFiles = Array.isArray(current?.missionFiles)
+        ? (current.missionFiles as MissionFile[])
+        : [];
+      const currentBelongsToMission = current?.missionId === missionId;
+      const hasCompleteWorkspace =
+        currentFiles.length >= missionWorkspace.files.length;
+      if (
+        currentBelongsToMission &&
+        currentSequence >= missionWorkspace.lastSequence &&
+        hasCompleteWorkspace
+      ) {
         return current;
       }
       return {
         ...(current ?? {}),
         missionFileLastSequence: missionWorkspace.lastSequence,
         missionFiles: missionWorkspace.files,
+        missionId,
       };
     });
   }, [missionWorkspace, setMetadata]);

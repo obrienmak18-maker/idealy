@@ -158,7 +158,7 @@ function parseReviewerDecision(value: unknown): {
   }
 }
 
-function validateWorkspaceStructure(files: Array<{ checksum: string | null; path: string; status: string }>) {
+function validateWorkspaceStructure(files: Array<{ checksum: string | null; content: string | null; path: string; status: string }>) {
   const expectedPaths = ["package.json", "index.html"];
   const savedPaths = new Set(files.map((file) => file.path));
   const missing = expectedPaths.filter((path) => !savedPaths.has(path));
@@ -167,6 +167,25 @@ function validateWorkspaceStructure(files: Array<{ checksum: string | null; path
     .map((file) => file.path);
 
   const errors: ReviewerDiagnostic[] = [];
+  const manifest = files.find((file) => file.path === "package.json");
+  if (manifest) {
+    try {
+      const parsed = JSON.parse(manifest.content ?? "") as { scripts?: Record<string, unknown> };
+      if (typeof parsed.scripts?.build !== "string" || !parsed.scripts.build.trim()) {
+        throw new Error("missing_build_script");
+      }
+    } catch {
+      errors.push({
+        evidence: "Le contenu enregistré ne peut pas être analysé par JSON.parse.",
+        expectedBehavior: "package.json doit être un manifeste JSON valide avec un script build non vide.",
+        file: "package.json",
+        location: "root",
+        problem: "Le package.json généré n’est pas un JSON valide ou ne définit pas scripts.build.",
+        severity: "critical",
+        suggestedCorrection: "Réécrire package.json comme un objet JSON brut valide; ne pas sérialiser le fichier une seconde fois.",
+      });
+    }
+  }
 
   for (const m of missing) {
     errors.push({
@@ -192,7 +211,7 @@ function validateWorkspaceStructure(files: Array<{ checksum: string | null; path
     });
   }
 
-  const isPassing = missing.length === 0 && invalid.length === 0 && files.length > 0;
+  const isPassing = missing.length === 0 && invalid.length === 0 && files.length > 0 && errors.length === 0;
 
   return {
     checks: { expectedPaths, savedFileCount: files.length },
@@ -553,7 +572,7 @@ Deno.serve(async (request) => {
 
       const { data: files, error: filesError } = await admin
         .from("mission_files")
-        .select("path,language,checksum,status,version")
+        .select("path,language,checksum,status,version,content")
         .eq("mission_id", missionId)
         .eq("status", "saved")
         .order("path")
@@ -652,27 +671,29 @@ Deno.serve(async (request) => {
       validation: finalValidationPayload,
     }).eq("id", missionId).eq("user_id", auth.user.id);
 
-    const { data: settledPower, error: settlePowerError } = await admin.rpc("settle_power_reservation", {
-      p_idempotency_key: powerReservationKey,
-      p_actual_points: squadPowerPoints,
-    });
-    if (settlePowerError) {
-      throw new Error(`POWER_SETTLEMENT_FAILED:${settlePowerError.message}`);
+    if (!isPassed) {
+      const { data: settledPower, error: settlePowerError } = await admin.rpc("settle_power_reservation", {
+        p_idempotency_key: powerReservationKey,
+        p_actual_points: 0,
+      });
+      if (settlePowerError) {
+        throw new Error(`POWER_SETTLEMENT_FAILED:${settlePowerError.message}`);
+      }
+      powerReservationHeld = false;
+      const rawSettlement = Array.isArray(settledPower) ? settledPower[0] : settledPower;
+      const settlement = rawSettlement && typeof rawSettlement === "object"
+        ? (rawSettlement as Record<string, unknown>)
+        : {};
+      await appendEvent(admin, "power_consumed", missionId, `${runKey}:power:consumed`, {
+        actionType: "mission_squad",
+        amountCharged: typeof settlement.charged_points === "number" ? settlement.charged_points : 0,
+        powerReleased: typeof settlement.released_points === "number" ? settlement.released_points : squadPowerPoints,
+        powerRemaining: typeof settlement.balance === "number" ? settlement.balance : null,
+        reservationId,
+        runKey,
+        source: "orchestrate-mission",
+      });
     }
-    powerReservationHeld = false;
-    const rawSettlement = Array.isArray(settledPower) ? settledPower[0] : settledPower;
-    const settlement = rawSettlement && typeof rawSettlement === "object"
-      ? (rawSettlement as Record<string, unknown>)
-      : {};
-    await appendEvent(admin, "power_consumed", missionId, `${runKey}:power:consumed`, {
-      actionType: "mission_squad",
-      amountCharged: typeof settlement.charged_points === "number" ? settlement.charged_points : squadPowerPoints,
-      powerReleased: typeof settlement.released_points === "number" ? settlement.released_points : 0,
-      powerRemaining: typeof settlement.balance === "number" ? settlement.balance : null,
-      reservationId,
-      runKey,
-      source: "orchestrate-mission",
-    });
 
     await appendEvent(admin, "mission_completed", missionId, `${runKey}:mission:completed`, {
       finalStatus: missionStatus,

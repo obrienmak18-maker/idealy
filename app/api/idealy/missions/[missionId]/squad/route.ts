@@ -393,6 +393,57 @@ async function verifyMissionBuild({
   };
 }
 
+async function settleMissionPower({
+  idempotencyKey,
+  missionId,
+  actualPoints,
+}: {
+  idempotencyKey: string;
+  missionId: string;
+  actualPoints: number;
+}): Promise<void> {
+  const supabaseUrl = (
+    process.env.SUPABASE_URL ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL ??
+    ""
+  ).trim().replace(/\/+$/, "");
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Server-side Supabase admin configuration is unavailable.");
+  }
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const reservationKey = `${idempotencyKey}:power:mission_squad:reserve`;
+  const { data, error } = await admin.rpc("settle_power_reservation", {
+    p_idempotency_key: reservationKey,
+    p_actual_points: actualPoints,
+  });
+  if (error) throw new Error(`POWER_SETTLEMENT_FAILED:${error.message}`);
+
+  const result = Array.isArray(data) ? data[0] : data;
+  const settlement = result && typeof result === "object"
+    ? result as Record<string, unknown>
+    : {};
+  const { error: eventError } = await admin.rpc("append_mission_file_event", {
+    p_event_type: "power_consumed",
+    p_file_version: null,
+    p_idempotency_key: (idempotencyKey + ":power:consumed").slice(0, 180),
+    p_mission_id: missionId,
+    p_path: null,
+    p_payload: {
+      actionType: "mission_squad",
+      amountCharged: typeof settlement.charged_points === "number" ? settlement.charged_points : actualPoints,
+      powerReleased: typeof settlement.released_points === "number" ? settlement.released_points : 0,
+      powerRemaining: typeof settlement.balance === "number" ? settlement.balance : null,
+      runKey: idempotencyKey,
+      source: "post-squad-build-verification",
+    },
+  });
+  if (eventError) console.warn("Mission Power event persistence failed.", { missionId });
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ missionId: string }> },
@@ -495,16 +546,13 @@ export async function POST(
     }
 
     orchestratorSucceeded = true;
-    await commitFreeGeneration({
-      idempotencyKey: input.idempotencyKey,
-      userId,
-    });
-    quotaCommitted = true;
 
     let payloadValue: unknown;
     try {
       payloadValue = JSON.parse(responseText);
     } catch {
+      await refundFreeGeneration({ idempotencyKey: input.idempotencyKey, userId }).catch(() => undefined);
+      await settleMissionPower({ idempotencyKey: input.idempotencyKey, missionId, actualPoints: 0 }).catch(() => undefined);
       return Response.json(
         { error: "Le backend d’orchestration a renvoyé une réponse non vérifiable." },
         { status: 502, headers: { "Cache-Control": "no-store" } },
@@ -513,6 +561,8 @@ export async function POST(
 
     const payload = asRecord(payloadValue);
     if (payload.missionId && payload.missionId !== missionId) {
+      await refundFreeGeneration({ idempotencyKey: input.idempotencyKey, userId }).catch(() => undefined);
+      await settleMissionPower({ idempotencyKey: input.idempotencyKey, missionId, actualPoints: 0 }).catch(() => undefined);
       return Response.json(
         { error: "Le backend a renvoyé une mission différente de celle demandée." },
         { status: 502, headers: { "Cache-Control": "no-store" } },
@@ -520,10 +570,16 @@ export async function POST(
     }
 
     if (payload.status !== "ready") {
+      await refundFreeGeneration({
+        idempotencyKey: input.idempotencyKey,
+        userId,
+      }).catch(() => undefined);
       return Response.json(payload, { status: response.status, headers: responseHeaders });
     }
 
     if (!supabaseUserId) {
+      await settleMissionPower({ idempotencyKey: input.idempotencyKey, missionId, actualPoints: 0 }).catch(() => undefined);
+      await refundFreeGeneration({ idempotencyKey: input.idempotencyKey, userId }).catch(() => undefined);
       const report: WorkspaceBuildResult = {
         durationMs: 0,
         error: "La session ne contient pas d’identifiant Supabase vérifiable.",
@@ -560,6 +616,15 @@ export async function POST(
         ? "ready"
         : "needs-fix";
 
+    if (finalStatus === "ready") {
+      await settleMissionPower({ idempotencyKey: input.idempotencyKey, missionId, actualPoints: 50 });
+      await commitFreeGeneration({ idempotencyKey: input.idempotencyKey, userId });
+      quotaCommitted = true;
+    } else {
+      await settleMissionPower({ idempotencyKey: input.idempotencyKey, missionId, actualPoints: 0 });
+      await refundFreeGeneration({ idempotencyKey: input.idempotencyKey, userId });
+    }
+
     return Response.json(
       {
         ...payload,
@@ -574,6 +639,13 @@ export async function POST(
       { status: response.status, headers: responseHeaders },
     );
   } catch (error) {
+    if (orchestratorSucceeded) {
+      await settleMissionPower({
+        idempotencyKey: input.idempotencyKey,
+        missionId,
+        actualPoints: 0,
+      }).catch(() => undefined);
+    }
     if (!quotaCommitted) {
       await refundFreeGeneration({
         idempotencyKey: input.idempotencyKey,

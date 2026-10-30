@@ -1,5 +1,8 @@
 import { auth } from "@/app/(auth)/auth";
-import { listIdealyMissionFileEvents } from "@/lib/idealy/backend-adapter";
+import {
+  listIdealyMissionFileEvents,
+  listIdealyMissionFiles,
+} from "@/lib/idealy/backend-adapter";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -36,11 +39,14 @@ export async function GET(
   }
 
   try {
-    const events = await listIdealyMissionFileEvents({ afterSequence, missionId, request });
+    const [events, files] = await Promise.all([
+      listIdealyMissionFileEvents({ afterSequence, missionId, request }),
+      listIdealyMissionFiles({ missionId, request }),
+    ]);
     const lastSequence = events.at(-1)?.sequence ?? afterSequence;
 
     return Response.json(
-      { events, lastSequence },
+      { events, files, lastSequence },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {

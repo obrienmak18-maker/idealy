@@ -189,10 +189,10 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
 
   const sendMessage: UseChatHelpers<ChatMessage>["sendMessage"] = useCallback(
     async (message, options) => {
+      if (message && typeof message === "object" && "role" in message && message.role === "user") {
+        hasSentUserMessageRef.current = true;
+      }
       if (!isDemoMode) {
-        if (message && typeof message === "object" && "role" in message && message.role === "user") {
-          hasSentUserMessageRef.current = true;
-        }
         return sendRemoteMessage(message, options);
       }
 
