@@ -24,7 +24,7 @@ type AgentDefinition = {
   role: string;
 };
 
-const MAX_REVIEW_ITERATIONS = 3;
+const MAX_REVIEW_ITERATIONS = 1;
 const SQUAD_POWER_POINTS = 50;
 
 const WAY_AGENTS: Record<string, AgentDefinition[]> = {
@@ -367,10 +367,14 @@ Deno.serve(async (request) => {
     : {};
   const reservationId = typeof reservation.reservation_id === "string" ? reservation.reservation_id : null;
   if (!reservationId) {
-    await admin.rpc("release_power_reservation", {
-      p_idempotency_key: powerReservationKey,
-      p_reason: "missing_reservation_id",
-    }).catch(() => undefined);
+    try {
+      await admin.rpc("release_power_reservation", {
+        p_idempotency_key: powerReservationKey,
+        p_reason: "missing_reservation_id",
+      });
+    } catch (releaseError) {
+      console.error("Power reservation release failed", releaseError);
+    }
     await admin.from("mission_agent_runs").delete().eq("mission_id", missionId).eq("run_key", runKey);
     return corsResponse({ error: "La réservation Power n’a pas pu être confirmée." }, 503, request);
   }
@@ -546,13 +550,13 @@ Deno.serve(async (request) => {
         designer,
         1,
         `Agis comme ${designer.name}, spécialiste ${designer.role}. Tu es le responsable UI/UX de préparation de mission. À partir du plan du chef, définis les contraintes d'expérience, de structure d'écran, de cohérence visuelle et d'accessibilité que le builder doit respecter. Ne modifie aucun fichier et n'appelle aucun connecteur. Signale uniquement des exigences vérifiables et produis un rapport structuré. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 10_000)}. Contexte : ${missionContext}`,
-        { planOnly: true },
+        { planOnly: false },
       ),
       runOptionalAgent(
         specialist,
         1,
         `Agis comme ${specialist.name}, spécialiste ${specialist.role}. Tu es le responsable architecture et risques de préparation de mission. À partir du plan du chef, définis les contraintes d'architecture, de sécurité, de dépendances, de performance et de régression que le builder doit respecter. Ne modifie aucun fichier et n'appelle aucun connecteur. Signale uniquement des exigences vérifiables et produis un rapport structuré. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 10_000)}. Contexte : ${missionContext}`,
-        { planOnly: true },
+        { planOnly: false },
       ),
     ]);
 
@@ -717,12 +721,14 @@ Deno.serve(async (request) => {
     }, 200, request);
   } catch (error) {
     if (powerReservationHeld) {
-      await admin.rpc("release_power_reservation", {
-        p_idempotency_key: powerReservationKey,
-        p_reason: error instanceof Error ? error.message.slice(0, 180) : "MISSION_RUN_FAILED",
-      }).catch((releaseError) => {
+      try {
+        await admin.rpc("release_power_reservation", {
+          p_idempotency_key: powerReservationKey,
+          p_reason: error instanceof Error ? error.message.slice(0, 180) : "MISSION_RUN_FAILED",
+        });
+      } catch (releaseError) {
         console.error("Power reservation release failed", releaseError);
-      });
+      }
     }
     const code = error instanceof Error ? error.message.slice(0, 180) : "MISSION_RUN_FAILED";
     if (activeAgent) {
