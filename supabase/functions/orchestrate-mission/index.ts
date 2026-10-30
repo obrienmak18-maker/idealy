@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { authenticate } from "./auth.ts";
 import { corsResponse, optionsResponse } from "./cors.ts";
+import { extractJsonObject } from "../_shared/tolerantParsing.ts";
 
 type SquadRequest = {
   idempotencyKey?: unknown;
@@ -122,12 +123,10 @@ function parseReviewerDecision(value: unknown): {
   const raw = value && typeof value === "object" && typeof (value as Record<string, unknown>).message === "string"
     ? String((value as Record<string, unknown>).message)
     : "";
-  const cleaned = raw
-    .replace(/^\s*```(?:json)?\s*/i, "")
-    .replace(/\s*```\s*$/i, "")
-    .trim();
   try {
-    const parsed = JSON.parse(cleaned) as { reviewStatus?: unknown; diagnostics?: unknown };
+    // Tolerate prose or fences around the JSON verdict.
+    const parsed = extractJsonObject(raw) as { reviewStatus?: unknown; diagnostics?: unknown } | null;
+    if (!parsed) throw new Error("reviewer_not_json");
     const diagnostics = Array.isArray(parsed.diagnostics)
       ? parsed.diagnostics.filter(
           (item): item is ReviewerDiagnostic =>
@@ -446,6 +445,35 @@ Deno.serve(async (request) => {
     return result;
   };
 
+  // Preparation agents (designer, specialist) refine the brief but must never
+  // block the build: if one fails, record it truthfully and continue without it.
+  const runOptionalAgent = async (
+    agent: AgentDefinition,
+    iteration: number,
+    prompt: string,
+    options?: { workspaceStream?: boolean; planOnly?: boolean },
+  ): Promise<Record<string, unknown> | null> => {
+    try {
+      return await runAgent(agent, iteration, prompt, options);
+    } catch (error) {
+      const code = error instanceof Error ? error.message.slice(0, 180) : "OPTIONAL_AGENT_FAILED";
+      console.error(`Optional agent ${agent.key} failed; continuing without it`, code);
+      await admin.from("mission_agent_runs")
+        .update({ completed_at: new Date().toISOString(), error_code: code, status: "failed" })
+        .eq("mission_id", missionId)
+        .eq("run_key", runKey)
+        .eq("agent_key", agent.key);
+      await appendEvent(admin, "agent_failed", missionId, `${runKey}:${agent.key}:failed:optional`, {
+        agent: agent.key,
+        code,
+        optional: true,
+        runKey,
+      }).catch(() => undefined);
+      activeAgent = null;
+      return null;
+    }
+  };
+
   try {
     await appendEvent(admin, "mission_started", missionId, `${runKey}:mission:started`, {
       runKey,
@@ -495,13 +523,13 @@ Deno.serve(async (request) => {
     // nodes and can run concurrently; the builder consumes both plans; the
     // reviewer closes the loop. This is the live runtime's first safe DAG edge.
     [designerReport, specialistReport] = await Promise.all([
-      runAgent(
+      runOptionalAgent(
         designer,
         1,
         `Agis comme ${designer.name}, spécialiste ${designer.role}. Tu es le responsable UI/UX de préparation de mission. À partir du plan du chef, définis les contraintes d'expérience, de structure d'écran, de cohérence visuelle et d'accessibilité que le builder doit respecter. Ne modifie aucun fichier et n'appelle aucun connecteur. Signale uniquement des exigences vérifiables et produis un rapport structuré. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 10_000)}. Contexte : ${missionContext}`,
         { planOnly: true },
       ),
-      runAgent(
+      runOptionalAgent(
         specialist,
         1,
         `Agis comme ${specialist.name}, spécialiste ${specialist.role}. Tu es le responsable architecture et risques de préparation de mission. À partir du plan du chef, définis les contraintes d'architecture, de sécurité, de dépendances, de performance et de régression que le builder doit respecter. Ne modifie aucun fichier et n'appelle aucun connecteur. Signale uniquement des exigences vérifiables et produis un rapport structuré. ${missionVoice} Plan : ${JSON.stringify(plan).slice(0, 10_000)}. Contexte : ${missionContext}`,

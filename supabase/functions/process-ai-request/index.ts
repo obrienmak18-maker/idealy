@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { classifyIntent } from './intentRouter.ts';
+import { extractJsonObject, WorkspaceFrameParser, type RawWorkspaceFrame } from '../_shared/tolerantParsing.ts';
 import { streamUI, type AgentUIPhase } from './streamUI.ts';
 import { createToolEnabledChatResponse } from "./toolCalling.ts";
 import {
@@ -192,9 +193,12 @@ type MissionPlan = {
 
 function parseMissionPlan(content: unknown): MissionPlan | null {
   if (typeof content !== 'string') return null;
-  const normalized = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-  try {
-    const value = JSON.parse(normalized) as Partial<MissionPlan>;
+  // Models often wrap the JSON in prose or fences; extract the object instead
+  // of requiring the whole answer to be JSON.
+  const extracted = extractJsonObject(content);
+  if (!extracted) return null;
+  {
+    const value = extracted as Partial<MissionPlan>;
     if (!value || typeof value !== 'object' || !Array.isArray(value.agents)) return null;
     const agents = value.agents
       .filter((agent): agent is MissionPlanAgent => Boolean(agent && typeof agent === 'object'))
@@ -214,8 +218,6 @@ function parseMissionPlan(content: unknown): MissionPlan | null {
       agents,
       nextStep: text(value.nextStep, 'valider le plan avant la construction'),
     };
-  } catch {
-    return null;
   }
 }
 
@@ -232,28 +234,25 @@ type WorkspaceFrame =
   | { content: string; path: string; type: 'file_content' }
   | { message: string; type: 'build_log' };
 
-function parseWorkspaceFrame(content: string): WorkspaceFrame | null {
-  let parsed: unknown;
+function toWorkspaceFrame(frame: RawWorkspaceFrame): WorkspaceFrame | null {
   try {
-    parsed = JSON.parse(content);
+    if (frame.type === 'build_log' && typeof frame.message === 'string') {
+      return { message: frame.message.slice(0, 2_000), type: 'build_log' };
+    }
+    if (frame.type === 'file_started' && typeof frame.path === 'string') {
+      return {
+        ...(typeof frame.language === 'string' ? { language: frame.language.slice(0, 80) } : {}),
+        path: normalizeWorkspacePath(frame.path),
+        type: 'file_started',
+      };
+    }
+    if (frame.type === 'file_content' && typeof frame.path === 'string' && typeof frame.content === 'string') {
+      // An oversized file is skipped on its own; it must not abort the build.
+      if (frame.content.length > 300_000) return null;
+      return { content: frame.content, path: normalizeWorkspacePath(frame.path), type: 'file_content' };
+    }
   } catch {
-    return null;
-  }
-  if (!parsed || typeof parsed !== 'object') return null;
-  const frame = parsed as { content?: unknown; language?: unknown; message?: unknown; path?: unknown; type?: unknown };
-  if (frame.type === 'build_log' && typeof frame.message === 'string') {
-    return { message: frame.message.slice(0, 2_000), type: 'build_log' };
-  }
-  if (frame.type === 'file_started' && typeof frame.path === 'string') {
-    return {
-      ...(typeof frame.language === 'string' ? { language: frame.language.slice(0, 80) } : {}),
-      path: normalizeWorkspacePath(frame.path),
-      type: 'file_started',
-    };
-  }
-  if (frame.type === 'file_content' && typeof frame.path === 'string' && typeof frame.content === 'string') {
-    if (frame.content.length > 300_000) throw new Error('Generated file content is too large.');
-    return { content: frame.content, path: normalizeWorkspacePath(frame.path), type: 'file_content' };
+    // Unsafe or invalid path: ignore this frame only.
   }
   return null;
 }
@@ -321,8 +320,8 @@ async function streamWorkspaceBuild(
   const reader = llmRes.body?.getReader();
   if (!reader) throw new Error('Workspace provider returned no stream.');
   const decoder = new TextDecoder();
-  let pending = '';
   let providerPending = '';
+  const frameParser = new WorkspaceFrameParser();
   const pendingFiles = new Map<string, { language?: string; version: number }>();
   let savedFileCount = 0;
 
@@ -339,7 +338,7 @@ async function streamWorkspaceBuild(
     }
 
     if (frame.type === 'file_started') {
-      if (pendingFiles.has(frame.path)) throw new Error(`Duplicate file_started frame for ${frame.path}.`);
+      // A repeated file_started simply restarts that file (upsert below).
       const version = 1;
       const { error } = await supabaseAdmin.from('mission_files').upsert({
         content: '',
@@ -364,8 +363,11 @@ async function streamWorkspaceBuild(
       return;
     }
 
-    const pendingFile = pendingFiles.get(frame.path);
-    if (!pendingFile) throw new Error(`file_content requires a preceding file_started frame for ${frame.path}.`);
+    if (!pendingFiles.has(frame.path)) {
+      // The model skipped file_started: open the file implicitly.
+      await persistFrame({ path: frame.path, type: 'file_started' });
+    }
+    const pendingFile = pendingFiles.get(frame.path)!;
     const fileChecksum = await checksum(frame.content);
     const { error } = await supabaseAdmin.from('mission_files').update({
       checksum: fileChecksum,
@@ -395,21 +397,26 @@ async function streamWorkspaceBuild(
     savedFileCount += 1;
   };
 
+  const persistRawFrames = async (rawFrames: RawWorkspaceFrame[]) => {
+    for (const raw of rawFrames) {
+      const frame = toWorkspaceFrame(raw);
+      if (frame) await persistFrame(frame);
+    }
+  };
+
   const consumeProviderLine = async (line: string) => {
     if (!line.startsWith('data: ')) return;
     const raw = line.slice(6).trim();
     if (!raw || raw === '[DONE]') return;
-    const chunk = JSON.parse(raw) as { choices?: Array<{ delta?: { content?: string } }> };
+    let chunk: { choices?: Array<{ delta?: { content?: string } }> };
+    try {
+      chunk = JSON.parse(raw);
+    } catch {
+      return; // keep-alive or partial provider event
+    }
     const content = chunk.choices?.[0]?.delta?.content;
     if (!content) return;
-    pending += content;
-    const frames = pending.split('\n');
-    pending = frames.pop() ?? '';
-    for (const frameLine of frames) {
-      const frame = parseWorkspaceFrame(frameLine.trim());
-      if (!frame) throw new Error('Builder emitted an invalid workspace frame.');
-      await persistFrame(frame);
-    }
+    await persistRawFrames(frameParser.feed(content));
   };
 
   try {
@@ -423,19 +430,37 @@ async function streamWorkspaceBuild(
       for (const line of providerLines) await consumeProviderLine(line);
     }
     if (providerPending.trim()) await consumeProviderLine(providerPending);
-    const tail = pending.trim();
-    if (tail) {
-      const frame = parseWorkspaceFrame(tail);
-      if (!frame) throw new Error('Builder ended with an invalid workspace frame.');
-      await persistFrame(frame);
-    }
+    await persistRawFrames(frameParser.flush());
   } finally {
     if (input.signal?.aborted) await reader.cancel().catch(() => undefined);
     reader.releaseLock();
   }
 
-  if (pendingFiles.size > 0) throw new Error('Builder ended before saving every started file.');
-  if (savedFileCount === 0) throw new Error('The builder returned no valid files.');
+  // Files the model started but never finished (truncated output): mark them
+  // as errors so they are visible to validation, but keep everything that was
+  // saved. The review loop asks the builder to complete the missing files.
+  const incompletePaths = Array.from(pendingFiles.keys());
+  if (incompletePaths.length > 0) {
+    await supabaseAdmin.from('mission_files')
+      .update({ status: 'error' })
+      .eq('mission_id', input.missionId)
+      .eq('status', 'writing')
+      .in('path', incompletePaths);
+  }
+  const skippedFrames = frameParser.droppedFrames + incompletePaths.length;
+  if (skippedFrames > 0 && savedFileCount > 0) {
+    await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
+      eventType: 'build_log',
+      idempotencyKey: `${input.idempotencyKey}:log:partial`,
+      missionId: input.missionId,
+      payload: {
+        message: `${skippedFrames} fichier(s) incomplet(s) ignoré(s) ; ${savedFileCount} fichier(s) enregistré(s). La vérification demandera de compléter le reste.`,
+      },
+    });
+  }
+  if (savedFileCount === 0) {
+    throw new Error(`The builder returned no valid files (${frameParser.droppedFrames} broken frame(s), ${frameParser.ignoredLines} ignored line(s)).`);
+  }
 
   await emitMissionFileEvent(controller, encoder, supabaseAdmin, {
     eventType: 'validation_result',
