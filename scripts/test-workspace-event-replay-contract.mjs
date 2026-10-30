@@ -55,7 +55,7 @@ for (const requiredFragment of [
   "file_content",
   "file_saved",
   "build_log",
-  "parseWorkspaceFrame",
+  "WorkspaceFrameParser",
   "pendingFiles",
   "providerPending",
   "abortController.abort()",
