@@ -35,7 +35,7 @@ export function ContinuousUpdateNotice() {
   return (
     <aside
       aria-label="Note d'information sur les mises à jour continues"
-      className="fixed bottom-5 right-5 z-50 max-w-sm rounded-2xl border border-primary/25 bg-background/95 p-4 shadow-2xl backdrop-blur-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+      className="fixed bottom-44 right-5 z-50 max-w-sm rounded-2xl border border-primary/25 bg-background/95 p-4 shadow-2xl backdrop-blur-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
     >
       <div className="flex items-start gap-3">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
