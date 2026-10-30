@@ -671,27 +671,29 @@ Deno.serve(async (request) => {
       validation: finalValidationPayload,
     }).eq("id", missionId).eq("user_id", auth.user.id);
 
-    const { data: settledPower, error: settlePowerError } = await admin.rpc("settle_power_reservation", {
-      p_idempotency_key: powerReservationKey,
-      p_actual_points: squadPowerPoints,
-    });
-    if (settlePowerError) {
-      throw new Error(`POWER_SETTLEMENT_FAILED:${settlePowerError.message}`);
+    if (!isPassed) {
+      const { data: settledPower, error: settlePowerError } = await admin.rpc("settle_power_reservation", {
+        p_idempotency_key: powerReservationKey,
+        p_actual_points: 0,
+      });
+      if (settlePowerError) {
+        throw new Error(`POWER_SETTLEMENT_FAILED:${settlePowerError.message}`);
+      }
+      powerReservationHeld = false;
+      const rawSettlement = Array.isArray(settledPower) ? settledPower[0] : settledPower;
+      const settlement = rawSettlement && typeof rawSettlement === "object"
+        ? (rawSettlement as Record<string, unknown>)
+        : {};
+      await appendEvent(admin, "power_consumed", missionId, `${runKey}:power:consumed`, {
+        actionType: "mission_squad",
+        amountCharged: typeof settlement.charged_points === "number" ? settlement.charged_points : 0,
+        powerReleased: typeof settlement.released_points === "number" ? settlement.released_points : squadPowerPoints,
+        powerRemaining: typeof settlement.balance === "number" ? settlement.balance : null,
+        reservationId,
+        runKey,
+        source: "orchestrate-mission",
+      });
     }
-    powerReservationHeld = false;
-    const rawSettlement = Array.isArray(settledPower) ? settledPower[0] : settledPower;
-    const settlement = rawSettlement && typeof rawSettlement === "object"
-      ? (rawSettlement as Record<string, unknown>)
-      : {};
-    await appendEvent(admin, "power_consumed", missionId, `${runKey}:power:consumed`, {
-      actionType: "mission_squad",
-      amountCharged: typeof settlement.charged_points === "number" ? settlement.charged_points : squadPowerPoints,
-      powerReleased: typeof settlement.released_points === "number" ? settlement.released_points : 0,
-      powerRemaining: typeof settlement.balance === "number" ? settlement.balance : null,
-      reservationId,
-      runKey,
-      source: "orchestrate-mission",
-    });
 
     await appendEvent(admin, "mission_completed", missionId, `${runKey}:mission:completed`, {
       finalStatus: missionStatus,
