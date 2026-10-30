@@ -692,6 +692,7 @@ export async function createIdealyMission({
     "missions",
     {
       body: JSON.stringify({
+        kind: "application",
         brief: {
           chatId,
           intentCategory,
