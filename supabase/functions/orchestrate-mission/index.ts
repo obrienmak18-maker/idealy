@@ -255,48 +255,6 @@ async function appendEvent(
   if (error) throw new Error(`EVENT_PERSISTENCE_FAILED:${error.message}`);
 }
 
-
-type WorkspaceBuildResult = {
-  durationMs?: number;
-  error?: string;
-  stderr?: string;
-  status: "passed" | "failed" | "not-configured";
-  stdout?: string;
-};
-
-async function runWorkspaceBuild(input: {
-  authorization: string;
-  iteration: number;
-  missionId: string;
-  runKey: string;
-}): Promise<WorkspaceBuildResult> {
-  const origin = (Deno.env.get("IDEALY_BUILD_API_ORIGIN") ?? "https://idealy-ai.vercel.app")
-    .trim()
-    .replace(/\/+$/, "");
-  const response = await fetch(`${origin}/api/idealy/workspace/build`, {
-    method: "POST",
-    headers: {
-      Authorization: input.authorization,
-      "Content-Type": "application/json",
-      "x-client-info": "idealy-mission-build",
-    },
-    body: JSON.stringify({
-      missionId: input.missionId,
-      runKey: input.runKey,
-      iteration: input.iteration,
-    }),
-  });
-  const payload = await response.json().catch(() => null) as
-    | { build?: WorkspaceBuildResult; error?: string }
-    | null;
-  if (!response.ok || !payload?.build) {
-    throw new Error(
-      `WORKSPACE_BUILD_API_${response.status}:${payload?.error ?? "No build result returned."}`,
-    );
-  }
-  return payload.build;
-}
-
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return optionsResponse(request);
   if (request.method !== "POST") return corsResponse({ error: "Method not allowed" }, 405, request);
@@ -530,7 +488,6 @@ Deno.serve(async (request) => {
     let designerReport: Record<string, unknown> | null = null;
     let specialistReport: Record<string, unknown> | null = null;
     let lastReviewerReport: Record<string, unknown> | null = null;
-    let lastWorkspaceBuild: WorkspaceBuildResult | null = null;
     let reviewerDecision: ReturnType<typeof parseReviewerDecision> = { diagnostics: [], reviewStatus: "FAIL" };
 
     // The five Way agents form the real execution team. The chief creates the
@@ -577,51 +534,8 @@ Deno.serve(async (request) => {
       if (filesError) throw new Error(`DESIGN_REVIEW_FILE_READ_FAILED:${filesError.message}`);
 
       currentValidation = validateWorkspaceStructure(files ?? []);
-      lastWorkspaceBuild = null;
-
-      if (currentValidation.status === "passed") {
-        try {
-          lastWorkspaceBuild = await runWorkspaceBuild({
-            authorization,
-            iteration,
-            missionId,
-            runKey,
-          });
-        } catch (buildError) {
-          lastWorkspaceBuild = {
-            status: "failed",
-            error: buildError instanceof Error ? buildError.message.slice(0, 1_500) : "Workspace build request failed.",
-            stdout: "",
-            stderr: "",
-          };
-        }
-
-        if (lastWorkspaceBuild.status !== "passed") {
-          currentValidation = {
-            ...currentValidation,
-            status: "needs-fix",
-            errors: [
-              ...currentValidation.errors,
-              {
-                evidence: [
-                  lastWorkspaceBuild.error ?? "The isolated npm build did not pass.",
-                  lastWorkspaceBuild.stderr ?? "",
-                ].filter(Boolean).join("\\n").slice(0, 4_000),
-                expectedBehavior: "The generated project must install its dependencies and complete npm run build in an isolated E2B sandbox.",
-                file: "package.json",
-                location: "npm install / npm run build",
-                problem: "La compilation réelle du projet a échoué ou n’a pas pu être vérifiée.",
-                severity: "critical",
-                suggestedCorrection: "Inspecter les journaux npm, corriger les dépendances et les erreurs TypeScript/Vite, puis régénérer les fichiers concernés.",
-              },
-            ],
-          };
-        }
-      }
-
       const enrichedValidation = {
         ...currentValidation,
-        build: lastWorkspaceBuild,
         iteration,
         maxIterations: MAX_REVIEW_ITERATIONS,
       };
@@ -645,7 +559,7 @@ Deno.serve(async (request) => {
       lastReviewerReport = await runAgent(
         reviewer,
         iteration,
-        `Agis comme ${reviewer.name}, agent de ${reviewer.role}. Tu es la dernière vérification réelle. Ne modifie aucun fichier. Contrôle les faits, les risques, la conformité au plan, le préflight structurel et les rapports de préparation des autres agents. ${missionVoice} Réponds UNIQUEMENT avec un JSON valide de la forme {"reviewStatus":"PASS"|"FAIL","diagnostics":[{"evidence":"...","expectedBehavior":"...","file":"...","location":"...","problem":"...","severity":"critical|warning|info","suggestedCorrection":"..."}]}. Utilise PASS uniquement si tu as des preuves suffisantes et aucun blocage critique. Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préparation UI/UX : ${JSON.stringify(designerReport).slice(0, 8_000)}. Préparation technique : ${JSON.stringify(specialistReport).slice(0, 8_000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}. Résultat npm/E2B : ${JSON.stringify(lastWorkspaceBuild).slice(0, 8_000)}`,
+        `Agis comme ${reviewer.name}, agent de ${reviewer.role}. Tu es la dernière vérification réelle. Ne modifie aucun fichier. Contrôle les faits, les risques, la conformité au plan, le préflight structurel et les rapports de préparation des autres agents. ${missionVoice} Réponds UNIQUEMENT avec un JSON valide de la forme {"reviewStatus":"PASS"|"FAIL","diagnostics":[{"evidence":"...","expectedBehavior":"...","file":"...","location":"...","problem":"...","severity":"critical|warning|info","suggestedCorrection":"..."}]}. Utilise PASS uniquement si tu as des preuves suffisantes et aucun blocage critique. Plan : ${JSON.stringify(plan).slice(0, 8_000)}. Préparation UI/UX : ${JSON.stringify(designerReport).slice(0, 8_000)}. Préparation technique : ${JSON.stringify(specialistReport).slice(0, 8_000)}. Préflight : ${JSON.stringify(enrichedValidation)}. Fichiers : ${JSON.stringify(files ?? []).slice(0, 10_000)}`,
       );
 
       reviewerDecision = parseReviewerDecision(lastReviewerReport);
@@ -700,7 +614,6 @@ Deno.serve(async (request) => {
       }),
       diagnosticReport: lastReviewerReport,
       reviewerDecision,
-      build: lastWorkspaceBuild,
       iteration: Math.min(iteration, MAX_REVIEW_ITERATIONS),
       maxIterations: MAX_REVIEW_ITERATIONS,
       status: finalValidationStatus,
