@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import { auth } from "@/app/(auth)/auth";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { getIdealySupabaseFunctionUrl } from "@/lib/idealy/config";
+import { getSupabaseUserWithAccessToken } from "@/lib/idealy/supabase-auth";
 import {
   commitFreeGeneration,
   refundFreeGeneration,
@@ -410,10 +411,14 @@ export async function POST(
     typeof token?.supabaseAccessToken === "string"
       ? token.supabaseAccessToken
       : null;
-  const supabaseUserId =
+  let supabaseUserId =
     typeof token?.supabaseUserId === "string"
       ? token.supabaseUserId
       : null;
+  if (!supabaseUserId && supabaseAccessToken) {
+    const supabaseUser = await getSupabaseUserWithAccessToken(supabaseAccessToken);
+    supabaseUserId = supabaseUser?.id ?? null;
+  }
   const userId = session?.user?.id ?? (typeof token?.sub === "string" ? token.sub : null);
 
   if (!supabaseAccessToken || !userId) {
