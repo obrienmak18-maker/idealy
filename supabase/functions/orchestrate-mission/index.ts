@@ -158,7 +158,7 @@ function parseReviewerDecision(value: unknown): {
   }
 }
 
-function validateWorkspaceStructure(files: Array<{ checksum: string | null; path: string; status: string }>) {
+function validateWorkspaceStructure(files: Array<{ checksum: string | null; content: string | null; path: string; status: string }>) {
   const expectedPaths = ["package.json", "index.html"];
   const savedPaths = new Set(files.map((file) => file.path));
   const missing = expectedPaths.filter((path) => !savedPaths.has(path));
@@ -167,6 +167,25 @@ function validateWorkspaceStructure(files: Array<{ checksum: string | null; path
     .map((file) => file.path);
 
   const errors: ReviewerDiagnostic[] = [];
+  const manifest = files.find((file) => file.path === "package.json");
+  if (manifest) {
+    try {
+      const parsed = JSON.parse(manifest.content ?? "") as { scripts?: Record<string, unknown> };
+      if (typeof parsed.scripts?.build !== "string" || !parsed.scripts.build.trim()) {
+        throw new Error("missing_build_script");
+      }
+    } catch {
+      errors.push({
+        evidence: "Le contenu enregistré ne peut pas être analysé par JSON.parse.",
+        expectedBehavior: "package.json doit être un manifeste JSON valide avec un script build non vide.",
+        file: "package.json",
+        location: "root",
+        problem: "Le package.json généré n’est pas un JSON valide ou ne définit pas scripts.build.",
+        severity: "critical",
+        suggestedCorrection: "Réécrire package.json comme un objet JSON brut valide; ne pas sérialiser le fichier une seconde fois.",
+      });
+    }
+  }
 
   for (const m of missing) {
     errors.push({
@@ -192,7 +211,7 @@ function validateWorkspaceStructure(files: Array<{ checksum: string | null; path
     });
   }
 
-  const isPassing = missing.length === 0 && invalid.length === 0 && files.length > 0;
+  const isPassing = missing.length === 0 && invalid.length === 0 && files.length > 0 && errors.length === 0;
 
   return {
     checks: { expectedPaths, savedFileCount: files.length },
@@ -553,7 +572,7 @@ Deno.serve(async (request) => {
 
       const { data: files, error: filesError } = await admin
         .from("mission_files")
-        .select("path,language,checksum,status,version")
+        .select("path,language,checksum,status,version,content")
         .eq("mission_id", missionId)
         .eq("status", "saved")
         .order("path")
