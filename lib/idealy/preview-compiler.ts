@@ -357,7 +357,31 @@ export function compileProjectPreview({
     }
   }
 
-  const codeSource = targetFile?.content || singleCodeContent || "";
+  let codeSource = targetFile?.content || singleCodeContent || "";
+  let projectCssSource = "";
+
+  // Vite's index.html points at a TypeScript module that only Vite can serve.
+  // An isolated srcDoc cannot resolve that host-relative URL. When the generated
+  // project includes a Vite module entry and a React app component, render that
+  // component through the existing Babel harness and carry over the project's CSS.
+  const hasBundlerModuleEntry =
+    /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["'][^"']+\.(?:[cm]?[jt]sx?)["'])[^>]*>/i.test(
+      codeSource
+    );
+  const generatedAppFile = hasBundlerModuleEntry
+    ? files
+        .filter((file) => /^src\/App\.(?:tsx|jsx|js)$/i.test(file.path.replaceAll("\\", "/").replace(/^\/+/, "")))
+        .sort((left, right) => (right.version ?? 0) - (left.version ?? 0))[0]
+    : undefined;
+
+  if (generatedAppFile) {
+    codeSource = generatedAppFile.content;
+    projectCssSource = files
+      .filter((file) => file.path.toLowerCase().endsWith(".css") && typeof file.content === "string")
+      .map((file) => file.content)
+      .join("\n")
+      .replace(/<\/style/gi, "<\\/style");
+  }
 
   // 4. If codeSource is raw HTML: inject Tailwind & safe error boundary
   if (codeSource.includes("<!DOCTYPE") || codeSource.includes("<!doctype") || codeSource.includes("<html")) {
@@ -391,6 +415,7 @@ export function compileProjectPreview({
   // 5. If codeSource is React / JSX / TSX: wrap in safe client-side React preview harness
   const cleanCode = codeSource
     .replace(/^import\s+.*?from\s+['"].*?['"];?/gm, "") // strip standard imports
+    .replace(/^\s*import\s+['"][^'"]+['"];?\s*$/gm, "") // strip side-effect imports
     .replace(/^export\s+default\s+/gm, "window.__IDEALY_DEFAULT_COMPONENT = ");
 
   const reactHarness = `<!doctype html>
@@ -415,11 +440,12 @@ export function compileProjectPreview({
     .error-card h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; color: #f87171; }
     .error-card pre { margin: 12px 0 0; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 12px; overflow-x: auto; color: #fecaca; }
   </style>
+  ${projectCssSource ? `<style id="idealy-generated-project-styles">${projectCssSource}</style>` : ""}
 </head>
 <body>
   <div id="root"></div>
 
-  <script type="text/babel">
+  <script type="text/babel" data-presets="env,react,typescript">
     const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
     // Universal Icon Proxy for Lucide icons
