@@ -50,7 +50,7 @@ const DEFAULT_MODELS: Record<Provider, string> = {
   anthropic: 'claude-sonnet-4-6',
   deepseek: 'deepseek-chat',
   gemini: 'gemini-3.7-flash',
-  groq: 'llama-3.3-70b-versatile',
+  groq: 'openai/gpt-oss-120b',
   moonshot: 'kimi-k3',
   openai: 'gpt-5',
   openrouter: 'openrouter/free',
@@ -61,11 +61,15 @@ const DEFAULT_ALLOWED_MODELS: Record<Provider, readonly string[]> = {
   anthropic: ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-7'],
   deepseek: ['deepseek-chat', 'deepseek-v4-flash', 'deepseek-v4-pro'],
   gemini: ['gemini-3.7-flash', 'gemini-3.1-pro-preview', 'gemini-2.5-flash'],
-  groq: ['llama-3.3-70b-versatile', 'moonshotai/kimi-k2-instruct'],
+  groq: ['openai/gpt-oss-120b', 'moonshotai/kimi-k2-instruct'],
   moonshot: ['kimi-k3', 'kimi-k2.7-code', 'kimi-k2.6', 'kimi-k2.5'],
   openai: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano'],
   openrouter: ['openrouter/free', 'deepseek/deepseek-coder'],
   together: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
+};
+
+const MODEL_ALIASES: Partial<Record<Provider, Readonly<Record<string, string>>>> = {
+  groq: { 'llama-3.3-70b-versatile': 'openai/gpt-oss-120b' },
 };
 
 function getAllowedModels(): Record<Provider, readonly string[]> {
@@ -78,7 +82,9 @@ function getAllowedModels(): Record<Provider, readonly string[]> {
     for (const provider of Object.keys(DEFAULT_ALLOWED_MODELS) as Provider[]) {
       const values = parsed[provider];
       if (Array.isArray(values)) {
-        const models = values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+        const models = values
+          .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+          .map((value) => MODEL_ALIASES[provider]?.[value] ?? value);
         if (models.length > 0) configured[provider] = Array.from(new Set(models)).slice(0, 50);
       }
     }
@@ -796,7 +802,8 @@ Deno.serve(async (req) => {
     const provider = input.provider ?? 'groq';
     if (!isSupportedProvider(provider)) return jsonError('Unsupported provider.', 400, headers);
 
-    const model = input.model ?? DEFAULT_MODELS[provider];
+    const requestedModel = input.model ?? DEFAULT_MODELS[provider];
+    const model = MODEL_ALIASES[provider]?.[requestedModel] ?? requestedModel;
     const allowedModels = getAllowedModels();
     if (typeof model !== 'string' || !allowedModels[provider].includes(model)) {
       return jsonError('Model is not allowed for this provider.', 400, headers);
