@@ -375,10 +375,10 @@ export function compileProjectPreview({
     : undefined;
 
   if (generatedAppFile) {
-    codeSource = generatedAppFile.content;
+    codeSource = generatedAppFile.content ?? "";
     projectCssSource = files
       .filter((file) => file.path.toLowerCase().endsWith(".css") && typeof file.content === "string")
-      .map((file) => file.content)
+      .map((file) => file.content ?? "")
       .join("\n")
       .replace(/<\/style/gi, "<\\/style");
   }
