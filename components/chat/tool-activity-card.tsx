@@ -422,8 +422,7 @@ export function ToolActivityCard({
   return (
     <Tool
       className="w-[min(100%,560px)] overflow-hidden rounded-xl border border-border/60 bg-card/60 shadow-xs"
-      open={isOpen}
-      onOpenChange={setIsOpen}
+      open={isOpen} onOpenChange={setIsOpen}
       key={toolCallId}
     >
       <ToolHeader
