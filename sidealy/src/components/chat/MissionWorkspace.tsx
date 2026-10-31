@@ -100,6 +100,8 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
   const [databaseLoading, setDatabaseLoading] = useState(false);
   const [databaseError, setDatabaseError] = useState("");
   const databaseRequestedRef = useRef(false);
+  const lastEventSequenceRef = useRef(0);
+  const pollingRef = useRef(false);
   const [checkpointName, setCheckpointName] = useState("");
   const [restoreTarget, setRestoreTarget] = useState<Checkpoint | null>(null);
   const [saving, setSaving] = useState(false);
@@ -192,7 +194,9 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
         const eventPayload = await readPayload<{
           events?: Task[];
           files?: MissionWorkspaceFile[];
+          lastSequence?: number;
         }>(eventsResponse);
+        lastEventSequenceRef.current = eventPayload.lastSequence ?? 0;
         setTasks([
           ...(tasksPayload.tasks ?? []),
           ...(eventPayload.events ?? []),
@@ -215,6 +219,72 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
       });
     return () => controller.abort();
   }, [missionId]);
+
+  useEffect(() => {
+    if (tab !== "activity") return;
+    const controller = new AbortController();
+    const poll = async () => {
+      if (pollingRef.current || controller.signal.aborted) return;
+      pollingRef.current = true;
+      try {
+        const [tasksResponse, eventsResponse] = await Promise.all([
+          fetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/tasks`, {
+            cache: "no-store",
+            credentials: "same-origin",
+            signal: controller.signal,
+          }),
+          fetch(
+            `/api/idealy/missions/${encodeURIComponent(missionId)}/events?afterSequence=${lastEventSequenceRef.current}`,
+            {
+              cache: "no-store",
+              credentials: "same-origin",
+              signal: controller.signal,
+            },
+          ),
+        ]);
+        const [tasksPayload, eventsPayload] = await Promise.all([
+          readPayload<{ tasks?: Task[] }>(tasksResponse),
+          readPayload<{ events?: Task[]; lastSequence?: number }>(
+            eventsResponse,
+          ),
+        ]);
+        if (controller.signal.aborted) return;
+        if (typeof eventsPayload.lastSequence === "number")
+          lastEventSequenceRef.current = eventsPayload.lastSequence;
+        setTasks((current) => {
+          const merged = new Map<string, Task>();
+          for (const item of current)
+            merged.set(
+              item.id ?? `sequence-${item.sequence ?? merged.size}`,
+              item,
+            );
+          for (const item of tasksPayload.tasks ?? [])
+            merged.set(item.id ?? `task-${item.title ?? merged.size}`, item);
+          for (const item of eventsPayload.events ?? [])
+            merged.set(
+              item.id ?? `event-${item.sequence ?? merged.size}`,
+              item,
+            );
+          return [...merged.values()];
+        });
+      } catch (cause) {
+        if (!controller.signal.aborted)
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "La mise à jour de l’activité a échoué.",
+          );
+      } finally {
+        pollingRef.current = false;
+      }
+    };
+    void poll();
+    const interval = window.setInterval(() => void poll(), 5000);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+    };
+  }, [missionId, tab]);
 
   useEffect(() => {
     if (tab !== "data" || databaseSnapshot || databaseRequestedRef.current)
