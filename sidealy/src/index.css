@@ -1,0 +1,320 @@
+@import "./styles/base.css";
+@import "./styles/brand-font.css";
+@import "./styles/corner-shape.css";
+@import "./styles/design-platform.css";
+@import "./styles/gradient-shadow-text.css";
+@import "./styles/scrollbar.css";
+@import "./styles/focus.css";
+@import "./styles/shiki.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Sidebar uses Material 3 surface roles, scoped locally to preserve the rest of Sidealy's theme. */
+.sidebar-shell {
+  --sidebar-motion: 300ms cubic-bezier(0.2, 0, 0, 1);
+  --sidebar-surface: #f8f9fa;
+  --sidebar-surface-hover: #e8eaed;
+  --sidebar-surface-selected: #e2e5e9;
+  --sidebar-action-surface: #e8eaed;
+  --sidebar-on-surface: #202124;
+  --sidebar-on-surface-variant: #5f6368;
+  --dsw-specific-sidebar-fill: var(--sidebar-surface);
+  --dsw-alias-label-primary: var(--sidebar-on-surface);
+  --dsw-alias-label-secondary: var(--sidebar-on-surface-variant);
+  --dsw-alias-label-tertiary: #62666b;
+  --dsw-alias-label-caption: #70757a;
+  --dsw-alias-interactive-bg-hover: var(--sidebar-surface-hover);
+  --dsw-alias-border-l2: #dadce0;
+  overflow: hidden;
+  color: var(--sidebar-on-surface);
+  background-color: var(--sidebar-surface);
+  transition: width var(--sidebar-motion);
+}
+
+body[data-ds-dark-theme] .sidebar-shell {
+  --sidebar-surface: #1e1f20;
+  --sidebar-surface-hover: #2a2b2f;
+  --sidebar-surface-selected: #333537;
+  --sidebar-action-surface: #131314;
+  --sidebar-on-surface: #e3e3e3;
+  --sidebar-on-surface-variant: #c4c7c5;
+  --dsw-alias-label-tertiary: #a0a4a9;
+  --dsw-alias-label-caption: #9aa0a6;
+  --dsw-alias-border-l2: #444746;
+}
+
+.sidebar-new-chat {
+  overflow: hidden;
+  color: var(--sidebar-on-surface);
+  white-space: nowrap;
+  background: var(--sidebar-action-surface);
+  transition:
+    background-color 200ms ease,
+    filter 200ms ease,
+    width var(--sidebar-motion),
+    padding var(--sidebar-motion);
+}
+
+.sidebar-new-chat:hover {
+  filter: brightness(1.12);
+}
+
+.sidebar-item-active {
+  background: var(--sidebar-surface-selected);
+}
+
+.sidebar-nav-item {
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    width var(--sidebar-motion),
+    padding var(--sidebar-motion);
+}
+
+.sidebar-label {
+  overflow: hidden;
+  transition:
+    opacity 150ms ease,
+    max-width var(--sidebar-motion);
+}
+
+.sidebar-section-heading {
+  color: var(--dsw-alias-label-tertiary);
+  letter-spacing: 0.01em;
+}
+
+.sidebar-library-item,
+.sidebar-more-button {
+  min-height: 40px;
+}
+
+.sidebar-shell button:focus-visible,
+.sidebar-shell select:focus-visible {
+  outline: 2px solid var(--idealy-indigo);
+  outline-offset: 2px;
+}
+
+/* The dock fills the chat width but stays on the same surface as the message list. */
+.composer-dock {
+  background: transparent;
+  border: 0;
+}
+
+.composer-card {
+  background: color-mix(
+    in srgb,
+    var(--dsw-specific-input-major) 92%,
+    transparent
+  );
+  border: 1px solid var(--dsw-alias-border-l2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.composer-card textarea,
+.composer-card textarea:focus {
+  outline: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.composer-add-heading {
+  padding: 5px 9px 4px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.composer-add-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 9px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--dsw-alias-label-primary);
+  text-align: left;
+  border: 0;
+  border-radius: 10px;
+  transition: background-color 120ms ease;
+}
+
+.composer-add-row > svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--dsw-alias-label-secondary);
+  stroke-width: 1.8;
+}
+
+.composer-add-row:hover {
+  background: color-mix(
+    in srgb,
+    var(--dsw-alias-label-primary) 8%,
+    transparent
+  );
+}
+
+.composer-add-row:focus-visible {
+  outline: 2px solid var(--idealy-indigo);
+  outline-offset: -2px;
+}
+
+.composer-add-menu {
+  transform-origin: 0 100%;
+  animation: composer-menu-in 120ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.dictation-bars {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+}
+
+.dictation-bars i {
+  display: block;
+  width: 2px;
+  min-height: 3px;
+  background: currentColor;
+  border-radius: 999px;
+  transition: height 90ms ease-out;
+}
+
+@keyframes composer-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer-add-menu {
+    animation: none;
+  }
+  .dictation-bars i {
+    transition: none;
+  }
+}
+
+.message-scroll-region:focus-visible {
+  outline: none;
+  box-shadow: inset 2px 0
+    color-mix(in srgb, var(--idealy-indigo) 72%, transparent);
+}
+.composer-card:focus-within {
+  border-color: color-mix(
+    in srgb,
+    var(--idealy-indigo) 58%,
+    var(--dsw-alias-border-l2)
+  );
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--idealy-indigo) 16%, transparent),
+    0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 639px) {
+  .composer-dock {
+    padding-inline: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+@layer base {
+  :root,
+  body {
+    --color-bg-base: var(--dsw-alias-bg-base);
+    --color-bg-surface: var(--dsw-alias-bg-layer-1);
+    --color-bg-subtle: var(--dsw-alias-bg-module-platform);
+
+    --color-text-main: var(--dsw-alias-label-primary);
+    --color-text-muted: var(--dsw-alias-label-tertiary);
+
+    --color-border: var(--dsw-alias-border-l2);
+    --color-ring: var(--idealy-indigo);
+
+    --color-primary: var(--idealy-indigo);
+    --color-on-primary: #ffffff;
+    --color-accent: var(--idealy-teal-petrol);
+
+    --color-destructive: var(--dsw-alias-state-error-primary);
+    --color-success: var(--dsw-alias-state-success-primary);
+
+    --dsh-chat-content-width: 760px;
+    --dsh-composer-side-clearance: 32px;
+    --dsh-composer-card-max-width: 760px;
+  }
+
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    font-family: var(--dsw-font-family);
+    -webkit-font-smoothing: antialiased;
+    color: var(--dsw-alias-label-primary);
+    background-color: var(--dsw-alias-bg-base);
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* DeepSeek Card & Hairline Stroke Elevation */
+.dsh-card {
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l2);
+  box-sizing: border-box;
+  background: var(--dsw-specific-input-major);
+  border-radius: var(--dsw-radius-panel);
+  box-shadow: var(--dsw-elevation-soft);
+}
+
+.dsh-panel {
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l2);
+  box-sizing: border-box;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: var(--dsw-elevation-panel);
+}
+
+/* DeepSeek Thinking / Reasoning Block */
+.dsh-thinking-block {
+  background: var(--dsw-linear-gradient-think);
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-md);
+}
+
+/* Accessible focus visible utility */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 1.5px solid var(--idealy-indigo);
+  outline-offset: 2px;
+}
+
+/* prefers-reduced-motion compliance */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
