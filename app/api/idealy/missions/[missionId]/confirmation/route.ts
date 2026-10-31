@@ -6,7 +6,17 @@ import { getIdealySupabaseFunctionUrl } from "@/lib/idealy/config";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TOKEN_PATTERN = /^[a-zA-Z0-9_-]{32,180}$/;
-const ALLOWED_OPERATIONS = new Set(["github:export", "vercel:deploy"]);
+const ALLOWED_OPERATIONS = new Set([
+  "github:export",
+  "vercel:deploy",
+  "github:github-create-branch",
+  "github:github-open-pull-request",
+  "canva:canva-create-design",
+  "canva:canva-export-design",
+  "notion:notion-append-page",
+  "slack:slack-send-message",
+  "supabase:supabase-append-mission-event",
+]);
 
 async function handleConfirmation(
   request: Request,
