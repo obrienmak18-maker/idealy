@@ -46,6 +46,9 @@ interface AppContextValue {
   confirmModal: ConfirmModalData | null;
 
   conversations: Conversation[];
+  conversationsHasMore: boolean;
+  isLoadingConversations: boolean;
+  loadMoreConversations: () => Promise<void>;
   createConversation: (spaceId?: string, title?: string) => string;
   createSpace: (
     name: string,
@@ -147,6 +150,7 @@ function pageFromPath(pathname: string): AppPage {
   );
   if (path.startsWith("/settings/")) return "settings";
   if (path.startsWith("/connectors/")) return "connectors";
+  if (path.startsWith("/docs/")) return "docs";
   return match?.[0] ?? "chat";
 }
 
@@ -205,6 +209,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const missionStartsRef = useRef<Set<string>>(new Set());
   const historyLoadsRef = useRef<Set<string>>(new Set());
   const [historyReady, setHistoryReady] = useState(false);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null);
+  const [conversationsHasMore, setConversationsHasMore] = useState(false);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
 
   // Active items resolution
   const activeSpace = spaces.find((s) => s.id === activeSpaceId) || spaces[0];
@@ -256,14 +263,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     let cancelled = false;
     BackendHistoryService.listAndImport()
-      .then((imported) => {
-        if (!cancelled && imported.length) {
+      .then((page) => {
+        if (cancelled) return;
+        setHistoryCursor(page.cursor);
+        setConversationsHasMore(page.hasMore);
+        if (page.conversations.length) {
           setConversations((current) => {
             const currentIds = new Set(
               current.map((conversation) => conversation.id),
             );
             const next = [
-              ...imported.filter(
+              ...page.conversations.filter(
                 (conversation) => !currentIds.has(conversation.id),
               ),
               ...current,
@@ -283,6 +293,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       cancelled = true;
     };
   }, []);
+
+  const loadMoreConversations = async () => {
+    if (!historyCursor || !conversationsHasMore || isLoadingConversations)
+      return;
+    setIsLoadingConversations(true);
+    try {
+      const page = await BackendHistoryService.listAndImport(historyCursor);
+      setHistoryCursor(page.cursor);
+      setConversationsHasMore(page.hasMore);
+      if (page.conversations.length) {
+        setConversations((current) => {
+          const currentIds = new Set(
+            current.map((conversation) => conversation.id),
+          );
+          const next = [
+            ...current,
+            ...page.conversations.filter(
+              (conversation) => !currentIds.has(conversation.id),
+            ),
+          ];
+          StorageService.saveConversations(next);
+          return next;
+        });
+      }
+    } catch (error) {
+      console.warn("Loading more conversations failed", error);
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  };
 
   useEffect(() => {
     if (
@@ -967,6 +1007,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         closeConfirmModal,
         confirmModal,
         conversations,
+        conversationsHasMore,
+        isLoadingConversations,
+        loadMoreConversations,
         createConversation,
         createSpace,
         deepThink,

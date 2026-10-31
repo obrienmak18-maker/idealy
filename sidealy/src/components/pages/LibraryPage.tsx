@@ -7,7 +7,10 @@ export const LibraryPage: React.FC = () => {
   const {
     artifacts,
     conversations,
+    conversationsHasMore,
     createConversation,
+    isLoadingConversations,
+    loadMoreConversations,
     openArtifact,
     setActiveConversationId,
     spaces,
@@ -118,6 +121,18 @@ export const LibraryPage: React.FC = () => {
             <p className="rounded-xl border border-dashed border-border-subtle px-4 py-6 text-sm text-text-muted">
               Aucune discussion ne correspond à cette recherche.
             </p>
+          )}
+          {conversationsHasMore && (
+            <button
+              className="mt-3 h-9 rounded-lg border border-border-subtle px-3 text-xs font-medium text-text-muted hover:bg-bg-subtle hover:text-text-main focus-ring disabled:opacity-60"
+              disabled={isLoadingConversations}
+              onClick={() => void loadMoreConversations()}
+              type="button"
+            >
+              {isLoadingConversations
+                ? "Chargement…"
+                : "Charger les discussions plus anciennes"}
+            </button>
           )}
         </section>
 

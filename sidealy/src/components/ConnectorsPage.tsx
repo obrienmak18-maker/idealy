@@ -33,6 +33,7 @@ type BackendPlugin = {
 };
 
 type PluginResponse = { plugins?: BackendPlugin[]; error?: string };
+type PluginInstallReview = { plugin: BackendPlugin; permissions: string[] };
 
 function pluginStateLabel(plugin: BackendPlugin): string {
   if (plugin.available) {
@@ -54,6 +55,11 @@ export const ConnectorsPage: React.FC = () => {
   const [error, setError] = useState("");
   const [authRequired, setAuthRequired] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [connectedProviders, setConnectedProviders] = useState<string[]>([]);
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [review, setReview] = useState<PluginInstallReview | null>(null);
+  const [installing, setInstalling] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -113,7 +119,184 @@ export const ConnectorsPage: React.FC = () => {
     return () => controller.abort();
   }, [reloadKey]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/idealy/connectors/status", {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as {
+          integrations?: Array<{
+            provider?: string;
+            serverReady?: boolean;
+            status?: string;
+          }>;
+        };
+        if (!response.ok || !Array.isArray(payload.integrations)) return;
+        const providers = payload.integrations
+          .filter(
+            (entry) => entry.status === "active" && entry.serverReady === true,
+          )
+          .map((entry) =>
+            entry.provider === "google" ? "google-drive" : entry.provider,
+          )
+          .filter(
+            (provider): provider is string => typeof provider === "string",
+          );
+        setConnectedProviders(Array.from(new Set(providers)));
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const connected = url.searchParams.get("connected");
+    const errorCode = url.searchParams.get("error");
+    if (!connected && !errorCode) return;
+    if (connected)
+      setActionError(
+        `${url.searchParams.get("display") || connected} est connecté. Actualisation du registre…`,
+      );
+    if (errorCode)
+      setActionError(
+        `La connexion a échoué (${errorCode}). Réessayez depuis le connecteur.`,
+      );
+    url.searchParams.delete("connected");
+    url.searchParams.delete("display");
+    url.searchParams.delete("error");
+    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    setReloadKey((key) => key + 1);
+  }, []);
+
   const readyCount = plugins.filter((plugin) => plugin.available).length;
+
+  const connectPlugin = async (plugin: BackendPlugin) => {
+    const supportedProviders = new Set([
+      "github",
+      "canva",
+      "figma",
+      "google-drive",
+      "notion",
+      "slack",
+      "vercel",
+    ]);
+    if (!supportedProviders.has(plugin.id)) {
+      setActionError(
+        `${plugin.name} utilise une configuration serveur ; aucune connexion OAuth n’est déclarée pour ce connecteur.`,
+      );
+      return;
+    }
+    setConnectingId(plugin.id);
+    setActionError("");
+    try {
+      const endpoint =
+        plugin.id === "vercel"
+          ? "/api/idealy/connectors/vercel/start"
+          : "/api/idealy/connectors/start";
+      const response = await fetch(endpoint, {
+        body: JSON.stringify({ provider: plugin.id }),
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        url?: string;
+      };
+      if (!response.ok || !payload.url)
+        throw new Error(
+          payload.error ||
+            "Le fournisseur n’a pas retourné de lien de connexion.",
+        );
+      window.location.assign(payload.url);
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error
+          ? cause.message
+          : "Impossible de démarrer la connexion.",
+      );
+      setConnectingId(null);
+    }
+  };
+
+  const reviewPluginInstall = async (plugin: BackendPlugin) => {
+    setActionError("");
+    try {
+      const response = await fetch(
+        `/api/idealy/plugins/${encodeURIComponent(plugin.id)}/install`,
+        {
+          body: JSON.stringify({ confirmed: false }),
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        requestedPermissions?: string[];
+      };
+      if (
+        response.status === 409 &&
+        Array.isArray(payload.requestedPermissions)
+      ) {
+        setReview({ plugin, permissions: payload.requestedPermissions });
+        return;
+      }
+      if (!response.ok)
+        throw new Error(
+          payload.error ||
+            "Les autorisations du plugin n’ont pas pu être chargées.",
+        );
+      throw new Error(
+        "Le registre n’a pas retourné les autorisations à examiner.",
+      );
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error
+          ? cause.message
+          : "Les autorisations du plugin n’ont pas pu être chargées.",
+      );
+    }
+  };
+
+  const confirmPluginInstall = async () => {
+    if (!review) return;
+    setInstalling(true);
+    setActionError("");
+    try {
+      const response = await fetch(
+        `/api/idealy/plugins/${encodeURIComponent(review.plugin.id)}/install`,
+        {
+          body: JSON.stringify({
+            confirmed: true,
+            permissions: review.permissions,
+          }),
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok)
+        throw new Error(payload.error || "L’installation du plugin a échoué.");
+      setReview(null);
+      setActionError(`${review.plugin.name} a été installé.`);
+      setReloadKey((key) => key + 1);
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error
+          ? cause.message
+          : "L’installation du plugin a échoué.",
+      );
+    } finally {
+      setInstalling(false);
+    }
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg-base text-text-main">
@@ -311,12 +494,49 @@ export const ConnectorsPage: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="shrink-0 text-[10px] text-text-muted md:text-right">
-                      <span>{plugin.category}</span>
-                      {plugin.version && (
-                        <span className="ml-2 opacity-70">
-                          v{plugin.version}
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
+                      <span className="text-[10px] text-text-muted">
+                        {plugin.category}
+                        {plugin.version ? ` · v${plugin.version}` : ""}
+                      </span>
+                      {plugin.available ? (
+                        <span className="rounded-full bg-success/10 px-2.5 py-1 text-[10px] font-medium text-success">
+                          Prêt
                         </span>
+                      ) : (
+                        <>
+                          {[
+                            "github",
+                            "canva",
+                            "figma",
+                            "google-drive",
+                            "notion",
+                            "slack",
+                            "vercel",
+                          ].includes(plugin.id) && (
+                            <button
+                              className="inline-flex h-8 items-center rounded-full border border-border-subtle px-3 text-[11px] font-medium text-text-main hover:bg-bg-subtle focus-ring disabled:opacity-60"
+                              disabled={connectingId === plugin.id || loading}
+                              onClick={() => void connectPlugin(plugin)}
+                              type="button"
+                            >
+                              {connectingId === plugin.id
+                                ? "Connexion…"
+                                : connectedProviders.includes(plugin.id)
+                                  ? "Compte connecté"
+                                  : "Connecter"}
+                            </button>
+                          )}
+                          {!plugin.installed && (
+                            <button
+                              className="inline-flex h-8 items-center rounded-full bg-bg-subtle px-3 text-[11px] font-medium text-text-main hover:bg-border-subtle focus-ring"
+                              onClick={() => void reviewPluginInstall(plugin)}
+                              type="button"
+                            >
+                              Examiner l’installation
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </article>
@@ -335,8 +555,71 @@ export const ConnectorsPage: React.FC = () => {
               </div>
             </section>
           )}
+          {actionError && (
+            <p
+              aria-live="polite"
+              className="mt-4 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3 text-[12px] text-text-muted"
+            >
+              {actionError}
+            </p>
+          )}
         </div>
       </main>
+
+      {review && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
+          <section
+            aria-labelledby="plugin-install-title"
+            aria-modal="true"
+            className="w-full max-w-lg rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-elevated"
+            role="dialog"
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+              Autorisation explicite
+            </p>
+            <h2
+              className="mt-2 text-lg font-semibold text-text-main"
+              id="plugin-install-title"
+            >
+              Installer {review.plugin.name} ?
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-text-muted">
+              L’installation demandera les permissions suivantes. L’application
+              les transmet au backend seulement après votre confirmation.
+            </p>
+            <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto rounded-xl bg-bg-base p-3">
+              {review.permissions.map((permission) => (
+                <li className="text-xs text-text-main" key={permission}>
+                  {permission}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                className="h-9 rounded-lg px-3 text-xs text-text-muted hover:bg-bg-subtle focus-ring"
+                onClick={() => setReview(null)}
+                type="button"
+              >
+                Annuler
+              </button>
+              <button
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-primary px-3 text-xs font-medium text-brand-onPrimary hover:opacity-90 focus-ring disabled:opacity-60"
+                disabled={installing}
+                onClick={() => void confirmPluginInstall()}
+                type="button"
+              >
+                {installing && (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 animate-spin"
+                  />
+                )}
+                Autoriser et installer
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

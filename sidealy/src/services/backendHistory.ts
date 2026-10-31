@@ -80,17 +80,28 @@ function mapMessages(payload: unknown, conversationId: string): Message[] {
 }
 
 export const BackendHistoryService = {
-  async listAndImport(): Promise<Conversation[]> {
-    const response = await fetch("/api/history?limit=50", {
+  async listAndImport(endingBefore?: string): Promise<{
+    conversations: Conversation[];
+    cursor: string | null;
+    hasMore: boolean;
+  }> {
+    const cursor = endingBefore
+      ? `&ending_before=${encodeURIComponent(endingBefore)}`
+      : "";
+    const response = await fetch(`/api/history?limit=50${cursor}`, {
       credentials: "same-origin",
       headers: { Accept: "application/json" },
     });
-    if (response.status === 401 || response.status === 403) return [];
+    if (response.status === 401 || response.status === 403)
+      return { conversations: [], cursor: null, hasMore: false };
     if (!response.ok)
       throw new Error(
         `Chargement de l’historique impossible (${response.status}).`,
       );
-    const payload = (await response.json()) as { chats?: BackendChat[] };
+    const payload = (await response.json()) as {
+      chats?: BackendChat[];
+      hasMore?: boolean;
+    };
     const remoteChats = Array.isArray(payload.chats) ? payload.chats : [];
     const linked = getLinkedBackendChatIds();
     const conversationByRemoteId = new Map(
@@ -134,7 +145,12 @@ export const BackendHistoryService = {
 
     if (additions.length)
       StorageService.saveConversations([...additions, ...existing]);
-    return additions;
+    const lastChatId = remoteChats.at(-1)?.id;
+    return {
+      conversations: additions,
+      cursor: typeof lastChatId === "string" ? lastChatId : null,
+      hasMore: payload.hasMore === true && typeof lastChatId === "string",
+    };
   },
 
   async loadMessages(localConversationId: string): Promise<Message[] | null> {

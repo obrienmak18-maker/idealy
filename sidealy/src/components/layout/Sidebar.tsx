@@ -41,6 +41,9 @@ export const Sidebar: React.FC = () => {
     artifacts,
     openArtifact,
     setIsCommandPaletteOpen,
+    conversationsHasMore,
+    isLoadingConversations,
+    loadMoreConversations,
   } = useApp();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -294,21 +297,29 @@ export const Sidebar: React.FC = () => {
               )}
             </nav>
 
-            {!collapsed && spaceConversations.length > 5 && (
-              <button
-                className="mt-2 flex h-8 w-full items-center justify-between rounded-md px-2.5 text-[12px] font-medium text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-300 focus-ring"
-                onClick={() => setShowAllRecent((v) => !v)}
-                type="button"
-              >
-                <span>
-                  {showAllRecent ? "Afficher moins" : "Afficher plus"}
-                </span>
-                <ChevronDown
-                  className={`h-3 w-3 transition-transform duration-300 ${showAllRecent ? "rotate-180" : ""}`}
-                  strokeWidth={2.5}
-                />
-              </button>
-            )}
+            {!collapsed &&
+              (spaceConversations.length > 5 || conversationsHasMore) && (
+                <button
+                  className="mt-2 flex h-8 w-full items-center justify-between rounded-md px-2.5 text-[12px] font-medium text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-300 focus-ring"
+                  onClick={() => {
+                    setShowAllRecent((v) => !v);
+                    if (conversationsHasMore) void loadMoreConversations();
+                  }}
+                  type="button"
+                >
+                  <span>
+                    {isLoadingConversations
+                      ? "Chargement…"
+                      : showAllRecent
+                        ? "Afficher moins"
+                        : "Afficher plus"}
+                  </span>
+                  <ChevronDown
+                    className={`h-3 w-3 transition-transform duration-300 ${showAllRecent ? "rotate-180" : ""}`}
+                    strokeWidth={2.5}
+                  />
+                </button>
+              )}
           </section>
         )}
 

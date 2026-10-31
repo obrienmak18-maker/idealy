@@ -26,6 +26,9 @@ export const MobileDrawer: React.FC = () => {
     activeSpace,
     setActiveSpaceId,
     conversations,
+    conversationsHasMore,
+    isLoadingConversations,
+    loadMoreConversations,
     activeConversation,
     setActiveConversationId,
     createConversation,
@@ -286,7 +289,7 @@ export const MobileDrawer: React.FC = () => {
               </nav>
             </section>
           )}
-          {spaceConversations.length > 0 && (
+          {(spaceConversations.length > 0 || conversationsHasMore) && (
             <section aria-label="Toutes les conversations">
               <h2 className="sidebar-section-heading px-3 pb-1.5 pt-2 text-[13px] font-medium text-[var(--dsw-alias-label-tertiary)]">
                 Toutes
@@ -296,15 +299,22 @@ export const MobileDrawer: React.FC = () => {
                   renderConversation(conversation),
                 )}
               </nav>
-              {spaceConversations.length > 5 && (
+              {(spaceConversations.length > 5 || conversationsHasMore) && (
                 <button
                   aria-expanded={showAllRecent}
                   className="mt-1 flex min-h-10 w-full items-center justify-between rounded-lg px-3 text-xs text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] focus-ring"
-                  onClick={() => setShowAllRecent((value) => !value)}
+                  onClick={() => {
+                    setShowAllRecent((value) => !value);
+                    if (conversationsHasMore) void loadMoreConversations();
+                  }}
                   type="button"
                 >
                   <span>
-                    {showAllRecent ? "Afficher moins" : "Afficher plus"}
+                    {isLoadingConversations
+                      ? "Chargement…"
+                      : showAllRecent
+                        ? "Afficher moins"
+                        : "Afficher plus"}
                   </span>
                   <ChevronDown
                     aria-hidden="true"

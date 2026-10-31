@@ -13,7 +13,14 @@ export default defineConfig({
     // Keep API and auth requests same-origin in the browser during local development.
     // Production must route these paths through the same public origin as the frontend.
     proxy: Object.fromEntries(
-      ["/api", "/login", "/register", "/onboarding", "/_next"].map((path) => [
+      [
+        "/api",
+        "/login",
+        "/register",
+        "/verify-email",
+        "/onboarding",
+        "/_next",
+      ].map((path) => [
         path,
         {
           changeOrigin: false,
