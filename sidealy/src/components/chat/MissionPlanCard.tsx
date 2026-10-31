@@ -6,14 +6,17 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import type React from "react";
+import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import type { MissionRun } from "../../types";
+import { MissionWorkspace } from "./MissionWorkspace";
 
 export const MissionPlanCard: React.FC<{
   mission: MissionRun;
   messageId: string;
 }> = ({ mission, messageId }) => {
   const { startMission } = useApp();
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const isBuilding = mission.status === "building";
 
   return (
@@ -134,10 +137,20 @@ export const MissionPlanCard: React.FC<{
           </p>
         )}
         {mission.status === "ready" && (
-          <p className="text-[12px] text-text-muted">
-            {mission.files?.length ?? 0} fichier(s) chargés depuis l’espace de
-            mission.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-3">
+            <p className="text-[12px] text-text-muted">
+              {mission.files?.length ?? 0} fichier(s) chargés depuis l’espace de
+              mission.
+            </p>
+            <button
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-text-main px-3.5 text-[12px] font-medium text-bg-base transition-opacity hover:opacity-85 focus-ring"
+              onClick={() => setWorkspaceOpen(true)}
+              type="button"
+            >
+              <Rocket aria-hidden="true" className="h-3.5 w-3.5" />
+              Ouvrir l’espace de mission
+            </button>
+          </div>
         )}
         {mission.status === "needs-fix" && (
           <p className="text-[12px] text-text-muted">
@@ -146,6 +159,14 @@ export const MissionPlanCard: React.FC<{
           </p>
         )}
       </div>
+      {workspaceOpen && (
+        <MissionWorkspace
+          initialFiles={mission.files ?? []}
+          missionId={mission.id}
+          onClose={() => setWorkspaceOpen(false)}
+          projectName={mission.plan.projectKind}
+        />
+      )}
     </section>
   );
 };
