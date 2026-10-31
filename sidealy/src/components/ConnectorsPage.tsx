@@ -11,6 +11,7 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useApp } from "../context/AppContext";
+import { getConnectorBrandLogo } from "./connectors/brand-logos";
 
 type BackendPlugin = {
   id: string;
@@ -52,7 +53,7 @@ export const ConnectorsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [authRequired, setAuthRequired] = useState(false);
-  const [_reloadKey, setReloadKey] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -110,7 +111,7 @@ export const ConnectorsPage: React.FC = () => {
       });
 
     return () => controller.abort();
-  }, []);
+  }, [reloadKey]);
 
   const readyCount = plugins.filter((plugin) => plugin.available).length;
 
@@ -272,14 +273,18 @@ export const ConnectorsPage: React.FC = () => {
                   >
                     <div className="flex min-w-0 gap-3">
                       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border-subtle bg-bg-base text-text-muted">
-                        {plugin.available ? (
-                          <Check
-                            aria-hidden="true"
-                            className="h-4 w-4 text-success"
-                          />
-                        ) : (
-                          <Plug aria-hidden="true" className="h-4 w-4" />
-                        )}
+                        {getConnectorBrandLogo(
+                          plugin.id,
+                          "h-[18px] w-[18px]",
+                        ) ??
+                          (plugin.available ? (
+                            <Check
+                              aria-hidden="true"
+                              className="h-4 w-4 text-success"
+                            />
+                          ) : (
+                            <Plug aria-hidden="true" className="h-4 w-4" />
+                          ))}
                       </div>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
