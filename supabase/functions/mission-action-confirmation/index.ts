@@ -85,9 +85,9 @@ Deno.serve(async (request) => {
     const { data, error } = await admin.from("mission_action_confirmations").insert({
       confirmation_token_hash: await sha256(confirmationToken),
       expires_at: expiresAt,
-      integration_id: integration.id,
+      integration_id: integrationId,
       mission_id: missionId,
-      operation: "github:export",
+      operation: requestedOperation,
       resource_snapshot: { payload_digest: payloadDigest },
       user_id: auth.user.id,
     }).select("id,expires_at,status").single();
@@ -100,7 +100,7 @@ Deno.serve(async (request) => {
     .update({ approved_at: new Date().toISOString(), status: "approved" })
     .eq("mission_id", missionId)
     .eq("user_id", auth.user.id)
-.eq("operation", requestedOperation)
+    .eq("operation", requestedOperation)
     .eq("confirmation_token_hash", await sha256(confirmationToken))
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())

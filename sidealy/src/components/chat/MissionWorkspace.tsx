@@ -1,6 +1,7 @@
 import {
   ChevronRight,
   Clock3,
+  CloudUpload,
   Database,
   FileCode2,
   Github,
@@ -24,7 +25,8 @@ type WorkspaceTab =
   | "checkpoints"
   | "data"
   | "build"
-  | "github";
+  | "github"
+  | "deploy";
 type Checkpoint = {
   createdAt: string;
   description?: string;
@@ -72,6 +74,12 @@ type GitHubExport = {
   repo: string;
   url?: string;
 };
+type VercelDeployment = {
+  deploymentUrl: string | null;
+  projectName: string;
+  status: string;
+  target: "preview" | "production";
+};
 type WorkspaceProps = {
   missionId: string;
   projectName: string;
@@ -114,6 +122,34 @@ async function githubPayloadDigest(
       }),
   );
   const serialized = JSON.stringify({ branch, files, project });
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(serialized),
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function deploymentPayloadDigest(
+  missionId: string,
+  projectName: string,
+  target: "preview" | "production",
+  sourceFiles: MissionWorkspaceFile[],
+) {
+  const seenPaths = new Set<string>();
+  const files = sourceFiles
+    .filter((file) => {
+      if (file.status !== "saved" || seenPaths.has(file.path)) return false;
+      seenPaths.add(file.path);
+      return true;
+    })
+    .map((file) => ({
+      path: file.path,
+      checksum: file.checksum ?? null,
+      version: file.version,
+    }));
+  const serialized = JSON.stringify({ missionId, projectName, target, files });
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(serialized),
@@ -172,6 +208,23 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
   const [githubReviewOpen, setGithubReviewOpen] = useState(false);
   const [githubBusy, setGithubBusy] = useState(false);
   const [githubResult, setGithubResult] = useState<GitHubExport | null>(null);
+  const [vercelProjectName, setVercelProjectName] = useState(() =>
+    projectName
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 100),
+  );
+  const [vercelTarget, setVercelTarget] = useState<"preview" | "production">(
+    "preview",
+  );
+  const [vercelReviewOpen, setVercelReviewOpen] = useState(false);
+  const [vercelBusy, setVercelBusy] = useState(false);
+  const [vercelResult, setVercelResult] = useState<VercelDeployment | null>(
+    null,
+  );
   const workspaceRef = useRef<HTMLElement>(null);
   const confirmationDialogRef = useRef<HTMLElement>(null);
   const confirmationButtonRef = useRef<HTMLButtonElement>(null);
@@ -203,6 +256,11 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
           event.preventDefault();
           return;
         }
+        if (vercelReviewOpen) {
+          setVercelReviewOpen(false);
+          event.preventDefault();
+          return;
+        }
         onClose();
         return;
       }
@@ -230,12 +288,12 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
       window.removeEventListener("keydown", closeOnEscape);
       previousFocus?.focus();
     };
-  }, [githubReviewOpen, onClose, restoreTarget]);
+  }, [githubReviewOpen, onClose, restoreTarget, vercelReviewOpen]);
 
   useEffect(() => {
-    if (githubReviewOpen || restoreTarget)
+    if (githubReviewOpen || restoreTarget || vercelReviewOpen)
       confirmationButtonRef.current?.focus();
-  }, [githubReviewOpen, restoreTarget]);
+  }, [githubReviewOpen, restoreTarget, vercelReviewOpen]);
 
   const loadCheckpoints = async () => {
     const response = await fetch(
@@ -569,7 +627,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     try {
       const confirmationToken = createConfirmationToken();
       const payloadDigest = await githubPayloadDigest(repo, branch, files);
-      const confirmationUrl = `/api/idealy/missions/${encodeURIComponent(missionId)}/github/confirmation`;
+      const confirmationUrl = `/api/idealy/missions/${encodeURIComponent(missionId)}/confirmation`;
       const preparedResponse = await fetch(confirmationUrl, {
         body: JSON.stringify({
           confirmationToken,
@@ -631,6 +689,124 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     }
   };
 
+  const deployToVercel = async () => {
+    const name = vercelProjectName.trim();
+    if (!/^[a-z0-9-]{1,100}$/i.test(name)) {
+      setError(
+        "Le nom du projet Vercel doit contenir uniquement des lettres, chiffres et tirets.",
+      );
+      return;
+    }
+    if (selectedFile && draft !== selectedFile.content) {
+      setError("Enregistrez d’abord le fichier modifié avant le déploiement.");
+      return;
+    }
+    if (
+      vercelTarget === "production" &&
+      buildVerification?.status !== "passed"
+    ) {
+      setError("La production est disponible après la réussite du build.");
+      return;
+    }
+
+    setVercelBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const filesResponse = await fetch(
+        `/api/idealy/missions/${encodeURIComponent(missionId)}/files`,
+        { cache: "no-store", credentials: "same-origin" },
+      );
+      const filesPayload = await readPayload<{
+        files?: MissionWorkspaceFile[];
+      }>(filesResponse);
+      const seenPaths = new Set<string>();
+      const deployableFiles = (filesPayload.files ?? []).filter((file) => {
+        if (file.status !== "saved" || seenPaths.has(file.path)) return false;
+        seenPaths.add(file.path);
+        return true;
+      });
+      if (!deployableFiles.length)
+        throw new Error("Aucun fichier enregistré n’est prêt au déploiement.");
+
+      const confirmationToken = createConfirmationToken();
+      const payloadDigest = await deploymentPayloadDigest(
+        missionId,
+        name,
+        vercelTarget,
+        deployableFiles,
+      );
+      const confirmationUrl = `/api/idealy/missions/${encodeURIComponent(missionId)}/confirmation`;
+      const preparedResponse = await fetch(confirmationUrl, {
+        body: JSON.stringify({
+          confirmationToken,
+          operation: "vercel:deploy",
+          payloadDigest,
+        }),
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const prepared = await readPayload<{ status?: string }>(preparedResponse);
+      if (prepared.status !== "pending")
+        throw new Error("La confirmation du déploiement n’a pas été préparée.");
+
+      const approvedResponse = await fetch(confirmationUrl, {
+        body: JSON.stringify({
+          confirmationToken,
+          operation: "vercel:deploy",
+        }),
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      });
+      const approved = await readPayload<{ status?: string }>(approvedResponse);
+      if (approved.status !== "approved")
+        throw new Error("La confirmation du déploiement n’a pas été validée.");
+
+      const deployResponse = await fetch(
+        `/api/idealy/missions/${encodeURIComponent(missionId)}/vercel`,
+        {
+          body: JSON.stringify({
+            confirmationToken,
+            projectName: name,
+            target: vercelTarget,
+          }),
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      const deployed = await readPayload<{
+        deploymentUrl?: string | null;
+        projectName?: string;
+        status?: string;
+        target?: "preview" | "production";
+      }>(deployResponse);
+      if (!deployed.status)
+        throw new Error("Vercel n’a pas confirmé la création du déploiement.");
+      const result: VercelDeployment = {
+        deploymentUrl: deployed.deploymentUrl ?? null,
+        projectName: deployed.projectName ?? name,
+        status: deployed.status,
+        target: deployed.target ?? vercelTarget,
+      };
+      setVercelResult(result);
+      setVercelReviewOpen(false);
+      setNotice(
+        `Déploiement ${result.target === "production" ? "de production" : "preview"} transmis à Vercel · ${result.status}.`,
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Le déploiement Vercel a échoué.",
+      );
+    } finally {
+      setVercelBusy(false);
+    }
+  };
+
   const tabs: Array<{ id: WorkspaceTab; label: string }> = [
     { id: "files", label: `Fichiers (${files.length})` },
     { id: "activity", label: "Activité" },
@@ -638,6 +814,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     { id: "data", label: "Données" },
     { id: "build", label: "Build" },
     { id: "github", label: "GitHub" },
+    { id: "deploy", label: "Déployer" },
   ];
 
   return (
@@ -1130,6 +1307,116 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
           </div>
         )}
 
+        {tab === "deploy" && (
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="mx-auto max-w-2xl space-y-4">
+              <div className="flex items-start gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle text-text-main">
+                  <CloudUpload aria-hidden="true" className="h-4 w-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-text-main">
+                    Déployer sur Vercel
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-text-muted">
+                    Envoie les fichiers enregistrés à votre compte Vercel.
+                    Chaque déploiement nécessite une confirmation liée à son
+                    contenu exact.
+                  </p>
+                </div>
+              </div>
+              <section className="rounded-xl border border-border-subtle bg-bg-surface p-4 sm:p-5">
+                <label className="block text-xs font-medium text-text-muted">
+                  Nom du projet Vercel
+                  <input
+                    autoComplete="off"
+                    className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 font-mono text-sm text-text-main focus-ring"
+                    maxLength={100}
+                    onChange={(event) =>
+                      setVercelProjectName(event.target.value)
+                    }
+                    placeholder="mon-projet"
+                    value={vercelProjectName}
+                  />
+                </label>
+                <label className="mt-4 block text-xs font-medium text-text-muted">
+                  Cible
+                  <select
+                    className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
+                    onChange={(event) =>
+                      setVercelTarget(
+                        event.target.value as "preview" | "production",
+                      )
+                    }
+                    value={vercelTarget}
+                  >
+                    <option value="preview">Preview</option>
+                    <option
+                      disabled={buildVerification?.status !== "passed"}
+                      value="production"
+                    >
+                      Production — build vérifié requis
+                    </option>
+                  </select>
+                </label>
+                <p className="mt-3 text-[11px] leading-5 text-text-muted">
+                  Le build E2B{" "}
+                  {buildVerification?.status === "passed"
+                    ? "a réussi"
+                    : "n’est pas encore confirmé comme réussi"}
+                  . La production reste désactivée jusqu’à la réussite du build.
+                  Le compte Vercel doit être connecté.
+                </p>
+                {vercelResult && (
+                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-bg-subtle px-3 py-2.5">
+                    <span className="text-xs text-text-main">
+                      {vercelResult.target === "production"
+                        ? "Production"
+                        : "Preview"}{" "}
+                      · {vercelResult.projectName} · {vercelResult.status}
+                    </span>
+                    {vercelResult.deploymentUrl && (
+                      <a
+                        className="min-h-8 text-xs font-medium text-brand-primary underline-offset-4 hover:underline focus-ring"
+                        href={vercelResult.deploymentUrl}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        Ouvrir le déploiement
+                      </a>
+                    )}
+                  </div>
+                )}
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <button
+                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-text-main px-4 text-sm font-medium text-bg-base hover:opacity-90 focus-ring disabled:opacity-50"
+                    disabled={
+                      vercelBusy ||
+                      !vercelProjectName.trim() ||
+                      (vercelTarget === "production" &&
+                        buildVerification?.status !== "passed")
+                    }
+                    onClick={() => {
+                      setError("");
+                      setVercelReviewOpen(true);
+                    }}
+                    type="button"
+                  >
+                    <CloudUpload aria-hidden="true" className="h-4 w-4" />
+                    Examiner le déploiement
+                  </button>
+                  <a
+                    className="text-xs text-text-muted underline-offset-4 hover:text-text-main hover:underline focus-ring"
+                    href="/connectors"
+                  >
+                    Gérer les connecteurs
+                  </a>
+                </div>
+              </section>
+            </div>
+          </div>
+        )}
+
         {tab === "build" && (
           <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
             <div className="mx-auto max-w-3xl space-y-4">
@@ -1332,6 +1619,71 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
                     <Github aria-hidden="true" className="h-3.5 w-3.5" />
                   )}
                   {githubBusy ? "Export en cours…" : "Confirmer et exporter"}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {vercelReviewOpen && (
+          <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4">
+            <section
+              aria-labelledby="vercel-deploy-title"
+              aria-modal="true"
+              className="w-full max-w-md rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-elevated"
+              ref={confirmationDialogRef}
+              role="alertdialog"
+            >
+              <h2
+                className="text-sm font-semibold text-text-main"
+                id="vercel-deploy-title"
+              >
+                Confirmer le déploiement Vercel
+              </h2>
+              <p className="mt-2 text-xs leading-5 text-text-muted">
+                Idealy va envoyer les fichiers enregistrés de cette mission vers
+                le projet{" "}
+                <strong className="font-medium text-text-main">
+                  {vercelProjectName.trim()}
+                </strong>{" "}
+                en cible{" "}
+                <strong className="font-medium text-text-main">
+                  {vercelTarget === "production" ? "production" : "preview"}
+                </strong>
+                .
+              </p>
+              <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] leading-5 text-amber-500">
+                {vercelTarget === "production"
+                  ? "Ce déploiement sera publié en production et peut remplacer le site actuellement en ligne."
+                  : "Vercel créera un déploiement de preview distinct de la production."}
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  className="h-9 rounded-lg px-3 text-xs text-text-muted hover:bg-bg-subtle focus-ring"
+                  disabled={vercelBusy}
+                  onClick={() => setVercelReviewOpen(false)}
+                  type="button"
+                >
+                  Annuler
+                </button>
+                <button
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-text-main px-3 text-xs font-medium text-bg-base hover:opacity-90 focus-ring disabled:opacity-60"
+                  disabled={vercelBusy}
+                  onClick={() => void deployToVercel()}
+                  ref={confirmationButtonRef}
+                  type="button"
+                >
+                  {vercelBusy ? (
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 animate-spin"
+                    />
+                  ) : (
+                    <CloudUpload aria-hidden="true" className="h-3.5 w-3.5" />
+                  )}
+                  {vercelBusy
+                    ? "Déploiement en cours…"
+                    : "Confirmer et déployer"}
                 </button>
               </div>
             </section>

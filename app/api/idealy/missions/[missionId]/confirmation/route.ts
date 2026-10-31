@@ -6,6 +6,7 @@ import { getIdealySupabaseFunctionUrl } from "@/lib/idealy/config";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TOKEN_PATTERN = /^[a-zA-Z0-9_-]{32,180}$/;
+const ALLOWED_OPERATIONS = new Set(["github:export", "vercel:deploy"]);
 
 async function handleConfirmation(
   request: Request,
@@ -44,17 +45,18 @@ async function handleConfirmation(
   } | null;
   const confirmationToken =
     typeof body?.confirmationToken === "string" ? body.confirmationToken : "";
-  const operation =
-    typeof body?.operation === "string" ? body.operation : "github:export";
+  const operation = typeof body?.operation === "string" ? body.operation : "";
   if (
     !TOKEN_PATTERN.test(confirmationToken) ||
-    operation !== "github:export" ||
+    !ALLOWED_OPERATIONS.has(operation) ||
     (method === "POST" &&
       (typeof body?.payloadDigest !== "string" ||
         !/^[a-f0-9]{64}$/i.test(body.payloadDigest)))
   ) {
     return Response.json(
-      { error: "Les paramètres de confirmation GitHub sont invalides." },
+      {
+        error: "Les paramètres de confirmation de publication sont invalides.",
+      },
       { status: 400 }
     );
   }
@@ -88,7 +90,7 @@ async function handleConfirmation(
     });
   } catch {
     return Response.json(
-      { error: "Le service de confirmation GitHub est indisponible." },
+      { error: "Le service de confirmation est indisponible." },
       { headers: { "Cache-Control": "no-store" }, status: 502 }
     );
   }

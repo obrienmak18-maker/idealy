@@ -45,10 +45,11 @@ export interface MissionPlan {
 }
 
 export interface MissionWorkspaceFile {
+  checksum?: string | null;
   content: string;
   language?: string | null;
   path: string;
-  status?: string;
+  status?: "pending" | "writing" | "saved" | "validated" | "error" | string;
   version?: number;
 }
 
