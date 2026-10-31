@@ -1,6 +1,7 @@
 import {
   ChevronRight,
   Clock3,
+  Database,
   FileCode2,
   LoaderCircle,
   RotateCcw,
@@ -12,7 +13,7 @@ import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MissionWorkspaceFile } from "../../types";
 
-type WorkspaceTab = "files" | "activity" | "checkpoints";
+type WorkspaceTab = "files" | "activity" | "checkpoints" | "data";
 type Checkpoint = {
   createdAt: string;
   description?: string;
@@ -31,6 +32,28 @@ type Task = {
   status?: string;
   title?: string;
   updatedAt?: string;
+};
+type MissionRecord = {
+  created_at: string | null;
+  id: string;
+  status: string | null;
+  title: string | null;
+  way: string | null;
+};
+type AgentRun = {
+  agent_key: string;
+  completed_at: string | null;
+  id: string;
+  started_at: string | null;
+  status: string;
+  step_index: number;
+};
+type FileEvent = {
+  created_at: string;
+  event_type: string;
+  id: string;
+  path: string | null;
+  sequence: number;
 };
 type WorkspaceProps = {
   missionId: string;
@@ -64,6 +87,19 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
   const [draft, setDraft] = useState(initialFiles[0]?.content ?? "");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+  const [databaseSnapshot, setDatabaseSnapshot] = useState<{
+    mission: MissionRecord | null;
+    agentRuns: AgentRun[];
+    events: FileEvent[];
+    errors: {
+      mission?: string | null;
+      agentRuns?: string | null;
+      events?: string | null;
+    };
+  } | null>(null);
+  const [databaseLoading, setDatabaseLoading] = useState(false);
+  const [databaseError, setDatabaseError] = useState("");
+  const databaseRequestedRef = useRef(false);
   const [checkpointName, setCheckpointName] = useState("");
   const [restoreTarget, setRestoreTarget] = useState<Checkpoint | null>(null);
   const [saving, setSaving] = useState(false);
@@ -180,6 +216,67 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     return () => controller.abort();
   }, [missionId]);
 
+  useEffect(() => {
+    if (tab !== "data" || databaseSnapshot || databaseRequestedRef.current)
+      return;
+    const controller = new AbortController();
+    databaseRequestedRef.current = true;
+    setDatabaseLoading(true);
+    setDatabaseError("");
+    fetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/database`, {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: controller.signal,
+    })
+      .then((response) =>
+        readPayload<{
+          mission?: MissionRecord | null;
+          agentRuns?: AgentRun[];
+          events?: FileEvent[];
+          errors?: {
+            mission?: string | null;
+            agentRuns?: string | null;
+            events?: string | null;
+          };
+        }>(response),
+      )
+      .then((payload) => {
+        const errors = payload.errors ?? {};
+        setDatabaseSnapshot({
+          mission: payload.mission ?? null,
+          agentRuns: payload.agentRuns ?? [],
+          events: payload.events ?? [],
+          errors,
+        });
+        const unavailable = Object.entries(errors)
+          .filter(([, value]) => value)
+          .map(([key]) => key);
+        if (unavailable.length)
+          setDatabaseError(
+            `Certaines données ne sont pas disponibles : ${unavailable.join(", ")}.`,
+          );
+      })
+      .catch((cause) => {
+        if (!controller.signal.aborted)
+          setDatabaseError(
+            cause instanceof Error
+              ? cause.message
+              : "L’inspecteur de données n’a pas pu être chargé.",
+          );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          databaseRequestedRef.current = false;
+          setDatabaseLoading(false);
+        }
+      });
+    return () => {
+      controller.abort();
+      databaseRequestedRef.current = false;
+      setDatabaseLoading(false);
+    };
+  }, [databaseSnapshot, missionId, tab]);
+
   const saveFile = async () => {
     if (!selectedFile) return;
     setSaving(true);
@@ -293,6 +390,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     { id: "files", label: `Fichiers (${files.length})` },
     { id: "activity", label: "Activité" },
     { id: "checkpoints", label: `Versions (${checkpoints.length})` },
+    { id: "data", label: "Données" },
   ];
 
   return (
@@ -530,6 +628,158 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
                   </p>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "data" && (
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="mx-auto max-w-3xl space-y-4">
+              <div className="flex items-start gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle text-brand-primary">
+                  <Database aria-hidden="true" className="h-4 w-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-text-main">
+                    Données de la mission
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-text-muted">
+                    Vue en lecture seule des métadonnées, des exécutions
+                    d’agents et du journal conservés par le backend.
+                  </p>
+                </div>
+              </div>
+              {databaseLoading && (
+                <p
+                  aria-live="polite"
+                  className="py-8 text-center text-xs text-text-muted"
+                >
+                  Chargement des données…
+                </p>
+              )}
+              {databaseError && (
+                <p
+                  aria-live="polite"
+                  className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-500"
+                >
+                  {databaseError}
+                </p>
+              )}
+              {databaseSnapshot && (
+                <>
+                  <section className="rounded-xl border border-border-subtle bg-bg-surface p-4">
+                    <h3 className="text-xs font-semibold text-text-main">
+                      Enregistrement
+                    </h3>
+                    {databaseSnapshot.mission ? (
+                      <dl className="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-2">
+                        {[
+                          [
+                            "Titre",
+                            databaseSnapshot.mission.title || projectName,
+                          ],
+                          ["État", databaseSnapshot.mission.status || "—"],
+                          ["Mode", databaseSnapshot.mission.way || "—"],
+                          [
+                            "Créée",
+                            databaseSnapshot.mission.created_at
+                              ? new Date(
+                                  databaseSnapshot.mission.created_at,
+                                ).toLocaleString("fr-FR")
+                              : "—",
+                          ],
+                          ["Identifiant", databaseSnapshot.mission.id],
+                        ].map(([label, value]) => (
+                          <div className="min-w-0" key={label}>
+                            <dt className="text-[10px] text-text-muted">
+                              {label}
+                            </dt>
+                            <dd className="mt-1 break-all text-xs text-text-main">
+                              {value}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : (
+                      <p className="mt-2 text-xs text-text-muted">
+                        L’enregistrement de cette mission n’est pas disponible.
+                      </p>
+                    )}
+                  </section>
+                  <section className="rounded-xl border border-border-subtle bg-bg-surface p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-xs font-semibold text-text-main">
+                        Exécutions des agents
+                      </h3>
+                      <span className="text-[10px] text-text-muted">
+                        {databaseSnapshot.agentRuns.length}
+                      </span>
+                    </div>
+                    {databaseSnapshot.agentRuns.length ? (
+                      <ul className="mt-3 space-y-2">
+                        {databaseSnapshot.agentRuns.map((run) => (
+                          <li
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-bg-base px-3 py-2"
+                            key={run.id}
+                          >
+                            <span className="text-xs font-medium text-text-main">
+                              {run.agent_key} · étape {run.step_index + 1}
+                            </span>
+                            <span className="text-[10px] text-text-muted">
+                              {run.status}
+                              {run.started_at
+                                ? ` · ${new Date(run.started_at).toLocaleString("fr-FR")}`
+                                : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs text-text-muted">
+                        Aucune exécution enregistrée.
+                      </p>
+                    )}
+                  </section>
+                  <section className="rounded-xl border border-border-subtle bg-bg-surface p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-xs font-semibold text-text-main">
+                        Journal des fichiers
+                      </h3>
+                      <span className="text-[10px] text-text-muted">
+                        {databaseSnapshot.events.length}
+                      </span>
+                    </div>
+                    {databaseSnapshot.events.length ? (
+                      <ul className="mt-3 space-y-2">
+                        {databaseSnapshot.events
+                          .slice(-20)
+                          .reverse()
+                          .map((event) => (
+                            <li
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-bg-base px-3 py-2"
+                              key={event.id}
+                            >
+                              <span className="text-xs font-medium text-text-main">
+                                {event.event_type}
+                                {event.path ? ` · ${event.path}` : ""}
+                              </span>
+                              <span className="text-[10px] text-text-muted">
+                                #{event.sequence} ·{" "}
+                                {new Date(event.created_at).toLocaleString(
+                                  "fr-FR",
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs text-text-muted">
+                        Aucun événement de fichier enregistré.
+                      </p>
+                    )}
+                  </section>
+                </>
+              )}
             </div>
           </div>
         )}
