@@ -5,6 +5,7 @@ import {
   FileText,
   LayoutGrid,
   MessageSquare,
+  Paintbrush,
   Pin,
   Plug,
   Search,
@@ -197,6 +198,15 @@ export const MobileDrawer: React.FC = () => {
             <span>Connecteurs</span>
           </button>
           <button
+            aria-current={activePage === "brandStudio" ? "page" : undefined}
+            className={`flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] transition-colors focus-ring ${activePage === "brandStudio" ? "sidebar-item-active text-[var(--dsw-alias-label-primary)] font-medium" : "text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"}`}
+            onClick={() => setActivePage("brandStudio")}
+            type="button"
+          >
+            <Paintbrush aria-hidden="true" className="h-4 w-4" />
+            <span>Studio de marque</span>
+          </button>
+          <button
             aria-current={activePage === "settings" ? "page" : undefined}
             className={`flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] transition-colors focus-ring ${activePage === "settings" ? "sidebar-item-active text-[var(--dsw-alias-label-primary)] font-medium" : "text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"}`}
             onClick={() => setActivePage("settings")}
@@ -304,6 +314,38 @@ export const MobileDrawer: React.FC = () => {
               )}
             </section>
           )}
+          <section
+            aria-label="Ressources"
+            className="mt-4 border-t border-[var(--dsw-alias-border-l1)] pt-3"
+          >
+            <h2 className="sidebar-section-heading px-3 pb-1.5 text-[13px] font-medium text-[var(--dsw-alias-label-tertiary)]">
+              Ressources
+            </h2>
+            <nav className="space-y-0.5">
+              {(
+                [
+                  ["welcome", "Bienvenue"],
+                  ["about", "À propos"],
+                  ["docs", "Documentation"],
+                  ["support", "Assistance"],
+                  ["pricing", "Offres"],
+                  ["privacy", "Confidentialité"],
+                  ["terms", "Conditions"],
+                  ["eula", "Licence"],
+                ] as const
+              ).map(([page, label]) => (
+                <button
+                  aria-current={activePage === page ? "page" : undefined}
+                  className="flex min-h-9 w-full items-center rounded-lg px-3 text-left text-[13px] text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] focus-ring"
+                  key={page}
+                  onClick={() => setActivePage(page)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+          </section>
         </div>
       </aside>
     </div>

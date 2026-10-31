@@ -9,12 +9,14 @@ import {
   LayoutGrid,
   MessageSquare,
   Moon,
+  Paintbrush,
   PanelLeft,
   PanelLeftClose,
   Pin,
   Plug,
   Search,
   Settings,
+  ShieldCheck,
   Sparkles,
   SquarePen,
   Sun,
@@ -200,6 +202,16 @@ export const Sidebar: React.FC = () => {
           <Plug className="h-4 w-4 shrink-0" strokeWidth={2} />
           {!collapsed && <span className="text-[13px]">Connecteurs</span>}
         </button>
+        <button
+          aria-current={activePage === "brandStudio" ? "page" : undefined}
+          className={`flex h-10 w-full items-center rounded-lg transition-colors focus-ring ${collapsed ? "mx-auto w-10 justify-center" : "gap-3 px-3"} ${activePage === "brandStudio" ? "bg-white/10 text-white font-medium" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"}`}
+          onClick={() => setActivePage("brandStudio")}
+          title="Studio de marque"
+          type="button"
+        >
+          <Paintbrush className="h-4 w-4 shrink-0" strokeWidth={2} />
+          {!collapsed && <span className="text-[13px]">Studio de marque</span>}
+        </button>
       </div>
 
       {/* --- ESPACE DE TRAVAIL (Select) --- */}
@@ -307,10 +319,14 @@ export const Sidebar: React.FC = () => {
             </h2>
             {(
               [
+                ["welcome", "Bienvenue", Sparkles],
                 ["docs", "Documentation", BookOpen],
                 ["support", "Assistance", CircleHelp],
                 ["about", "À propos", Info],
                 ["pricing", "Offres", CreditCard],
+                ["privacy", "Confidentialité", ShieldCheck],
+                ["terms", "Conditions", FileText],
+                ["eula", "Licence", FileText],
               ] as const
             ).map(([page, label, Icon]) => (
               <button

@@ -10,6 +10,8 @@ import { CommandPalette } from "./components/modals/CommandPalette";
 import { ConfirmModal } from "./components/modals/ConfirmModal";
 import { SettingsModal } from "./components/modals/SettingsModal";
 import { SpaceModal } from "./components/modals/SpaceModal";
+import { BrandStudioPage } from "./components/pages/BrandStudioPage";
+import { LegalPage } from "./components/pages/LegalPage";
 import { LibraryPage } from "./components/pages/LibraryPage";
 import { PricingPage } from "./components/pages/PricingPage";
 import { ProductInfoPage } from "./components/pages/ProductInfoPage";
@@ -29,8 +31,14 @@ const AppContent: React.FC = () => {
 
       {/* Main Conversation & Working Area */}
       <div className="flex-1 flex flex-col h-full min-w-0 relative">
-        {activePage === "connectors" ? (
+        {activePage === "connectors" || activePage === "plugins" ? (
           <ConnectorsPage />
+        ) : activePage === "brandStudio" ? (
+          <BrandStudioPage />
+        ) : activePage === "privacy" ||
+          activePage === "terms" ||
+          activePage === "eula" ? (
+          <LegalPage page={activePage} />
         ) : activePage === "library" ? (
           <LibraryPage />
         ) : activePage === "settings" ? (

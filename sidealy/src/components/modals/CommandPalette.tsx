@@ -35,7 +35,7 @@ export const CommandPalette: React.FC = () => {
     artifacts,
     openArtifact,
     setTheme,
-    setIsSettingsOpen,
+    setActivePage,
     setIsSpaceModalOpen,
     activeConversation,
     exportConversation,
@@ -83,7 +83,7 @@ export const CommandPalette: React.FC = () => {
     {
       action: () => {
         setIsCommandPaletteOpen(false);
-        setIsSettingsOpen(true);
+        setActivePage("settings");
       },
       category: "Actions",
       icon: <Settings className="w-4 h-4 text-text-muted" />,
