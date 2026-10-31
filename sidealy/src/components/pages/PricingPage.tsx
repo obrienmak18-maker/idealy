@@ -92,13 +92,13 @@ export const PricingPage: React.FC = () => {
     <main className="h-full overflow-y-auto px-5 py-10 sm:px-8">
       <div className="mx-auto max-w-5xl pb-12">
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
-          Formules Idealy
+          Formules Idéali
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-main sm:text-4xl">
           Choisissez l’espace dont votre projet a besoin.
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-text-muted">
-          Tarifs mensuels issus de l’offre Idealy. Les paiements restent soumis
+          Tarifs mensuels issus de l’offre Idéali. Les paiements restent soumis
           à l’activation du service et à la connexion du compte.
         </p>
         <div className="mt-8 grid gap-3 lg:grid-cols-3">
@@ -170,7 +170,7 @@ export const PricingPage: React.FC = () => {
           </p>
         )}
         <p className="mt-5 text-xs leading-5 text-text-muted">
-          Les actions de paiement passent par l’API Idealy. Si les paiements
+          Les actions de paiement passent par l’API Idéali. Si les paiements
           sont désactivés ou si vous n’êtes pas connecté, l’application affiche
           la raison au lieu d’ouvrir un faux checkout.
         </p>

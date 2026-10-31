@@ -115,7 +115,7 @@ export const ConnectorsPage: React.FC = () => {
           setAuthRequired(true);
           throw new Error(
             payload.error ||
-              "Connectez-vous à Idealy pour consulter vos connecteurs.",
+              "Connectez-vous à Idéali pour consulter vos connecteurs.",
           );
         }
         if (!response.ok) {
@@ -461,7 +461,7 @@ export const ConnectorsPage: React.FC = () => {
                 aria-hidden="true"
                 className="h-4 w-4 animate-spin"
               />
-              Lecture du registre Idealy…
+              Lecture du registre Idéali…
             </section>
           )}
 

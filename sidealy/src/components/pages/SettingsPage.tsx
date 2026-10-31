@@ -372,7 +372,7 @@ export const SettingsPage: React.FC = () => {
                 </h2>
                 <p className="mt-1 text-xs text-text-muted">
                   Ces options sont chargées et enregistrées sur votre profil
-                  Idealy.
+                  Idéali.
                 </p>
               </div>
             </div>
@@ -385,7 +385,7 @@ export const SettingsPage: React.FC = () => {
                 <p className="text-sm text-text-muted">
                   {preferences.accountEmail ||
                     preferences.displayName ||
-                    "Profil Idealy"}
+                    "Profil Idéali"}
                 </p>
                 <label className="block text-xs font-medium text-text-muted">
                   Voie de travail
@@ -467,7 +467,7 @@ export const SettingsPage: React.FC = () => {
                   Services et compteurs
                 </h2>
                 <p className="mt-1 text-xs text-text-muted">
-                  État lu depuis les API du backend Idealy.
+                  État lu depuis les API du backend Idéali.
                 </p>
               </div>
               <span
@@ -487,7 +487,7 @@ export const SettingsPage: React.FC = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-2 text-xs text-text-muted">
               <span className="rounded-lg bg-bg-subtle px-3 py-2">
-                API Idealy :{" "}
+                API Idéali :{" "}
                 {service === "ready"
                   ? "connectée"
                   : service === "checking"
@@ -523,7 +523,7 @@ export const SettingsPage: React.FC = () => {
                 </h2>
                 <p className="mt-1 text-xs leading-5 text-text-muted">
                   État du forfait et crédits lus depuis le service de
-                  facturation Idealy.
+                  facturation Idéali.
                 </p>
               </div>
             </div>
@@ -649,7 +649,7 @@ export const SettingsPage: React.FC = () => {
             </h2>
             <p className="mt-2 text-sm leading-6 text-text-muted">
               Les notifications push et e-mail du backend ne sont pas encore
-              exposées dans cette interface. Idealy n’active donc aucun
+              exposées dans cette interface. Idéali n’active donc aucun
               abonnement de notification depuis ce panneau.
             </p>
             <p className="mt-4 text-xs text-text-muted">

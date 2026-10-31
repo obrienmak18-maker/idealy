@@ -139,7 +139,7 @@ export const MobileDrawer: React.FC = () => {
               <Sparkles aria-hidden="true" className="h-4 w-4 fill-current" />
             </div>
             <span className="text-sm font-semibold text-[var(--dsw-alias-label-primary)]">
-              Idealy
+              Idéali
             </span>
           </div>
           <button

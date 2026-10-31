@@ -152,13 +152,13 @@ async function responseError(response: Response): Promise<Error> {
 
   if (response.status === 401 || response.status === 403) {
     return new Error(
-      `${serverMessage || "Une session Idealy est nécessaire pour utiliser le moteur IA."} Connectez-vous, puis revenez au chat : /login?callbackUrl=%2F`,
+      `${serverMessage || "Une session Idéali est nécessaire pour utiliser le moteur IA."} Connectez-vous, puis revenez au chat : /login?callbackUrl=%2F`,
     );
   }
 
   return new Error(
     serverMessage ||
-      `Le backend Idealy a répondu avec le statut ${response.status}.`,
+      `Le backend Idéali a répondu avec le statut ${response.status}.`,
   );
 }
 
@@ -265,7 +265,7 @@ export const AssistantRemoteService = {
       const networkError =
         error instanceof Error
           ? error
-          : new Error("Connexion au backend Idealy impossible.");
+          : new Error("Connexion au backend Idéali impossible.");
       callbacks.onError?.(networkError);
       throw networkError;
     }
@@ -277,7 +277,7 @@ export const AssistantRemoteService = {
     }
     if (!response.body) {
       const error = new Error(
-        "Le backend Idealy a répondu sans flux de génération.",
+        "Le backend Idéali a répondu sans flux de génération.",
       );
       callbacks.onError?.(error);
       throw error;
@@ -288,7 +288,7 @@ export const AssistantRemoteService = {
     let pending = "";
     let code = "";
     let kind = "code";
-    let title = options.conversationTitle || "Production Idealy";
+    let title = options.conversationTitle || "Production Idéali";
     let missionId = "";
     let frameError: Error | null = null;
 

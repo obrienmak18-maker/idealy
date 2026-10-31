@@ -133,7 +133,7 @@ export const Sidebar: React.FC = () => {
               <Sparkles className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
             </div>
             <span className="text-[15px] font-semibold tracking-tight text-zinc-100 truncate">
-              Idealy
+              Idéali
             </span>
           </div>
         )}

@@ -553,9 +553,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     const convMessages = messages.filter((m) => m.conversationId === id);
 
-    let text = `# ${conv.title}\n*Exporté depuis Idealy le ${new Date().toLocaleString("fr-FR")}*\n\n---\n\n`;
+    let text = `# ${conv.title}\n*Exporté depuis Idéali le ${new Date().toLocaleString("fr-FR")}*\n\n---\n\n`;
     for (const msg of convMessages) {
-      const roleName = msg.role === "user" ? "Utilisateur" : "Assistant Idealy";
+      const roleName = msg.role === "user" ? "Utilisateur" : "Assistant Idéali";
       const time = new Date(msg.createdAt).toLocaleTimeString("fr-FR", {
         hour: "2-digit",
         minute: "2-digit",

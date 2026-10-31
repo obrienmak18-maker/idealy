@@ -2,21 +2,21 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import App from "../App";
 
-describe("Idealy Application Suite", () => {
+describe("Idéali Application Suite", () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
   it("renders the core application layout and welcome message", () => {
     render(<App />);
-    expect(screen.getAllByText("Idealy").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Idéali").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Espace Principal").length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText("Bienvenue sur Idealy").length,
+      screen.getAllByText("Bienvenue sur Idéali").length,
     ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText(
-        "Quelles sont les caractéristiques de ce nouvel environnement Idealy ?",
+        "Quelles sont les caractéristiques de ce nouvel environnement Idéali ?",
       ),
     ).toBeInTheDocument();
   });
@@ -46,9 +46,9 @@ describe("Idealy Application Suite", () => {
     fireEvent.change(textarea, { target: { value: "Brouillon pour conv 2" } });
     expect(textarea).toHaveValue("Brouillon pour conv 2");
 
-    // Switch back to the first conversation ("Bienvenue sur Idealy")
+    // Switch back to the first conversation ("Bienvenue sur Idéali")
     const welcomeConvBtns = screen.getAllByRole("button", {
-      name: /Bienvenue sur Idealy/i,
+      name: /Bienvenue sur Idéali/i,
     });
     fireEvent.click(welcomeConvBtns[0]);
 

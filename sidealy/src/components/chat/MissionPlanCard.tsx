@@ -21,7 +21,7 @@ export const MissionPlanCard: React.FC<{
 
   return (
     <section
-      aria-label="Plan de mission Idealy"
+      aria-label="Plan de mission Idéali"
       className="my-4 overflow-hidden rounded-2xl border border-border-subtle bg-bg-surface shadow-subtle"
     >
       <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-4 py-3.5 md:px-5">

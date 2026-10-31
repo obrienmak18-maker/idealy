@@ -63,17 +63,17 @@ export const ProductInfoPage: React.FC<{ page: ProductPageKind }> = ({
       eyebrow: "Bienvenue",
       title: "Une idée mérite un vrai espace de travail.",
       subtitle:
-        "Concevez, explorez et construisez avec Idealy : une conversation reliée à vos missions, vos fichiers et vos outils.",
+        "Concevez, explorez et construisez avec Idéali : une conversation reliée à vos missions, vos fichiers et vos outils.",
     },
     about: {
       eyebrow: "À propos",
       title: "Un workspace pour passer de l’idée au produit.",
       subtitle:
-        "Idealy réunit l’assistant, la création de livrables et les intégrations dans un espace de travail continu.",
+        "Idéali réunit l’assistant, la création de livrables et les intégrations dans un espace de travail continu.",
     },
     docs: {
       eyebrow: "Documentation",
-      title: "Les bases pour avancer dans Idealy.",
+      title: "Les bases pour avancer dans Idéali.",
       subtitle:
         "Un guide pratique des fonctions actuellement reliées à l’application.",
     },
@@ -85,7 +85,7 @@ export const ProductInfoPage: React.FC<{ page: ProductPageKind }> = ({
     },
   };
   const copyDiagnostics = async () => {
-    const diagnostics = `Idealy\nURL : ${window.location.origin}\nNavigateur : ${navigator.userAgent}\nDate : ${new Date().toISOString()}`;
+    const diagnostics = `Idéali\nURL : ${window.location.origin}\nNavigateur : ${navigator.userAgent}\nDate : ${new Date().toISOString()}`;
     try {
       await navigator.clipboard.writeText(diagnostics);
       setCopied(true);
@@ -172,7 +172,7 @@ export const ProductInfoPage: React.FC<{ page: ProductPageKind }> = ({
 
         {page === "docs" && (
           <section
-            aria-label="Guides Idealy"
+            aria-label="Guides Idéali"
             className="mt-9 divide-y divide-border-subtle rounded-2xl border border-border-subtle bg-bg-surface px-5 sm:px-6"
           >
             {docs.map((item, index) => (

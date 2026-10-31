@@ -209,7 +209,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
   return (
     <article
-      aria-label={`Message de ${isUser ? "vous" : "Idealy"}`}
+      aria-label={`Message de ${isUser ? "vous" : "Idéali"}`}
       className={`py-3 px-4 md:px-6 transition-colors ${
         isUser
           ? "ml-auto max-w-[85%] md:max-w-[78%] flex flex-col items-end"
@@ -258,7 +258,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
           {/* Header Info */}
           <div className="flex items-center justify-between gap-3 pt-1">
             <div className="flex items-center gap-2">
-              {/* Idealy Custom Geometric Spark Logo */}
+              {/* Idéali Custom Geometric Spark Logo */}
               <div
                 aria-hidden="true"
                 className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white shadow-sm"
@@ -266,7 +266,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
                 <Sparkles className="w-3.5 h-3.5 fill-current" />
               </div>
               <span className="text-xs font-semibold text-[var(--dsw-alias-label-primary)]">
-                Idealy
+                Idéali
               </span>
               <span className="text-[11px] text-[var(--dsw-alias-label-tertiary)]">
                 {timeFormatted}

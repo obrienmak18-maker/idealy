@@ -374,7 +374,7 @@ export const Composer: React.FC = () => {
 
         <div className="px-5 pt-4 pb-1">
           <textarea
-            aria-label="Message à Idealy"
+            aria-label="Message à Idéali"
             className="w-full min-h-[52px] max-h-[200px] resize-none overflow-y-auto bg-transparent p-0 text-[15px] leading-6 text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] focus:outline-none focus:ring-0"
             enterKeyHint="enter"
             onChange={(event) => {
@@ -387,7 +387,7 @@ export const Composer: React.FC = () => {
               }
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Message à Idealy"
+            placeholder="Message à Idéali"
             ref={textareaRef}
             rows={1}
             style={{ caretColor: "var(--idealy-indigo)" }}

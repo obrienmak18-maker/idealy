@@ -1579,7 +1579,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
                 Confirmer l’export GitHub
               </h2>
               <p className="mt-2 text-xs leading-5 text-text-muted">
-                Idealy va écrire {files.length} fichier(s) dans{" "}
+                Idéali va écrire {files.length} fichier(s) dans{" "}
                 <strong className="font-medium text-text-main">
                   {githubOwner.trim()}/{githubRepo.trim()}
                 </strong>
@@ -1641,7 +1641,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
                 Confirmer le déploiement Vercel
               </h2>
               <p className="mt-2 text-xs leading-5 text-text-muted">
-                Idealy va envoyer les fichiers enregistrés de cette mission vers
+                Idéali va envoyer les fichiers enregistrés de cette mission vers
                 le projet{" "}
                 <strong className="font-medium text-text-main">
                   {vercelProjectName.trim()}
