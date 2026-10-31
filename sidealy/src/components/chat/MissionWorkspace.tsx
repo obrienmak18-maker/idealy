@@ -3,17 +3,28 @@ import {
   Clock3,
   Database,
   FileCode2,
+  Github,
   LoaderCircle,
   RotateCcw,
   Save,
   ShieldCheck,
+  Terminal,
   X,
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MissionWorkspaceFile } from "../../types";
+import type {
+  MissionBuildVerification,
+  MissionWorkspaceFile,
+} from "../../types";
 
-type WorkspaceTab = "files" | "activity" | "checkpoints" | "data";
+type WorkspaceTab =
+  | "files"
+  | "activity"
+  | "checkpoints"
+  | "data"
+  | "build"
+  | "github";
 type Checkpoint = {
   createdAt: string;
   description?: string;
@@ -55,10 +66,17 @@ type FileEvent = {
   path: string | null;
   sequence: number;
 };
+type GitHubExport = {
+  branch: string;
+  owner: string;
+  repo: string;
+  url?: string;
+};
 type WorkspaceProps = {
   missionId: string;
   projectName: string;
   initialFiles: MissionWorkspaceFile[];
+  buildVerification?: MissionBuildVerification;
   onClose: () => void;
 };
 
@@ -75,10 +93,48 @@ async function readPayload<T>(
   return payload;
 }
 
+async function githubPayloadDigest(
+  project: string,
+  branch: string,
+  sourceFiles: MissionWorkspaceFile[],
+) {
+  const files = await Promise.all(
+    sourceFiles
+      .map((file) => ({ path: file.path, content: file.content }))
+      .sort((left, right) => left.path.localeCompare(right.path))
+      .map(async ({ path, content }) => {
+        const digest = await crypto.subtle.digest(
+          "SHA-256",
+          new TextEncoder().encode(content),
+        );
+        const checksum = Array.from(new Uint8Array(digest))
+          .map((byte) => byte.toString(16).padStart(2, "0"))
+          .join("");
+        return { path, checksum };
+      }),
+  );
+  const serialized = JSON.stringify({ branch, files, project });
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(serialized),
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function createConfirmationToken() {
+  const random = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(random)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export const MissionWorkspace: React.FC<WorkspaceProps> = ({
   missionId,
   projectName,
   initialFiles,
+  buildVerification,
   onClose,
 }) => {
   const [tab, setTab] = useState<WorkspaceTab>("files");
@@ -108,7 +164,17 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [githubOwner, setGithubOwner] = useState("");
+  const [githubRepo, setGithubRepo] = useState("");
+  const [githubBranch, setGithubBranch] = useState(
+    `idealy/mission-${missionId.slice(0, 8)}`,
+  );
+  const [githubReviewOpen, setGithubReviewOpen] = useState(false);
+  const [githubBusy, setGithubBusy] = useState(false);
+  const [githubResult, setGithubResult] = useState<GitHubExport | null>(null);
   const workspaceRef = useRef<HTMLElement>(null);
+  const confirmationDialogRef = useRef<HTMLElement>(null);
+  const confirmationButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const selectedFile = useMemo(
     () => files.find((file) => file.path === selectedPath),
@@ -126,10 +192,25 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
         : null;
     closeButtonRef.current?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !restoreTarget) onClose();
+      if (event.key === "Escape") {
+        if (restoreTarget) {
+          setRestoreTarget(null);
+          event.preventDefault();
+          return;
+        }
+        if (githubReviewOpen) {
+          setGithubReviewOpen(false);
+          event.preventDefault();
+          return;
+        }
+        onClose();
+        return;
+      }
       if (event.key !== "Tab" || !workspaceRef.current) return;
       const focusable = Array.from(
-        workspaceRef.current.querySelectorAll<HTMLElement>(
+        (
+          confirmationDialogRef.current ?? workspaceRef.current
+        ).querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
         ),
       ).filter((element) => element.offsetParent !== null);
@@ -149,7 +230,12 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
       window.removeEventListener("keydown", closeOnEscape);
       previousFocus?.focus();
     };
-  }, [onClose, restoreTarget]);
+  }, [githubReviewOpen, onClose, restoreTarget]);
+
+  useEffect(() => {
+    if (githubReviewOpen || restoreTarget)
+      confirmationButtonRef.current?.focus();
+  }, [githubReviewOpen, restoreTarget]);
 
   const loadCheckpoints = async () => {
     const response = await fetch(
@@ -456,11 +542,102 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     }
   };
 
+  const exportToGitHub = async () => {
+    const owner = githubOwner.trim();
+    const repo = githubRepo.trim();
+    const branch = githubBranch.trim();
+    if (!owner || !repo || !branch || files.length === 0) {
+      setError(
+        "Renseignez le propriétaire, le dépôt et une branche ; la mission doit contenir des fichiers.",
+      );
+      return;
+    }
+    if (branch === "main" || branch === "master") {
+      setError(
+        "Choisissez une branche dédiée : l’export direct vers main ou master est bloqué.",
+      );
+      return;
+    }
+    if (selectedFile && draft !== selectedFile.content) {
+      setError("Enregistrez d’abord le fichier modifié avant l’export GitHub.");
+      return;
+    }
+
+    setGithubBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const confirmationToken = createConfirmationToken();
+      const payloadDigest = await githubPayloadDigest(repo, branch, files);
+      const confirmationUrl = `/api/idealy/missions/${encodeURIComponent(missionId)}/github/confirmation`;
+      const preparedResponse = await fetch(confirmationUrl, {
+        body: JSON.stringify({
+          confirmationToken,
+          operation: "github:export",
+          payloadDigest,
+        }),
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const prepared = await readPayload<{ status?: string }>(preparedResponse);
+      if (prepared.status !== "pending")
+        throw new Error("La confirmation GitHub n’a pas été préparée.");
+
+      const approvedResponse = await fetch(confirmationUrl, {
+        body: JSON.stringify({ confirmationToken, operation: "github:export" }),
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      });
+      const approved = await readPayload<{ status?: string }>(approvedResponse);
+      if (approved.status !== "approved")
+        throw new Error("La confirmation GitHub n’a pas été validée.");
+
+      const exportResponse = await fetch(
+        `/api/idealy/missions/${encodeURIComponent(missionId)}/github`,
+        {
+          body: JSON.stringify({ branch, confirmationToken, owner, repo }),
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      const exported = await readPayload<{
+        branch?: string;
+        branchUrl?: string;
+        error?: string;
+        repoUrl?: string;
+        repository?: string;
+        success?: boolean;
+      }>(exportResponse);
+      if (!exported.success || !exported.branchUrl)
+        throw new Error(exported.error || "GitHub n’a pas confirmé l’export.");
+      const result = {
+        branch: exported.branch ?? branch,
+        owner,
+        repo: exported.repository ?? `${owner}/${repo}`,
+        url: exported.branchUrl,
+      };
+      setGithubResult(result);
+      setGithubReviewOpen(false);
+      setNotice(`Export confirmé sur ${result.repo} · ${result.branch}.`);
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "L’export GitHub a échoué.",
+      );
+    } finally {
+      setGithubBusy(false);
+    }
+  };
+
   const tabs: Array<{ id: WorkspaceTab; label: string }> = [
     { id: "files", label: `Fichiers (${files.length})` },
     { id: "activity", label: "Activité" },
     { id: "checkpoints", label: `Versions (${checkpoints.length})` },
     { id: "data", label: "Données" },
+    { id: "build", label: "Build" },
+    { id: "github", label: "GitHub" },
   ];
 
   return (
@@ -569,7 +746,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
                 </div>
                 <textarea
                   aria-label={`Contenu du fichier ${selectedFile.path}`}
-                  className="mt-3 min-h-0 flex-1 resize-none rounded-xl border border-border-subtle bg-[#101114] p-4 font-mono text-xs leading-6 text-text-main outline-none focus:border-brand-primary/40"
+                  className="mt-3 min-h-0 flex-1 resize-none rounded-xl border border-border-subtle bg-bg-base p-4 font-mono text-xs leading-6 text-text-main outline-none focus:border-brand-primary/40"
                   onChange={(event) => setDraft(event.target.value)}
                   spellCheck={false}
                   value={draft}
@@ -854,6 +1031,194 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
           </div>
         )}
 
+        {tab === "github" && (
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="mx-auto max-w-2xl space-y-4">
+              <div className="flex items-start gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle text-text-main">
+                  <Github aria-hidden="true" className="h-4 w-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-text-main">
+                    Exporter cette mission vers GitHub
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-text-muted">
+                    Les fichiers enregistrés seront publiés dans une branche
+                    dédiée du dépôt connecté. L’export ne modifie pas main ou
+                    master.
+                  </p>
+                </div>
+              </div>
+              <section className="rounded-xl border border-border-subtle bg-bg-surface p-4 sm:p-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-xs font-medium text-text-muted">
+                    Propriétaire GitHub
+                    <input
+                      autoComplete="off"
+                      className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
+                      maxLength={100}
+                      onChange={(event) => setGithubOwner(event.target.value)}
+                      placeholder="organisation ou compte"
+                      value={githubOwner}
+                    />
+                  </label>
+                  <label className="block text-xs font-medium text-text-muted">
+                    Nom du dépôt
+                    <input
+                      autoComplete="off"
+                      className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
+                      maxLength={100}
+                      onChange={(event) => setGithubRepo(event.target.value)}
+                      placeholder="mon-projet"
+                      value={githubRepo}
+                    />
+                  </label>
+                </div>
+                <label className="mt-4 block text-xs font-medium text-text-muted">
+                  Branche cible
+                  <input
+                    autoComplete="off"
+                    className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 font-mono text-xs text-text-main focus-ring"
+                    maxLength={120}
+                    onChange={(event) => setGithubBranch(event.target.value)}
+                    value={githubBranch}
+                  />
+                </label>
+                <p className="mt-3 text-[11px] leading-5 text-text-muted">
+                  {files.length} fichier(s) · Les brouillons doivent être
+                  enregistrés. Une confirmation à usage unique lie l’accord au
+                  contenu exact exporté.
+                </p>
+                {githubResult?.url && (
+                  <a
+                    className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-bg-subtle px-3 text-xs font-medium text-brand-primary hover:underline focus-ring"
+                    href={githubResult.url}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <Github aria-hidden="true" className="h-3.5 w-3.5" />
+                    Ouvrir {githubResult.repo} · {githubResult.branch}
+                  </a>
+                )}
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <button
+                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-text-main px-4 text-sm font-medium text-bg-base hover:opacity-90 focus-ring disabled:opacity-50"
+                    disabled={
+                      files.length === 0 ||
+                      !githubOwner.trim() ||
+                      !githubRepo.trim() ||
+                      githubBusy
+                    }
+                    onClick={() => {
+                      setError("");
+                      setGithubReviewOpen(true);
+                    }}
+                    type="button"
+                  >
+                    <Github aria-hidden="true" className="h-4 w-4" />
+                    Examiner l’export
+                  </button>
+                  <a
+                    className="text-xs text-text-muted underline-offset-4 hover:text-text-main hover:underline focus-ring"
+                    href="/connectors"
+                  >
+                    Gérer les connecteurs
+                  </a>
+                </div>
+              </section>
+            </div>
+          </div>
+        )}
+
+        {tab === "build" && (
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="mx-auto max-w-3xl space-y-4">
+              <div className="flex items-start gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle text-brand-primary">
+                  <Terminal aria-hidden="true" className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-text-main">
+                    Vérification du build
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-text-muted">
+                    Résultat du build isolé exécuté par le backend après la
+                    génération. Ce rapport ne représente pas un terminal
+                    interactif.
+                  </p>
+                </div>
+                {buildVerification && (
+                  <span
+                    className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium ${buildVerification.status === "passed" ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`}
+                  >
+                    {buildVerification.status === "passed"
+                      ? "Réussi"
+                      : buildVerification.status === "failed"
+                        ? "À corriger"
+                        : "Non configuré"}
+                  </span>
+                )}
+              </div>
+              {buildVerification ? (
+                <>
+                  <section className="rounded-xl border border-border-subtle bg-bg-surface p-4">
+                    <dl className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <dt className="text-[10px] text-text-muted">
+                          Commande
+                        </dt>
+                        <dd className="mt-1 font-mono text-xs text-text-main">
+                          {buildVerification.command ||
+                            "npm install · npm run build"}
+                        </dd>
+                      </div>
+                      {typeof buildVerification.durationMs === "number" && (
+                        <div>
+                          <dt className="text-[10px] text-text-muted">Durée</dt>
+                          <dd className="mt-1 text-xs text-text-main">
+                            {(buildVerification.durationMs / 1000).toFixed(1)} s
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                    {buildVerification.error && (
+                      <p className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-500">
+                        {buildVerification.error}
+                      </p>
+                    )}
+                  </section>
+                  {buildVerification.stdout && (
+                    <section className="overflow-hidden rounded-xl border border-border-subtle bg-bg-base">
+                      <h4 className="border-b border-border-subtle px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+                        Sortie standard
+                      </h4>
+                      <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-5 text-text-main">
+                        {buildVerification.stdout}
+                      </pre>
+                    </section>
+                  )}
+                  {buildVerification.stderr && (
+                    <section className="overflow-hidden rounded-xl border border-amber-500/20 bg-bg-base">
+                      <h4 className="border-b border-amber-500/20 px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-amber-500">
+                        Erreurs et avertissements
+                      </h4>
+                      <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-5 text-text-main">
+                        {buildVerification.stderr}
+                      </pre>
+                    </section>
+                  )}
+                </>
+              ) : (
+                <p className="rounded-xl border border-border-subtle bg-bg-surface px-4 py-8 text-center text-xs leading-5 text-text-muted">
+                  Aucun rapport de build n’est enregistré pour cette mission.
+                  Lancez la mission pour demander sa génération et sa
+                  vérification.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {(error || notice) && (
           <p
             aria-live="polite"
@@ -869,6 +1234,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
               aria-labelledby="restore-checkpoint-title"
               aria-modal="true"
               className="w-full max-w-md rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-elevated"
+              ref={confirmationDialogRef}
               role="alertdialog"
             >
               <h2
@@ -894,6 +1260,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-amber-600 px-3 text-xs font-medium text-white hover:opacity-90 focus-ring disabled:opacity-60"
                   disabled={busy}
                   onClick={() => void restoreCheckpoint()}
+                  ref={confirmationButtonRef}
                   type="button"
                 >
                   {busy && (
@@ -903,6 +1270,68 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
                     />
                   )}
                   Restaurer la version
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {githubReviewOpen && (
+          <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4">
+            <section
+              aria-labelledby="github-export-title"
+              aria-modal="true"
+              className="w-full max-w-md rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-elevated"
+              ref={confirmationDialogRef}
+              role="alertdialog"
+            >
+              <h2
+                className="text-sm font-semibold text-text-main"
+                id="github-export-title"
+              >
+                Confirmer l’export GitHub
+              </h2>
+              <p className="mt-2 text-xs leading-5 text-text-muted">
+                Idealy va écrire {files.length} fichier(s) dans{" "}
+                <strong className="font-medium text-text-main">
+                  {githubOwner.trim()}/{githubRepo.trim()}
+                </strong>
+                , branche{" "}
+                <strong className="font-medium text-text-main">
+                  {githubBranch.trim()}
+                </strong>
+                . La branche distante sera créée ou mise à jour avec ces
+                fichiers.
+              </p>
+              <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] leading-5 text-amber-500">
+                Cette action publie le contenu de la mission sur GitHub.
+                Vérifiez qu’il ne contient aucun secret ni donnée privée.
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  className="h-9 rounded-lg px-3 text-xs text-text-muted hover:bg-bg-subtle focus-ring"
+                  disabled={githubBusy}
+                  onClick={() => setGithubReviewOpen(false)}
+                  type="button"
+                >
+                  Annuler
+                </button>
+                <button
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-text-main px-3 text-xs font-medium text-bg-base hover:opacity-90 focus-ring disabled:opacity-60"
+                  disabled={githubBusy}
+                  onClick={() => void exportToGitHub()}
+                  ref={confirmationButtonRef}
+                  type="button"
+                >
+                  {githubBusy ? (
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 animate-spin"
+                    />
+                  ) : (
+                    <Github aria-hidden="true" className="h-3.5 w-3.5" />
+                  )}
+                  {githubBusy ? "Export en cours…" : "Confirmer et exporter"}
                 </button>
               </div>
             </section>

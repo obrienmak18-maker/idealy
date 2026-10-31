@@ -17,6 +17,7 @@ import type {
   GenerationStatus,
   IntentionMode,
   Message,
+  MissionBuildVerification,
   MissionRun,
   MissionWorkspaceFile,
   Space,
@@ -843,6 +844,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       const result = (await response.json().catch(() => null)) as {
         status?: unknown;
         error?: unknown;
+        buildVerification?: {
+          command?: unknown;
+          durationMs?: unknown;
+          error?: unknown;
+          status?: unknown;
+          stderr?: unknown;
+          stdout?: unknown;
+        };
       } | null;
       if (!response.ok) {
         const message =
@@ -890,7 +899,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const status: MissionRun["status"] =
         result?.status === "ready" ? "ready" : "needs-fix";
-      updateMission({ error: fileLoadError, files, status });
+      const build = result?.buildVerification;
+      const buildVerification =
+        build &&
+        ["passed", "failed", "not-configured"].includes(String(build.status))
+          ? {
+              status: build.status as MissionBuildVerification["status"],
+              ...(typeof build.command === "string"
+                ? { command: build.command }
+                : {}),
+              ...(typeof build.durationMs === "number"
+                ? { durationMs: build.durationMs }
+                : {}),
+              ...(typeof build.error === "string"
+                ? { error: build.error }
+                : {}),
+              ...(typeof build.stderr === "string"
+                ? { stderr: build.stderr }
+                : {}),
+              ...(typeof build.stdout === "string"
+                ? { stdout: build.stdout }
+                : {}),
+            }
+          : undefined;
+      updateMission({ buildVerification, error: fileLoadError, files, status });
 
       if (files.length > 0) {
         const createdAt = Date.now();

@@ -1,5 +1,7 @@
 import {
   Check,
+  CreditCard,
+  ExternalLink,
   LoaderCircle,
   Monitor,
   Moon,
@@ -42,6 +44,7 @@ export const SettingsPage: React.FC = () => {
     "general",
     "account",
     "appearance",
+    "billing",
     "notifications",
     "privacy",
     "data",
@@ -66,6 +69,17 @@ export const SettingsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const [billing, setBilling] = useState<{
+    active?: boolean;
+    cancelAtPeriodEnd?: boolean;
+    creditsBalance?: number | null;
+    currentPeriodEnd?: number | null;
+    planId?: string;
+    status?: string;
+  } | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingError, setBillingError] = useState("");
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     const syncSection = () => setSection(currentSection());
@@ -73,11 +87,86 @@ export const SettingsPage: React.FC = () => {
     return () => window.removeEventListener("popstate", syncSection);
   }, []);
 
+  useEffect(() => {
+    if (section !== "billing") return;
+    const controller = new AbortController();
+    setBillingLoading(true);
+    setBillingError("");
+    fetch("/api/idealy/billing/status", {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as {
+          active?: boolean;
+          cancelAtPeriodEnd?: boolean;
+          creditsBalance?: number | null;
+          currentPeriodEnd?: number | null;
+          error?: string;
+          planId?: string;
+          status?: string;
+        };
+        if (!response.ok)
+          throw new Error(
+            payload.error || "Le statut de facturation est indisponible.",
+          );
+        if (!controller.signal.aborted) setBilling(payload);
+      })
+      .catch((cause) => {
+        if (!controller.signal.aborted)
+          setBillingError(
+            cause instanceof Error
+              ? cause.message
+              : "Le statut de facturation est indisponible.",
+          );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setBillingLoading(false);
+      });
+    return () => controller.abort();
+  }, [section]);
+
   const openSection = (next: SettingsSection) => {
     setSection(next);
     const path = next === "general" ? "/settings" : `/settings/${next}`;
     if (window.location.pathname !== path)
       window.history.pushState(null, "", path);
+  };
+
+  const openBillingPortal = async () => {
+    setPortalLoading(true);
+    setBillingError("");
+    try {
+      const response = await fetch("/api/idealy/billing/portal", {
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        url?: string;
+      };
+      const portalUrl = payload.url ? new URL(payload.url) : null;
+      if (
+        !response.ok ||
+        !portalUrl ||
+        portalUrl.protocol !== "https:" ||
+        portalUrl.hostname !== "billing.stripe.com"
+      )
+        throw new Error(
+          payload.error || "Le portail de facturation n’a pas pu être ouvert.",
+        );
+      window.location.assign(portalUrl.toString());
+    } catch (cause) {
+      setBillingError(
+        cause instanceof Error
+          ? cause.message
+          : "Le portail de facturation n’a pas pu être ouvert.",
+      );
+    } finally {
+      setPortalLoading(false);
+    }
   };
 
   const exportLocalData = () => {
@@ -220,6 +309,7 @@ export const SettingsPage: React.FC = () => {
               ["general", "Général"],
               ["account", "Compte"],
               ["appearance", "Apparence"],
+              ["billing", "Facturation"],
               ["notifications", "Notifications"],
               ["privacy", "Confidentialité"],
               ["data", "Données"],
@@ -418,6 +508,99 @@ export const SettingsPage: React.FC = () => {
                 Gérer les connecteurs
               </button>
             </div>
+          </section>
+        )}
+
+        {section === "billing" && (
+          <section className="mt-4 rounded-2xl border border-border-subtle bg-bg-surface p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-bg-subtle text-text-muted">
+                <CreditCard aria-hidden="true" className="h-4 w-4" />
+              </span>
+              <div>
+                <h2 className="text-sm font-semibold text-text-main">
+                  Abonnement et facturation
+                </h2>
+                <p className="mt-1 text-xs leading-5 text-text-muted">
+                  État du forfait et crédits lus depuis le service de
+                  facturation Idealy.
+                </p>
+              </div>
+            </div>
+            {billingLoading ? (
+              <p aria-live="polite" className="mt-5 text-sm text-text-muted">
+                Chargement de l’abonnement…
+              </p>
+            ) : billingError ? (
+              <p
+                aria-live="polite"
+                className="mt-5 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-sm text-amber-500"
+              >
+                {billingError}
+              </p>
+            ) : billing ? (
+              <>
+                <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl bg-bg-subtle p-3">
+                    <dt className="text-xs text-text-muted">Forfait</dt>
+                    <dd className="mt-1 text-sm font-semibold text-text-main">
+                      {billing.planId === "business"
+                        ? "Business"
+                        : billing.planId === "pro"
+                          ? "Pro"
+                          : "Découverte"}
+                    </dd>
+                  </div>
+                  <div className="rounded-xl bg-bg-subtle p-3">
+                    <dt className="text-xs text-text-muted">
+                      Crédits disponibles
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-text-main">
+                      {billing.creditsBalance ?? "—"}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="mt-3 text-xs leading-5 text-text-muted">
+                  {billing.active
+                    ? billing.cancelAtPeriodEnd
+                      ? `L’abonnement se termine le ${billing.currentPeriodEnd ? new Date(billing.currentPeriodEnd * 1000).toLocaleDateString("fr-FR") : "à la fin de la période"}.`
+                      : `Abonnement ${billing.status === "trialing" ? "en période d’essai" : "actif"}${billing.currentPeriodEnd ? ` · renouvellement le ${new Date(billing.currentPeriodEnd * 1000).toLocaleDateString("fr-FR")}` : ""}.`
+                    : "Aucun abonnement payant actif sur ce compte."}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {billing.active ? (
+                    <button
+                      className="inline-flex h-10 items-center gap-2 rounded-xl bg-text-main px-4 text-sm font-medium text-bg-base hover:opacity-90 focus-ring disabled:opacity-60"
+                      disabled={portalLoading}
+                      onClick={() => void openBillingPortal()}
+                      type="button"
+                    >
+                      {portalLoading ? (
+                        <LoaderCircle
+                          aria-hidden="true"
+                          className="h-4 w-4 animate-spin"
+                        />
+                      ) : (
+                        <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                      )}
+                      Gérer l’abonnement
+                    </button>
+                  ) : (
+                    <button
+                      className="h-10 rounded-xl bg-text-main px-4 text-sm font-medium text-bg-base hover:opacity-90 focus-ring"
+                      onClick={() => setActivePage("pricing")}
+                      type="button"
+                    >
+                      Voir les formules
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="mt-5 text-sm text-text-muted">
+                Connectez-vous pour consulter les informations de facturation.
+              </p>
+            )}
           </section>
         )}
 

@@ -52,7 +52,17 @@ export interface MissionWorkspaceFile {
   version?: number;
 }
 
+export interface MissionBuildVerification {
+  command?: string;
+  durationMs?: number;
+  error?: string;
+  status: "passed" | "failed" | "not-configured";
+  stderr?: string;
+  stdout?: string;
+}
+
 export interface MissionRun {
+  buildVerification?: MissionBuildVerification;
   error?: string;
   files?: MissionWorkspaceFile[];
   id: string;

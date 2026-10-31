@@ -161,6 +161,7 @@ export const MissionPlanCard: React.FC<{
       </div>
       {workspaceOpen && (
         <MissionWorkspace
+          buildVerification={mission.buildVerification}
           initialFiles={mission.files ?? []}
           missionId={mission.id}
           onClose={() => setWorkspaceOpen(false)}
