@@ -321,6 +321,7 @@ export const Composer: React.FC = () => {
     }
     const additions: Attachment[] = Array.from(files).map((file) => ({
       id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      file,
       name: file.name,
       size: file.size,
       type: file.type,

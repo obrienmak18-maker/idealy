@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { AssistantRemoteService } from "../services/assistantRemote";
+import { BackendHistoryService } from "../services/backendHistory";
 import { StorageService } from "../services/storage";
 import type {
   Artifact,
@@ -35,7 +36,7 @@ interface AppContextValue {
   activeArtifact: Artifact | undefined;
   activeConversation: Conversation | undefined;
   activeMessages: Message[];
-  activePage: "chat" | "connectors";
+  activePage: AppPage;
   activeSpace: Space | undefined;
 
   artifacts: Artifact[];
@@ -79,7 +80,7 @@ interface AppContextValue {
     options?: { deepThink?: boolean; webSearch?: boolean },
   ) => Promise<void>;
   setActiveConversationId: (id: string) => void;
-  setActivePage: (page: "chat" | "connectors") => void;
+  setActivePage: (page: AppPage) => void;
   setActiveSpaceId: (id: string) => void;
   setDeepThink: (deepThink: boolean) => void;
   setDraft: (text: string) => void;
@@ -106,11 +107,44 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+export type AppPage =
+  | "chat"
+  | "connectors"
+  | "library"
+  | "settings"
+  | "welcome"
+  | "about"
+  | "docs"
+  | "support"
+  | "pricing";
+
+const pagePaths: Record<AppPage, string> = {
+  about: "/about",
+  chat: "/",
+  connectors: "/connectors",
+  docs: "/docs",
+  library: "/library",
+  pricing: "/pricing",
+  settings: "/settings",
+  support: "/support",
+  welcome: "/welcome",
+};
+
+function pageFromPath(pathname: string): AppPage {
+  const path = pathname.replace(/\/$/, "") || "/";
+  const match = (Object.entries(pagePaths) as [AppPage, string][]).find(
+    ([, route]) => route === path,
+  );
+  return match?.[0] ?? "chat";
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [activePage, setActivePageState] = useState<"chat" | "connectors">(
-    "chat",
+  const [activePage, setActivePageState] = useState<AppPage>(() =>
+    typeof window === "undefined"
+      ? "chat"
+      : pageFromPath(window.location.pathname),
   );
   // Theme state
   const [theme, setThemeState] = useState<Theme>(() =>
@@ -157,6 +191,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   // Controller for stream interruption
   const abortControllerRef = useRef<AbortController | null>(null);
   const missionStartsRef = useRef<Set<string>>(new Set());
+  const historyLoadsRef = useRef<Set<string>>(new Set());
+  const [historyReady, setHistoryReady] = useState(false);
 
   // Active items resolution
   const activeSpace = spaces.find((s) => s.id === activeSpaceId) || spaces[0];
@@ -190,6 +226,117 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [theme]);
 
+  useEffect(() => {
+    const syncRoute = () =>
+      setActivePageState(pageFromPath(window.location.pathname));
+    window.addEventListener("popstate", syncRoute);
+    return () => window.removeEventListener("popstate", syncRoute);
+  }, []);
+
+  const setActivePage = (page: AppPage) => {
+    setActivePageState(page);
+    const nextPath = pagePaths[page];
+    if (window.location.pathname !== nextPath)
+      window.history.pushState(null, "", nextPath);
+    setIsMobileDrawerOpen(false);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    BackendHistoryService.listAndImport()
+      .then((imported) => {
+        if (!cancelled && imported.length) {
+          setConversations((current) => {
+            const currentIds = new Set(
+              current.map((conversation) => conversation.id),
+            );
+            const next = [
+              ...imported.filter(
+                (conversation) => !currentIds.has(conversation.id),
+              ),
+              ...current,
+            ];
+            StorageService.saveConversations(next);
+            return next;
+          });
+        }
+      })
+      .catch((error) => {
+        console.warn("Backend history sync failed", error);
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !historyReady ||
+      !activeConversation?.id ||
+      historyLoadsRef.current.has(activeConversation.id)
+    )
+      return;
+    historyLoadsRef.current.add(activeConversation.id);
+    let cancelled = false;
+    BackendHistoryService.loadMessages(activeConversation.id)
+      .then((remoteMessages) => {
+        if (cancelled) {
+          historyLoadsRef.current.delete(activeConversation.id);
+          return;
+        }
+        if (!remoteMessages?.length) return;
+        setMessages((current) => {
+          const local = current.filter(
+            (message) => message.conversationId === activeConversation.id,
+          );
+          const matchedLocalIds = new Set<string>();
+          const mergedRemote = remoteMessages.map((remote) => {
+            const match = local.find(
+              (candidate) =>
+                !matchedLocalIds.has(candidate.id) &&
+                candidate.role === remote.role &&
+                candidate.content === remote.content &&
+                Math.abs(candidate.createdAt - remote.createdAt) < 5 * 60_000,
+            );
+            if (!match) return remote;
+            matchedLocalIds.add(match.id);
+            return {
+              ...remote,
+              ...match,
+              attachments: remote.attachments?.length
+                ? remote.attachments
+                : match.attachments,
+              content: remote.content,
+              createdAt: remote.createdAt,
+              conversationId: remote.conversationId,
+            };
+          });
+          const merged = [
+            ...mergedRemote,
+            ...local.filter((message) => !matchedLocalIds.has(message.id)),
+          ].sort((left, right) => left.createdAt - right.createdAt);
+          const next = [
+            ...current.filter(
+              (message) => message.conversationId !== activeConversation.id,
+            ),
+            ...merged,
+          ];
+          StorageService.saveMessages(next);
+          return next;
+        });
+      })
+      .catch((error) => {
+        historyLoadsRef.current.delete(activeConversation.id);
+        console.warn("Conversation history sync failed", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeConversation?.id, historyReady]);
+
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     StorageService.saveTheme(newTheme);
@@ -204,7 +351,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     setActiveConversationIdState(convId);
     StorageService.saveActiveConversationId(convId);
     setIsMobileDrawerOpen(false);
-    setActivePageState("chat");
+    setActivePage("chat");
   };
 
   // Draft handling with instant persistence
@@ -295,7 +442,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const next = [newConv, ...conversations];
     setConversations(next);
     StorageService.saveConversations(next);
-    setActivePageState("chat");
+    setActivePage("chat");
     setActiveConversationId(newConv.id);
     return newConv.id;
   };
@@ -390,7 +537,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     sendOpts?: { deepThink?: boolean; webSearch?: boolean },
   ) => {
     if (
-      !content.trim() ||
+      (!content.trim() && !attachments?.length) ||
       !activeConversation ||
       generationStatus === "receiving" ||
       generationStatus === "sending"
@@ -424,7 +571,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       (m) => m.conversationId === currentConvId,
     ).length;
     if (
-      convMsgCount === 0 ||
+      (convMsgCount === 0 && content.trim()) ||
       activeConversation.title === "Nouvelle conversation"
     ) {
       const suggestedTitle =
@@ -548,6 +695,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           },
         },
         content: content.trim(),
+        attachments,
         conversationId: currentConvId,
         conversationTitle: activeConversation.title,
         deepThink: useDeepThink,
@@ -826,7 +974,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         renameConversation,
         sendMessage,
         setActiveConversationId,
-        setActivePage: setActivePageState,
+        setActivePage,
         setActiveSpaceId,
         setDeepThink,
         setDraft,

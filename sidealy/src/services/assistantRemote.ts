@@ -1,4 +1,9 @@
-import type { Artifact, IntentionMode, MissionPlan } from "../types";
+import type {
+  Artifact,
+  Attachment,
+  IntentionMode,
+  MissionPlan,
+} from "../types";
 
 export interface AssistantStreamCallbacks {
   onArtifact?: (artifact: Omit<Artifact, "id" | "createdAt">) => void;
@@ -12,6 +17,7 @@ export interface AssistantStreamCallbacks {
 export interface SendMessageOptions {
   callbacks: AssistantStreamCallbacks;
   content: string;
+  attachments?: Attachment[];
   conversationId: string;
   conversationTitle?: string;
   deepThink?: boolean;
@@ -45,7 +51,7 @@ function createUuid(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-function getBackendChatId(conversationId: string): string {
+export function getBackendChatId(conversationId: string): string {
   try {
     const saved = JSON.parse(
       localStorage.getItem(CHAT_ID_MAP_KEY) || "{}",
@@ -62,6 +68,34 @@ function getBackendChatId(conversationId: string): string {
     return id;
   } catch {
     return createUuid();
+  }
+}
+
+export function linkBackendChatId(
+  conversationId: string,
+  backendChatId: string,
+): void {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem(CHAT_ID_MAP_KEY) || "{}",
+    ) as Record<string, string>;
+    localStorage.setItem(
+      CHAT_ID_MAP_KEY,
+      JSON.stringify({ ...saved, [conversationId]: backendChatId }),
+    );
+  } catch {
+    // The remote history can still be read for this session if storage is disabled.
+  }
+}
+
+export function getLinkedBackendChatIds(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(CHAT_ID_MAP_KEY) || "{}") as Record<
+      string,
+      string
+    >;
+  } catch {
+    return {};
   }
 }
 
@@ -147,6 +181,64 @@ export const AssistantRemoteService = {
     const remoteChatId = getBackendChatId(conversationId);
     const selectedChatModel = await getSelectedModel();
 
+    const fileParts = await Promise.all(
+      (options.attachments ?? []).map(async (attachment) => {
+        if (!attachment.file) {
+          if (attachment.url) {
+            return {
+              filename: attachment.name,
+              mediaType: attachment.type || "application/octet-stream",
+              type: "file" as const,
+              url: attachment.url,
+            };
+          }
+          throw new Error(
+            `Le fichier « ${attachment.name} » n’est plus disponible. Ajoutez-le de nouveau avant l’envoi.`,
+          );
+        }
+        const formData = new FormData();
+        formData.set("file", attachment.file, attachment.name);
+        const upload = await fetch("/api/files/upload", {
+          body: formData,
+          credentials: "same-origin",
+          method: "POST",
+          signal,
+        });
+        if (!upload.ok) {
+          throw await responseError(upload);
+        }
+        const result = (await upload.json()) as {
+          contentType?: string;
+          url?: string;
+        };
+        if (!result.url || !result.url.startsWith("https://")) {
+          throw new Error(
+            "Le stockage des fichiers n’est pas configuré pour fournir une URL sécurisée. Configurez Supabase Storage, puis réessayez.",
+          );
+        }
+        return {
+          filename: attachment.name,
+          mediaType:
+            result.contentType || attachment.type || "application/octet-stream",
+          type: "file" as const,
+          url: result.url,
+        };
+      }),
+    );
+    const parts = [
+      ...(content.trim()
+        ? [{ text: content.trim(), type: "text" as const }]
+        : options.attachments?.length
+          ? [
+              {
+                text: "Veuillez examiner les fichiers joints à ce message.",
+                type: "text" as const,
+              },
+            ]
+          : []),
+      ...fileParts,
+    ];
+
     let response: Response;
     try {
       response = await fetch("/api/chat", {
@@ -154,7 +246,7 @@ export const AssistantRemoteService = {
           id: remoteChatId,
           message: {
             id: createUuid(),
-            parts: [{ text: content.trim(), type: "text" }],
+            parts,
             role: "user",
           },
           selectedChatModel,

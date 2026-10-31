@@ -1,7 +1,11 @@
 import {
+  BookOpen,
   ChevronDown,
+  CircleHelp,
+  CreditCard,
   Edit3,
   FileText,
+  Info,
   LayoutGrid,
   MessageSquare,
   Moon,
@@ -35,7 +39,6 @@ export const Sidebar: React.FC = () => {
     artifacts,
     openArtifact,
     setIsCommandPaletteOpen,
-    setIsSettingsOpen,
   } = useApp();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -173,8 +176,18 @@ export const Sidebar: React.FC = () => {
         </button>
       </div>
 
-      {/* Connecteurs: navigation dédiée, sans exposer d'intégrations non configurées. */}
+      {/* Navigation workspace */}
       <div className={`shrink-0 px-2 pb-2 ${collapsed ? "pt-0" : "pt-1"}`}>
+        <button
+          aria-current={activePage === "library" ? "page" : undefined}
+          className={`flex h-10 w-full items-center rounded-lg transition-colors focus-ring ${collapsed ? "mx-auto w-10 justify-center" : "gap-3 px-3"} ${activePage === "library" ? "bg-white/10 text-white font-medium" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"}`}
+          onClick={() => setActivePage("library")}
+          title="Bibliothèque"
+          type="button"
+        >
+          <LayoutGrid className="h-4 w-4 shrink-0" strokeWidth={2} />
+          {!collapsed && <span className="text-[13px]">Bibliothèque</span>}
+        </button>
         <button
           aria-current={activePage === "connectors" ? "page" : undefined}
           className={`flex h-10 w-full items-center rounded-lg transition-colors focus-ring ${
@@ -286,6 +299,33 @@ export const Sidebar: React.FC = () => {
             )}
           </section>
         )}
+
+        {!collapsed && (
+          <section className="mt-5 border-t border-white/[0.06] pt-3">
+            <h2 className="px-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+              Ressources
+            </h2>
+            {(
+              [
+                ["docs", "Documentation", BookOpen],
+                ["support", "Assistance", CircleHelp],
+                ["about", "À propos", Info],
+                ["pricing", "Offres", CreditCard],
+              ] as const
+            ).map(([page, label, Icon]) => (
+              <button
+                aria-current={activePage === page ? "page" : undefined}
+                className={`flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[12px] transition-colors focus-ring ${activePage === page ? "bg-white/10 text-white" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"}`}
+                key={page}
+                onClick={() => setActivePage(page)}
+                type="button"
+              >
+                <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </section>
+        )}
       </div>
 
       {/* --- FOOTER (Utilisateur / Paramètres / Thème) --- */}
@@ -334,7 +374,7 @@ export const Sidebar: React.FC = () => {
             className={`grid place-items-center rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors focus-ring ${
               collapsed ? "h-9 w-9" : "h-8 w-8"
             }`}
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={() => setActivePage("settings")}
             title="Paramètres"
             type="button"
           >

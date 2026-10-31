@@ -15,6 +15,9 @@ export interface Attachment {
   name: string;
   size: number;
   type: string;
+  /** Kept in memory until the message is uploaded; never serialized to localStorage. */
+  file?: File;
+  url?: string;
 }
 
 export interface Artifact {

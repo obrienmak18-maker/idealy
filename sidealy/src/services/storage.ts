@@ -51,86 +51,50 @@ const DEFAULT_CONVERSATION: Conversation = {
   draft: "",
   id: "conv-welcome",
   isArchived: false,
-  isPinned: true,
+  isPinned: false,
   selectedMode: "chat",
   spaceId: "space-general",
-  title: "Bienvenue sur Idealy",
+  title: "Nouvelle conversation",
   updatedAt: Date.now() - 3_600_000,
 };
 
-const DEFAULT_ARTIFACT: Artifact = {
-  content: `# Manifeste d'Interaction Idealy
+const DEFAULT_ARTIFACTS: Artifact[] = [];
+const DEFAULT_MESSAGES: Message[] = [];
 
-## 1. Respect de la continuité
-- Les brouillons restent préservés d'une conversation à l'autre.
-- Les changements d'espace ne réinitialisent pas vos travaux en cours.
+function migrateDemoContent(): void {
+  try {
+    const messages = JSON.parse(
+      safeGet(STORAGE_KEYS.MESSAGES) || "[]",
+    ) as Message[];
+    const conversations = JSON.parse(
+      safeGet(STORAGE_KEYS.CONVERSATIONS) || "[]",
+    ) as Conversation[];
+    const artifacts = JSON.parse(
+      safeGet(STORAGE_KEYS.ARTIFACTS) || "[]",
+    ) as Artifact[];
+    const cleanMessages = messages.filter(
+      (message) => !["msg-1", "msg-2"].includes(message.id),
+    );
+    const cleanArtifacts = artifacts.filter(
+      (artifact) => artifact.id !== "art-charter",
+    );
+    const cleanConversations = conversations.map((conversation) =>
+      conversation.id === "conv-welcome"
+        ? { ...conversation, isPinned: false, title: "Nouvelle conversation" }
+        : conversation,
+    );
+    if (cleanMessages.length !== messages.length)
+      safeSet(STORAGE_KEYS.MESSAGES, JSON.stringify(cleanMessages));
+    if (cleanArtifacts.length !== artifacts.length)
+      safeSet(STORAGE_KEYS.ARTIFACTS, JSON.stringify(cleanArtifacts));
+    if (JSON.stringify(cleanConversations) !== JSON.stringify(conversations))
+      safeSet(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(cleanConversations));
+  } catch {
+    // Ignore corrupt local cache; normal loaders will initialize a clean state.
+  }
+}
 
-## 2. Rigueur technique & Esthétique
-- Intégration du système visuel DeepSeek Harness : élévations douces 0.5px, fond blanc bleuté et surfaces dark profondes.
-- Déclinaison de couleurs signature : Vert pétrole très doux (#0e9f90 / #2dd4bf) et accents indigo (#6366f1 / #818cf8).
-- Déroulé complet du raisonnement (Reasoning Tokens) avec accordéon interactif.
-
-## 3. Ergonomie sobre
-- Palette douce conforme WCAG AA (≥ 4.5:1).
-- Navigation clavier totale (\`Ctrl+K\`, \`Échap\`, \`Tab\`).
-`,
-  conversationId: "conv-welcome",
-  createdAt: Date.now() - 3_600_000,
-  id: "art-charter",
-  title: "Manifeste d'interaction Idealy",
-  type: "document",
-};
-
-const DEFAULT_MESSAGES: Message[] = [
-  {
-    content:
-      "Quelles sont les caractéristiques de ce nouvel environnement Idealy ?",
-    conversationId: "conv-welcome",
-    createdAt: Date.now() - 3_600_000,
-    id: "msg-1",
-    mode: "chat",
-    role: "user",
-  },
-  {
-    artifactIds: ["art-charter"],
-    content: `Bienvenue dans la nouvelle version d'**Idealy**, entièrement remaniée à partir de l'architecture d'interface **DeepSeek Harness** adaptée pour le Web.
-
-Cette version allie la puissance et la clarté visuelle du design de DeepSeek à une identité soignée enrichie d'un **vert pétrole très doux** et de touches **indigo**.
-
-### Ce qui est désormais intégré :
-- **Processus de raisonnement interactif :** Dépliez l'accordéon ci-dessus pour consulter la chaîne de pensée détaillée et sa durée mesurée (4 s).
-- **Composeur flottant élevé :** Une carte élégante aux angles squircle avec élévation douce 0.5px, sélecteur de mode et bouton d'envoi dédié.
-- **Cartouches de code Shiki :** Bandeau adhésif avec nom du langage et copie instantanée dans le presse-papier :
-
-\`\`\`typescript
-// Configuration de l'environnement Idealy
-export const idealyThemeConfig = {
-  themeBase: 'neutral-bluish',
-  accents: {
-    petrolGreen: 'rgb(14, 159, 148)', // Vert pétrole doux
-    indigoSoft: 'rgb(129, 140, 248)',   // Indigo ciel
-  },
-  elevation: '0.5px hairline stroke with dual gaussian blur',
-  responsiveMode: 'web-native',
-};
-\`\`\`
-
-- **Panneau de productions (Livrables) :** Consultez les artefacts et documents complets côte à côte sans perdre le fil de votre conversation.
-
-Ouvrez le livrable à droite pour découvrir le manifeste complet.`,
-    conversationId: "conv-welcome",
-    createdAt: Date.now() - 3_590_000,
-    id: "msg-2",
-    mode: "chat",
-    reasoning: `L'utilisateur s'enquiert des spécificités du nouvel environnement Idealy.
-1. Prendre en compte la refonte basée sur le dépôt libre DeepSeek Harness adapté au pur web.
-2. Souligner les éléments d'interface authentiques : accordéon de réflexion (ReasoningRow), composeur flottant élevé (InputBar), cartouches de code avec bandeau adhésif (CodeBlock).
-3. Mettre en avant la nouvelle touche d'identité : blanc bleuté neutre, vert pétrole très doux et accents indigo subtils.
-4. Rédiger une réponse structurée avec un exemple de code et un lien vers le document de synthèse.`,
-    reasoningDuration: 4,
-    role: "assistant",
-  },
-];
+migrateDemoContent();
 
 export const StorageService = {
   loadActiveConversationId(): string {
@@ -144,14 +108,14 @@ export const StorageService = {
   loadArtifacts(): Artifact[] {
     const raw = safeGet(STORAGE_KEYS.ARTIFACTS);
     if (!raw) {
-      this.saveArtifacts([DEFAULT_ARTIFACT]);
-      return [DEFAULT_ARTIFACT];
+      this.saveArtifacts(DEFAULT_ARTIFACTS);
+      return DEFAULT_ARTIFACTS;
     }
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [DEFAULT_ARTIFACT];
+      return Array.isArray(parsed) ? parsed : DEFAULT_ARTIFACTS;
     } catch {
-      return [DEFAULT_ARTIFACT];
+      return DEFAULT_ARTIFACTS;
     }
   },
 
@@ -179,9 +143,7 @@ export const StorageService = {
     }
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) && parsed.length > 0
-        ? parsed
-        : DEFAULT_MESSAGES;
+      return Array.isArray(parsed) ? parsed : DEFAULT_MESSAGES;
     } catch {
       return DEFAULT_MESSAGES;
     }
@@ -226,7 +188,17 @@ export const StorageService = {
   },
 
   saveMessages(messages: Message[]): void {
-    safeSet(STORAGE_KEYS.MESSAGES, JSON.stringify(messages));
+    safeSet(
+      STORAGE_KEYS.MESSAGES,
+      JSON.stringify(
+        messages.map((message) => ({
+          ...message,
+          attachments: message.attachments?.map(
+            ({ file: _file, ...attachment }) => attachment,
+          ),
+        })),
+      ),
+    );
   },
 
   saveSpaces(spaces: Space[]): void {

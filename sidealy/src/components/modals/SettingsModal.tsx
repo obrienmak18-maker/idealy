@@ -22,6 +22,7 @@ export const SettingsModal: React.FC = () => {
     messages,
     artifacts,
     openConfirmModal,
+    setActivePage,
   } = useApp();
 
   if (!isSettingsOpen) {
@@ -135,24 +136,36 @@ export const SettingsModal: React.FC = () => {
                 <span>Confidentialité & Rigueur Technique</span>
               </div>
               <p className="text-text-muted">
-                • <strong>Moteur actif :</strong> Mode Local Documenté
-                (adaptateur de test et démonstration autonome).
+                • <strong>Moteur IA :</strong> réponses diffusées depuis le
+                backend Idealy via l’API de chat.
               </p>
               <p className="text-text-muted">
                 • <strong>Clés API distantes :</strong> Aucune clé secrète n'est
                 exposée dans le navigateur.
               </p>
               <p className="text-text-muted">
-                • <strong>Persistance :</strong> Stockage 100% local dans votre
-                navigateur.
+                • <strong>Persistance :</strong> conversations synchronisées
+                avec le compte quand une session est active ; les brouillons
+                restent dans ce navigateur.
               </p>
+              <Button
+                className="mt-2"
+                onClick={() => {
+                  setIsSettingsOpen(false);
+                  setActivePage("settings");
+                }}
+                size="sm"
+                variant="secondary"
+              >
+                Ouvrir tous les paramètres
+              </Button>
             </div>
           </div>
 
           {/* Data Statistics & Reset */}
           <div>
             <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">
-              Données Locales
+              Cache de cet appareil
             </h4>
             <div className="p-4 rounded-xl border border-border-subtle bg-bg-subtle/30 space-y-3">
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -180,7 +193,7 @@ export const SettingsModal: React.FC = () => {
 
               <div className="pt-2 border-t border-border-subtle/60 flex items-center justify-between">
                 <span className="text-xs text-text-muted">
-                  Stockage local du navigateur
+                  Données locales du navigateur
                 </span>
                 <Button
                   leftIcon={<Trash2 className="w-3.5 h-3.5" />}

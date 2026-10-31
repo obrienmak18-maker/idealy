@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   ChevronDown,
   Edit3,
   FileText,
@@ -7,6 +8,7 @@ import {
   Pin,
   Plug,
   Search,
+  Settings,
   Sparkles,
   SquarePen,
   X,
@@ -159,6 +161,15 @@ export const MobileDrawer: React.FC = () => {
             <span>Nouvelle conversation</span>
           </button>
           <button
+            aria-current={activePage === "library" ? "page" : undefined}
+            className={`flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] transition-colors focus-ring ${activePage === "library" ? "sidebar-item-active text-[var(--dsw-alias-label-primary)] font-medium" : "text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"}`}
+            onClick={() => setActivePage("library")}
+            type="button"
+          >
+            <LayoutGrid aria-hidden="true" className="h-4 w-4" />
+            <span>Bibliothèque</span>
+          </button>
+          <button
             className="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] focus-ring"
             onClick={() => {
               setIsMobileDrawerOpen(false);
@@ -184,6 +195,26 @@ export const MobileDrawer: React.FC = () => {
           >
             <Plug aria-hidden="true" className="h-4 w-4" />
             <span>Connecteurs</span>
+          </button>
+          <button
+            aria-current={activePage === "settings" ? "page" : undefined}
+            className={`flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] transition-colors focus-ring ${activePage === "settings" ? "sidebar-item-active text-[var(--dsw-alias-label-primary)] font-medium" : "text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"}`}
+            onClick={() => setActivePage("settings")}
+            type="button"
+          >
+            <Settings aria-hidden="true" className="h-4 w-4" />
+            <span>Paramètres</span>
+          </button>
+          <button
+            className="flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] focus-ring"
+            onClick={() => {
+              setActivePage("docs");
+              setIsMobileDrawerOpen(false);
+            }}
+            type="button"
+          >
+            <BookOpen aria-hidden="true" className="h-4 w-4" />
+            <span>Documentation</span>
           </button>
         </div>
 
