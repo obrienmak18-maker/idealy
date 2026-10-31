@@ -2,7 +2,9 @@ import {
   AlertCircle,
   ArrowLeft,
   Check,
+  ChevronDown,
   LoaderCircle,
+  Play,
   Menu,
   Plug,
   RefreshCw,
@@ -33,7 +35,31 @@ type BackendPlugin = {
 };
 
 type PluginResponse = { plugins?: BackendPlugin[]; error?: string };
+type PluginExecutionRecord = {
+  id?: string;
+  output?: unknown;
+  started_at?: string | null;
+  status?: string;
+  tool_id?: string;
+};
+type PluginExecutionResponse = {
+  error?: string;
+  executions?: PluginExecutionRecord[];
+  output?: unknown;
+  ok?: boolean;
+};
 type PluginInstallReview = { plugin: BackendPlugin; permissions: string[] };
+
+const NO_INPUT_READ_TOOLS = new Set([
+  "github-list-repositories",
+  "google-drive-list-drive-files",
+  "vercel-list-projects",
+  "canva-list-designs",
+  "notion-search-pages",
+  "slack-list-channels",
+  "stripe-read-subscription",
+  "stripe-read-invoice",
+]);
 
 function pluginStateLabel(plugin: BackendPlugin): string {
   if (plugin.available) {
@@ -60,6 +86,15 @@ export const ConnectorsPage: React.FC = () => {
   const [review, setReview] = useState<PluginInstallReview | null>(null);
   const [installing, setInstalling] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [openToolsPlugin, setOpenToolsPlugin] = useState<string | null>(null);
+  const [executingTool, setExecutingTool] = useState<string | null>(null);
+  const [executionHistory, setExecutionHistory] = useState<
+    Record<string, PluginExecutionRecord[]>
+  >({});
+  const [executionResult, setExecutionResult] = useState<{
+    output: unknown;
+    pluginId: string;
+  } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -259,6 +294,70 @@ export const ConnectorsPage: React.FC = () => {
           ? cause.message
           : "Les autorisations du plugin nâ€™ont pas pu Ãªtre chargÃ©es.",
       );
+    }
+  };
+
+  const loadPluginExecutions = async (pluginId: string) => {
+    const response = await fetch(
+      "/api/idealy/plugins/" + encodeURIComponent(pluginId) + "/execute",
+      { cache: "no-store", credentials: "same-origin" },
+    );
+    const payload = (await response.json().catch(() => ({}))) as PluginExecutionResponse;
+    if (!response.ok)
+      throw new Error(payload.error || "L’historique des outils est indisponible.");
+    setExecutionHistory((current) => ({
+      ...current,
+      [pluginId]: Array.isArray(payload.executions) ? payload.executions : [],
+    }));
+  };
+
+  const togglePluginTools = async (plugin: BackendPlugin) => {
+    if (openToolsPlugin === plugin.id) {
+      setOpenToolsPlugin(null);
+      return;
+    }
+    setOpenToolsPlugin(plugin.id);
+    setActionError("");
+    try {
+      await loadPluginExecutions(plugin.id);
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error ? cause.message : "L’historique des outils est indisponible.",
+      );
+    }
+  };
+
+  const executeReadTool = async (plugin: BackendPlugin, toolId: string) => {
+    if (!plugin.available || !NO_INPUT_READ_TOOLS.has(toolId) || executingTool)
+      return;
+    setExecutingTool(plugin.id + ":" + toolId);
+    setActionError("");
+    setExecutionResult(null);
+    try {
+      const response = await fetch(
+        "/api/idealy/plugins/" + encodeURIComponent(plugin.id) + "/execute",
+        {
+          body: JSON.stringify({
+            idempotencyKey: crypto.randomUUID(),
+            input: {},
+            toolId,
+          }),
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      const payload = (await response.json().catch(() => ({}))) as PluginExecutionResponse;
+      if (!response.ok || payload.ok !== true)
+        throw new Error(payload.error || "L’outil n’a pas pu être exécuté.");
+      setExecutionResult({ output: payload.output ?? null, pluginId: plugin.id });
+      await loadPluginExecutions(plugin.id);
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error ? cause.message : "L’outil n’a pas pu être exécuté.",
+      );
+    } finally {
+      setExecutingTool(null);
     }
   };
 
@@ -492,6 +591,98 @@ export const ConnectorsPage: React.FC = () => {
                               .join(" Â· ")}
                           </p>
                         )}
+                        {plugin.available &&
+                          plugin.tools.some(
+                            (tool) =>
+                              NO_INPUT_READ_TOOLS.has(tool.id) &&
+                              tool.requiresConfirmation === false,
+                          ) && (
+                            <div className="mt-3">
+                              <button
+                                aria-expanded={openToolsPlugin === plugin.id}
+                                className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-border-subtle px-3 text-[11px] font-medium text-text-main hover:bg-bg-subtle focus-ring"
+                                onClick={() => void togglePluginTools(plugin)}
+                                type="button"
+                              >
+                                Outils de lecture
+                                <ChevronDown
+                                  aria-hidden="true"
+                                  className={"h-3.5 w-3.5 transition-transform " + (openToolsPlugin === plugin.id ? "rotate-180" : "")}
+                                />
+                              </button>
+                              {openToolsPlugin === plugin.id && (
+                                <section
+                                  aria-label={"Outils de lecture " + plugin.name}
+                                  className="mt-3 rounded-xl border border-border-subtle bg-bg-base p-3"
+                                >
+                                  <p className="text-[11px] leading-5 text-text-muted">
+                                    Ces outils lisent les données du compte connecté. Les actions d’écriture et de publication ne sont pas lancées depuis ce panneau.
+                                  </p>
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {plugin.tools
+                                      .filter(
+                                        (tool) =>
+                                          NO_INPUT_READ_TOOLS.has(tool.id) &&
+                                          tool.requiresConfirmation === false,
+                                      )
+                                      .map((tool) => (
+                                        <button
+                                          className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-bg-subtle px-3 text-[11px] font-medium text-text-main hover:bg-border-subtle focus-ring disabled:opacity-50"
+                                          disabled={executingTool !== null}
+                                          key={tool.id}
+                                          onClick={() => void executeReadTool(plugin, tool.id)}
+                                          type="button"
+                                        >
+                                          {executingTool === plugin.id + ":" + tool.id ? (
+                                            <LoaderCircle aria-hidden="true" className="h-3 w-3 animate-spin" />
+                                          ) : (
+                                            <Play aria-hidden="true" className="h-3 w-3" />
+                                          )}
+                                          {tool.label}
+                                        </button>
+                                      ))}
+                                  </div>
+                                  {executionResult?.pluginId === plugin.id && (
+                                    <pre
+                                      aria-label={"Résultat " + plugin.name}
+                                      className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border-subtle bg-bg-surface p-3 font-mono text-[10px] leading-4 text-text-muted"
+                                    >
+                                      {JSON.stringify(executionResult.output, null, 2)}
+                                    </pre>
+                                  )}
+                                  <div className="mt-3">
+                                    <h4 className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+                                      Exécutions récentes
+                                    </h4>
+                                    {executionHistory[plugin.id]?.length ? (
+                                      <ul className="mt-2 space-y-1.5">
+                                        {executionHistory[plugin.id].slice(0, 5).map((execution, index) => (
+                                          <li
+                                            className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-text-muted"
+                                            key={execution.id ?? (execution.tool_id || "tool") + "-" + index}
+                                          >
+                                            <span className="truncate">
+                                              {execution.tool_id ?? "Outil"}
+                                              {execution.started_at
+                                                ? " · " + new Date(execution.started_at).toLocaleString("fr-FR")
+                                                : ""}
+                                            </span>
+                                            <span className={execution.status === "succeeded" ? "text-success" : ""}>
+                                              {execution.status ?? "État inconnu"}
+                                            </span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    ) : (
+                                      <p className="mt-1.5 text-[10px] text-text-muted">
+                                        Aucune exécution enregistrée.
+                                      </p>
+                                    )}
+                                  </div>
+                                </section>
+                              )}
+                            </div>
+                          )}
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
