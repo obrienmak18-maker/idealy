@@ -42,7 +42,7 @@ export const Header: React.FC = () => {
       )}
 
       <button
-        aria-label="Nouvelle discussion"
+        aria-label="Nouvelle conversation"
         className="grid h-8 w-8 place-items-center rounded-xl text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] focus-ring md:hidden"
         onClick={() => createConversation()}
         type="button"
