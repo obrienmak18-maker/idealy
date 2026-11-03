@@ -36,7 +36,7 @@ export const Header: React.FC = () => {
       </div>
 
       {!hasMessages && (
-        <span className="absolute left-1/2 -translate-x-1/2 text-[15px] font-semibold tracking-tight text-[var(--dsw-alias-label-primary)] md:hidden">
+        <span className="absolute left-1/2 -translate-x-1/2 text-[15px] font-medium tracking-tight text-[var(--dsw-alias-label-primary)] md:hidden">
           Idealy
         </span>
       )}

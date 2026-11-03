@@ -129,7 +129,9 @@ export type AppPage =
   | "privacy"
   | "terms"
   | "eula"
-  | "login";
+  | "login"
+  | "onboarding"
+  | "authAction";
 
 const pagePaths: Record<AppPage, string> = {
   about: "/about",
@@ -144,6 +146,8 @@ const pagePaths: Record<AppPage, string> = {
   terms: "/terms",
   eula: "/eula",
   login: "/login",
+  onboarding: "/onboarding",
+  authAction: "/auth/action",
   settings: "/settings",
   support: "/support",
   welcome: "/welcome",

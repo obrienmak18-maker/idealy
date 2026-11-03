@@ -1,34 +1,59 @@
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   authErrorMessage,
+  completeMagicLink,
+  confirmPhoneCode,
   createBackendSession,
   isFirebaseConfigured,
+  isMagicLinkUrl,
+  rememberedMagicEmail,
   resetPassword,
+  sendMagicLink,
+  sendPhoneCode,
   signInEmail,
   signInGoogle,
   signUpEmail,
 } from "../../services/firebase";
+import { AuthShell, authField, authLink, authPrimary, authSecondary, Message, routeAfterAuth } from "./AuthShell";
 
-type Mode = "login" | "signup";
+type View = "login" | "signup" | "magic" | "phone" | "reset" | "sent";
+type FirebaseUser = Awaited<ReturnType<typeof signInGoogle>>;
+
+const GoogleMark = () => (
+  <svg aria-hidden="true" height="18" viewBox="0 0 48 48" width="18">
+    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
+    <path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.9-6.1z" />
+    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+  </svg>
+);
 
 export const AuthPage: React.FC = () => {
-  const [mode, setMode] = useState<Mode>(window.location.pathname.startsWith("/register") ? "signup" : "login");
+  const [view, setView] = useState<View>(window.location.pathname.startsWith("/register") ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [sentTo, setSentTo] = useState<{ kind: "verify" | "magic" | "reset"; email: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const recaptchaRef = useRef<HTMLDivElement>(null);
 
-  const finish = async (run: () => Promise<Parameters<typeof createBackendSession>[0]>) => {
+  const go = (next: View) => {
+    setView(next);
+    setError(null);
+    setNotice(null);
+  };
+
+  const run = async (task: () => Promise<void>) => {
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
-      const user = await run();
-      await createBackendSession(user);
-      if (mode === "signup") setNotice("Compte créé. Un e-mail de vérification vous a été envoyé.");
-      window.location.replace("/");
+      await task();
     } catch (e) {
       setError(authErrorMessage(e));
     } finally {
@@ -36,87 +61,163 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  const finish = async (user: FirebaseUser) => {
+    await createBackendSession(user);
+    await routeAfterAuth();
+  };
+
+  // Retour depuis un lien magique
+  useEffect(() => {
+    if (!isMagicLinkUrl()) return;
+    const known = rememberedMagicEmail();
+    if (!known) {
+      setView("magic");
+      setNotice("Confirmez votre adresse e-mail pour terminer la connexion.");
+      return;
+    }
+    void run(async () => finish(await completeMagicLink(known)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    void finish(() => (mode === "login" ? signInEmail(email, password) : signUpEmail(email, password)));
+    void run(async () => {
+      if (view === "login") return finish(await signInEmail(email, password));
+      if (view === "signup") {
+        const user = await signUpEmail(email, password);
+        await createBackendSession(user);
+        setSentTo({ kind: "verify", email });
+        setView("sent");
+        return;
+      }
+      if (view === "reset") {
+        await resetPassword(email);
+        setSentTo({ kind: "reset", email });
+        setView("sent");
+        return;
+      }
+      if (view === "magic") {
+        if (isMagicLinkUrl()) return finish(await completeMagicLink(email));
+        await sendMagicLink(email);
+        setSentTo({ kind: "magic", email });
+        setView("sent");
+        return;
+      }
+      if (view === "phone") {
+        if (!codeSent) {
+          if (!recaptchaRef.current) return;
+          await sendPhoneCode(phone.replace(/\s+/g, ""), recaptchaRef.current);
+          setCodeSent(true);
+          setNotice("Code envoyé par SMS.");
+          return;
+        }
+        return finish(await confirmPhoneCode(code));
+      }
+    });
   };
 
-  const onReset = async () => {
-    if (!email) return setError("Saisissez d’abord votre e-mail.");
-    try {
-      await resetPassword(email);
-      setNotice("Si un compte existe, un e-mail de réinitialisation vient d’être envoyé.");
-      setError(null);
-    } catch (e) {
-      setError(authErrorMessage(e));
-    }
+  const titles: Record<View, [string, string]> = {
+    login: ["Bon retour", "Connectez-vous pour retrouver vos projets."],
+    signup: ["Créez votre compte", "Quelques secondes suffisent."],
+    magic: ["Lien de connexion", "Recevez un lien sécurisé par e-mail, sans mot de passe."],
+    phone: ["Connexion par téléphone", "Nous vous envoyons un code par SMS."],
+    reset: ["Mot de passe oublié", "Saisissez votre e-mail pour recevoir un lien de réinitialisation."],
+    sent: ["Vérifiez votre boîte mail", ""],
   };
 
-  const field =
-    "h-12 w-full rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] px-4 text-[15px] text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-tertiary)] focus-ring";
-
-  return (
-    <main className="flex min-h-screen w-screen items-center justify-center bg-bg-base px-5 py-10 text-text-main">
-      <div className="w-full max-w-[380px]">
-        <h1 className="text-[30px] font-semibold tracking-[-0.03em]">
-          {mode === "login" ? "Bon retour" : "Créez votre compte"}
-        </h1>
-        <p className="mt-2 text-[15px] text-[var(--dsw-alias-label-secondary)]">
-          {mode === "login" ? "Connectez-vous pour retrouver vos projets." : "Quelques secondes suffisent."}
-        </p>
-
-        {!isFirebaseConfigured() && (
-          <p className="mt-5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-[13px]" role="status">
-            La connexion n’est pas configurée ici (variables VITE_FIREBASE_* manquantes).
-          </p>
-        )}
-
-        <button
-          className="focus-ring mt-7 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[var(--dsw-alias-border-l2)] text-[15px] font-medium transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] disabled:opacity-60"
-          disabled={busy}
-          onClick={() => void finish(signInGoogle)}
-          type="button"
-        >
-          <svg aria-hidden="true" height="18" viewBox="0 0 48 48" width="18">
-            <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
-            <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
-            <path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.100 0 24s.9 7.600 2.600 10.800l7.900-6.100z" />
-            <path fill="#34A853" d="M24 48c6.500 0 11.900-2.100 15.900-5.800l-7.500-5.800c-2.100 1.400-4.800 2.300-8.400 2.300-6.300 0-11.600-4.100-13.500-9.800l-7.900 6.100C6.500 42.600 14.600 48 24 48z" />
-          </svg>
-          Continuer avec Google
-        </button>
-
-        <div className="my-6 flex items-center gap-3 text-[12px] text-[var(--dsw-alias-label-tertiary)]">
-          <span className="h-px flex-1 bg-[var(--dsw-alias-border-l1)]" />
-          ou
-          <span className="h-px flex-1 bg-[var(--dsw-alias-border-l1)]" />
-        </div>
-
-        <form className="space-y-3" onSubmit={onSubmit}>
-          <input autoComplete="email" className={field} onChange={(e) => setEmail(e.target.value)} placeholder="Adresse e-mail" required type="email" value={email} />
-          <input autoComplete={mode === "login" ? "current-password" : "new-password"} className={field} minLength={6} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe" required type="password" value={password} />
-          {error && <p className="text-[13px] text-red-400" role="alert">{error}</p>}
-          {notice && <p className="text-[13px] text-[var(--idealy-teal-petrol)]" role="status">{notice}</p>}
-          <button
-            className="focus-ring h-12 w-full rounded-xl bg-[var(--dsw-alias-label-primary)] text-[15px] font-semibold text-[var(--dsw-alias-bg-layer-1)] transition-opacity disabled:opacity-60"
-            disabled={busy}
-            type="submit"
-          >
-            {busy ? "Un instant…" : mode === "login" ? "Se connecter" : "Créer mon compte"}
-          </button>
-        </form>
-
-        <div className="mt-5 flex items-center justify-between text-[13px] text-[var(--dsw-alias-label-secondary)]">
-          <button className="focus-ring rounded underline-offset-4 hover:underline" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }} type="button">
-            {mode === "login" ? "Créer un compte" : "J’ai déjà un compte"}
-          </button>
-          {mode === "login" && (
-            <button className="focus-ring rounded underline-offset-4 hover:underline" onClick={() => void onReset()} type="button">
-              Mot de passe oublié
+  if (view === "sent" && sentTo) {
+    const text =
+      sentTo.kind === "verify"
+        ? `Nous avons envoyé un e-mail de confirmation à ${sentTo.email}. Ouvrez-le pour activer votre compte.`
+        : sentTo.kind === "magic"
+          ? `Un lien de connexion a été envoyé à ${sentTo.email}. Ouvrez-le sur cet appareil.`
+          : `Si un compte existe pour ${sentTo.email}, un lien de réinitialisation vient d’être envoyé.`;
+    return (
+      <AuthShell title={titles.sent[0]}>
+        <p className="text-[15px] leading-relaxed text-[var(--dsw-alias-label-secondary)]">{text}</p>
+        <div className="mt-8 space-y-3">
+          {sentTo.kind === "verify" && (
+            <button className={authPrimary} onClick={() => void routeAfterAuth()} type="button">
+              Continuer
             </button>
           )}
+          <button className={authLink} onClick={() => go("login")} type="button">
+            Retour à la connexion
+          </button>
         </div>
+      </AuthShell>
+    );
+  }
+
+  const [title, subtitle] = titles[view];
+  const needsPassword = view === "login" || view === "signup";
+  const submitLabel =
+    view === "login" ? "Se connecter" : view === "signup" ? "Créer mon compte" : view === "phone" ? (codeSent ? "Valider le code" : "Recevoir le code") : view === "reset" ? "Envoyer le lien" : "Envoyer le lien";
+
+  return (
+    <AuthShell title={title} subtitle={subtitle}>
+      {!isFirebaseConfigured() && (
+        <p className="mb-5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-[13px]" role="status">
+          La connexion n’est pas configurée ici (variables VITE_FIREBASE_* manquantes).
+        </p>
+      )}
+
+      {(view === "login" || view === "signup") && (
+        <>
+          <button className={authSecondary} disabled={busy} onClick={() => void run(async () => finish(await signInGoogle()))} type="button">
+            <GoogleMark />
+            Continuer avec Google
+          </button>
+          <div className="my-6 flex items-center gap-3 text-[12px] text-[var(--dsw-alias-label-tertiary)]">
+            <span className="h-px flex-1 bg-[var(--dsw-alias-border-l1)]" />
+            ou
+            <span className="h-px flex-1 bg-[var(--dsw-alias-border-l1)]" />
+          </div>
+        </>
+      )}
+
+      <form className="space-y-3" onSubmit={onSubmit}>
+        {view !== "phone" && (
+          <input autoComplete="email" className={authField} onChange={(e) => setEmail(e.target.value)} placeholder="Adresse e-mail" required type="email" value={email} />
+        )}
+        {needsPassword && (
+          <input autoComplete={view === "login" ? "current-password" : "new-password"} className={authField} minLength={6} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe" required type="password" value={password} />
+        )}
+        {view === "phone" && (
+          <>
+            <input autoComplete="tel" className={authField} disabled={codeSent} inputMode="tel" onChange={(e) => setPhone(e.target.value)} placeholder="+234 801 234 5678" required type="tel" value={phone} />
+            {codeSent && (
+              <input autoComplete="one-time-code" className={authField} inputMode="numeric" maxLength={6} onChange={(e) => setCode(e.target.value)} placeholder="Code à 6 chiffres" required value={code} />
+            )}
+            <div ref={recaptchaRef} />
+          </>
+        )}
+        <Message error={error} notice={notice} />
+        <button className={authPrimary} disabled={busy} type="submit">
+          {busy ? "Un instant…" : submitLabel}
+        </button>
+      </form>
+
+      <div className="mt-6 flex flex-col gap-3">
+        {view === "login" && (
+          <div className="flex items-center justify-between">
+            <button className={authLink} onClick={() => go("signup")} type="button">Créer un compte</button>
+            <button className={authLink} onClick={() => go("reset")} type="button">Mot de passe oublié</button>
+          </div>
+        )}
+        {view === "signup" && (
+          <button className={authLink} onClick={() => go("login")} type="button">J’ai déjà un compte</button>
+        )}
+        {(view === "login" || view === "signup") && (
+          <div className="flex items-center gap-5 pt-1">
+            <button className={authLink} onClick={() => go("magic")} type="button">Lien par e-mail</button>
+            <button className={authLink} onClick={() => go("phone")} type="button">Téléphone</button>
+          </div>
+        )}
+        {(view === "magic" || view === "phone" || view === "reset") && (
+          <button className={authLink} onClick={() => go("login")} type="button">Retour</button>
+        )}
       </div>
-    </main>
+    </AuthShell>
   );
 };

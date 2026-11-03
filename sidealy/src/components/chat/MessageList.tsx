@@ -95,7 +95,7 @@ export const MessageList: React.FC = () => {
         {activeMessages.length === 0 ? (
           <div className="idealy-home relative mx-auto flex min-h-full flex-1 w-full max-w-[760px] flex-col justify-end px-3 pb-2 pt-2 sm:justify-center sm:px-8 sm:pb-16 sm:pt-8">
             <div className="animate-fade-up flex flex-1 items-center justify-center pb-6 text-center sm:mb-8 sm:flex-none sm:pb-0">
-              <h1 className="max-w-[16ch] text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] text-text-main sm:max-w-none sm:text-[36px]">
+              <h1 className="max-w-[16ch] text-[26px] font-medium leading-[1.2] tracking-[-0.02em] text-text-main sm:max-w-none sm:text-[34px]">
                 {greeting}
               </h1>
             </div>

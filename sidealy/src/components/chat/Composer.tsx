@@ -608,15 +608,15 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                 aria-label="Envoyer le message"
                 className={
                   isEmpty
-                    ? "grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-[var(--dsw-alias-button-info-fill)] text-white opacity-40 cursor-not-allowed transition-all duration-200 focus-ring"
-                    : "grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white hover:opacity-95 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg focus-ring"
+                    ? "grid h-9 w-9 place-items-center rounded-full bg-[var(--dsw-alias-interactive-bg-hover)] text-[var(--dsw-alias-label-tertiary)] cursor-not-allowed transition-all duration-200 focus-ring"
+                    : "grid h-9 w-9 place-items-center rounded-full bg-[var(--dsw-alias-label-primary)] text-[var(--dsw-alias-bg-layer-1)] hover:opacity-90 active:scale-95 transition-all duration-200 focus-ring"
                 }
                 disabled={isEmpty}
                 onClick={handleSend}
                 title="Envoyer le message"
                 type="button"
               >
-                <ArrowUp aria-hidden="true" className="h-4.5 w-4.5 stroke-[2.5]" />
+                <ArrowUp aria-hidden="true" className="h-4 w-4 stroke-[2.2]" />
               </button>
             )}
           </div>

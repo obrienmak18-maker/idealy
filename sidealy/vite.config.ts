@@ -20,8 +20,6 @@ export default defineConfig({
     proxy: Object.fromEntries(
       [
         "/api",
-        "/verify-email",
-        "/onboarding",
         "/_next",
       ].map((path) => [
         path,

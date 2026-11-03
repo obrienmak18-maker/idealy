@@ -16,13 +16,17 @@ import { LibraryPage } from "./components/pages/LibraryPage";
 import { PricingPage } from "./components/pages/PricingPage";
 import { ProductInfoPage } from "./components/pages/ProductInfoPage";
 import { SettingsPage } from "./components/pages/SettingsPage";
+import { AuthActionPage } from "./components/auth/AuthActionPage";
 import { AuthPage } from "./components/auth/AuthPage";
+import { OnboardingPage } from "./components/auth/OnboardingPage";
 import { AppProvider, useApp } from "./context/AppContext";
 
 const AppContent: React.FC = () => {
   const { activeArtifact, activePage, activeMessages } = useApp();
 
   if (activePage === "login") return <AuthPage />;
+  if (activePage === "onboarding") return <OnboardingPage />;
+  if (activePage === "authAction") return <AuthActionPage />;
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-base text-text-main font-sans selection:bg-brand-primary/20">
