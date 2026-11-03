@@ -93,20 +93,16 @@ export const MessageList: React.FC = () => {
     >
       <div className="mx-auto flex min-h-full w-full max-w-[900px] flex-col space-y-4">
         {activeMessages.length === 0 ? (
-          <div className="idealy-home relative mx-auto flex min-h-full flex-1 w-full max-w-[760px] flex-col justify-end px-4 pb-3 pt-10 sm:justify-center sm:px-8 sm:pb-16 sm:pt-8">
-            <div className="animate-fade-up mb-auto sm:mb-8 sm:text-center">
-              <p className="text-[13px] font-medium text-[var(--dsw-alias-label-tertiary)] sm:hidden">Idealy</p>
-              <h1 className="mt-2 max-w-[18ch] text-[34px] font-semibold leading-[1.05] tracking-[-0.035em] text-text-main sm:mt-0 sm:max-w-none sm:text-[36px]">
+          <div className="idealy-home relative mx-auto flex min-h-full flex-1 w-full max-w-[760px] flex-col justify-end px-3 pb-2 pt-2 sm:justify-center sm:px-8 sm:pb-16 sm:pt-8">
+            <div className="animate-fade-up flex flex-1 items-center justify-center pb-6 text-center sm:mb-8 sm:flex-none sm:pb-0">
+              <h1 className="max-w-[16ch] text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] text-text-main sm:max-w-none sm:text-[36px]">
                 {greeting}
               </h1>
-              <p className="mt-3 max-w-[32ch] text-[15px] leading-snug text-[var(--dsw-alias-label-secondary)] sm:hidden">
-                Décrivez votre idée, je m’occupe du reste.
-              </p>
             </div>
 
             {/* Mobile: suggestions défilent horizontalement au-dessus du champ */}
             <div
-              className="-mx-4 mb-3 flex snap-x gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
+              className="-mx-3 mb-2.5 flex snap-x gap-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
               aria-label="Suggestions de départ"
             >
               {mobileStarters.map((s) => {
@@ -116,7 +112,7 @@ export const MessageList: React.FC = () => {
                     key={s.title}
                     type="button"
                     onClick={() => chooseStarter(s.prompt)}
-                    className="focus-ring flex shrink-0 snap-start items-center gap-2 rounded-2xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-2)] px-3.5 py-3 text-[14px] text-[var(--dsw-alias-label-primary)] active:scale-[0.98]"
+                    className="focus-ring flex shrink-0 snap-start items-center gap-2 rounded-full border border-[var(--dsw-alias-border-l1)] px-3.5 py-2 text-[13.5px] text-[var(--dsw-alias-label-primary)] active:scale-[0.98]"
                   >
                     <Icon className="h-4 w-4 text-[var(--idealy-teal-petrol)]" aria-hidden="true" />
                     {s.title}

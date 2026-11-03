@@ -1,6 +1,5 @@
 import type React from "react";
 import { useState } from "react";
-import { useApp } from "../../context/AppContext";
 import {
   authErrorMessage,
   createBackendSession,
@@ -14,7 +13,6 @@ import {
 type Mode = "login" | "signup";
 
 export const AuthPage: React.FC = () => {
-  const { setActivePage } = useApp();
   const [mode, setMode] = useState<Mode>(window.location.pathname.startsWith("/register") ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -118,9 +116,6 @@ export const AuthPage: React.FC = () => {
             </button>
           )}
         </div>
-        <button className="focus-ring mt-8 rounded text-[13px] text-[var(--dsw-alias-label-tertiary)] hover:underline" onClick={() => setActivePage("chat")} type="button">
-          Continuer sans compte
-        </button>
       </div>
     </main>
   );

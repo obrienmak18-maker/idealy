@@ -97,24 +97,36 @@ function getAllowedModels(): Record<Provider, readonly string[]> {
 const MAX_PROMPT_CHARS = 120_000;
 const MAX_SYSTEM_PROMPT_CHARS = 20_000;
 const DEFAULT_OUTPUT_TOKENS = 30_000;
-// Absolute request ceiling; the effective limit is clamped per provider below.
-const MAX_OUTPUT_TOKENS = 64_000;
-// Conservative per-provider output ceilings (tokens). Override with
-// AI_MAX_OUTPUT_TOKENS_<PROVIDER> (e.g. AI_MAX_OUTPUT_TOKENS_OPENAI) once verified.
-const PROVIDER_OUTPUT_CEILINGS: Record<Provider, number> = {
+// Absolute request ceiling (1M). Each provider is then limited by its own budget
+// (what Idealy allows) and by the hard cap the provider API actually accepts.
+const MAX_OUTPUT_TOKENS = 1_000_000;
+const PROVIDER_OUTPUT_BUDGETS: Record<Provider, number> = {
+  anthropic: 500_000,
+  deepseek: 200_000,
+  gemini: 500_000,
+  groq: 128_000,
+  moonshot: 200_000,
+  openai: 200_000,
+  openrouter: 64_000,
+  together: 128_000,
+};
+// Largest max_tokens a single provider call accepts. Sending more makes the API
+// answer 400, so longer builds are produced file by file with continuation.
+// Override with AI_MAX_OUTPUT_TOKENS_<PROVIDER> after checking the model's limit.
+const PROVIDER_API_CAPS: Record<Provider, number> = {
   anthropic: 64_000,
-  deepseek: 8_000,
-  gemini: 64_000,
+  deepseek: 64_000,
+  gemini: 65_536,
   groq: 32_000,
-  moonshot: 32_000,
-  openai: 32_000,
-  openrouter: 16_000,
+  moonshot: 64_000,
+  openai: 128_000,
+  openrouter: 64_000,
   together: 32_000,
 };
 function outputCeilingFor(provider: Provider): number {
   const override = Number(Deno.env.get(`AI_MAX_OUTPUT_TOKENS_${provider.toUpperCase()}`));
-  const ceiling = Number.isInteger(override) && override >= 128 ? override : PROVIDER_OUTPUT_CEILINGS[provider];
-  return Math.min(ceiling, MAX_OUTPUT_TOKENS);
+  const apiCap = Number.isInteger(override) && override >= 128 ? override : PROVIDER_API_CAPS[provider];
+  return Math.min(apiCap, PROVIDER_OUTPUT_BUDGETS[provider], MAX_OUTPUT_TOKENS);
 }
 const MAX_IDEMPOTENCY_KEY_CHARS = 180;
 const WORKSPACE_SYSTEM_PROMPT = `
