@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { MessageItem } from './MessageItem';
-import { ArrowDown, History, Layers2 } from 'lucide-react';
+import { ArrowDown, Braces, FileText, History, Layers2, Wand2 } from 'lucide-react';
 import { Composer } from './Composer';
 
 export const MessageList: React.FC = () => {
@@ -69,8 +69,16 @@ export const MessageList: React.FC = () => {
     { icon: History, title: 'Reprendre un projet récent', prompt: '' },
   ] as const;
 
+  const mobileStarters = [
+    { icon: Layers2, title: 'Créer une application', prompt: 'Je veux créer une application qui ' },
+    { icon: Braces, title: 'Explorer du code', prompt: 'Aide-moi à comprendre ou améliorer ce code : ' },
+    { icon: Wand2, title: 'Générer du contenu', prompt: 'Génère-moi ' },
+    { icon: FileText, title: 'Préparer un plan', prompt: 'Aide-moi à préparer un plan pour ' },
+    { icon: History, title: 'Reprendre un projet', prompt: '' },
+  ] as const;
+
   const hour = new Date().getHours();
-  const greeting = hour < 5 || hour >= 18 ? 'Bonsoir, que construisons-nous ?' : 'Bonjour, que construisons-nous ?';
+  const greeting = hour < 5 || hour >= 18 ? 'Bonsoir. Que construisons-nous ?' : 'Bonjour. Que construisons-nous ?';
 
   return (
     <div
@@ -85,14 +93,43 @@ export const MessageList: React.FC = () => {
     >
       <div className="mx-auto flex min-h-full w-full max-w-[900px] flex-col space-y-4">
         {activeMessages.length === 0 ? (
-          <div className="idealy-home relative mx-auto flex min-h-full w-full max-w-[760px] flex-col justify-center px-4 pb-16 pt-8 sm:px-8">
-            <h1 className="animate-fade-up mb-8 text-center text-[28px] font-semibold leading-tight tracking-[-0.03em] text-text-main sm:text-[36px]">
-              {greeting}
-            </h1>
+          <div className="idealy-home relative mx-auto flex min-h-full flex-1 w-full max-w-[760px] flex-col justify-end px-4 pb-3 pt-10 sm:justify-center sm:px-8 sm:pb-16 sm:pt-8">
+            <div className="animate-fade-up mb-auto sm:mb-8 sm:text-center">
+              <p className="text-[13px] font-medium text-[var(--dsw-alias-label-tertiary)] sm:hidden">Idealy</p>
+              <h1 className="mt-2 max-w-[18ch] text-[34px] font-semibold leading-[1.05] tracking-[-0.035em] text-text-main sm:mt-0 sm:max-w-none sm:text-[36px]">
+                {greeting}
+              </h1>
+              <p className="mt-3 max-w-[32ch] text-[15px] leading-snug text-[var(--dsw-alias-label-secondary)] sm:hidden">
+                Décrivez votre idée, je m’occupe du reste.
+              </p>
+            </div>
+
+            {/* Mobile: suggestions défilent horizontalement au-dessus du champ */}
+            <div
+              className="-mx-4 mb-3 flex snap-x gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
+              aria-label="Suggestions de départ"
+            >
+              {mobileStarters.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <button
+                    key={s.title}
+                    type="button"
+                    onClick={() => chooseStarter(s.prompt)}
+                    className="focus-ring flex shrink-0 snap-start items-center gap-2 rounded-2xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-2)] px-3.5 py-3 text-[14px] text-[var(--dsw-alias-label-primary)] active:scale-[0.98]"
+                  >
+                    <Icon className="h-4 w-4 text-[var(--idealy-teal-petrol)]" aria-hidden="true" />
+                    {s.title}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="animate-fade-up-delay">
               <Composer placement="home" />
             </div>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 animate-fade-up-delay-2" aria-label="Suggestions de départ">
+
+            <div className="mt-5 hidden flex-wrap items-center justify-center gap-2 animate-fade-up-delay-2 sm:flex" aria-label="Suggestions de départ">
               {starters.map((s) => {
                 const Icon = s.icon;
                 return (
