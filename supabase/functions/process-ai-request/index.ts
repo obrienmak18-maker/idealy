@@ -96,7 +96,26 @@ function getAllowedModels(): Record<Provider, readonly string[]> {
 
 const MAX_PROMPT_CHARS = 120_000;
 const MAX_SYSTEM_PROMPT_CHARS = 20_000;
-const MAX_OUTPUT_TOKENS = 30_000;
+const DEFAULT_OUTPUT_TOKENS = 30_000;
+// Absolute request ceiling; the effective limit is clamped per provider below.
+const MAX_OUTPUT_TOKENS = 64_000;
+// Conservative per-provider output ceilings (tokens). Override with
+// AI_MAX_OUTPUT_TOKENS_<PROVIDER> (e.g. AI_MAX_OUTPUT_TOKENS_OPENAI) once verified.
+const PROVIDER_OUTPUT_CEILINGS: Record<Provider, number> = {
+  anthropic: 64_000,
+  deepseek: 8_000,
+  gemini: 64_000,
+  groq: 32_000,
+  moonshot: 32_000,
+  openai: 32_000,
+  openrouter: 16_000,
+  together: 32_000,
+};
+function outputCeilingFor(provider: Provider): number {
+  const override = Number(Deno.env.get(`AI_MAX_OUTPUT_TOKENS_${provider.toUpperCase()}`));
+  const ceiling = Number.isInteger(override) && override >= 128 ? override : PROVIDER_OUTPUT_CEILINGS[provider];
+  return Math.min(ceiling, MAX_OUTPUT_TOKENS);
+}
 const MAX_IDEMPOTENCY_KEY_CHARS = 180;
 const WORKSPACE_SYSTEM_PROMPT = `
 Tu es le Builder d’Idealy. Pour une mission EXECUTION, réponds uniquement avec des lignes NDJSON valides, sans markdown ni texte autour. Une ligne par événement, dans cet ordre pour chaque fichier :
@@ -651,7 +670,7 @@ async function fetchProviderWithFallback(input: {
     const body = isAnthropic
       ? {
           model: resolution.model,
-          max_tokens: input.maxTokens,
+          max_tokens: Math.min(input.maxTokens, outputCeilingFor(resolution.provider)),
           stream: input.stream,
           ...(systemText ? { system: systemText } : {}),
           messages: providerMessages.map((message) => ({ role: "user", content: message.content })),
@@ -660,7 +679,7 @@ async function fetchProviderWithFallback(input: {
           model: resolution.model,
           messages: input.messages,
           stream: input.stream,
-          max_tokens: input.maxTokens,
+          max_tokens: Math.min(input.maxTokens, outputCeilingFor(resolution.provider)),
           ...(resolution.provider === "moonshot" && resolution.model === "kimi-k3"
             ? { reasoning_effort: "high" }
             : {}),
@@ -812,7 +831,7 @@ Deno.serve(async (req) => {
     const stream = input.stream ?? false;
     if (typeof stream !== 'boolean') return jsonError('stream must be boolean.', 400, headers);
 
-    const maxTokens = input.maxTokens ?? MAX_OUTPUT_TOKENS;
+    const maxTokens = input.maxTokens ?? DEFAULT_OUTPUT_TOKENS;
     if (!Number.isInteger(maxTokens) || maxTokens < 128 || maxTokens > MAX_OUTPUT_TOKENS) {
       return jsonError(`maxTokens must be an integer between 128 and ${MAX_OUTPUT_TOKENS}.`, 400, headers);
     }
