@@ -1,11 +1,11 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { MessageItem } from './MessageItem';
-import { ArrowDown, Braces, Code2, FileText, Layers2, Sparkles, Wand2, Zap } from 'lucide-react';
+import { ArrowDown, History, Layers2 } from 'lucide-react';
 import { Composer } from './Composer';
 
 export const MessageList: React.FC = () => {
-  const { activeMessages, generationStatus, setDraft } = useApp();
+  const { activeMessages, generationStatus, setDraft, conversations, setActiveConversationId } = useApp();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -51,6 +51,11 @@ export const MessageList: React.FC = () => {
   };
 
   const chooseStarter = (starter: string) => {
+    if (!starter) {
+      const recent = conversations.find((c) => c.id && (c as { messageCount?: number }).messageCount !== 0);
+      if (recent) setActiveConversationId(recent.id);
+      return;
+    }
     setDraft(starter);
     window.requestAnimationFrame(() => {
       const input = document.querySelector<HTMLTextAreaElement>('[data-composer-input]');
@@ -60,39 +65,12 @@ export const MessageList: React.FC = () => {
   };
 
   const starters = [
-    {
-      icon: Layers2,
-      title: 'Créer une application',
-      desc: "Décrivez votre idée, Idealy fait le reste.",
-      prompt: 'Je veux créer une application qui ',
-      color: 'var(--idealy-indigo)',
-      bgColor: 'var(--idealy-indigo-bg)',
-    },
-    {
-      icon: Braces,
-      title: 'Explorer du code',
-      desc: "Comprendre, corriger, optimiser.",
-      prompt: 'Aide-moi à comprendre ou améliorer ce code : ',
-      color: 'var(--idealy-teal-petrol)',
-      bgColor: 'var(--idealy-teal-bg)',
-    },
-    {
-      icon: Wand2,
-      title: 'Générer du contenu',
-      desc: "Textes, images, données, fichiers.",
-      prompt: 'Génère-moi ',
-      color: 'rgb(167, 139, 250)',
-      bgColor: 'rgba(167, 139, 250, 0.1)',
-    },
-    {
-      icon: FileText,
-      title: 'Préparer un plan',
-      desc: "Structurer les prochaines étapes.",
-      prompt: 'Aide-moi à préparer un plan pour ',
-      color: 'var(--dsw-alias-label-secondary)',
-      bgColor: 'var(--dsw-alias-interactive-bg-hover)',
-    },
+    { icon: Layers2, title: 'Créer une application', prompt: 'Je veux créer une application qui ' },
+    { icon: History, title: 'Reprendre un projet récent', prompt: '' },
   ] as const;
+
+  const hour = new Date().getHours();
+  const greeting = hour < 5 || hour >= 18 ? 'Bonsoir, que construisons-nous ?' : 'Bonjour, que construisons-nous ?';
 
   return (
     <div
@@ -107,113 +85,28 @@ export const MessageList: React.FC = () => {
     >
       <div className="mx-auto flex min-h-full w-full max-w-[900px] flex-col space-y-4">
         {activeMessages.length === 0 ? (
-          <div className="idealy-home relative mx-auto flex min-h-full w-full max-w-[860px] flex-col justify-center px-4 pb-12 pt-8 sm:px-8">
-            {/* ─── Gradient Mesh Background ────────────────────────── */}
-            <div className="idealy-gradient-mesh" aria-hidden="true" />
-
-            {/* ─── Eyebrow Badge ────────────────────────────────────── */}
-            <div className="mb-8 sm:mb-10 animate-fade-up">
-              <div className="mb-5 inline-flex items-center gap-2.5 rounded-full border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)]/60 px-3.5 py-1.5 backdrop-blur-sm">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                </span>
-                <span className="text-[11.5px] font-medium tracking-wide text-text-muted">
-                  Votre espace de création
-                </span>
-                <span className="idealy-badge--teal idealy-badge">
-                  <Zap className="h-2.5 w-2.5" aria-hidden="true" />
-                  Prêt
-                </span>
-              </div>
-
-              {/* ─── Hero Heading ─────────────────────────────────────── */}
-              <h1 className="max-w-2xl text-[32px] font-semibold leading-[1.08] tracking-[-0.04em] text-text-main sm:text-[46px]">
-                Que voulez-vous{' '}
-                <span
-                  className="bg-gradient-to-r from-[var(--idealy-teal-petrol)] via-[var(--idealy-indigo)] to-[rgb(167,139,250)] bg-clip-text text-transparent"
-                  style={{ backgroundSize: '200% auto', animation: 'gradientShift 6s ease-in-out infinite' }}
-                >
-                  construire
-                </span>
-                <span className="text-text-muted">&thinsp;?</span>
-              </h1>
-
-              <p className="mt-4 max-w-lg text-[14px] leading-relaxed text-text-muted sm:text-[15px]">
-                Décrivez votre idée. Idealy peut clarifier le besoin, préparer les étapes et travailler dans un espace projet.
-              </p>
+          <div className="idealy-home relative mx-auto flex min-h-full w-full max-w-[760px] flex-col justify-center px-4 pb-16 pt-8 sm:px-8">
+            <h1 className="animate-fade-up mb-8 text-center text-[28px] font-semibold leading-tight tracking-[-0.03em] text-text-main sm:text-[36px]">
+              {greeting}
+            </h1>
+            <div className="animate-fade-up-delay">
+              <Composer placement="home" />
             </div>
-
-            {/* ─── Starter Cards Grid ────────────────────────────────── */}
-            <div
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-              aria-label="Suggestions de départ"
-            >
-              {starters.map((s, i) => {
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 animate-fade-up-delay-2" aria-label="Suggestions de départ">
+              {starters.map((s) => {
                 const Icon = s.icon;
-                const delayClass = i === 0
-                  ? 'animate-fade-up'
-                  : i === 1
-                    ? 'animate-fade-up-delay'
-                    : i === 2
-                      ? 'animate-fade-up-delay-2'
-                      : 'animate-fade-up-delay-3';
-
                 return (
                   <button
                     key={s.title}
                     type="button"
                     onClick={() => chooseStarter(s.prompt)}
-                    className={`idealy-card-premium group flex flex-col justify-between gap-4 p-4 text-left focus-ring min-h-[120px] ${delayClass}`}
-                    onMouseMove={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      e.currentTarget.style.setProperty('--mouse-x', `${((e.clientX - rect.left) / rect.width) * 100}%`);
-                      e.currentTarget.style.setProperty('--mouse-y', `${((e.clientY - rect.top) / rect.height) * 100}%`);
-                    }}
+                    className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--dsw-alias-border-l1)] px-3.5 py-2 text-[13px] text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"
                   >
-                    <span
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
-                      style={{
-                        background: s.bgColor,
-                        color: s.color,
-                        boxShadow: 'none',
-                      }}
-                    >
-                      <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                    </span>
-                    <div>
-                      <span className="block text-[13px] font-semibold text-text-main tracking-tight">
-                        {s.title}
-                      </span>
-                      <span className="mt-0.5 block text-[11.5px] leading-[1.4] text-text-muted">
-                        {s.desc}
-                      </span>
-                    </div>
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    {s.title}
                   </button>
                 );
               })}
-            </div>
-
-            {/* ─── Composer ──────────────────────────────────────────── */}
-            <div className="animate-fade-up-delay-3">
-              <Composer placement="home" />
-            </div>
-
-            {/* ─── Bottom Capabilities Strip ─────────────────────────── */}
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 animate-fade-up-delay-3">
-              {[
-                { icon: Code2, label: 'Génération de code' },
-                { icon: Sparkles, label: 'IA multi-modèle' },
-                { icon: Layers2, label: 'Projets complets' },
-              ].map(({ icon: CIcon, label }) => (
-                <span
-                  key={label}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-medium text-text-muted/60"
-                >
-                  <CIcon className="h-3 w-3" aria-hidden="true" />
-                  {label}
-                </span>
-              ))}
             </div>
           </div>
         ) : (

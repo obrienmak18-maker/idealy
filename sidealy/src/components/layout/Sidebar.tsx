@@ -11,15 +11,14 @@ import {
   Settings,
   SquarePen,
   Trash2,
-  Zap,
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { hasConversationActivity } from "../../services/conversationVisibility";
 import { AccountChip } from "./AccountChip";
+import { CreditsPill } from "../credits/CreditsPill";
 import { IdealyLogo } from "../branding/IdealyLogo";
-import { voiesCatalog, type WayDetailed } from "../../services/voies-catalog";
 
 export const Sidebar: React.FC = () => {
   const {
@@ -39,13 +38,10 @@ export const Sidebar: React.FC = () => {
 
   const [collapsed, setCollapsed] = useState(false);
   const [openActionsId, setOpenActionsId] = useState<string | null>(null);
-  const [currentWayKey] = useState<string>("ninja");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
 
   const actionsRef = useRef<HTMLDivElement>(null);
   const actionsTriggerRef = useRef<HTMLButtonElement>(null);
-
-  const activeWay: WayDetailed = voiesCatalog[currentWayKey] ?? voiesCatalog.ninja;
 
   useEffect(() => {
     if (!openActionsId) return;
@@ -402,71 +398,6 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* ─── 4. MISSION EN COURS / SQUAD CARD ────────────────────────────── */}
-      {!collapsed && (
-        <div className="shrink-0 px-2.5 pt-2 pb-1">
-          <div
-            className="idealy-card-premium group cursor-pointer p-3"
-            onClick={() => setActivePage("agents")}
-            title="Consulter l'escouade active"
-            onMouseMove={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              e.currentTarget.style.setProperty('--mouse-x', `${((e.clientX - rect.left) / rect.width) * 100}%`);
-              e.currentTarget.style.setProperty('--mouse-y', `${((e.clientY - rect.top) / rect.height) * 100}%`);
-            }}
-          >
-            <div className="flex items-center gap-2.5 mb-2.5">
-              <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-[var(--idealy-teal-petrol)]/30 shadow-sm">
-                <img
-                  alt={activeWay.chiefName || "Chef"}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  src={activeWay.agents[0]?.avatarUrl || "/images/agents/Minato.jpg"}
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
-                />
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-[var(--dsw-alias-bg-layer-2)] idealy-pulse-dot" />
-              </div>
-              <div className="min-w-0 flex-1 leading-tight">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-bold text-[var(--dsw-alias-label-primary)] truncate">
-                    {activeWay.chiefName || "Chef Minato"}
-                  </span>
-                  <span className="idealy-badge idealy-badge--teal">
-                    En ligne
-                  </span>
-                </div>
-                <span className="text-[10.5px] text-[var(--dsw-alias-label-tertiary)] truncate block mt-0.5">
-                  {activeWay.label}
-                </span>
-              </div>
-            </div>
-
-            {/* Chakra / Resource bar */}
-            <div className="space-y-1.5 pt-2 border-t border-[var(--dsw-alias-border-l1)]">
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="flex items-center gap-1 text-[var(--dsw-alias-label-secondary)] font-medium">
-                  <Zap className="h-3 w-3 text-amber-400" />
-                  {activeWay.resourceLabel}
-                </span>
-                <span className="font-bold text-[var(--dsw-alias-label-primary)] idealy-stat-number">
-                  1 000 / 1 000
-                </span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-[var(--dsw-alias-interactive-bg-hover)] overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-1000 ease-spring"
-                  style={{
-                    width: '100%',
-                    background: 'linear-gradient(90deg, rgb(251, 191, 36), var(--idealy-teal-petrol) 50%, var(--idealy-indigo))',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ─── 5. CHRONOLOGICAL DISCUSSION HISTORY ──────────────────────────── */}
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 idealy-scroll mt-1">
         {renderSection("Aujourd'hui", groupedConversations.today)}
@@ -489,6 +420,9 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* ─── 6. FOOTER (UTILISATEUR, LANGUE & PARAMÈTRES) ─────────────────── */}
+      <div className={`shrink-0 px-3.5 pb-2 ${collapsed ? "flex justify-center" : ""}`}>
+        <CreditsPill compact={collapsed} />
+      </div>
       <div
         className={`sidebar-footer shrink-0 flex border-t border-[var(--dsw-alias-border-l1)] transition-all duration-300 ${
           collapsed
