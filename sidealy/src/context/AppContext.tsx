@@ -128,7 +128,8 @@ export type AppPage =
   | "plugins"
   | "privacy"
   | "terms"
-  | "eula";
+  | "eula"
+  | "login";
 
 const pagePaths: Record<AppPage, string> = {
   about: "/about",
@@ -142,6 +143,7 @@ const pagePaths: Record<AppPage, string> = {
   privacy: "/privacy",
   terms: "/terms",
   eula: "/eula",
+  login: "/login",
   settings: "/settings",
   support: "/support",
   welcome: "/welcome",
@@ -152,6 +154,7 @@ function pageFromPath(pathname: string): AppPage {
   const match = (Object.entries(pagePaths) as [AppPage, string][]).find(
     ([, route]) => route === path,
   );
+  if (path === "/register") return "login";
   if (path.startsWith("/settings/")) return "settings";
   if (path.startsWith("/connectors/")) return "connectors";
   if (path.startsWith("/docs/")) return "docs";

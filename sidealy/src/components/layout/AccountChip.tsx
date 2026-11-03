@@ -80,7 +80,7 @@ export const AccountChip: React.FC<{
       disabled={loading}
       onClick={() => {
         if (result.requiresSignIn) {
-          window.location.assign("/login?callbackUrl=%2Fsettings%2Faccount");
+          window.location.assign("/login");
         } else {
           onOpenSettings();
         }

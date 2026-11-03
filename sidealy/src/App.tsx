@@ -16,10 +16,13 @@ import { LibraryPage } from "./components/pages/LibraryPage";
 import { PricingPage } from "./components/pages/PricingPage";
 import { ProductInfoPage } from "./components/pages/ProductInfoPage";
 import { SettingsPage } from "./components/pages/SettingsPage";
+import { AuthPage } from "./components/auth/AuthPage";
 import { AppProvider, useApp } from "./context/AppContext";
 
 const AppContent: React.FC = () => {
   const { activeArtifact, activePage, activeMessages } = useApp();
+
+  if (activePage === "login") return <AuthPage />;
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-base text-text-main font-sans selection:bg-brand-primary/20">
