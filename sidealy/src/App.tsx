@@ -10,7 +10,7 @@ import { CommandPalette } from "./components/modals/CommandPalette";
 import { ConfirmModal } from "./components/modals/ConfirmModal";
 import { SettingsModal } from "./components/modals/SettingsModal";
 import { SpaceModal } from "./components/modals/SpaceModal";
-import { BrandStudioPage } from "./components/pages/BrandStudioPage";
+import { AgentsPage } from "./components/pages/AgentsPage";
 import { LegalPage } from "./components/pages/LegalPage";
 import { LibraryPage } from "./components/pages/LibraryPage";
 import { PricingPage } from "./components/pages/PricingPage";
@@ -19,10 +19,13 @@ import { SettingsPage } from "./components/pages/SettingsPage";
 import { AppProvider, useApp } from "./context/AppContext";
 
 const AppContent: React.FC = () => {
-  const { activeArtifact, activePage } = useApp();
+  const { activeArtifact, activePage, activeMessages } = useApp();
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-base text-text-main font-sans selection:bg-brand-primary/20">
+      <a className="idealy-skip-link" href="#main-content">
+        Passer au contenu principal
+      </a>
       {/* Desktop Sidebar Navigation */}
       <Sidebar />
 
@@ -33,8 +36,8 @@ const AppContent: React.FC = () => {
       <div className="flex-1 flex flex-col h-full min-w-0 relative">
         {activePage === "connectors" || activePage === "plugins" ? (
           <ConnectorsPage />
-        ) : activePage === "brandStudio" ? (
-          <BrandStudioPage />
+        ) : activePage === "agents" ? (
+          <AgentsPage />
         ) : activePage === "privacy" ||
           activePage === "terms" ||
           activePage === "eula" ? (
@@ -53,9 +56,9 @@ const AppContent: React.FC = () => {
         ) : (
           <>
             <Header />
-            <main className="flex-1 flex flex-col overflow-hidden relative">
+            <main className="flex-1 flex flex-col overflow-hidden relative" id="main-content">
               <MessageList />
-              <Composer />
+              {activeMessages.length > 0 && <Composer />}
             </main>
           </>
         )}

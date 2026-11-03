@@ -67,6 +67,7 @@ import { generateImage } from "@/lib/ai/tools/generate-image";
 import { executeSandbox } from "@/lib/ai/tools/execute-sandbox";
 import { generateVideo } from "@/lib/ai/tools/generate-video";
 import { renderWidget } from "@/lib/ai/tools/render-widget";
+import { dispatchSubAgents } from "@/lib/ai/tools/dispatch-subagents";
 import {
   isDevelopmentEnvironment,
   isProductionEnvironment,
@@ -290,6 +291,7 @@ async function streamIdealyEdgeResponse({
             choices?: Array<{ delta?: { content?: string } }>;
             activity?: IdealyChatToolActivity;
             event?: unknown;
+            progress?: unknown;
             type?: string;
           };
           if (
@@ -308,6 +310,13 @@ async function streamIdealyEdgeResponse({
             dataStream.write({
               data: parsed.event as never,
               type: "data-idealy-file-event",
+            });
+            continue;
+          }
+          if (parsed.type === "idealy_subagent" && parsed.progress) {
+            dataStream.write({
+              data: parsed.progress as never,
+              type: "data-idealy-subagent",
             });
             continue;
           }
@@ -894,6 +903,7 @@ export async function POST(request: Request) {
                             "executeSandbox",
                             "generateVideo",
                             "renderWidget",
+                            "dispatchSubAgents",
                           ],
                     instructions: `${systemPrompt({
                       language: userLanguage,
@@ -953,6 +963,10 @@ export async function POST(request: Request) {
                       executeSandbox: executeSandbox(),
                       generateVideo: generateVideo(),
                       renderWidget: renderWidget(),
+                      dispatchSubAgents: dispatchSubAgents({
+                        dataStream,
+                        modelId: chatModel,
+                      }),
                     },
                   });
 
@@ -1005,6 +1019,7 @@ export async function POST(request: Request) {
                     "executeSandbox",
                     "generateVideo",
                     "renderWidget",
+                    "dispatchSubAgents",
                   ],
             instructions: `${systemPrompt({
               language: userLanguage,
@@ -1064,6 +1079,10 @@ export async function POST(request: Request) {
               executeSandbox: executeSandbox(),
               generateVideo: generateVideo(),
               renderWidget: renderWidget(),
+              dispatchSubAgents: dispatchSubAgents({
+                dataStream,
+                modelId: chatModel,
+              }),
             },
           });
 

@@ -1,4 +1,6 @@
 import type React from "react";
+import { PageFrame } from "../layout/PageFrame";
+import { PageHeader } from "../layout/PageHeader";
 
 type LegalKind = "privacy" | "terms" | "eula";
 
@@ -13,13 +15,13 @@ const legalCopy: Record<
 > = {
   privacy: {
     eyebrow: "Confidentialité",
-    title: "Comment Idéali traite vos données.",
+    title: "Comment Idealy traite vos données.",
     intro:
-      "Cette politique décrit les traitements identifiables dans la version actuelle du code d’Idéali. Elle ne remplace pas une validation juridique. Les coordonnées du responsable, les délais exacts de conservation et la procédure de suppression doivent être confirmés avant publication définitive.",
+      "Cette politique décrit les traitements identifiables dans la version actuelle du code d’Idealy. Elle ne remplace pas une validation juridique. Les coordonnées du responsable, les délais exacts de conservation et la procédure de suppression doivent être confirmés avant publication définitive.",
     sections: [
       {
         title: "Données de compte et d’utilisation",
-        body: "Idéali utilise un système d’authentification et une base de données Supabase. Selon les fonctionnalités utilisées, le service traite les informations de compte disponibles, les préférences de langue et de thème, les missions, les messages et les fichiers de travail associés à votre compte. Ces données servent à fournir le workspace, enregistrer votre progression et répondre aux actions que vous demandez.",
+        body: "Idealy utilise un système d’authentification et une base de données Supabase. Selon les fonctionnalités utilisées, le service traite les informations de compte disponibles, les préférences de langue et de thème, les missions, les messages et les fichiers de travail associés à votre compte. Ces données servent à fournir le workspace, enregistrer votre progression et répondre aux actions que vous demandez.",
       },
       {
         title: "Prompts, code et contenu généré",
@@ -35,11 +37,11 @@ const legalCopy: Record<
       },
       {
         title: "Connexion Vercel et déploiements",
-        body: "Si vous connectez Vercel, Idéali traite les informations de compte retournées par Vercel, l’identifiant de compte externe, les autorisations retournées et les jetons nécessaires à la connexion. Le code chiffre les jetons côté serveur et ne les renvoie pas au navigateur. Lors d’un déploiement explicitement confirmé, Idéali transmet à l’API Vercel les fichiers enregistrés de la mission choisie et reçoit les informations de déploiement, comme son identifiant, son état et son URL. Vercel traite alors ces données selon ses propres conditions.",
+        body: "Si vous connectez Vercel, Idealy traite les informations de compte retournées par Vercel, l’identifiant de compte externe, les autorisations retournées et les jetons nécessaires à la connexion. Le code chiffre les jetons côté serveur et ne les renvoie pas au navigateur. Lors d’un déploiement explicitement confirmé, Idealy transmet à l’API Vercel les fichiers enregistrés de la mission choisie et reçoit les informations de déploiement, comme son identifiant, son état et son URL. Vercel traite alors ces données selon ses propres conditions.",
       },
       {
         title: "Paiements",
-        body: "Le code intègre Stripe pour les sessions de paiement, les portails de facturation et les notifications de paiement. Idéali conserve des identifiants de client et d’abonnement ainsi que des informations nécessaires à l’état du forfait. Les paiements sont traités par Stripe ; Idéali ne doit pas être présenté comme stockant les numéros complets de cartes bancaires.",
+        body: "Le code intègre Stripe pour les sessions de paiement, les portails de facturation et les notifications de paiement. Idealy conserve des identifiants de client et d’abonnement ainsi que des informations nécessaires à l’état du forfait. Les paiements sont traités par Stripe ; Idealy ne doit pas être présenté comme stockant les numéros complets de cartes bancaires.",
       },
       {
         title: "Cookies et protection anti-robot",
@@ -51,7 +53,7 @@ const legalCopy: Record<
       },
       {
         title: "Vos choix et vos droits",
-        body: "Vous pouvez choisir de ne pas connecter un fournisseur externe, révoquer une autorisation depuis le fournisseur lorsque cette option existe, éviter de soumettre des données sensibles et contacter Idéali pour demander des informations sur vos données. Les droits applicables et les délais de traitement dépendent de votre situation et de la législation applicable.",
+        body: "Vous pouvez choisir de ne pas connecter un fournisseur externe, révoquer une autorisation depuis le fournisseur lorsque cette option existe, éviter de soumettre des données sensibles et contacter Idealy pour demander des informations sur vos données. Les droits applicables et les délais de traitement dépendent de votre situation et de la législation applicable.",
       },
       {
         title: "Responsable et contact",
@@ -61,13 +63,13 @@ const legalCopy: Record<
   },
   terms: {
     eyebrow: "Conditions d’utilisation",
-    title: "Utiliser Idéali de manière sûre et responsable.",
+    title: "Utiliser Idealy de manière sûre et responsable.",
     intro:
       "Ces conditions de produit constituent un socle de transparence ; elles doivent être adaptées et validées juridiquement avant toute mise sur le marché payante.",
     sections: [
       {
         title: "Responsabilité des actions",
-        body: "Vous restez responsable du contenu fourni, des services connectés et de toute action de publication confirmée. Idéali doit présenter clairement les opérations externes avant leur exécution.",
+        body: "Vous restez responsable du contenu fourni, des services connectés et de toute action de publication confirmée. Idealy doit présenter clairement les opérations externes avant leur exécution.",
       },
       {
         title: "Disponibilité et résultats",
@@ -83,11 +85,11 @@ const legalCopy: Record<
     eyebrow: "EULA · Version préparatoire",
     title: "Conditions de licence utilisateur final.",
     intro:
-      "Cette page est un projet de conditions préparé pour examen. Elle ne doit pas être présentée comme un contrat final ni utilisée comme validation juridique avant confirmation par le responsable d’Idéali et, si nécessaire, un professionnel du droit.",
+      "Cette page est un projet de conditions préparé pour examen. Elle ne doit pas être présentée comme un contrat final ni utilisée comme validation juridique avant confirmation par le responsable d’Idealy et, si nécessaire, un professionnel du droit.",
     sections: [
       {
         title: "Licence d’utilisation",
-        body: "Sous réserve des conditions définitives qui seront publiées, Idéali est destiné à fournir des outils de création logicielle assistée par IA et une intégration permettant de transmettre des fichiers sélectionnés vers le compte Vercel autorisé par l’utilisateur. Aucun transfert de propriété du service Idéali n’est accordé par le simple accès au service.",
+        body: "Sous réserve des conditions définitives qui seront publiées, Idealy est destiné à fournir des outils de création logicielle assistée par IA et une intégration permettant de transmettre des fichiers sélectionnés vers le compte Vercel autorisé par l’utilisateur. Aucun transfert de propriété du service Idealy n’est accordé par le simple accès au service.",
       },
       {
         title: "Utilisation autorisée",
@@ -99,7 +101,7 @@ const legalCopy: Record<
       },
       {
         title: "Contenu généré et disponibilité",
-        body: "Les sorties de l’IA peuvent être erronées, incomplètes ou incompatibles avec les besoins de l’utilisateur. Idéali ne garantit pas qu’un code généré soit exempt de défauts, qu’un déploiement réussisse ou que le service soit disponible sans interruption. Les limites de responsabilité et les garanties doivent être rédigées et validées juridiquement avant publication définitive.",
+        body: "Les sorties de l’IA peuvent être erronées, incomplètes ou incompatibles avec les besoins de l’utilisateur. Idealy ne garantit pas qu’un code généré soit exempt de défauts, qu’un déploiement réussisse ou que le service soit disponible sans interruption. Les limites de responsabilité et les garanties doivent être rédigées et validées juridiquement avant publication définitive.",
       },
       {
         title: "Suspension, résiliation et données",
@@ -116,14 +118,9 @@ const legalCopy: Record<
 export const LegalPage: React.FC<{ page: LegalKind }> = ({ page }) => {
   const content = legalCopy[page];
   return (
-    <main className="h-full overflow-y-auto px-5 py-10 sm:px-8">
+    <PageFrame label={content.eyebrow}>
       <article className="mx-auto max-w-3xl pb-12">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
-          {content.eyebrow}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight text-text-main sm:text-4xl">
-          {content.title}
-        </h1>
+        <PageHeader eyebrow={content.eyebrow} title={content.title} />
         <p className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 text-sm leading-6 text-text-muted">
           {content.intro}
         </p>
@@ -143,6 +140,6 @@ export const LegalPage: React.FC<{ page: LegalKind }> = ({ page }) => {
           ))}
         </div>
       </article>
-    </main>
+    </PageFrame>
   );
 };

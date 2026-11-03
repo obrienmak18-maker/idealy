@@ -5,11 +5,15 @@ import {
   Rocket,
   TriangleAlert,
 } from "lucide-react";
-import type React from "react";
-import { useState } from "react";
+import React, { Suspense, lazy, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import type { MissionRun } from "../../types";
-import { MissionWorkspace } from "./MissionWorkspace";
+
+const MissionWorkspace = lazy(() =>
+  import("./MissionWorkspace").then((module) => ({
+    default: module.MissionWorkspace,
+  })),
+);
 
 export const MissionPlanCard: React.FC<{
   mission: MissionRun;
@@ -21,7 +25,7 @@ export const MissionPlanCard: React.FC<{
 
   return (
     <section
-      aria-label="Plan de mission Idéali"
+      aria-label="Plan de mission Idealy"
       className="my-4 overflow-hidden rounded-2xl border border-border-subtle bg-bg-surface shadow-subtle"
     >
       <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-4 py-3.5 md:px-5">
@@ -160,13 +164,31 @@ export const MissionPlanCard: React.FC<{
         )}
       </div>
       {workspaceOpen && (
-        <MissionWorkspace
-          buildVerification={mission.buildVerification}
-          initialFiles={mission.files ?? []}
-          missionId={mission.id}
-          onClose={() => setWorkspaceOpen(false)}
-          projectName={mission.plan.projectKind}
-        />
+        <Suspense
+          fallback={
+            <div
+              aria-live="polite"
+              className="fixed inset-0 z-50 grid place-items-center bg-black/65 p-4 text-sm text-white"
+              role="status"
+            >
+              <span className="flex items-center gap-2.5 rounded-xl bg-bg-surface px-4 py-3 text-text-main shadow-elevated">
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="h-4 w-4 animate-spin text-brand-primary"
+                />
+                Ouverture de l’espace du projet…
+              </span>
+            </div>
+          }
+        >
+          <MissionWorkspace
+            buildVerification={mission.buildVerification}
+            initialFiles={mission.files ?? []}
+            missionId={mission.id}
+            onClose={() => setWorkspaceOpen(false)}
+            projectName={mission.plan.projectKind}
+          />
+        </Suspense>
       )}
     </section>
   );

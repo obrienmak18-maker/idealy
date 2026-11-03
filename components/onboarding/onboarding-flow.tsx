@@ -319,17 +319,10 @@ export function OnboardingFlow() {
   }
 
   return (
-    <main className="idealy-app-background relative flex min-h-dvh w-full flex-col items-center justify-between overflow-x-hidden p-4 sm:p-6 lg:p-8 text-foreground selection:bg-teal-500/20">
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.08),transparent_58%)]"
-        aria-hidden="true"
-      >
-        <div className="welcome-grid opacity-20" />
-      </div>
-
+    <main className="idealy-onboarding-page relative flex min-h-dvh w-full flex-col items-center justify-between overflow-x-hidden bg-background p-4 text-foreground selection:bg-primary/20 sm:p-6 lg:p-8">
       <header className="relative z-10 w-full max-w-4xl flex items-center justify-between gap-4 py-2">
         <div className="flex min-w-0 items-center gap-3">
-          <IdealyLogo compact size={32} />
+          <IdealyLogo compact label="Idealy" size={32} />
           <div className="min-w-0">
             <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
               {t("onboarding.badge") || "Studio Idealy"}
@@ -350,7 +343,7 @@ export function OnboardingFlow() {
 
 
       <div className="w-full max-w-3xl my-auto py-4 z-10">
-        <section className="relative rounded-3xl border border-border/70 dark:border-white/10 bg-card/85 dark:bg-card/75 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-2xl sm:p-8 transition-colors">
+        <section className="relative rounded-2xl border border-border bg-card p-6 shadow-xl sm:p-8 transition-colors">
 
           <div className="mb-6 flex items-center justify-between gap-3 border-b border-border/40 pb-4">
             <ol className="flex items-center gap-2">

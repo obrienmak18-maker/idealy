@@ -31,7 +31,9 @@ type SpeechRecognitionWindow = Window & {
   webkitSpeechRecognition?: new () => SpeechRecognitionLike;
 };
 
-export const Composer: React.FC = () => {
+type ComposerProps = { placement?: "conversation" | "home" };
+
+export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }) => {
   const { draft, setDraft, sendMessage, stopGeneration, generationStatus } =
     useApp();
 
@@ -337,7 +339,7 @@ export const Composer: React.FC = () => {
   };
 
   return (
-    <div className="composer-dock relative z-10 w-full shrink-0 px-3 pb-3 pt-1 sm:px-4">
+    <div className={`composer-dock relative z-10 w-full shrink-0 ${placement === "home" ? "mt-6 px-0 pb-0 pt-0" : "px-3 pb-3 pt-1 sm:px-4"}`}>
       <div
         className="composer-card relative mx-auto flex w-full max-w-3xl flex-col rounded-[26px] transition-[border-color,box-shadow,background-color] duration-200"
         data-composer-card
@@ -372,10 +374,11 @@ export const Composer: React.FC = () => {
           </div>
         )}
 
-        <div className="px-5 pt-4 pb-1">
+        <div className={placement === "home" ? "px-5 pt-2 pb-0" : "px-5 pt-4 pb-1"}>
           <textarea
-            aria-label="Message à Idéali"
-            className="w-full min-h-[52px] max-h-[200px] resize-none overflow-y-auto bg-transparent p-0 text-[15px] leading-6 text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] focus:outline-none focus:ring-0"
+            data-composer-input
+            aria-label="Message à Idealy"
+            className={`w-full ${placement === "home" ? "min-h-[36px]" : "min-h-[52px]"} max-h-[200px] resize-none overflow-y-auto bg-transparent p-0 text-[15px] leading-6 text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] focus:outline-none focus:ring-0`}
             enterKeyHint="enter"
             onChange={(event) => {
               if (dictationActive) {
@@ -387,7 +390,7 @@ export const Composer: React.FC = () => {
               }
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Message à Idéali"
+            placeholder="Message à Idealy"
             ref={textareaRef}
             rows={1}
             style={{ caretColor: "var(--idealy-indigo)" }}
@@ -395,7 +398,7 @@ export const Composer: React.FC = () => {
           />
         </div>
 
-        <div className="flex min-h-[52px] items-center justify-between gap-3 px-3 pb-2.5 pt-1">
+        <div className={`flex ${placement === "home" ? "min-h-[44px]" : "min-h-[52px]"} items-center justify-between gap-3 px-3 pb-2 pt-1`}>
           <div className="flex min-w-0 items-center gap-2">
             <input
               aria-label="Choisir des fichiers"
@@ -410,7 +413,7 @@ export const Composer: React.FC = () => {
                 aria-expanded={addMenuOpen}
                 aria-haspopup="dialog"
                 aria-label="Ajouter au message"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-colors focus-ring"
+                className="grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
                 onClick={() => setAddMenuOpen((open) => !open)}
                 ref={addButtonRef}
                 title="Ajouter au message"
@@ -419,7 +422,7 @@ export const Composer: React.FC = () => {
                 <Plus
                   aria-hidden="true"
                   className={
-                    "h-[18px] w-[18px] transition-transform duration-200 " +
+                    "h-5 w-5 transition-transform duration-200 " +
                     (addMenuOpen ? "rotate-45" : "")
                   }
                 />
@@ -459,8 +462,8 @@ export const Composer: React.FC = () => {
                 aria-pressed={dictationActive}
                 className={
                   dictationActive
-                    ? "dictation-button dictation-button-active grid h-10 w-10 place-items-center rounded-full bg-[var(--idealy-indigo)] text-white transition-colors focus-ring"
-                    : "dictation-button grid h-10 w-10 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-colors focus-ring"
+                    ? "dictation-button dictation-button-active grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-[var(--idealy-indigo)] text-white shadow-md transition-all duration-200 active:scale-95 focus-ring"
+                    : "dictation-button grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
                 }
                 data-recording={dictationActive || undefined}
                 onClick={toggleDictation}
@@ -509,14 +512,14 @@ export const Composer: React.FC = () => {
             {isGenerating ? (
               <button
                 aria-label="Arrêter la réponse"
-                className="grid h-10 w-10 place-items-center rounded-full bg-[var(--dsw-alias-state-error-primary)] text-white transition-colors focus-ring"
+                className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-[var(--dsw-alias-state-error-primary)] text-white shadow-sm transition-all duration-200 active:scale-95 focus-ring"
                 onClick={stopGeneration}
                 title="Arrêter la réponse"
                 type="button"
               >
                 <Square
                   aria-hidden="true"
-                  className="h-3.5 w-3.5 fill-current"
+                  className="h-4 w-4 fill-current"
                 />
               </button>
             ) : (
@@ -524,15 +527,15 @@ export const Composer: React.FC = () => {
                 aria-label="Envoyer le message"
                 className={
                   isEmpty
-                    ? "grid h-10 w-10 place-items-center rounded-full bg-[var(--dsw-alias-button-info-fill)] text-white opacity-40 cursor-not-allowed transition-colors focus-ring"
-                    : "grid h-10 w-10 place-items-center rounded-full bg-[var(--idealy-indigo)] text-white hover:opacity-90 active:scale-95 transition-all focus-ring"
+                    ? "grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-[var(--dsw-alias-button-info-fill)] text-white opacity-40 cursor-not-allowed transition-all duration-200 focus-ring"
+                    : "grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white hover:opacity-95 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg focus-ring"
                 }
                 disabled={isEmpty}
                 onClick={handleSend}
                 title="Envoyer le message"
                 type="button"
               >
-                <ArrowUp aria-hidden="true" className="h-4 w-4 stroke-[2.5]" />
+                <ArrowUp aria-hidden="true" className="h-4.5 w-4.5 stroke-[2.5]" />
               </button>
             )}
           </div>

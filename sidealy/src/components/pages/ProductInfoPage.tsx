@@ -8,6 +8,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import type React from "react";
+import { PageFrame } from "../layout/PageFrame";
+import { PageHeader } from "../layout/PageHeader";
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 
@@ -63,17 +65,17 @@ export const ProductInfoPage: React.FC<{ page: ProductPageKind }> = ({
       eyebrow: "Bienvenue",
       title: "Une idée mérite un vrai espace de travail.",
       subtitle:
-        "Concevez, explorez et construisez avec Idéali : une conversation reliée à vos missions, vos fichiers et vos outils.",
+        "Concevez, explorez et construisez avec Idealy : une conversation reliée à vos missions, vos fichiers et vos outils.",
     },
     about: {
       eyebrow: "À propos",
       title: "Un workspace pour passer de l’idée au produit.",
       subtitle:
-        "Idéali réunit l’assistant, la création de livrables et les intégrations dans un espace de travail continu.",
+        "Idealy réunit l’assistant, la création de livrables et les intégrations dans un espace de travail continu.",
     },
     docs: {
       eyebrow: "Documentation",
-      title: "Les bases pour avancer dans Idéali.",
+      title: "Les bases pour avancer dans Idealy.",
       subtitle:
         "Un guide pratique des fonctions actuellement reliées à l’application.",
     },
@@ -85,7 +87,7 @@ export const ProductInfoPage: React.FC<{ page: ProductPageKind }> = ({
     },
   };
   const copyDiagnostics = async () => {
-    const diagnostics = `Idéali\nURL : ${window.location.origin}\nNavigateur : ${navigator.userAgent}\nDate : ${new Date().toISOString()}`;
+    const diagnostics = `Idealy\nURL : ${window.location.origin}\nNavigateur : ${navigator.userAgent}\nDate : ${new Date().toISOString()}`;
     try {
       await navigator.clipboard.writeText(diagnostics);
       setCopied(true);
@@ -96,17 +98,13 @@ export const ProductInfoPage: React.FC<{ page: ProductPageKind }> = ({
   };
 
   return (
-    <main className="h-full overflow-y-auto px-5 py-10 sm:px-8">
+    <PageFrame label={titles[page].eyebrow}>
       <div className="mx-auto max-w-5xl pb-12">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
-          {titles[page].eyebrow}
-        </p>
-        <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-text-main sm:text-4xl">
-          {titles[page].title}
-        </h1>
-        <p className="mt-4 max-w-2xl text-sm leading-7 text-text-muted sm:text-base">
-          {titles[page].subtitle}
-        </p>
+        <PageHeader
+          description={titles[page].subtitle}
+          eyebrow={titles[page].eyebrow}
+          title={titles[page].title}
+        />
 
         {page === "welcome" && (
           <>
@@ -172,7 +170,7 @@ export const ProductInfoPage: React.FC<{ page: ProductPageKind }> = ({
 
         {page === "docs" && (
           <section
-            aria-label="Guides Idéali"
+            aria-label="Guides Idealy"
             className="mt-9 divide-y divide-border-subtle rounded-2xl border border-border-subtle bg-bg-surface px-5 sm:px-6"
           >
             {docs.map((item, index) => (
@@ -247,6 +245,6 @@ export const ProductInfoPage: React.FC<{ page: ProductPageKind }> = ({
           </div>
         )}
       </div>
-    </main>
+    </PageFrame>
   );
 };

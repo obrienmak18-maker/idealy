@@ -17,3 +17,15 @@ Object.defineProperty(window, "matchMedia", {
 
 // Polyfill scrollIntoView
 window.HTMLElement.prototype.scrollIntoView = () => {};
+
+// Handle relative URLs in Node/JSDOM fetch
+const originalFetch = global.fetch;
+if (originalFetch) {
+  global.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    if (typeof input === "string" && input.startsWith("/")) {
+      return originalFetch(`http://localhost${input}`, init);
+    }
+    return originalFetch(input, init);
+  };
+}
+

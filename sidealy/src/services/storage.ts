@@ -168,7 +168,7 @@ export const StorageService = {
     const raw = safeGet(STORAGE_KEYS.THEME) as Theme;
     return raw === "light" || raw === "dark" || raw === "system"
       ? raw
-      : "system";
+      : "dark";
   },
 
   saveActiveConversationId(conversationId: string): void {

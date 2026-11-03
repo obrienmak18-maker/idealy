@@ -331,7 +331,7 @@ export const PluginToolRunner: React.FC<Props> = ({
     }
     if (MISSION_INPUT_TOOLS.has(selectedToolId ?? "")) {
       if (!missionId)
-        throw new Error("Choisissez une mission Idéali pour cette action.");
+        throw new Error("Choisissez une mission Idealy pour cette action.");
       input.missionId = missionId;
     }
     return input;

@@ -1,0 +1,309 @@
+/* ─── Premium Animation System (Linear/Vercel/Stripe Level) ────────────────── */
+
+/* Gradient Mesh Background for Home Hero */
+.idealy-gradient-mesh {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.idealy-gradient-mesh::before {
+  content: "";
+  position: absolute;
+  top: -30%;
+  left: -20%;
+  width: 140%;
+  height: 140%;
+  background:
+    radial-gradient(ellipse 600px 400px at 20% 30%,
+      color-mix(in srgb, var(--idealy-teal-petrol) 8%, transparent),
+      transparent),
+    radial-gradient(ellipse 500px 500px at 70% 20%,
+      color-mix(in srgb, var(--idealy-indigo) 6%, transparent),
+      transparent),
+    radial-gradient(ellipse 400px 300px at 40% 70%,
+      color-mix(in srgb, var(--idealy-teal-soft) 4%, transparent),
+      transparent),
+    radial-gradient(ellipse 300px 400px at 80% 60%,
+      rgba(167, 139, 250, 0.04),
+      transparent);
+  animation: mesh-drift 20s ease-in-out infinite alternate;
+  filter: blur(40px);
+}
+
+@keyframes mesh-drift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(2%, -1%) rotate(1deg); }
+  66% { transform: translate(-1%, 2%) rotate(-0.5deg); }
+  100% { transform: translate(1%, -1%) rotate(0.5deg); }
+}
+
+/* Shimmer Text Effect */
+.idealy-shimmer-text {
+  background: linear-gradient(
+    110deg,
+    var(--dsw-alias-label-primary) 35%,
+    color-mix(in srgb, var(--idealy-teal-petrol) 60%, var(--dsw-alias-label-primary)) 50%,
+    var(--dsw-alias-label-primary) 65%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer-text 4s ease-in-out infinite;
+}
+
+@keyframes shimmer-text {
+  0%, 100% { background-position: 200% center; }
+  50% { background-position: -200% center; }
+}
+
+/* Gradient Border Effect */
+.idealy-gradient-border {
+  position: relative;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.idealy-gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--idealy-teal-petrol) 40%, transparent),
+    color-mix(in srgb, var(--idealy-indigo) 20%, transparent),
+    transparent 60%
+  );
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.idealy-gradient-border:hover::before {
+  opacity: 1;
+}
+
+/* Glassmorphism */
+.idealy-glass {
+  background: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-border-l2) 60%, transparent);
+}
+
+/* Premium Card with Glow on Hover */
+.idealy-card-premium {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 350ms ease,
+    box-shadow 350ms ease;
+}
+
+.idealy-card-premium::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    color-mix(in srgb, var(--idealy-teal-petrol) 6%, transparent),
+    transparent 40%
+  );
+  transition: opacity 350ms ease;
+  pointer-events: none;
+}
+
+.idealy-card-premium:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--idealy-teal-petrol) 30%, var(--dsw-alias-border-l2));
+  box-shadow:
+    0 20px 40px -12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px color-mix(in srgb, var(--idealy-teal-petrol) 10%, transparent);
+}
+
+.idealy-card-premium:hover::after {
+  opacity: 1;
+}
+
+/* Animated Indicator Bar */
+.idealy-active-indicator {
+  position: relative;
+}
+
+.idealy-active-indicator::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 0;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(
+    180deg,
+    var(--idealy-teal-petrol),
+    var(--idealy-indigo)
+  );
+  transform: translateY(-50%);
+  transition: height 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.idealy-active-indicator[data-active="true"]::before {
+  height: 60%;
+}
+
+/* Pulse Dot (Online Status) */
+.idealy-pulse-dot {
+  position: relative;
+}
+
+.idealy-pulse-dot::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.4;
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.4; }
+  70% { transform: scale(2); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* Premium Badge */
+.idealy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.idealy-badge--teal {
+  color: var(--idealy-teal-petrol);
+  background: var(--idealy-teal-bg);
+  border: 1px solid var(--idealy-teal-border);
+}
+
+.idealy-badge--indigo {
+  color: var(--idealy-indigo);
+  background: var(--idealy-indigo-bg);
+  border: 1px solid var(--idealy-indigo-border);
+}
+
+.idealy-badge--violet {
+  color: rgb(167, 139, 250);
+  background: rgba(167, 139, 250, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+/* Page Transition Animation */
+.idealy-page-enter {
+  animation: pageEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton Loading */
+.idealy-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--dsw-alias-bg-skeleton) 25%,
+    color-mix(in srgb, var(--dsw-alias-bg-skeleton) 50%, transparent) 50%,
+    var(--dsw-alias-bg-skeleton) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.8s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-wave {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Smooth number counter */
+.idealy-stat-number {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" on;
+}
+
+/* Premium Scrollbar (Vercel-style thin) */
+.idealy-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.idealy-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.idealy-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 25%, transparent);
+  border-radius: 100px;
+}
+.idealy-scroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 45%, transparent);
+}
+
+/* Tooltip */
+.idealy-tooltip {
+  position: relative;
+}
+
+.idealy-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-primary-foreground);
+  background: var(--dsw-alias-label-primary);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.idealy-tooltip:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idealy-gradient-mesh::before,
+  .idealy-shimmer-text,
+  .idealy-pulse-dot::after,
+  .idealy-skeleton {
+    animation: none;
+  }
+  .idealy-page-enter {
+    animation: none;
+  }
+}

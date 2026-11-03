@@ -10,6 +10,11 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // WebContainer uses SharedArrayBuffer and requires a cross-origin isolated page.
+    headers: {
+      "Cross-Origin-Embedder-Policy": "credentialless",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
     // Keep API and auth requests same-origin in the browser during local development.
     // Production must route these paths through the same public origin as the frontend.
     proxy: Object.fromEntries(

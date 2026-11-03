@@ -1,5 +1,7 @@
 import { Check, Copy, Globe2, LoaderCircle, Sparkles } from "lucide-react";
 import type React from "react";
+import { PageFrame } from "../layout/PageFrame";
+import { PageHeader } from "../layout/PageHeader";
 import { useState } from "react";
 
 type Domain = {
@@ -65,19 +67,13 @@ export const BrandStudioPage: React.FC = () => {
   };
 
   return (
-    <main className="h-full overflow-y-auto px-5 py-10 sm:px-8">
+    <PageFrame label="Studio de marque">
       <div className="mx-auto max-w-4xl pb-12">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
-          Atelier de marque
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-main">
-          Trouvez un nom qui porte votre idée.
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-text-muted">
-          Décrivez le produit. Le backend proposera cinq noms avec une histoire,
-          une piste visuelle et une vérification RDAP pour les domaines .com,
-          .ai et .app.
-        </p>
+        <PageHeader
+          description={<>Décrivez le produit. Le backend proposera cinq noms avec une histoire, une piste visuelle et une vérification RDAP pour les domaines .com, .ai et .app.</>}
+          eyebrow="Atelier de marque"
+          title="Trouvez un nom qui porte votre idée."
+        />
 
         <form
           className="mt-8 rounded-2xl border border-border-subtle bg-bg-surface p-4 sm:p-5"
@@ -202,6 +198,6 @@ export const BrandStudioPage: React.FC = () => {
           </section>
         )}
       </div>
-    </main>
+    </PageFrame>
   );
 };

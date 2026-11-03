@@ -6,6 +6,7 @@
 @import "./styles/scrollbar.css";
 @import "./styles/focus.css";
 @import "./styles/shiki.css";
+@import "./styles/premium.css";
 
 @tailwind base;
 @tailwind components;
@@ -17,7 +18,8 @@
   --sidebar-surface: #f8f9fa;
   --sidebar-surface-hover: #e8eaed;
   --sidebar-surface-selected: #e2e5e9;
-  --sidebar-action-surface: #e8eaed;
+  --sidebar-action-surface: var(--idealy-teal-bg);
+  --sidebar-action-on-surface: var(--idealy-teal-petrol);
   --sidebar-on-surface: #202124;
   --sidebar-on-surface-variant: #5f6368;
   --dsw-specific-sidebar-fill: var(--sidebar-surface);
@@ -37,7 +39,8 @@ body[data-ds-dark-theme] .sidebar-shell {
   --sidebar-surface: #1e1f20;
   --sidebar-surface-hover: #2a2b2f;
   --sidebar-surface-selected: #333537;
-  --sidebar-action-surface: #131314;
+  --sidebar-action-surface: var(--idealy-teal-bg);
+  --sidebar-action-on-surface: var(--idealy-teal-petrol);
   --sidebar-on-surface: #e3e3e3;
   --sidebar-on-surface-variant: #c4c7c5;
   --dsw-alias-label-tertiary: #a0a4a9;
@@ -47,22 +50,82 @@ body[data-ds-dark-theme] .sidebar-shell {
 
 .sidebar-new-chat {
   overflow: hidden;
-  color: var(--sidebar-on-surface);
+  color: var(--sidebar-action-on-surface);
   white-space: nowrap;
   background: var(--sidebar-action-surface);
   transition:
-    background-color 200ms ease,
-    filter 200ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 160ms cubic-bezier(0.2, 0, 0, 1),
     width var(--sidebar-motion),
     padding var(--sidebar-motion);
 }
 
 .sidebar-new-chat:hover {
-  filter: brightness(1.12);
+  background: color-mix(
+    in srgb,
+    var(--sidebar-action-on-surface) 10%,
+    var(--sidebar-action-surface)
+  );
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--sidebar-on-surface) 12%, transparent);
+}
+
+.sidebar-new-chat:active {
+  transform: scale(0.98);
 }
 
 .sidebar-item-active {
-  background: var(--sidebar-surface-selected);
+  color: var(--dsw-alias-label-primary);
+  background: var(--idealy-teal-bg);
+  box-shadow: inset 2px 0 0 var(--idealy-teal-petrol);
+}
+
+.idealy-home::before {
+  position: absolute;
+  z-index: -1;
+  top: 9%;
+  left: 50%;
+  width: min(720px, 96%);
+  height: min(58%, 440px);
+  pointer-events: none;
+  content: "";
+  background: radial-gradient(
+    ellipse at 48% 42%,
+    color-mix(in srgb, var(--idealy-indigo) 9%, transparent),
+    color-mix(in srgb, var(--idealy-teal-petrol) 5%, transparent) 42%,
+    transparent 74%
+  );
+  filter: blur(28px);
+  transform: translateX(-50%);
+}
+
+.idealy-home {
+  isolation: isolate;
+}
+
+.idealy-starter-card {
+  transition:
+    transform 180ms cubic-bezier(0.2, 0, 0, 1),
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.idealy-starter-card:hover {
+  border-color: color-mix(in srgb, var(--idealy-teal-petrol) 35%, var(--color-border));
+  background-color: var(--color-bg-surface);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--idealy-indigo) 7%, transparent);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idealy-starter-card {
+    transition: none;
+  }
+
+  .idealy-starter-card:hover {
+    transform: none;
+  }
 }
 
 .sidebar-nav-item {
@@ -107,13 +170,13 @@ body[data-ds-dark-theme] .sidebar-shell {
 .composer-card {
   background: color-mix(
     in srgb,
-    var(--dsw-specific-input-major) 92%,
+    var(--dsw-alias-bg-layer-2) 85%,
     transparent
   );
-  border: 1px solid var(--dsw-alias-border-l2);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-border-l2) 70%, transparent);
+  box-shadow: 0 16px 48px -8px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  backdrop-filter: blur(20px) saturate(1.3);
 }
 
 .composer-card textarea,
@@ -221,12 +284,12 @@ body[data-ds-dark-theme] .sidebar-shell {
 .composer-card:focus-within {
   border-color: color-mix(
     in srgb,
-    var(--idealy-indigo) 58%,
-    var(--dsw-alias-border-l2)
+    var(--idealy-teal-petrol) 40%,
+    var(--idealy-indigo)
   );
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--idealy-indigo) 16%, transparent),
-    0 12px 40px rgba(0, 0, 0, 0.2);
+    0 0 0 3px color-mix(in srgb, var(--idealy-teal-petrol) 15%, transparent),
+    0 20px 52px -10px rgba(0, 0, 0, 0.38);
 }
 
 @media (max-width: 639px) {
@@ -316,5 +379,242 @@ body[data-ds-dark-theme] .sidebar-shell {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+
+/* Idéali shared page system */
+.idealy-skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 8px;
+  left: 8px;
+  padding: 10px 14px;
+  color: var(--color-bg-base);
+  background: var(--color-text-main);
+  border-radius: 10px;
+  transform: translateY(-160%);
+}
+.idealy-skip-link:focus {
+  transform: translateY(0);
+}
+.idealy-page-shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: var(--color-bg-base);
+}
+.idealy-page-topbar {
+  display: flex;
+  flex: 0 0 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+.idealy-page-menu {
+  display: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 12px;
+  color: var(--color-text-muted);
+  background: transparent;
+}
+.idealy-page-menu:hover {
+  color: var(--color-text-main);
+  background: var(--color-bg-subtle);
+}
+.idealy-page-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 13px;
+  font-weight: 550;
+}
+.idealy-page-breadcrumb__separator {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+.idealy-page {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 36px clamp(18px, 5vw, 64px) max(40px, env(safe-area-inset-bottom));
+  background: transparent;
+}
+.idealy-page--fill {
+  height: 100%;
+}
+.idealy-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 30px;
+}
+.idealy-page-header__copy {
+  min-width: 0;
+}
+.idealy-page-eyebrow {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+}
+.idealy-page h1 {
+  margin: 8px 0 0;
+  color: var(--color-text-main);
+  font-size: clamp(29px, 3vw, 38px);
+  font-weight: 620;
+  line-height: 1.16;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.idealy-page-description {
+  max-width: 680px;
+  margin: 10px 0 0;
+  color: var(--color-text-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.idealy-page-header__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+.idealy-page button:not([type="checkbox"]),
+.idealy-page input:not([type="checkbox"]),
+.idealy-page select {
+  min-height: 44px;
+}
+.idealy-page textarea {
+  line-height: 1.6;
+}
+.idealy-page :is(article, section, aside, form) {
+  scroll-margin-top: 16px;
+}
+#desktop-sidebar-navigation.sidebar-shell {
+  border-right: 1px solid var(--dsw-alias-border-l2);
+}
+#desktop-sidebar-navigation [class*="text-zinc-"] {
+  color: var(--sidebar-on-surface-variant) !important;
+}
+#desktop-sidebar-navigation [class*="text-white"] {
+  color: var(--sidebar-on-surface) !important;
+}
+#desktop-sidebar-navigation [class*="text-emerald-"] {
+  color: var(--idealy-teal-petrol) !important;
+}
+#desktop-sidebar-navigation [class*="bg-white/"]:not(.sidebar-new-chat) {
+  background-color: transparent !important;
+}
+#desktop-sidebar-navigation [class*="bg-white/10"] {
+  background-color: var(--sidebar-surface-selected) !important;
+}
+#desktop-sidebar-navigation [class*="hover:bg-white/"]:hover {
+  background-color: var(--sidebar-surface-hover) !important;
+}
+#desktop-sidebar-navigation [class*="border-white/"] {
+  border-color: var(--dsw-alias-border-l2) !important;
+}
+#desktop-sidebar-navigation [class*="hover:text-zinc-"]:hover,
+#desktop-sidebar-navigation .group:hover [class*="group-hover:text-white"] {
+  color: var(--sidebar-on-surface) !important;
+}
+#desktop-sidebar-navigation .sidebar-footer {
+  background: color-mix(in srgb, var(--sidebar-surface) 94%, transparent);
+  backdrop-filter: none;
+}
+.idealy-page-shell button,
+.idealy-page-shell a {
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 680px) {
+  .idealy-page-topbar {
+    flex-basis: 52px;
+    padding-inline: 8px 12px;
+  }
+  .idealy-page-menu {
+    display: inline-flex;
+  }
+  .idealy-page {
+    padding: 25px 16px max(28px, env(safe-area-inset-bottom));
+  }
+  .idealy-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 23px;
+  }
+  .idealy-page h1 {
+    font-size: clamp(27px, 8vw, 33px);
+  }
+  .idealy-page-header__actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .idealy-page-header__actions > button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
+/* ─── Idealy Brand Mark Animations ─────────────────────────────────────────── */
+.idealy-mark {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+
+.idealy-mark__orbit {
+  transform-origin: 128px 128px;
+}
+
+.idealy-mark--animated .idealy-mark__orbit--one {
+  animation: idealy-orbit-one 8s linear infinite;
+}
+
+.idealy-mark--animated .idealy-mark__orbit--two {
+  animation: idealy-orbit-two 11s linear infinite reverse;
+}
+
+.idealy-mark--animated .idealy-mark__core {
+  animation: idealy-core-pulse 3.2s ease-in-out infinite;
+  transform-origin: 128px 128px;
+}
+
+@keyframes idealy-orbit-one {
+  from { transform: rotate(-15deg); }
+  to { transform: rotate(345deg); }
+}
+
+@keyframes idealy-orbit-two {
+  from { transform: rotate(30deg); }
+  to { transform: rotate(-330deg); }
+}
+
+@keyframes idealy-core-pulse {
+  0%, 100% { opacity: 0.92; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idealy-mark--animated .idealy-mark__orbit,
+  .idealy-mark--animated .idealy-mark__core {
+    animation: none;
   }
 }

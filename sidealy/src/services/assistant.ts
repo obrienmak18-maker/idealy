@@ -87,7 +87,7 @@ export const AssistantService = {
         "### Spécification et Livrable de Travail\n\n",
         `Voici le document préparé pour votre demande : **« ${content.trim()} »**.\n\n`,
         "Le livrable structuré a été généré et projeté dans le **panneau latéral (Livrables)** pour vous permettre de le lire, l\u2019éditer et l\u2019exporter en toute simplicité.\n\n",
-        "```typescript\\n// Extrait de configuration généré pour Idéali\\nexport interface ProductionConfig {\\n  readonly taskName: string;\\n  readonly mode: 'produce';\\n  readonly styling: 'deepseek-harness-hybrid';\\n  readonly activePalette: {\\n    readonly tealPetrol: 'rgb(14, 159, 148)';\\n    readonly indigoSoft: 'rgb(129, 140, 248)';\\n  };\\n}\\n```\\n\\n",
+        "```typescript\\n// Extrait de configuration généré pour Idealy\\nexport interface ProductionConfig {\\n  readonly taskName: string;\\n  readonly mode: 'produce';\\n  readonly styling: 'deepseek-harness-hybrid';\\n  readonly activePalette: {\\n    readonly tealPetrol: 'rgb(14, 159, 148)';\\n    readonly indigoSoft: 'rgb(129, 140, 248)';\\n  };\\n}\\n```\\n\\n",
         "#### Points de vigilance :\n",
         "- **Conformité des styles :** Les élévations 0.5px et les rayons squircle sont appliqués.\n",
         `- **Intégrité des données :** L'artefact reste conservé dans votre historique local.\n\n`,
@@ -95,7 +95,7 @@ export const AssistantService = {
       ];
 
       artifactToGenerate = {
-        content: `# Livrable de Travail Idéali
+        content: `# Livrable de Travail Idealy
 
 **Demande initiale :** ${content.trim()}  
 **Mode :** Produire  
@@ -125,7 +125,7 @@ Ce document regroupe les éléments d'analyse et de mise en œuvre validés par 
       chunks = [
         "### Analyse Comparative et Exploration\n\n",
         `Examen analytique de la requête : **« ${content.trim()} »**.\n\n`,
-        "| Critère | Approche Antérieure | Approche Idéali (Harness) |\n",
+        "| Critère | Approche Antérieure | Approche Idealy (Harness) |\n",
         "| :--- | :--- | :--- |\n",
         "| **Composant Saisie** | Formulaire statique | Carte flottante élevée avec bordures 0.5px |\n",
         "| **Raisonnement** | Absent ou texte brut | Accordéon repliable avec durée mesurée |\n",
@@ -136,7 +136,7 @@ Ce document regroupe les éléments d'analyse et de mise en œuvre validés par 
     } else {
       chunks = [
         `Bien reçu. Voici une réponse directe et soignée relative à : **« ${content.trim()} »**.\n\n`,
-        `L'environnement Idéali est désormais configuré avec l'ergonomie DeepSeek Harness adaptée au web :\n\n`,
+        `L'environnement Idealy est désormais configuré avec l'ergonomie DeepSeek Harness adaptée au web :\n\n`,
         "- **Bloc de raisonnement :** Vous pouvez déplier la section de pensée ci-dessus pour observer le cheminement pas à pas.\n",
         `- **Palette chromatique :** Blancs bleutés neutres rehaussés d'un vert pétrole très doux et d'accents indigo discrets.\n`,
         "- **Composeur fluide :** Saisie auto-extensible, raccourcis `Entrée` pour envoyer et gestion robuste du focus.\n\n",

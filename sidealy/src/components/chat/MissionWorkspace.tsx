@@ -6,9 +6,13 @@ import {
   FileCode2,
   Github,
   LoaderCircle,
+  ExternalLink,
+  Eye,
+  Play,
   RotateCcw,
   Save,
   ShieldCheck,
+  Square,
   Terminal,
   X,
 } from "lucide-react";
@@ -18,9 +22,11 @@ import type {
   MissionBuildVerification,
   MissionWorkspaceFile,
 } from "../../types";
+import type { ProjectRuntimeState } from "../../services/projectRuntime";
 
 type WorkspaceTab =
   | "files"
+  | "preview"
   | "activity"
   | "checkpoints"
   | "data"
@@ -225,6 +231,12 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
   const [vercelResult, setVercelResult] = useState<VercelDeployment | null>(
     null,
   );
+  const [runtimeState, setRuntimeState] = useState<ProjectRuntimeState>("stopped");
+  const [runtimeUrl, setRuntimeUrl] = useState("");
+  const [runtimeError, setRuntimeError] = useState("");
+  const [runtimeOutput, setRuntimeOutput] = useState("");
+  const runtimeModuleRef = useRef<typeof import("../../services/projectRuntime") | null>(null);
+  const previewGenerationRef = useRef(0);
   const workspaceRef = useRef<HTMLElement>(null);
   const confirmationDialogRef = useRef<HTMLElement>(null);
   const confirmationButtonRef = useRef<HTMLButtonElement>(null);
@@ -233,6 +245,61 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     () => files.find((file) => file.path === selectedPath),
     [files, selectedPath],
   );
+  const hasProjectManifest = files.some(
+    (file) => file.path.replaceAll("\\", "/").replace(/^\/+/, "") === "package.json",
+  );
+  const runtimeBusy = ["booting", "installing", "starting"].includes(runtimeState);
+
+  useEffect(() => {
+    previewGenerationRef.current += 1;
+    runtimeModuleRef.current?.stopProjectPreview();
+    setRuntimeState("stopped");
+    setRuntimeUrl("");
+    setRuntimeError("");
+    setRuntimeOutput("");
+    return () => {
+      previewGenerationRef.current += 1;
+      runtimeModuleRef.current?.stopProjectPreview();
+    };
+  }, [missionId]);
+
+  const startPreview = async () => {
+    if (!hasProjectManifest || runtimeBusy) return;
+    setRuntimeError("");
+    setRuntimeOutput("");
+    setRuntimeUrl("");
+    setRuntimeState("booting");
+    const generation = ++previewGenerationRef.current;
+    try {
+      const runtime = await import("../../services/projectRuntime");
+      runtimeModuleRef.current = runtime;
+      if (generation !== previewGenerationRef.current) {
+        runtime.stopProjectPreview();
+        return;
+      }
+      const url = await runtime.startProjectPreview(files, {
+        onOutput: (text) =>
+          setRuntimeOutput((current) => (current + text).slice(-18_000)),
+        onState: setRuntimeState,
+      });
+      setRuntimeUrl(url);
+    } catch (cause) {
+      setRuntimeState("error");
+      setRuntimeError(
+        cause instanceof Error
+          ? cause.message
+          : "L’aperçu interactif n’a pas pu démarrer.",
+      );
+    }
+  };
+
+  const stopPreview = () => {
+    previewGenerationRef.current += 1;
+    runtimeModuleRef.current?.stopProjectPreview();
+    setRuntimeUrl("");
+    setRuntimeState("stopped");
+    setRuntimeOutput((current) => `${current}\nProjet arrêté.\n`.slice(-18_000));
+  };
 
   useEffect(() => {
     setDraft(selectedFile?.content ?? "");
@@ -524,7 +591,31 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
         ),
       );
       setDraft(savedFile.content);
-      setNotice("Fichier enregistré dans l’espace de mission.");
+      let savedNotice = "Fichier enregistré dans l’espace de mission.";
+      if (runtimeState === "ready" && runtimeModuleRef.current) {
+        try {
+          const updated = await runtimeModuleRef.current.updateProjectPreviewFile(
+            savedFile.path,
+            savedFile.content,
+          );
+          if (updated) {
+            const normalizedPath = savedFile.path
+              .replaceAll("\\", "/")
+              .replace(/^\/+/, "");
+            if (normalizedPath === "package.json") {
+              stopPreview();
+              savedNotice =
+                "Fichier enregistré. Relancez l’aperçu pour appliquer les dépendances.";
+            } else {
+              savedNotice = "Fichier enregistré et aperçu actualisé.";
+            }
+          }
+        } catch {
+          savedNotice =
+            "Fichier enregistré. Relancez l’aperçu pour charger la dernière version.";
+        }
+      }
+      setNotice(savedNotice);
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "L’enregistrement a échoué.",
@@ -809,6 +900,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
 
   const tabs: Array<{ id: WorkspaceTab; label: string }> = [
     { id: "files", label: `Fichiers (${files.length})` },
+    { id: "preview", label: "Aperçu" },
     { id: "activity", label: "Activité" },
     { id: "checkpoints", label: `Versions (${checkpoints.length})` },
     { id: "data", label: "Données" },
@@ -870,6 +962,119 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
             </button>
           ))}
         </nav>
+
+        {tab === "preview" && (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4">
+              <div className="flex items-center gap-2 text-xs text-text-muted">
+                <Eye aria-hidden="true" className="h-3.5 w-3.5" />
+                {runtimeState === "ready" ? (
+                  <span className="text-emerald-500">Application en cours</span>
+                ) : (
+                  <span>Exécution interactive du projet</span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                {runtimeUrl && (
+                  <a
+                    aria-label="Ouvrir l’aperçu dans un nouvel onglet"
+                    className="grid h-8 w-8 place-items-center rounded-lg text-text-muted hover:bg-bg-subtle hover:text-text-main focus-ring"
+                    href={runtimeUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                    title="Ouvrir dans un nouvel onglet"
+                  >
+                    <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                  </a>
+                )}
+                {runtimeBusy ? (
+                  <button
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 text-[11px] font-medium text-text-main hover:bg-bg-subtle focus-ring"
+                    onClick={stopPreview}
+                    type="button"
+                  >
+                    <Square aria-hidden="true" className="h-3 w-3 fill-current" />
+                    Arrêter
+                  </button>
+                ) : (
+                  <button
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand-primary px-2.5 text-[11px] font-medium text-brand-onPrimary hover:opacity-90 focus-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!hasProjectManifest}
+                    onClick={() => void startPreview()}
+                    type="button"
+                  >
+                    <Play aria-hidden="true" className="h-3 w-3 fill-current" />
+                    {runtimeState === "ready" ? "Relancer" : "Lancer"}
+                  </button>
+                )}
+              </div>
+            </div>
+            {runtimeUrl ? (
+              <iframe
+                allow="cross-origin-isolated"
+                className="min-h-0 flex-1 border-0 bg-white"
+                referrerPolicy="no-referrer"
+                src={runtimeUrl}
+                title="Aperçu interactif de l’application générée"
+              />
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto px-5 py-8 text-center">
+                <span className="grid h-11 w-11 place-items-center rounded-2xl border border-border-subtle bg-bg-surface text-brand-primary shadow-subtle">
+                  {runtimeBusy ? (
+                    <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Terminal aria-hidden="true" className="h-5 w-5" />
+                  )}
+                </span>
+                <h3 className="mt-4 text-[15px] font-semibold text-text-main">
+                  {runtimeBusy ? "Préparation du projet" : "Aperçu interactif"}
+                </h3>
+                <p className="mt-1.5 max-w-sm text-[12px] leading-5 text-text-muted">
+                  {hasProjectManifest
+                    ? "Idealy installe les dépendances et lance le projet dans un runtime isolé de ce navigateur."
+                    : "Le projet doit contenir un package.json à sa racine pour démarrer son application."}
+                </p>
+                {!hasProjectManifest && (
+                  <button
+                    className="mt-3 text-xs font-medium text-brand-primary hover:underline focus-ring"
+                    onClick={() => setTab("files")}
+                    type="button"
+                  >
+                    Voir les fichiers du projet
+                  </button>
+                )}
+                {runtimeError && (
+                  <div
+                    className="mt-4 max-w-xl rounded-xl border border-amber-500/20 bg-amber-500/5 px-3.5 py-2.5 text-left text-[11px] leading-5 text-amber-500"
+                    role="alert"
+                  >
+                    {runtimeError}
+                  </div>
+                )}
+              </div>
+            )}
+            {(runtimeOutput || runtimeBusy) && (
+              <div className="max-h-48 shrink-0 border-t border-border-subtle bg-[#111318]">
+                <div className="flex h-8 items-center gap-2 border-b border-white/[0.06] px-3 text-[10px] font-medium text-white/65">
+                  <Terminal aria-hidden="true" className="h-3 w-3" />
+                  Terminal du projet
+                  <span className="ml-auto text-white/40">
+                    {runtimeBusy ? "En cours" : runtimeState === "error" ? "Erreur" : "Sortie"}
+                  </span>
+                </div>
+                <pre
+                  aria-live="polite"
+                  className="max-h-40 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-[10px] leading-4 text-white/75"
+                >
+                  {runtimeOutput || "Préparation du terminal…"}
+                </pre>
+              </div>
+            )}
+            <p className="border-t border-border-subtle px-4 py-2 text-[10px] leading-4 text-text-muted">
+              Le lancement commence après votre clic. Les dépendances du projet sont téléchargées depuis npm.
+            </p>
+          </div>
+        )}
 
         {tab === "files" && (
           <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
@@ -1579,7 +1784,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
                 Confirmer l’export GitHub
               </h2>
               <p className="mt-2 text-xs leading-5 text-text-muted">
-                Idéali va écrire {files.length} fichier(s) dans{" "}
+                Idealy va écrire {files.length} fichier(s) dans{" "}
                 <strong className="font-medium text-text-main">
                   {githubOwner.trim()}/{githubRepo.trim()}
                 </strong>
@@ -1641,7 +1846,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
                 Confirmer le déploiement Vercel
               </h2>
               <p className="mt-2 text-xs leading-5 text-text-muted">
-                Idéali va envoyer les fichiers enregistrés de cette mission vers
+                Idealy va envoyer les fichiers enregistrés de cette mission vers
                 le projet{" "}
                 <strong className="font-medium text-text-main">
                   {vercelProjectName.trim()}

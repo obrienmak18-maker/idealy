@@ -14,6 +14,7 @@ import { useApp } from "../../context/AppContext";
 import type { Message } from "../../types";
 import { Badge } from "../common/Badge";
 import { ArtifactCard } from "./ArtifactCard";
+import { AssistantActivity } from "./AssistantActivity";
 import { CodeBlock } from "./CodeBlock";
 import { MissionPlanCard } from "./MissionPlanCard";
 import { ReasoningBlock } from "./ReasoningBlock";
@@ -209,7 +210,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
   return (
     <article
-      aria-label={`Message de ${isUser ? "vous" : "Idéali"}`}
+      aria-label={`Message de ${isUser ? "vous" : "Idealy"}`}
       className={`py-3 px-4 md:px-6 transition-colors ${
         isUser
           ? "ml-auto max-w-[85%] md:max-w-[78%] flex flex-col items-end"
@@ -258,7 +259,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
           {/* Header Info */}
           <div className="flex items-center justify-between gap-3 pt-1">
             <div className="flex items-center gap-2">
-              {/* Idéali Custom Geometric Spark Logo */}
+              {/* Idealy Custom Geometric Spark Logo */}
               <div
                 aria-hidden="true"
                 className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white shadow-sm"
@@ -266,7 +267,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
                 <Sparkles className="w-3.5 h-3.5 fill-current" />
               </div>
               <span className="text-xs font-semibold text-[var(--dsw-alias-label-primary)]">
-                Idéali
+                Idealy
               </span>
               <span className="text-[11px] text-[var(--dsw-alias-label-tertiary)]">
                 {timeFormatted}
@@ -320,6 +321,13 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
             />
           )}
 
+          <AssistantActivity
+            activities={message.activities}
+            fileEvents={message.fileEvents}
+            isStreaming={message.isPartial}
+            subagents={message.subagents}
+          />
+
           {/* Body Content */}
           <div className="text-sm md:text-[15px] leading-relaxed text-[var(--dsw-alias-label-primary)] break-words">
             {renderFormattedContent(message.content)}
@@ -364,10 +372,10 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
           {/* Assistant Action Toolbar (Thumbs, Regenerate, Copy) */}
           {!message.isPartial && message.content && (
-            <div className="flex items-center gap-2 pt-2 text-xs text-[var(--dsw-alias-label-tertiary)]">
+            <div className="flex items-center gap-1 sm:gap-2 pt-2 text-xs text-[var(--dsw-alias-label-tertiary)]">
               <button
                 aria-label="Copier"
-                className="flex items-center gap-1 p-1 rounded hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                className="flex items-center gap-1.5 min-h-[36px] px-2.5 py-1.5 rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
                 onClick={handleCopyMessage}
                 title="Copier la réponse"
                 type="button"
@@ -377,14 +385,14 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
                 ) : (
                   <Copy className="w-3.5 h-3.5" />
                 )}
-                <span className="text-[11px]">
+                <span className="text-[11px] font-medium">
                   {copied ? "Copié" : "Copier"}
                 </span>
               </button>
 
               <button
                 aria-label="Réponse utile"
-                className={`p-1 rounded transition-colors ${
+                className={`grid min-h-[36px] min-w-[36px] place-items-center rounded-lg transition-all duration-150 active:scale-95 ${
                   feedback === "liked"
                     ? "text-[var(--idealy-teal-petrol)] bg-[var(--idealy-teal-bg)]"
                     : "hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
@@ -400,7 +408,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
               <button
                 aria-label="Réponse à améliorer"
-                className={`p-1 rounded transition-colors ${
+                className={`grid min-h-[36px] min-w-[36px] place-items-center rounded-lg transition-all duration-150 active:scale-95 ${
                   feedback === "disliked"
                     ? "text-[var(--dsw-alias-state-error-primary)] bg-red-500/10"
                     : "hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
@@ -416,7 +424,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
               <button
                 aria-label="Régénérer"
-                className="flex items-center gap-1 p-1 rounded hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors ml-auto"
+                className="flex items-center gap-1.5 min-h-[36px] px-2.5 py-1.5 rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95 ml-auto"
                 onClick={() =>
                   sendMessage("Régénérer et approfondir la réponse précédente.")
                 }
@@ -424,7 +432,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
                 type="button"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span className="text-[11px]">Régénérer</span>
+                <span className="text-[11px] font-medium">Régénérer</span>
               </button>
             </div>
           )}

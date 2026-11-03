@@ -1,0 +1,7 @@
+result=ok
+stage=publish
+reason=committed
+revision=1.91.379.0 (2d1b55d7621d)
+installed=1.91.379.0 (2d1b55d7621d)
+launcher=yes
+diagnostic=C:/Users/obrie/gstack/bin/.gstack-cso-build.log

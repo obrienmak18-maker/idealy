@@ -1,0 +1,205 @@
+{
+  "targetUrl": "https://lovable.dev",
+  "targetName": "lovable",
+  "extractedAt": "2026-11-02T15:59:56.126Z",
+  "specs": {
+    "title": "App & Website Builder | Build Software in Minutes | Lovable",
+    "body": {
+      "tagName": "BODY",
+      "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px",
+      "color": "oklch(0.1 0 0)",
+      "backgroundColor": "oklch(0.9699 0 107)",
+      "border": "0px solid oklch(0.866 0 107 / 0.4)",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "margin": "0px",
+      "transition": "all"
+    },
+    "buttons": [
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "color": "oklch(0.1 0 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "8px",
+        "boxShadow": "none",
+        "padding": "6px 10px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "color": "oklch(0.1 0 0)",
+        "backgroundColor": "oklch(1 0 0 / 0.8)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "8px",
+        "boxShadow": "none",
+        "padding": "6px 10px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "oklch(0.1 0 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "8px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "oklch(0.1 0 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "4px 0px 4px 6px",
+        "margin": "0px",
+        "transition": "color 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), outline-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), text-decoration-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), fill 0.15s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.15s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-from 0.15s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-via 0.15s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-to 0.15s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "oklch(0.1 0 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "4px 0px 4px 6px",
+        "margin": "0px",
+        "transition": "color 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), outline-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), text-decoration-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), fill 0.15s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.15s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-from 0.15s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-via 0.15s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-to 0.15s cubic-bezier(0.4, 0, 0.2, 1)"
+      }
+    ],
+    "inputs": [],
+    "headings": [
+      {
+        "tagName": "H2",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "48px",
+        "fontWeight": "600",
+        "lineHeight": "52.8px",
+        "color": "rgb(28, 28, 28)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H2",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "36px",
+        "fontWeight": "600",
+        "lineHeight": "39.6px",
+        "color": "rgb(28, 28, 28)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "color": "rgb(28, 28, 28)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "color": "rgb(28, 28, 28)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "\"Camera Plain Variable\", ui-sans-serif, system-ui, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "24px",
+        "color": "rgb(28, 28, 28)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid oklch(0.866 0 107 / 0.4)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      }
+    ]
+  },
+  "apiCallsSample": [
+    {
+      "url": "https://api.lovable.dev/consent/policy",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://lovable.dev/_serverFn/1c038d93a442abfb368123c39d8307c61b9f50f4e88b307ac5fb3fdb8056a5a7",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://lovable.dev/_serverFn/1cfa5e993551accfed5cd0a684fb78ea1a734c6715b5b2aff572fc7624e6b1cd",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://lovable.dev/_serverFn/e92a63b641f7839fdf318f4ff33c800e1b523b0f37dcb473d554463730d513ac",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://o4506071217143808.ingest.us.sentry.io/api/4506071220944896/envelope/?sentry_version=7&sentry_key=58ff8fddcbe1303f19bc19fbfed46f0f&sentry_client=sentry.javascript.browser%2F10.70.0",
+      "method": "POST",
+      "postData": "{\"sent_at\":\"2026-11-02T15:59:52.155Z\",\"sdk\":{\"name\":\"sentry.javascript.browser\",\"version\":\"10.70.0\"}}\n{\"type\":\"session\"}\n{\"sid\":\"d0b8fd7b3613409780799ecfe8bf9e4c\",\"init\":true,\"started\":\"2026-11-02T15:59:48.919Z\",\"timestamp\":\"2026-11-02T15:59:48.919Z\",\"status\":\"ok\",\"errors\":0,\"attrs\":{\"release\":\"ad296e4d7fcfae5b044f8ef5ede0e8ed0c88d020\",\"environment\":\"production\",\"user_agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36\"}}"
+    }
+  ]
+}

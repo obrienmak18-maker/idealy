@@ -137,7 +137,7 @@ export const SettingsModal: React.FC = () => {
               </div>
               <p className="text-text-muted">
                 • <strong>Moteur IA :</strong> réponses diffusées depuis le
-                backend Idéali via l’API de chat.
+                backend Idealy via l’API de chat.
               </p>
               <p className="text-text-muted">
                 • <strong>Clés API distantes :</strong> Aucune clé secrète n'est
@@ -210,7 +210,7 @@ export const SettingsModal: React.FC = () => {
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-border-subtle bg-bg-subtle/40 text-[11px] text-text-muted flex items-center justify-between">
-          <span>Idéali 2026 — Respect des standards WCAG AA</span>
+          <span>Idealy 2026 — Respect des standards WCAG AA</span>
           <Button
             onClick={() => setIsSettingsOpen(false)}
             size="sm"

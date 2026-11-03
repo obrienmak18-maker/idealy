@@ -44,6 +44,47 @@ export interface MissionPlan {
   v1Scope: string;
 }
 
+export interface AssistantToolActivity {
+  errorText?: string | null;
+  input: Record<string, unknown>;
+  kind:
+    | "webSearch"
+    | "searchImages"
+    | "generateImage"
+    | "dispatchSubAgents"
+    | "generateVideo"
+    | "renderWidget";
+  output?: Record<string, unknown>;
+  state: "input-available" | "output-available" | "output-error";
+  toolCallId: string;
+}
+
+export interface MissionFileActivity {
+  eventType: string;
+  file?: {
+    path?: string;
+    status?: string;
+  };
+  missionId: string;
+  path?: string;
+  payload?: Record<string, unknown>;
+  sequence: number;
+}
+
+export interface SubAgentProgress {
+  agents: Array<{
+    id: string;
+    name: string;
+    role: string;
+    status: "queued" | "running" | "completed" | "failed";
+    summary?: string;
+    task: string;
+  }>;
+  objective: string;
+  squad: string;
+  timestamp: number;
+}
+
 export interface MissionWorkspaceFile {
   checksum?: string | null;
   content: string;
@@ -73,6 +114,7 @@ export interface MissionRun {
 }
 
 export interface Message {
+  activities?: AssistantToolActivity[];
   artifactIds?: string[];
   attachments?: Attachment[];
   content: string;
@@ -80,8 +122,10 @@ export interface Message {
   createdAt: number;
   id: string;
   isPartial?: boolean;
+  fileEvents?: MissionFileActivity[];
   mission?: MissionRun;
   mode: IntentionMode;
+  subagents?: SubAgentProgress[];
   reasoning?: string;
   reasoningDuration?: number;
   role: "user" | "assistant";

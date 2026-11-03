@@ -1,150 +1,319 @@
 import {
-  BookOpen,
-  ChevronDown,
-  CircleHelp,
-  CreditCard,
-  Edit3,
-  FileText,
-  Info,
+  Bot,
+  Download,
   LayoutGrid,
   MessageSquare,
-  Moon,
-  Paintbrush,
+  MoreHorizontal,
   PanelLeft,
   PanelLeftClose,
   Pin,
   Plug,
-  Search,
   Settings,
-  ShieldCheck,
-  Sparkles,
   SquarePen,
-  Sun,
+  Trash2,
+  Zap,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { hasConversationActivity } from "../../services/conversationVisibility";
+import { AccountChip } from "./AccountChip";
+import { IdealyLogo } from "../branding/IdealyLogo";
+import { voiesCatalog, type WayDetailed } from "../../services/voies-catalog";
 
 export const Sidebar: React.FC = () => {
   const {
     activePage,
     setActivePage,
-    theme,
-    setTheme,
-    spaces,
     activeSpace,
-    setActiveSpaceId,
     conversations,
+    messages,
     activeConversation,
     setActiveConversationId,
     createConversation,
-    artifacts,
-    openArtifact,
-    setIsCommandPaletteOpen,
-    conversationsHasMore,
-    isLoadingConversations,
-    loadMoreConversations,
+    togglePinConversation,
+    exportConversation,
+    deleteConversation,
+    openConfirmModal,
   } = useApp();
 
   const [collapsed, setCollapsed] = useState(false);
-  const [showAllRecent, setShowAllRecent] = useState(false);
+  const [openActionsId, setOpenActionsId] = useState<string | null>(null);
+  const [currentWayKey] = useState<string>("ninja");
+  const [language, setLanguage] = useState<"fr" | "en">("fr");
 
-  const spaceConversations = conversations
-    .filter(
-      (conversation) =>
-        conversation.spaceId === activeSpace?.id && !conversation.isArchived,
-    )
-    .sort((a, b) => b.updatedAt - a.updatedAt);
-  const visibleConversations = showAllRecent
-    ? spaceConversations
-    : spaceConversations.slice(0, 5);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const actionsTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+  const activeWay: WayDetailed = voiesCatalog[currentWayKey] ?? voiesCatalog.ninja;
+
+  useEffect(() => {
+    if (!openActionsId) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!actionsRef.current?.contains(event.target as Node)) {
+        setOpenActionsId(null);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenActionsId(null);
+        actionsTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [openActionsId]);
+
+  const spaceConversations = useMemo(
+    () =>
+      conversations
+        .filter(
+          (conversation) =>
+            conversation.spaceId === activeSpace?.id &&
+            !conversation.isArchived &&
+            hasConversationActivity(conversation, messages),
+        )
+        .sort((a, b) => b.updatedAt - a.updatedAt),
+    [conversations, activeSpace, messages],
+  );
+
+  // Chronological grouping (Aujourd'hui, Hier, 7 derniers jours, Plus ancien)
+  const groupedConversations = useMemo(() => {
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const today: typeof spaceConversations = [];
+    const yesterday: typeof spaceConversations = [];
+    const lastWeek: typeof spaceConversations = [];
+    const older: typeof spaceConversations = [];
+
+    for (const conv of spaceConversations) {
+      const diff = now - conv.updatedAt;
+      if (diff < oneDay) {
+        today.push(conv);
+      } else if (diff < 2 * oneDay) {
+        yesterday.push(conv);
+      } else if (diff < 7 * oneDay) {
+        lastWeek.push(conv);
+      } else {
+        older.push(conv);
+      }
+    }
+
+    return { today, yesterday, lastWeek, older };
+  }, [spaceConversations]);
+
+  const navItems = [
+    {
+      key: "agents" as const,
+      label: "Escouade d'Agents",
+      badge: "Multi",
+      icon: Bot,
+      iconColor: "text-[var(--idealy-indigo)]",
+      activeBg: "bg-[var(--idealy-indigo-bg)]",
+      activeText: "text-[var(--idealy-indigo)]",
+      badgeClass: "idealy-badge--indigo",
+    },
+    {
+      key: "library" as const,
+      label: "Bibliothèque",
+      badge: null,
+      icon: LayoutGrid,
+      iconColor: "text-[var(--idealy-teal-petrol)]",
+      activeBg: "bg-[var(--idealy-teal-bg)]",
+      activeText: "text-[var(--idealy-teal-petrol)]",
+      badgeClass: "",
+    },
+    {
+      key: "connectors" as const,
+      label: "Connecteurs",
+      badge: "Hub",
+      icon: Plug,
+      iconColor: "text-violet-400",
+      activeBg: "bg-violet-500/10",
+      activeText: "text-violet-400",
+      badgeClass: "idealy-badge--violet",
+    },
+  ] as const;
 
   const renderConversation = (
     conversation: (typeof spaceConversations)[number],
   ) => {
-    const isActive = activeConversation?.id === conversation.id;
-    const hasDraft = Boolean(conversation.draft?.trim());
+    const isActive = activeConversation?.id === conversation.id && activePage === "chat";
+    const menuOpen = openActionsId === conversation.id;
+
+    const deleteThisConversation = () => {
+      setOpenActionsId(null);
+      openConfirmModal({
+        title: "Supprimer cette conversation ?",
+        confirmLabel: "Supprimer définitivement",
+        isDestructive: true,
+        message: `Supprimer « ${conversation.title} » ? Tous les messages et livrables associés seront effacés.`,
+        onConfirm: () => deleteConversation(conversation.id),
+      });
+    };
 
     return (
-      <button
-        aria-current={isActive ? "page" : undefined}
-        className={`group relative flex items-center transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] focus-ring ${
-          collapsed
-            ? "mx-auto h-10 w-10 justify-center rounded-xl bg-transparent hover:bg-white/10"
-            : "h-[38px] w-full justify-between rounded-lg px-3"
-        } ${
-          isActive
-            ? "bg-white/10 text-white font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-            : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
-        }`}
-        key={conversation.id}
-        onClick={() => setActiveConversationId(conversation.id)}
-        title={conversation.title}
-        type="button"
-      >
-        <span
-          className={`flex min-w-0 items-center ${collapsed ? "" : "gap-3"}`}
+      <div className="relative group/item" key={conversation.id}>
+        <div
+          className={`idealy-active-indicator group flex items-center transition-all duration-200 ease-spring ${
+            isActive
+              ? "bg-[var(--idealy-teal-bg)] text-[var(--idealy-teal-petrol)] font-medium"
+              : "text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"
+          } ${
+            collapsed
+              ? "mx-auto h-10 w-10 justify-center rounded-xl"
+              : "h-9 w-full gap-2 rounded-xl px-2.5"
+          }`}
+          data-active={isActive}
         >
-          {conversation.isPinned ? (
-            <Pin
-              className="h-4 w-4 shrink-0 text-emerald-400"
-              strokeWidth={2.5}
-            />
-          ) : (
-            <MessageSquare
-              className="h-4 w-4 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
-              strokeWidth={2}
-            />
-          )}
-          <span
-            className={`truncate text-[13px] transition-all duration-300 origin-left ${
-              collapsed
-                ? "w-0 opacity-0 scale-95 hidden"
-                : "w-auto opacity-100 scale-100"
+          {/* Main Select Button */}
+          <button
+            aria-current={isActive ? "true" : undefined}
+            className={`flex flex-1 items-center gap-2 min-w-0 text-left focus-ring rounded-lg ${
+              collapsed ? "h-full w-full justify-center" : "h-full"
             }`}
+            onClick={() => {
+              setActiveConversationId(conversation.id);
+              setActivePage("chat");
+            }}
+            title={conversation.title}
+            type="button"
           >
-            {conversation.title}
-          </span>
-        </span>
-        {!collapsed && hasDraft && (
-          <Edit3 className="h-3 w-3 shrink-0 text-emerald-500" />
+            <MessageSquare
+              className={`h-4 w-4 shrink-0 transition-all duration-200 ${
+                isActive
+                  ? "text-[var(--idealy-teal-petrol)] scale-110"
+                  : "text-[var(--dsw-alias-label-tertiary)] group-hover/item:text-[var(--dsw-alias-label-primary)]"
+              }`}
+              strokeWidth={1.8}
+            />
+            {!collapsed && (
+              <span className="truncate text-[12.5px] font-normal tracking-tight">
+                {conversation.title}
+              </span>
+            )}
+          </button>
+
+          {/* Options button on hover (Only when expanded) */}
+          {!collapsed && (
+            <div className="relative shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity duration-150">
+              <button
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                aria-label={`Options pour ${conversation.title}`}
+                className="grid h-7 w-7 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:bg-[var(--dsw-alias-bg-layer-3)] hover:text-[var(--dsw-alias-label-primary)] transition-colors focus-ring"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenActionsId(menuOpen ? null : conversation.id);
+                }}
+                ref={menuOpen ? actionsTriggerRef : undefined}
+                type="button"
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </button>
+
+              {menuOpen && (
+                <div
+                  aria-label="Options de la discussion"
+                  className="absolute right-0 top-8 z-50 w-48 rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-elevated idealy-glass animate-scale-in"
+                  ref={actionsRef}
+                  role="menu"
+                >
+                  <button
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                    onClick={() => {
+                      setOpenActionsId(null);
+                      togglePinConversation(conversation.id);
+                    }}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <Pin className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
+                    <span>{conversation.isPinned ? "Désépingler" : "Épingler"}</span>
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                    onClick={() => {
+                      setOpenActionsId(null);
+                      exportConversation(conversation.id);
+                    }}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <Download className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
+                    <span>Exporter (JSON)</span>
+                  </button>
+                  <div className="my-1 border-t border-[var(--dsw-alias-border-l1)]" />
+                  <button
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                    onClick={deleteThisConversation}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Supprimer</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSection = (
+    label: string,
+    items: typeof spaceConversations,
+  ) => {
+    if (items.length === 0) return null;
+    return (
+      <section className="mb-3">
+        {!collapsed && (
+          <h3 className="px-2.5 pb-1.5 pt-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--dsw-alias-label-caption)]">
+            {label}
+          </h3>
         )}
-      </button>
+        <nav className="space-y-0.5">
+          {items.map((conv) => renderConversation(conv))}
+        </nav>
+      </section>
     );
   };
 
   return (
     <aside
-      className={`hidden md:flex h-full shrink-0 flex-col select-none bg-[#0a0a0a] border-r border-white/[0.06] transition-[width] duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-        collapsed ? "w-[64px]" : "w-[260px]"
+      className={`sidebar-shell hidden md:flex h-full shrink-0 flex-col select-none transition-[width] duration-300 ease-spring ${
+        collapsed ? "w-[60px]" : "w-[260px]"
       }`}
+      aria-label="Navigation principale"
       id="desktop-sidebar-navigation"
+      role="navigation"
     >
-      {/* --- HEADER --- */}
+      {/* ─── 1. HEADER (LOGO & COLLAPSE) ─────────────────────────────────── */}
       <div
-        className={`flex h-[60px] shrink-0 items-center ${collapsed ? "justify-center px-0" : "justify-between px-4"}`}
+        className={`flex h-[56px] shrink-0 items-center ${
+          collapsed ? "justify-center px-0" : "justify-between px-3.5"
+        }`}
       >
-        {/* LOGO & BRAND (Seulement si déplié) */}
-        {!collapsed && (
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 shadow-sm">
-              <Sparkles className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
-            </div>
-            <span className="text-[15px] font-semibold tracking-tight text-zinc-100 truncate">
-              Idéali
-            </span>
-          </div>
-        )}
+        <div
+          className="flex items-center gap-2.5 overflow-hidden cursor-pointer group"
+          onClick={() => setActivePage("chat")}
+        >
+          <IdealyLogo animated compact={collapsed} size={collapsed ? 28 : 30} />
+        </div>
 
-        {/* BOUTON TOGGLE */}
         <button
-          aria-label={collapsed ? "Agrandir" : "Réduire"}
-          className={`flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-all focus-ring ${
-            collapsed ? "h-10 w-10" : "h-8 w-8"
+          aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"}
+          className={`grid place-items-center rounded-xl text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] active:scale-90 transition-all duration-200 ease-spring focus-ring ${
+            collapsed ? "h-9 w-9" : "h-8 w-8"
           }`}
           onClick={() => setCollapsed((v) => !v)}
+          title={collapsed ? "Agrandir" : "Réduire"}
           type="button"
         >
           {collapsed ? (
@@ -155,259 +324,206 @@ export const Sidebar: React.FC = () => {
         </button>
       </div>
 
-      {/* --- NEW CHAT BUTTON --- */}
-      <div
-        className={`shrink-0 transition-all duration-500 ${collapsed ? "px-3 py-3" : "px-3 py-2"}`}
-      >
+      {/* ─── 2. PRIMARY CTA (NOUVELLE DISCUSSION) ─────────────────────────── */}
+      <div className={`shrink-0 ${collapsed ? "px-2.5 py-2" : "px-3 py-2"}`}>
         <button
-          className={`group flex items-center justify-center bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] shadow-sm text-zinc-200 transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] focus-ring ${
+          className={`group relative overflow-hidden flex items-center justify-center font-medium transition-all duration-200 ease-spring focus-ring ${
             collapsed
-              ? "mx-auto h-10 w-10 rounded-xl"
-              : "h-10 w-full gap-2 rounded-lg px-3 justify-start"
-          }`}
-          onClick={() => createConversation()}
+              ? "mx-auto h-10 w-10 rounded-2xl"
+              : "h-10 w-full gap-2.5 rounded-xl px-3 justify-start"
+          } bg-gradient-to-r from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white shadow-md hover:shadow-glow-teal active:scale-[0.97]`}
+          onClick={() => {
+            createConversation();
+            setActivePage("chat");
+          }}
           title="Nouvelle conversation"
           type="button"
         >
+          {/* Shimmer overlay */}
+          <span
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            style={{
+              background: 'linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.15) 50%, transparent 75%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 2s linear infinite',
+            }}
+            aria-hidden="true"
+          />
           <SquarePen
-            className="h-[16px] w-[16px] shrink-0 text-zinc-400 group-hover:text-white transition-colors"
-            strokeWidth={2}
+            className="h-4 w-4 shrink-0 relative z-10"
+            strokeWidth={2.2}
           />
           {!collapsed && (
-            <span className="text-[13px] font-medium tracking-tight whitespace-nowrap overflow-hidden transition-all duration-300">
+            <span className="text-[13px] font-semibold tracking-tight relative z-10">
               Nouvelle discussion
             </span>
           )}
         </button>
       </div>
 
-      {/* Navigation workspace */}
-      <div className={`shrink-0 px-2 pb-2 ${collapsed ? "pt-0" : "pt-1"}`}>
-        <button
-          aria-current={activePage === "library" ? "page" : undefined}
-          className={`flex h-10 w-full items-center rounded-lg transition-colors focus-ring ${collapsed ? "mx-auto w-10 justify-center" : "gap-3 px-3"} ${activePage === "library" ? "bg-white/10 text-white font-medium" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"}`}
-          onClick={() => setActivePage("library")}
-          title="Bibliothèque"
-          type="button"
-        >
-          <LayoutGrid className="h-4 w-4 shrink-0" strokeWidth={2} />
-          {!collapsed && <span className="text-[13px]">Bibliothèque</span>}
-        </button>
-        <button
-          aria-current={activePage === "connectors" ? "page" : undefined}
-          className={`flex h-10 w-full items-center rounded-lg transition-colors focus-ring ${
-            collapsed ? "mx-auto w-10 justify-center" : "gap-3 px-3"
-          } ${activePage === "connectors" ? "bg-white/10 text-white font-medium" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"}`}
-          onClick={() => setActivePage("connectors")}
-          title="Connecteurs"
-          type="button"
-        >
-          <Plug className="h-4 w-4 shrink-0" strokeWidth={2} />
-          {!collapsed && <span className="text-[13px]">Connecteurs</span>}
-        </button>
-        <button
-          aria-current={activePage === "brandStudio" ? "page" : undefined}
-          className={`flex h-10 w-full items-center rounded-lg transition-colors focus-ring ${collapsed ? "mx-auto w-10 justify-center" : "gap-3 px-3"} ${activePage === "brandStudio" ? "bg-white/10 text-white font-medium" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"}`}
-          onClick={() => setActivePage("brandStudio")}
-          title="Studio de marque"
-          type="button"
-        >
-          <Paintbrush className="h-4 w-4 shrink-0" strokeWidth={2} />
-          {!collapsed && <span className="text-[13px]">Studio de marque</span>}
-        </button>
-      </div>
+      {/* ─── 3. NAVIGATION PILLARS ───────────────────────────────────────── */}
+      <nav aria-label="Sections principales" className="shrink-0 px-2.5 py-1.5 space-y-0.5">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activePage === item.key;
 
-      {/* --- ESPACE DE TRAVAIL (Select) --- */}
-      {!collapsed && spaces.length > 1 && (
-        <div className="shrink-0 px-3 pb-2">
-          <div className="relative group/select">
-            <select
-              className="h-9 w-full appearance-none rounded-lg bg-transparent pl-2.5 pr-8 text-[12px] font-medium text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-colors focus-ring cursor-pointer outline-none border border-transparent focus:border-white/10"
-              onChange={(event) => setActiveSpaceId(event.target.value)}
-              value={activeSpace?.id ?? ""}
+          return (
+            <button
+              key={item.key}
+              aria-current={isActive ? "page" : undefined}
+              className={`idealy-active-indicator flex h-10 w-full items-center rounded-xl transition-all duration-200 ease-spring focus-ring ${
+                collapsed ? "mx-auto w-10 justify-center" : "gap-2.5 px-2.5"
+              } ${
+                isActive
+                  ? `${item.activeBg} ${item.activeText} font-semibold`
+                  : "text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"
+              }`}
+              data-active={isActive}
+              onClick={() => setActivePage(item.key)}
+              title={item.label}
+              type="button"
             >
-              {spaces.map((space) => (
-                <option
-                  className="bg-[#0a0a0a] text-zinc-200"
-                  key={space.id}
-                  value={space.id}
-                >
-                  {space.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500 group-hover/select:text-zinc-300 transition-colors"
-              strokeWidth={2.5}
-            />
+              <Icon
+                className={`h-[18px] w-[18px] shrink-0 transition-all duration-200 ${item.iconColor} ${isActive ? "scale-110" : ""}`}
+                strokeWidth={isActive ? 2.2 : 1.8}
+              />
+              {!collapsed && (
+                <div className="flex flex-1 items-center justify-between min-w-0">
+                  <span className="text-[12.5px] truncate">{item.label}</span>
+                  {item.badge && (
+                    <span className={`idealy-badge ${item.badgeClass}`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* ─── 4. MISSION EN COURS / SQUAD CARD ────────────────────────────── */}
+      {!collapsed && (
+        <div className="shrink-0 px-2.5 pt-2 pb-1">
+          <div
+            className="idealy-card-premium group cursor-pointer p-3"
+            onClick={() => setActivePage("agents")}
+            title="Consulter l'escouade active"
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.style.setProperty('--mouse-x', `${((e.clientX - rect.left) / rect.width) * 100}%`);
+              e.currentTarget.style.setProperty('--mouse-y', `${((e.clientY - rect.top) / rect.height) * 100}%`);
+            }}
+          >
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-[var(--idealy-teal-petrol)]/30 shadow-sm">
+                <img
+                  alt={activeWay.chiefName || "Chef"}
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  src={activeWay.agents[0]?.avatarUrl || "/images/agents/Minato.jpg"}
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = "none";
+                  }}
+                />
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-[var(--dsw-alias-bg-layer-2)] idealy-pulse-dot" />
+              </div>
+              <div className="min-w-0 flex-1 leading-tight">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-bold text-[var(--dsw-alias-label-primary)] truncate">
+                    {activeWay.chiefName || "Chef Minato"}
+                  </span>
+                  <span className="idealy-badge idealy-badge--teal">
+                    En ligne
+                  </span>
+                </div>
+                <span className="text-[10.5px] text-[var(--dsw-alias-label-tertiary)] truncate block mt-0.5">
+                  {activeWay.label}
+                </span>
+              </div>
+            </div>
+
+            {/* Chakra / Resource bar */}
+            <div className="space-y-1.5 pt-2 border-t border-[var(--dsw-alias-border-l1)]">
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="flex items-center gap-1 text-[var(--dsw-alias-label-secondary)] font-medium">
+                  <Zap className="h-3 w-3 text-amber-400" />
+                  {activeWay.resourceLabel}
+                </span>
+                <span className="font-bold text-[var(--dsw-alias-label-primary)] idealy-stat-number">
+                  1 000 / 1 000
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-[var(--dsw-alias-interactive-bg-hover)] overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-1000 ease-spring"
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(90deg, rgb(251, 191, 36), var(--idealy-teal-petrol) 50%, var(--idealy-indigo))',
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* --- ZONE DE SCROLL --- */}
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 sidebar-scrollbar">
-        {/* Bibliothèque */}
-        {artifacts.length > 0 && (
-          <section className="mb-4">
-            {!collapsed && (
-              <h2 className="px-2 pb-1 pt-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest flex items-center gap-1.5">
-                <LayoutGrid className="h-3 w-3" strokeWidth={2.5} />{" "}
-                Bibliothèque
-              </h2>
-            )}
-            <nav className="space-y-0.5 mt-1">
-              {artifacts.map((artifact) => (
-                <button
-                  className={`group flex items-center transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] text-zinc-400 hover:text-zinc-200 hover:bg-white/5 focus-ring ${
-                    collapsed
-                      ? "mx-auto h-10 w-10 justify-center rounded-xl"
-                      : "h-[34px] w-full gap-2.5 rounded-md px-2.5"
-                  }`}
-                  key={artifact.id}
-                  onClick={() => openArtifact(artifact.id)}
-                  title={artifact.title}
-                  type="button"
-                >
-                  <FileText
-                    className="h-[15px] w-[15px] shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
-                    strokeWidth={2}
-                  />
-                  {!collapsed && (
-                    <span className="truncate text-[13px] transition-all duration-300 origin-left">
-                      {artifact.title}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
-          </section>
-        )}
+      {/* ─── 5. CHRONOLOGICAL DISCUSSION HISTORY ──────────────────────────── */}
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 idealy-scroll mt-1">
+        {renderSection("Aujourd'hui", groupedConversations.today)}
+        {renderSection("Hier", groupedConversations.yesterday)}
+        {renderSection("7 derniers jours", groupedConversations.lastWeek)}
+        {renderSection("Plus ancien", groupedConversations.older)}
 
-        {/* Discussions */}
-        {spaceConversations.length > 0 && (
-          <section>
-            {!collapsed && (
-              <h2 className="px-2 pb-1 pt-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
-                Toutes
-              </h2>
-            )}
-            <nav className="space-y-0.5 mt-1">
-              {visibleConversations.map((conversation) =>
-                renderConversation(conversation),
-              )}
-            </nav>
-
-            {!collapsed &&
-              (spaceConversations.length > 5 || conversationsHasMore) && (
-                <button
-                  className="mt-2 flex h-8 w-full items-center justify-between rounded-md px-2.5 text-[12px] font-medium text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-300 focus-ring"
-                  onClick={() => {
-                    setShowAllRecent((v) => !v);
-                    if (conversationsHasMore) void loadMoreConversations();
-                  }}
-                  type="button"
-                >
-                  <span>
-                    {isLoadingConversations
-                      ? "Chargement…"
-                      : showAllRecent
-                        ? "Afficher moins"
-                        : "Afficher plus"}
-                  </span>
-                  <ChevronDown
-                    className={`h-3 w-3 transition-transform duration-300 ${showAllRecent ? "rotate-180" : ""}`}
-                    strokeWidth={2.5}
-                  />
-                </button>
-              )}
-          </section>
-        )}
-
-        {!collapsed && (
-          <section className="mt-5 border-t border-white/[0.06] pt-3">
-            <h2 className="px-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
-              Ressources
-            </h2>
-            {(
-              [
-                ["welcome", "Bienvenue", Sparkles],
-                ["docs", "Documentation", BookOpen],
-                ["support", "Assistance", CircleHelp],
-                ["about", "À propos", Info],
-                ["pricing", "Offres", CreditCard],
-                ["privacy", "Confidentialité", ShieldCheck],
-                ["terms", "Conditions", FileText],
-                ["eula", "Licence", FileText],
-              ] as const
-            ).map(([page, label, Icon]) => (
-              <button
-                aria-current={activePage === page ? "page" : undefined}
-                className={`flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[12px] transition-colors focus-ring ${activePage === page ? "bg-white/10 text-white" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"}`}
-                key={page}
-                onClick={() => setActivePage(page)}
-                type="button"
-              >
-                <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
-          </section>
+        {/* Empty state when no chats */}
+        {spaceConversations.length === 0 && !collapsed && (
+          <div className="px-3 py-8 text-center text-xs text-[var(--dsw-alias-label-tertiary)]">
+            <div className="mb-2 mx-auto h-10 w-10 rounded-xl bg-[var(--dsw-alias-interactive-bg-hover)] grid place-items-center">
+              <MessageSquare className="h-4 w-4 text-[var(--dsw-alias-label-caption)]" />
+            </div>
+            <p className="font-medium">Aucune discussion</p>
+            <p className="mt-1 text-[10.5px] text-[var(--dsw-alias-label-caption)]">
+              Cliquez sur « Nouvelle discussion » pour commencer.
+            </p>
+          </div>
         )}
       </div>
 
-      {/* --- FOOTER (Utilisateur / Paramètres / Thème) --- */}
+      {/* ─── 6. FOOTER (UTILISATEUR, LANGUE & PARAMÈTRES) ─────────────────── */}
       <div
-        className={`shrink-0 flex border-t border-white/[0.06] bg-[#0a0a0a]/50 backdrop-blur-md transition-all duration-500 ${
+        className={`sidebar-footer shrink-0 flex border-t border-[var(--dsw-alias-border-l1)] transition-all duration-300 ${
           collapsed
-            ? "flex-col items-center gap-2 py-4"
-            : "items-center justify-between h-[56px] px-4"
+            ? "flex-col items-center gap-2 py-3"
+            : "items-center justify-between h-[54px] px-3.5"
         }`}
       >
-        {/* Bouton Recherche rapide (Seulement si déplié) */}
+        <AccountChip
+          collapsed={collapsed}
+          onOpenSettings={() => setActivePage("settings")}
+        />
+
         {!collapsed && (
-          <button
-            className="flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-[12px] font-medium text-zinc-500 hover:bg-white/5 hover:text-zinc-300 transition-colors focus-ring"
-            onClick={() => setIsCommandPaletteOpen(true)}
-            type="button"
-          >
-            <Search className="h-3.5 w-3.5" strokeWidth={2.5} />
-            <span>Rechercher</span>
-            <kbd className="ml-auto rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-sans text-zinc-400">
-              ⌘K
-            </kbd>
-          </button>
+          <div className="flex items-center gap-0.5">
+            {/* Language Switcher */}
+            <button
+              className="px-2 py-1 rounded-lg text-[10.5px] font-bold text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-200 focus-ring"
+              onClick={() => setLanguage((l) => (l === "fr" ? "en" : "fr"))}
+              title="Changer de langue"
+              type="button"
+            >
+              {language.toUpperCase()}
+            </button>
+
+            {/* Settings button */}
+            <button
+              className="grid place-items-center rounded-xl text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:rotate-45 active:scale-90 transition-all duration-300 ease-spring focus-ring h-8 w-8"
+              onClick={() => setActivePage("settings")}
+              title="Paramètres"
+              type="button"
+            >
+              <Settings className="h-4 w-4" strokeWidth={1.8} />
+            </button>
+          </div>
         )}
-
-        {/* Actions (Thème & Paramètres) */}
-        <div
-          className={`flex items-center ${collapsed ? "flex-col gap-2" : "gap-1"}`}
-        >
-          <button
-            className={`grid place-items-center rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors focus-ring ${
-              collapsed ? "h-9 w-9" : "h-8 w-8"
-            }`}
-            onClick={toggleTheme}
-            title={theme === "dark" ? "Thème clair" : "Thème sombre"}
-            type="button"
-          >
-            {theme === "dark" ? (
-              <Sun className="h-[15px] w-[15px]" strokeWidth={2} />
-            ) : (
-              <Moon className="h-[15px] w-[15px]" strokeWidth={2} />
-            )}
-          </button>
-
-          <button
-            className={`grid place-items-center rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors focus-ring ${
-              collapsed ? "h-9 w-9" : "h-8 w-8"
-            }`}
-            onClick={() => setActivePage("settings")}
-            title="Paramètres"
-            type="button"
-          >
-            <Settings className="h-[15px] w-[15px]" strokeWidth={2} />
-          </button>
-        </div>
       </div>
     </aside>
   );

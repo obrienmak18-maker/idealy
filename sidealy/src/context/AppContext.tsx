@@ -12,14 +12,17 @@ import { BackendHistoryService } from "../services/backendHistory";
 import { StorageService } from "../services/storage";
 import type {
   Artifact,
+  AssistantToolActivity,
   Attachment,
   Conversation,
   GenerationStatus,
   IntentionMode,
   Message,
+  MissionFileActivity,
   MissionBuildVerification,
   MissionRun,
   MissionWorkspaceFile,
+  SubAgentProgress,
   Space,
   Theme,
 } from "../types";
@@ -115,6 +118,7 @@ export type AppPage =
   | "chat"
   | "connectors"
   | "library"
+  | "agents"
   | "settings"
   | "welcome"
   | "about"
@@ -122,14 +126,13 @@ export type AppPage =
   | "support"
   | "pricing"
   | "plugins"
-  | "brandStudio"
   | "privacy"
   | "terms"
   | "eula";
 
 const pagePaths: Record<AppPage, string> = {
   about: "/about",
-  brandStudio: "/brand-studio",
+  agents: "/agents",
   chat: "/",
   connectors: "/connectors",
   docs: "/docs",
@@ -153,6 +156,33 @@ function pageFromPath(pathname: string): AppPage {
   if (path.startsWith("/connectors/")) return "connectors";
   if (path.startsWith("/docs/")) return "docs";
   return match?.[0] ?? "chat";
+}
+
+function conversationTitleFromPrompt(
+  content: string,
+  attachments: Attachment[] = [],
+): string {
+  const normalized = content.replace(/\s+/g, " ").trim();
+  if (!normalized && attachments.length) {
+    const firstName = attachments[0]?.name?.trim();
+    return firstName ? `Fichier : ${firstName}` : "Fichiers partagés";
+  }
+
+  const concise = normalized
+    .replace(/^aide(?:z)?-moi\s+(?:à|de)\s+/i, "")
+    .replace(/^je\s+(?:voudrais|veux|souhaite)\s+/i, "")
+    .replace(/[\s:;,.!?]+$/u, "")
+    .replace(/\s+(?:pour|avec|de|du|des|à|au|sur|dans|et)$/iu, "")
+    .trim();
+  const title = concise || normalized;
+  const points = Array.from(title);
+  if (points.length <= 44) {
+    return points.join("").charAt(0).toLocaleUpperCase("fr-FR") + points.join("").slice(1);
+  }
+  const preview = points.slice(0, 44).join("");
+  const wordBoundary = preview.lastIndexOf(" ");
+  const shortened = preview.slice(0, wordBoundary > 26 ? wordBoundary : 44).trim();
+  return `${shortened.charAt(0).toLocaleUpperCase("fr-FR")}${shortened.slice(1)}…`;
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -481,6 +511,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   // Conversation management
   const createConversation = (spaceId?: string, title?: string): string => {
     const targetSpace = spaceId || activeSpaceId || "space-general";
+    const activeConversationHasMessages = activeConversation
+      ? messages.some(
+          (message) => message.conversationId === activeConversation.id,
+        )
+      : false;
+    if (
+      !title &&
+      activeConversation?.id.startsWith("conv-") &&
+      activeConversation.spaceId === targetSpace &&
+      !activeConversation.isArchived &&
+      !activeConversation.draft?.trim() &&
+      !activeConversationHasMessages
+    ) {
+      setActiveConversationId(activeConversation.id);
+      return activeConversation.id;
+    }
+
     const newConv: Conversation = {
       createdAt: Date.now(),
       draft: "",
@@ -501,11 +548,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const renameConversation = (id: string, newTitle: string) => {
-    const next = conversations.map((c) =>
-      c.id === id ? { ...c, title: newTitle.trim() || c.title } : c,
-    );
-    setConversations(next);
-    StorageService.saveConversations(next);
+    setConversations((current) => {
+      const next = current.map((conversation) =>
+        conversation.id === id
+          ? { ...conversation, title: newTitle.trim() || conversation.title }
+          : conversation,
+      );
+      StorageService.saveConversations(next);
+      return next;
+    });
   };
 
   const togglePinConversation = (id: string) => {
@@ -553,9 +604,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     const convMessages = messages.filter((m) => m.conversationId === id);
 
-    let text = `# ${conv.title}\n*Exporté depuis Idéali le ${new Date().toLocaleString("fr-FR")}*\n\n---\n\n`;
+    let text = `# ${conv.title}\n*Exporté depuis Idealy le ${new Date().toLocaleString("fr-FR")}*\n\n---\n\n`;
     for (const msg of convMessages) {
-      const roleName = msg.role === "user" ? "Utilisateur" : "Assistant Idéali";
+      const roleName = msg.role === "user" ? "Utilisateur" : "Assistant Idealy";
       const time = new Date(msg.createdAt).toLocaleTimeString("fr-FR", {
         hour: "2-digit",
         minute: "2-digit",
@@ -624,11 +675,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       (m) => m.conversationId === currentConvId,
     ).length;
     if (
-      (convMsgCount === 0 && content.trim()) ||
+      convMsgCount === 0 ||
       activeConversation.title === "Nouvelle conversation"
     ) {
-      const suggestedTitle =
-        content.trim().slice(0, 32) + (content.length > 32 ? "..." : "");
+      const suggestedTitle = conversationTitleFromPrompt(content, attachments);
       renameConversation(currentConvId, suggestedTitle);
     }
 
@@ -732,6 +782,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                     }
                   : m,
               );
+              StorageService.saveMessages(updated);
+              return updated;
+            });
+          },
+          onToolActivity: (activity: AssistantToolActivity) => {
+            setMessages((prev) => {
+              const updated = prev.map((message) => {
+                if (message.id !== assistantMessageId) return message;
+                const activities = message.activities ?? [];
+                const existing = activities.findIndex(
+                  (item) => item.toolCallId === activity.toolCallId,
+                );
+                const nextActivities = [...activities];
+                if (existing >= 0) nextActivities[existing] = activity;
+                else nextActivities.push(activity);
+                return { ...message, activities: nextActivities };
+              });
+              StorageService.saveMessages(updated);
+              return updated;
+            });
+          },
+          onMissionFileEvent: (event: MissionFileActivity) => {
+            setMessages((prev) => {
+              const updated = prev.map((message) => {
+                if (message.id !== assistantMessageId) return message;
+                const fileEvents = message.fileEvents ?? [];
+                if (
+                  fileEvents.some(
+                    (item) =>
+                      item.missionId === event.missionId &&
+                      item.sequence === event.sequence,
+                  )
+                ) {
+                  return message;
+                }
+                return {
+                  ...message,
+                  fileEvents: [...fileEvents, event].slice(-24),
+                };
+              });
+              StorageService.saveMessages(updated);
+              return updated;
+            });
+          },
+          onSubAgentProgress: (progress: SubAgentProgress) => {
+            setMessages((prev) => {
+              const updated = prev.map((message) => {
+                if (message.id !== assistantMessageId) return message;
+                const subagents = message.subagents ?? [];
+                const existingIndex = subagents.findIndex(
+                  (item) => item.timestamp === progress.timestamp,
+                );
+                const nextSubagents = [...subagents];
+                if (existingIndex >= 0) nextSubagents[existingIndex] = progress;
+                else nextSubagents.push(progress);
+                return { ...message, subagents: nextSubagents.slice(-3) };
+              });
               StorageService.saveMessages(updated);
               return updated;
             });

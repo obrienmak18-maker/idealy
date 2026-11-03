@@ -1,8 +1,11 @@
 import type {
   Artifact,
+  AssistantToolActivity,
   Attachment,
   IntentionMode,
+  MissionFileActivity,
   MissionPlan,
+  SubAgentProgress,
 } from "../types";
 
 export interface AssistantStreamCallbacks {
@@ -11,7 +14,10 @@ export interface AssistantStreamCallbacks {
   onComplete?: (reasoningDuration?: number) => void;
   onError?: (error: Error) => void;
   onMissionPlan?: (missionId: string, plan: MissionPlan) => void;
+  onMissionFileEvent?: (event: MissionFileActivity) => void;
   onReasoningChunk?: (chunk: string) => void;
+  onSubAgentProgress?: (progress: SubAgentProgress) => void;
+  onToolActivity?: (activity: AssistantToolActivity) => void;
 }
 
 export interface SendMessageOptions {
@@ -152,13 +158,13 @@ async function responseError(response: Response): Promise<Error> {
 
   if (response.status === 401 || response.status === 403) {
     return new Error(
-      `${serverMessage || "Une session Idéali est nécessaire pour utiliser le moteur IA."} Connectez-vous, puis revenez au chat : /login?callbackUrl=%2F`,
+      `${serverMessage || "Une session Idealy est nécessaire pour utiliser le moteur IA."} Connectez-vous, puis revenez au chat : /login?callbackUrl=%2F`,
     );
   }
 
   return new Error(
     serverMessage ||
-      `Le backend Idéali a répondu avec le statut ${response.status}.`,
+      `Le backend Idealy a répondu avec le statut ${response.status}.`,
   );
 }
 
@@ -265,7 +271,7 @@ export const AssistantRemoteService = {
       const networkError =
         error instanceof Error
           ? error
-          : new Error("Connexion au backend Idéali impossible.");
+          : new Error("Connexion au backend Idealy impossible.");
       callbacks.onError?.(networkError);
       throw networkError;
     }
@@ -277,7 +283,7 @@ export const AssistantRemoteService = {
     }
     if (!response.body) {
       const error = new Error(
-        "Le backend Idéali a répondu sans flux de génération.",
+        "Le backend Idealy a répondu sans flux de génération.",
       );
       callbacks.onError?.(error);
       throw error;
@@ -288,7 +294,7 @@ export const AssistantRemoteService = {
     let pending = "";
     let code = "";
     let kind = "code";
-    let title = options.conversationTitle || "Production Idéali";
+    let title = options.conversationTitle || "Production Idealy";
     let missionId = "";
     let frameError: Error | null = null;
 
@@ -340,6 +346,108 @@ export const AssistantRemoteService = {
         typeof event.data === "object"
       ) {
         callbacks.onMissionPlan?.(missionId, event.data as MissionPlan);
+      } else if (
+        event.type === "data-idealy-tool-activity" &&
+        event.data &&
+        typeof event.data === "object"
+      ) {
+        const activity = event.data as AssistantToolActivity;
+        if (
+          typeof activity.toolCallId === "string" &&
+          [
+            "webSearch",
+            "searchImages",
+            "generateImage",
+            "dispatchSubAgents",
+            "generateVideo",
+            "renderWidget",
+          ].includes(activity.kind) &&
+          ["input-available", "output-available", "output-error"].includes(
+            activity.state,
+          )
+        ) {
+          callbacks.onToolActivity?.({
+            input: {},
+            kind: activity.kind,
+            state: activity.state,
+            toolCallId: activity.toolCallId,
+          });
+        }
+      } else if (
+        event.type === "data-idealy-file-event" &&
+        event.data &&
+        typeof event.data === "object"
+      ) {
+        const fileEvent = event.data as MissionFileActivity;
+        if (
+          typeof fileEvent.missionId === "string" &&
+          typeof fileEvent.eventType === "string" &&
+          typeof fileEvent.sequence === "number"
+        ) {
+          callbacks.onMissionFileEvent?.({
+            eventType: fileEvent.eventType,
+            missionId: fileEvent.missionId,
+            sequence: fileEvent.sequence,
+            ...(typeof fileEvent.path === "string"
+              ? { path: fileEvent.path }
+              : {}),
+            ...(fileEvent.file && typeof fileEvent.file === "object"
+              ? {
+                  file: {
+                    ...(typeof fileEvent.file.path === "string"
+                      ? { path: fileEvent.file.path }
+                      : {}),
+                    ...(typeof fileEvent.file.status === "string"
+                      ? { status: fileEvent.file.status }
+                      : {}),
+                  },
+                }
+              : {}),
+          });
+        }
+      } else if (
+        event.type === "data-idealy-subagent" &&
+        event.data &&
+        typeof event.data === "object"
+      ) {
+        const candidate = event.data as SubAgentProgress;
+        const validStatuses = ["queued", "running", "completed", "failed"];
+        if (
+          typeof candidate.objective === "string" &&
+          typeof candidate.squad === "string" &&
+          typeof candidate.timestamp === "number" &&
+          Array.isArray(candidate.agents)
+        ) {
+          const agents = candidate.agents.flatMap((agent) =>
+            agent &&
+            typeof agent.id === "string" &&
+            typeof agent.name === "string" &&
+            typeof agent.role === "string" &&
+            typeof agent.task === "string" &&
+            validStatuses.includes(agent.status)
+              ? [
+                  {
+                    id: agent.id.slice(0, 100),
+                    name: agent.name.slice(0, 48),
+                    role: agent.role.slice(0, 80),
+                    status: agent.status,
+                    task: agent.task.slice(0, 1200),
+                    ...(typeof agent.summary === "string"
+                      ? { summary: agent.summary.slice(0, 900) }
+                      : {}),
+                  },
+                ]
+              : [],
+          );
+          if (agents.length && agents.length <= 3) {
+            callbacks.onSubAgentProgress?.({
+              agents,
+              objective: candidate.objective.slice(0, 1200),
+              squad: candidate.squad.slice(0, 48),
+              timestamp: candidate.timestamp,
+            });
+          }
+        }
       } else if (event.type === "error") {
         frameError = new Error(
           typeof event.errorText === "string"

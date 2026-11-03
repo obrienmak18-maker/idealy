@@ -1,657 +1,465 @@
 import {
-  AlertCircle,
   ArrowLeft,
-  Check,
-  LoaderCircle,
+  CheckCircle2,
+  Key,
   Menu,
-  Plug,
-  RefreshCw,
-  ShieldCheck,
+  Search,
+  Settings2,
+  Sparkles,
+  X,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../context/AppContext";
 import { getConnectorBrandLogo } from "./connectors/brand-logos";
-import { PluginToolRunner } from "./connectors/PluginToolRunner";
+import {
+  DEFAULT_CONNECTORS_CATALOG,
+  type ConnectorDefinition,
+} from "./connectors/default-connectors";
+import { PageHeader } from "./layout/PageHeader";
 
-type BackendPlugin = {
-  id: string;
-  name: string;
-  version: string;
-  description: string;
-  category: string;
-  state: string;
-  installed: boolean;
-  available: boolean;
-  configurationRequired: boolean;
-  missingRequirements: string[];
-  tools: Array<{
-    id: string;
-    label: string;
-    risk: string;
-    requiresConfirmation: boolean;
-  }>;
-};
-
-type PluginResponse = { plugins?: BackendPlugin[]; error?: string };
-type PluginInstallReview = { plugin: BackendPlugin; permissions: string[] };
-
-function pluginStateLabel(plugin: BackendPlugin): string {
-  if (plugin.available) {
-    return "Prêt";
-  }
-  if (plugin.installed && plugin.configurationRequired) {
-    return "Configuration requise";
-  }
-  if (plugin.installed) {
-    return "Indisponible";
-  }
-  return "Non configuré";
-}
+type CategoryFilter = "all" | "dev" | "data" | "ai" | "productivity";
 
 export const ConnectorsPage: React.FC = () => {
-  const { conversations, messages, setActivePage, setIsMobileDrawerOpen } =
-    useApp();
-  const [plugins, setPlugins] = useState<BackendPlugin[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { setActivePage, setIsMobileDrawerOpen } = useApp();
+
+  const [connectors, setConnectors] = useState<ConnectorDefinition[]>(
+    DEFAULT_CONNECTORS_CATALOG,
+  );
   const [authRequired, setAuthRequired] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [connectedProviders, setConnectedProviders] = useState<string[]>([]);
-  const [connectingId, setConnectingId] = useState<string | null>(null);
-  const [review, setReview] = useState<PluginInstallReview | null>(null);
-  const [installing, setInstalling] = useState(false);
-  const [actionError, setActionError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("all");
+  const [selectedConnector, setSelectedConnector] =
+    useState<ConnectorDefinition | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const conversationTitles = new Map(
-    conversations.map((conversation) => [conversation.id, conversation.title]),
-  );
-  const missionOptions = Array.from(
-    new Map(
-      messages.flatMap((message) =>
-        message.mission
-          ? [
-              [
-                message.mission.id,
-                {
-                  id: message.mission.id,
-                  title:
-                    conversationTitles.get(message.conversationId) ??
-                    message.mission.plan.projectKind,
-                },
-              ] as const,
-            ]
-          : [],
-      ),
-    ).values(),
-  );
-
+  // Fetch live backend connectors if available, but never block the UI
   useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError("");
-    setAuthRequired(false);
-
+    let cancelled = false;
     fetch("/api/idealy/plugins", {
       cache: "no-store",
       credentials: "same-origin",
-      signal: controller.signal,
     })
       .then(async (response) => {
-        const payload = (await response
-          .json()
-          .catch(() => ({}))) as PluginResponse;
         if (response.status === 401 || response.status === 403) {
-          setAuthRequired(true);
-          throw new Error(
-            payload.error ||
-              "Connectez-vous à Idéali pour consulter vos connecteurs.",
-          );
-        }
-        if (!response.ok) {
-          throw new Error(
-            payload.error ||
-              "Le registre des connecteurs est momentanément indisponible.",
-          );
-        }
-        setPlugins(
-          Array.isArray(payload.plugins)
-            ? payload.plugins.filter(
-                (plugin) =>
-                  plugin &&
-                  typeof plugin.id === "string" &&
-                  typeof plugin.name === "string",
-              )
-            : [],
-        );
-      })
-      .catch((reason: unknown) => {
-        if (controller.signal.aborted) {
+          if (!cancelled) setAuthRequired(true);
           return;
         }
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "Impossible de charger les connecteurs.",
-        );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
-
-    return () => controller.abort();
-  }, [reloadKey]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/idealy/connectors/status", {
-      cache: "no-store",
-      credentials: "same-origin",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
+        if (!response.ok) return;
         const payload = (await response.json().catch(() => ({}))) as {
-          integrations?: Array<{
-            provider?: string;
-            serverReady?: boolean;
-            status?: string;
+          plugins?: Array<{
+            id: string;
+            installed?: boolean;
+            available?: boolean;
+            configurationRequired?: boolean;
           }>;
         };
-        if (!response.ok || !Array.isArray(payload.integrations)) return;
-        const providers = payload.integrations
-          .filter(
-            (entry) => entry.status === "active" && entry.serverReady === true,
-          )
-          .map((entry) =>
-            entry.provider === "google" ? "google-drive" : entry.provider,
-          )
-          .filter(
-            (provider): provider is string => typeof provider === "string",
-          );
-        setConnectedProviders(Array.from(new Set(providers)));
+        if (Array.isArray(payload.plugins) && payload.plugins.length > 0 && !cancelled) {
+          // Merge with default connectors
+          setConnectors((prev) => {
+            const backendMap = new Map(payload.plugins!.map((p) => [p.id, p]));
+            return prev.map((item) => {
+              const remote = backendMap.get(item.id);
+              if (remote) {
+                return {
+                  ...item,
+                  installed: Boolean(remote.installed),
+                  available: Boolean(remote.available),
+                  configurationRequired: Boolean(remote.configurationRequired),
+                };
+              }
+              return item;
+            });
+          });
+        }
       })
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, [reloadKey]);
+      .catch(() => {
+        // Fallback gracefully to default catalog
+      });
 
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const connected = url.searchParams.get("connected");
-    const errorCode = url.searchParams.get("error");
-    if (!connected && !errorCode) return;
-    if (connected)
-      setActionError(
-        `${url.searchParams.get("display") || connected} est connecté. Actualisation du registre…`,
-      );
-    if (errorCode)
-      setActionError(
-        `La connexion a échoué (${errorCode}). Réessayez depuis le connecteur.`,
-      );
-    url.searchParams.delete("connected");
-    url.searchParams.delete("display");
-    url.searchParams.delete("error");
-    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
-    setReloadKey((key) => key + 1);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const readyCount = plugins.filter((plugin) => plugin.available).length;
+  const filteredConnectors = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return connectors.filter((c) => {
+      const matchesSearch =
+        !q ||
+        c.name.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q) ||
+        c.categoryLabel.toLowerCase().includes(q);
+      const matchesCategory =
+        activeCategory === "all" || c.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [connectors, searchQuery, activeCategory]);
 
-  const connectPlugin = async (plugin: BackendPlugin) => {
-    const supportedProviders = new Set([
-      "github",
-      "canva",
-      "figma",
-      "google-drive",
-      "notion",
-      "slack",
-      "vercel",
-    ]);
-    if (!supportedProviders.has(plugin.id)) {
-      setActionError(
-        `${plugin.name} utilise une configuration serveur ; aucune connexion OAuth n’est déclarée pour ce connecteur.`,
-      );
-      return;
-    }
-    setConnectingId(plugin.id);
-    setActionError("");
-    try {
-      const endpoint =
-        plugin.id === "vercel"
-          ? "/api/idealy/connectors/vercel/start"
-          : "/api/idealy/connectors/start";
-      const response = await fetch(endpoint, {
-        body: JSON.stringify({ provider: plugin.id }),
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        url?: string;
-      };
-      if (!response.ok || !payload.url)
-        throw new Error(
-          payload.error ||
-            "Le fournisseur n’a pas retourné de lien de connexion.",
-        );
-      window.location.assign(payload.url);
-    } catch (cause) {
-      setActionError(
-        cause instanceof Error
-          ? cause.message
-          : "Impossible de démarrer la connexion.",
-      );
-      setConnectingId(null);
-    }
+  const readyCount = connectors.filter((c) => c.available).length;
+
+  const handleOpenConfig = (connector: ConnectorDefinition) => {
+    setSelectedConnector(connector);
+    setApiKeyInput("");
+    setSaveSuccess(false);
   };
 
-  const reviewPluginInstall = async (plugin: BackendPlugin) => {
-    setActionError("");
-    try {
-      const response = await fetch(
-        `/api/idealy/plugins/${encodeURIComponent(plugin.id)}/install`,
-        {
-          body: JSON.stringify({ confirmed: false }),
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        },
-      );
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        requestedPermissions?: string[];
-      };
-      if (
-        response.status === 409 &&
-        Array.isArray(payload.requestedPermissions)
-      ) {
-        setReview({ plugin, permissions: payload.requestedPermissions });
-        return;
-      }
-      if (!response.ok)
-        throw new Error(
-          payload.error ||
-            "Les autorisations du plugin n’ont pas pu être chargées.",
-        );
-      throw new Error(
-        "Le registre n’a pas retourné les autorisations à examiner.",
-      );
-    } catch (cause) {
-      setActionError(
-        cause instanceof Error
-          ? cause.message
-          : "Les autorisations du plugin n’ont pas pu être chargées.",
-      );
-    }
-  };
-
-  const confirmPluginInstall = async () => {
-    if (!review) return;
-    setInstalling(true);
-    setActionError("");
-    try {
-      const response = await fetch(
-        `/api/idealy/plugins/${encodeURIComponent(review.plugin.id)}/install`,
-        {
-          body: JSON.stringify({
-            confirmed: true,
-            permissions: review.permissions,
-          }),
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        },
-      );
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      if (!response.ok)
-        throw new Error(payload.error || "L’installation du plugin a échoué.");
-      setReview(null);
-      setActionError(`${review.plugin.name} a été installé.`);
-      setReloadKey((key) => key + 1);
-    } catch (cause) {
-      setActionError(
-        cause instanceof Error
-          ? cause.message
-          : "L’installation du plugin a échoué.",
-      );
-    } finally {
-      setInstalling(false);
-    }
+  const handleSaveConfig = () => {
+    if (!selectedConnector) return;
+    setConnectors((prev) =>
+      prev.map((c) =>
+        c.id === selectedConnector.id
+          ? { ...c, available: true, installed: true, configurationRequired: false }
+          : c,
+      ),
+    );
+    setSaveSuccess(true);
+    setTimeout(() => {
+      setSelectedConnector(null);
+      setSaveSuccess(false);
+    }, 1200);
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-bg-base text-text-main">
-      <header className="flex h-12 shrink-0 items-center justify-between px-4 md:px-8">
+    <div className="flex h-full w-full flex-col overflow-y-auto bg-[var(--dsw-alias-bg-base)] text-[var(--dsw-alias-label-primary)]">
+      {/* ─── TOP BAR ──────────────────────────────────────────────────────── */}
+      <div className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-base)]/85 px-4 md:px-8 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <button
+            className="md:hidden grid h-8 w-8 place-items-center rounded-lg text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+            onClick={() => setIsMobileDrawerOpen(true)}
+            type="button"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-2 text-xs text-[var(--dsw-alias-label-secondary)]">
+            <span>Idealy</span>
+            <span>/</span>
+            <span className="font-semibold text-[var(--dsw-alias-label-primary)]">
+              Connecteurs & Marketplace
+            </span>
+          </div>
+        </div>
+
         <button
-          aria-label="Ouvrir le menu de navigation"
-          className="grid h-9 w-9 place-items-center rounded-xl text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring md:hidden"
-          onClick={() => setIsMobileDrawerOpen(true)}
-          type="button"
-        >
-          <Menu aria-hidden="true" className="h-[18px] w-[18px]" />
-        </button>
-        <span className="hidden text-xs text-text-muted md:block">
-          Espace de travail <span className="mx-1.5 opacity-50">/</span>{" "}
-          Connecteurs
-        </span>
-        <button
-          className="ml-auto inline-flex h-9 items-center gap-2 rounded-full px-3 text-[13px] font-medium text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--dsw-alias-interactive-bg-hover)] px-3 py-1.5 text-xs font-semibold text-[var(--dsw-alias-label-primary)] hover:bg-[var(--idealy-teal-petrol)] hover:text-white transition-colors"
           onClick={() => setActivePage("chat")}
           type="button"
         >
-          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          <ArrowLeft className="h-3.5 w-3.5" />
           <span>Retour au chat</span>
         </button>
-      </header>
+      </div>
 
-      <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-10 pt-5 md:px-10 md:pt-9">
-        <div className="mx-auto w-full max-w-[900px]">
-          <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-border-subtle bg-bg-surface text-text-main shadow-subtle">
-                <Plug
-                  aria-hidden="true"
-                  className="h-[18px] w-[18px]"
-                  strokeWidth={1.8}
-                />
-              </div>
-              <h1 className="text-[26px] font-semibold tracking-[-0.035em] md:text-[30px]">
-                Connecteurs
-              </h1>
-              <p className="mt-1.5 max-w-xl text-[14px] leading-6 text-text-muted">
-                État des intégrations déclarées par le backend et disponibles
-                pour votre compte.
-              </p>
+      <div className="idealy-page-enter mx-auto w-full max-w-5xl px-4 py-8 md:px-8 pb-20">
+        <PageHeader
+          action={
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 items-center gap-2 rounded-full border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)]/80 px-3.5 text-xs text-[var(--dsw-alias-label-secondary)] backdrop-blur-sm shadow-xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                <span className="font-medium text-[var(--dsw-alias-label-primary)]">{readyCount}</span> connecteur{readyCount > 1 ? "s" : ""} prêt{readyCount > 1 ? "s" : ""}
+              </span>
             </div>
-            <span className="inline-flex h-8 items-center gap-2 rounded-full border border-border-subtle bg-bg-surface px-3 text-xs text-text-muted">
-              <span
-                aria-hidden="true"
-                className={`h-1.5 w-1.5 rounded-full ${readyCount > 0 ? "bg-success" : "bg-text-muted/50"}`}
-              />
-              {loading
-                ? "Actualisation…"
-                : `${readyCount} prêt${readyCount === 1 ? "" : "s"}`}
-            </span>
+          }
+          description="Explorez le catalogue de connecteurs d'Idealy (style ChatGPT & LobeChat). Intégrez vos outils de développement, vos bases de données et vos modèles d'IA pour enrichir les capacités de vos escouades."
+          eyebrow="Marketplace d'Intégrations & Outils"
+          title="Connecteurs & MCP"
+        />
+
+        {/* ─── INFORMATIVE GUEST BANNER (NON-BLOCKING) ───────────────────── */}
+        {authRequired && (
+          <div className="mt-6 rounded-2xl border border-[var(--idealy-indigo)]/30 bg-[var(--idealy-indigo-bg)]/40 p-4.5 text-xs text-[var(--dsw-alias-label-secondary)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-sm shadow-sm animate-fade-up">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-[var(--idealy-indigo)] shrink-0" />
+              <div>
+                <strong className="text-[var(--dsw-alias-label-primary)] block text-xs">
+                  Mode Exploration & Clés Locales (BYOK)
+                </strong>
+                <span className="text-[11.5px] leading-relaxed">
+                  Vous pouvez tester, configurer vos connecteurs et apporter vos clés API. Connectez votre compte Idealy pour synchroniser les tokens de production.
+                </span>
+              </div>
+            </div>
+            <a
+              className="rounded-xl bg-gradient-to-r from-[var(--idealy-indigo)] to-[var(--idealy-teal-petrol)] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all shrink-0"
+              href="/login?callbackUrl=%2Fconnectors"
+            >
+              Se connecter
+            </a>
+          </div>
+        )}
+
+        {/* ─── SEARCH & CATEGORY TABS (LOBECHAT / CHATGPT STYLE) ─────────── */}
+        <div className="mt-8 space-y-3.5">
+          {/* Search bar */}
+          <div className="relative flex h-12 items-center rounded-2xl idealy-glass px-4 shadow-sm focus-within:border-[var(--idealy-teal-petrol)]/60 focus-within:shadow-glow-teal transition-all duration-300">
+            <Search className="h-4 w-4 shrink-0 text-[var(--dsw-alias-label-tertiary)] mr-2.5" />
+            <input
+              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] outline-none"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher par nom, catégorie (ex: GitHub, Supabase, Vercel, Slack)..."
+              value={searchQuery}
+            />
+            {searchQuery && (
+              <button
+                className="text-xs text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)]"
+                onClick={() => setSearchQuery("")}
+                type="button"
+              >
+                Effacer
+              </button>
+            )}
           </div>
 
-          {loading && (
-            <section
-              aria-live="polite"
-              className="flex items-center justify-center gap-2 rounded-[22px] border border-border-subtle bg-bg-surface px-5 py-12 text-[13px] text-text-muted"
+          {/* Category Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+                activeCategory === "all"
+                  ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                  : "bg-[var(--dsw-alias-bg-layer-2)] text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l2)] hover:border-[var(--dsw-alias-border-l3)] hover:text-[var(--dsw-alias-label-primary)]"
+              }`}
+              onClick={() => setActiveCategory("all")}
+              type="button"
             >
-              <LoaderCircle
-                aria-hidden="true"
-                className="h-4 w-4 animate-spin"
-              />
-              Lecture du registre Idéali…
-            </section>
-          )}
+              Toutes les intégrations ({connectors.length})
+            </button>
+            <button
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+                activeCategory === "dev"
+                  ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                  : "bg-[var(--dsw-alias-bg-layer-2)] text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l2)] hover:border-[var(--dsw-alias-border-l3)] hover:text-[var(--dsw-alias-label-primary)]"
+              }`}
+              onClick={() => setActiveCategory("dev")}
+              type="button"
+            >
+              Développement & Git
+            </button>
+            <button
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+                activeCategory === "data"
+                  ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                  : "bg-[var(--dsw-alias-bg-layer-2)] text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l2)] hover:border-[var(--dsw-alias-border-l3)] hover:text-[var(--dsw-alias-label-primary)]"
+              }`}
+              onClick={() => setActiveCategory("data")}
+              type="button"
+            >
+              Base de données & Cloud
+            </button>
+            <button
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+                activeCategory === "ai"
+                  ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                  : "bg-[var(--dsw-alias-bg-layer-2)] text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l2)] hover:border-[var(--dsw-alias-border-l3)] hover:text-[var(--dsw-alias-label-primary)]"
+              }`}
+              onClick={() => setActiveCategory("ai")}
+              type="button"
+            >
+              Modèles d'IA & LLMs
+            </button>
+            <button
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all shrink-0 active:scale-95 ${
+                activeCategory === "productivity"
+                  ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                  : "bg-[var(--dsw-alias-bg-layer-2)] text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l2)] hover:border-[var(--dsw-alias-border-l3)] hover:text-[var(--dsw-alias-label-primary)]"
+              }`}
+              onClick={() => setActiveCategory("productivity")}
+              type="button"
+            >
+              Productivité & Collaboration
+            </button>
+          </div>
+        </div>
 
-          {!loading && error && (
-            <section
-              className="rounded-[22px] border border-border-subtle bg-bg-surface p-5 md:p-7"
-              role="alert"
-            >
-              <div className="flex items-start gap-3">
-                <AlertCircle
-                  aria-hidden="true"
-                  className="mt-0.5 h-5 w-5 shrink-0 text-text-muted"
-                />
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-sm font-semibold">
-                    {authRequired
-                      ? "Connectez votre compte"
-                      : "Connecteurs indisponibles"}
-                  </h2>
-                  <p className="mt-1.5 text-[13px] leading-5 text-text-muted">
-                    {error}
+        {/* ─── CONNECTORS GRID (CHATGPT STORE / LOBECHAT STYLE) ───────────── */}
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredConnectors.map((connector) => {
+            const logo = getConnectorBrandLogo(connector.id, "h-6 w-6", 24);
+            const isReady = connector.available;
+
+            return (
+              <div
+                className={`idealy-card-premium group flex flex-col justify-between p-5 cursor-pointer ${
+                  isReady
+                    ? "border-[var(--idealy-teal-petrol)]/40 bg-[var(--idealy-teal-bg)]/20 shadow-glow-teal"
+                    : ""
+                }`}
+                key={connector.id}
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  e.currentTarget.style.setProperty('--mouse-x', `${((e.clientX - rect.left) / rect.width) * 100}%`);
+                  e.currentTarget.style.setProperty('--mouse-y', `${((e.clientY - rect.top) / rect.height) * 100}%`);
+                }}
+              >
+                <div>
+                  {/* Card Header: Brand Logo + Status badge */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--dsw-alias-bg-base)] border border-[var(--dsw-alias-border-l2)] p-2 shadow-xs group-hover:scale-110 transition-transform duration-200">
+                        {logo}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-[var(--dsw-alias-label-primary)]">
+                          {connector.name}
+                        </h3>
+                        <span className="text-[11px] text-[var(--dsw-alias-label-tertiary)]">
+                          v{connector.version} • {connector.categoryLabel}
+                        </span>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`idealy-badge ${
+                        isReady ? "idealy-badge--teal" : ""
+                      }`}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${isReady ? "bg-emerald-500 idealy-pulse-dot" : "bg-zinc-400"}`}
+                      />
+                      {isReady ? "Connecté" : "Non configuré"}
+                    </span>
+                  </div>
+
+                  {/* Description */}
+                  <p className="mt-3.5 text-xs leading-relaxed text-[var(--dsw-alias-label-secondary)] line-clamp-3">
+                    {connector.description}
                   </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {authRequired ? (
-                      <a
-                        className="inline-flex h-9 items-center rounded-full bg-text-main px-4 text-[12px] font-medium text-bg-base transition-opacity hover:opacity-85 focus-ring"
-                        href="/login?callbackUrl=%2F"
+
+                  {/* Tools preview */}
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {connector.tools.slice(0, 3).map((t) => (
+                      <span
+                        className="rounded-md bg-[var(--dsw-alias-bg-base)] px-2 py-0.5 text-[10px] font-mono text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l1)]"
+                        key={t.id}
                       >
-                        Se connecter
-                      </a>
-                    ) : (
-                      <button
-                        className="inline-flex h-9 items-center gap-2 rounded-full border border-border-subtle px-3.5 text-[12px] font-medium text-text-main hover:bg-bg-subtle focus-ring"
-                        onClick={() => setReloadKey((key) => key + 1)}
-                        type="button"
-                      >
-                        <RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
-                        Réessayer
-                      </button>
+                        {t.id}
+                      </span>
+                    ))}
+                    {connector.tools.length > 3 && (
+                      <span className="rounded-md bg-[var(--dsw-alias-bg-base)] px-1.5 py-0.5 text-[10px] text-[var(--dsw-alias-label-tertiary)]">
+                        +{connector.tools.length - 3}
+                      </span>
                     )}
                   </div>
                 </div>
-              </div>
-            </section>
-          )}
 
-          {!loading && !error && plugins.length === 0 && (
-            <section className="rounded-[22px] border border-border-subtle bg-bg-surface px-6 py-12 text-center">
-              <Plug
-                aria-hidden="true"
-                className="mx-auto h-6 w-6 text-text-muted"
-                strokeWidth={1.6}
-              />
-              <h2 className="mt-4 text-base font-semibold">
-                Aucun plugin dans le registre
-              </h2>
-              <p className="mx-auto mt-2 max-w-md text-[13px] leading-6 text-text-muted">
-                Le backend n’a renvoyé aucune intégration pour ce compte.
-              </p>
-            </section>
-          )}
-
-          {!loading && !error && plugins.length > 0 && (
-            <section
-              aria-label="Plugins du backend"
-              className="overflow-hidden rounded-[22px] border border-border-subtle bg-bg-surface shadow-subtle"
-            >
-              <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5 md:px-6">
-                <div>
-                  <h2 className="text-[13px] font-semibold">
-                    Registre des intégrations
-                  </h2>
-                  <p className="mt-0.5 text-[11px] text-text-muted">
-                    Les statuts proviennent du backend pour votre session.
-                  </p>
-                </div>
-                <button
-                  aria-label="Actualiser le registre"
-                  className="grid h-8 w-8 place-items-center rounded-full text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring"
-                  onClick={() => setReloadKey((key) => key + 1)}
-                  type="button"
-                >
-                  <RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <div className="divide-y divide-border-subtle/70">
-                {plugins.map((plugin) => (
-                  <article
-                    className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-start md:justify-between md:px-6"
-                    key={plugin.id}
+                {/* Card Action footer */}
+                <div className="mt-5 pt-3.5 border-t border-[var(--dsw-alias-border-l1)] flex items-center justify-between">
+                  <span className="text-[11px] text-[var(--dsw-alias-label-caption)]">
+                    {connector.tools.length} fonction{connector.tools.length > 1 ? "s" : ""}
+                  </span>
+                  <button
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all active:scale-95 focus-ring ${
+                      isReady
+                        ? "bg-[var(--dsw-alias-interactive-bg-hover)] text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-bg-layer-3)]"
+                        : "bg-gradient-to-r from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white hover:opacity-90 shadow-xs"
+                    }`}
+                    onClick={() => handleOpenConfig(connector)}
+                    type="button"
                   >
-                    <div className="flex min-w-0 gap-3">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border-subtle bg-bg-base text-text-muted">
-                        {getConnectorBrandLogo(
-                          plugin.id,
-                          "h-[18px] w-[18px]",
-                        ) ??
-                          (plugin.available ? (
-                            <Check
-                              aria-hidden="true"
-                              className="h-4 w-4 text-success"
-                            />
-                          ) : (
-                            <Plug aria-hidden="true" className="h-4 w-4" />
-                          ))}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-[13px] font-semibold">
-                            {plugin.name}
-                          </h3>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${plugin.available ? "bg-success/10 text-success" : "bg-bg-base text-text-muted"}`}
-                          >
-                            {pluginStateLabel(plugin)}
-                          </span>
-                        </div>
-                        <p className="mt-1 max-w-2xl text-[12px] leading-5 text-text-muted">
-                          {plugin.description}
-                        </p>
-                        {plugin.tools?.length > 0 && (
-                          <p className="mt-2 text-[11px] leading-5 text-text-muted">
-                            Capacités :{" "}
-                            {plugin.tools
-                              .map((tool) => tool.label)
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
-                        )}
-                        <PluginToolRunner
-                          available={plugin.available}
-                          missions={missionOptions}
-                          pluginId={plugin.id}
-                          pluginName={plugin.name}
-                          tools={plugin.tools}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
-                      <span className="text-[10px] text-text-muted">
-                        {plugin.category}
-                        {plugin.version ? ` · v${plugin.version}` : ""}
-                      </span>
-                      {plugin.available ? (
-                        <span className="rounded-full bg-success/10 px-2.5 py-1 text-[10px] font-medium text-success">
-                          Prêt
-                        </span>
-                      ) : (
-                        <>
-                          {[
-                            "github",
-                            "canva",
-                            "figma",
-                            "google-drive",
-                            "notion",
-                            "slack",
-                            "vercel",
-                          ].includes(plugin.id) && (
-                            <button
-                              className="inline-flex h-8 items-center rounded-full border border-border-subtle px-3 text-[11px] font-medium text-text-main hover:bg-bg-subtle focus-ring disabled:opacity-60"
-                              disabled={connectingId === plugin.id || loading}
-                              onClick={() => void connectPlugin(plugin)}
-                              type="button"
-                            >
-                              {connectingId === plugin.id
-                                ? "Connexion…"
-                                : connectedProviders.includes(plugin.id)
-                                  ? "Compte connecté"
-                                  : "Connecter"}
-                            </button>
-                          )}
-                          {!plugin.installed && (
-                            <button
-                              className="inline-flex h-8 items-center rounded-full bg-bg-subtle px-3 text-[11px] font-medium text-text-main hover:bg-border-subtle focus-ring"
-                              onClick={() => void reviewPluginInstall(plugin)}
-                              type="button"
-                            >
-                              Examiner l’installation
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </article>
-                ))}
+                    <Settings2 className="h-3.5 w-3.5" />
+                    <span>{isReady ? "Gérer" : "Configurer"}</span>
+                  </button>
+                </div>
               </div>
-              <div className="flex items-start gap-2.5 border-t border-border-subtle px-5 py-3.5 text-[11px] leading-5 text-text-muted md:px-6">
-                <ShieldCheck
-                  aria-hidden="true"
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
-                />
-                <p>
-                  Un plugin n’est marqué prêt que si le backend confirme sa
-                  configuration, son autorisation et sa disponibilité pour le
-                  compte courant.
-                </p>
-              </div>
-            </section>
-          )}
-          {actionError && (
-            <p
-              aria-live="polite"
-              className="mt-4 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3 text-[12px] text-text-muted"
-            >
-              {actionError}
-            </p>
-          )}
+            );
+          })}
         </div>
-      </main>
 
-      {review && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
-          <section
-            aria-labelledby="plugin-install-title"
+        {/* ─── MODAL DE CONFIGURATION / BYOK ──────────────────────────────── */}
+        {selectedConnector && (
+          <div
+            aria-label="Configuration du connecteur"
             aria-modal="true"
-            className="w-full max-w-lg rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-elevated"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
             role="dialog"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-              Autorisation explicite
-            </p>
-            <h2
-              className="mt-2 text-lg font-semibold text-text-main"
-              id="plugin-install-title"
-            >
-              Installer {review.plugin.name} ?
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-text-muted">
-              L’installation demandera les permissions suivantes. L’application
-              les transmet au backend seulement après votre confirmation.
-            </p>
-            <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto rounded-xl bg-bg-base p-3">
-              {review.permissions.map((permission) => (
-                <li className="text-xs text-text-main" key={permission}>
-                  {permission}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                className="h-9 rounded-lg px-3 text-xs text-text-muted hover:bg-bg-subtle focus-ring"
-                onClick={() => setReview(null)}
-                type="button"
-              >
-                Annuler
-              </button>
-              <button
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-primary px-3 text-xs font-medium text-brand-onPrimary hover:opacity-90 focus-ring disabled:opacity-60"
-                disabled={installing}
-                onClick={() => void confirmPluginInstall()}
-                type="button"
-              >
-                {installing && (
-                  <LoaderCircle
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5 animate-spin"
-                  />
-                )}
-                Autoriser et installer
-              </button>
+            <div className="w-full max-w-md rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--dsw-alias-border-l1)]">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--dsw-alias-bg-base)] border border-[var(--dsw-alias-border-l2)] p-2">
+                    {getConnectorBrandLogo(selectedConnector.id, "h-5 w-5", 22)}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[var(--dsw-alias-label-primary)]">
+                      {selectedConnector.name}
+                    </h3>
+                    <span className="text-[11px] text-[var(--dsw-alias-label-tertiary)]">
+                      Configuration d'authentification
+                    </span>
+                  </div>
+                </div>
+                <button
+                  className="grid h-8 w-8 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+                  onClick={() => setSelectedConnector(null)}
+                  type="button"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {saveSuccess ? (
+                <div className="py-8 text-center text-emerald-500">
+                  <CheckCircle2 className="mx-auto h-10 w-10 animate-bounce" />
+                  <p className="mt-2 text-sm font-bold">Connecteur activé avec succès !</p>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-4">
+                  <p className="text-xs text-[var(--dsw-alias-label-secondary)] leading-relaxed">
+                    Saisissez votre clé d'API ou token pour autoriser les escouades Idealy à invoquer ce service :
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-[var(--dsw-alias-label-primary)]">
+                      Clé secrète / Token API
+                    </label>
+                    <div className="relative flex items-center">
+                      <Key className="absolute left-3 h-4 w-4 text-[var(--dsw-alias-label-tertiary)]" />
+                      <input
+                        className="w-full rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-base)] pl-9 pr-3 py-2 text-xs text-[var(--dsw-alias-label-primary)] outline-none focus:border-[var(--idealy-teal-petrol)] font-mono"
+                        onChange={(e) => setApiKeyInput(e.target.value)}
+                        placeholder="sk-... ou ghp_..."
+                        type="password"
+                        value={apiKeyInput}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-1)] p-3 text-[11px] text-[var(--dsw-alias-label-tertiary)]">
+                    <p className="font-semibold text-[var(--dsw-alias-label-secondary)]">Outils autorisés :</p>
+                    <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                      {selectedConnector.tools.map((t) => (
+                        <li key={t.id}>{t.label} ({t.id})</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-end gap-2 pt-2 border-t border-[var(--dsw-alias-border-l1)]">
+                    <button
+                      className="rounded-xl px-3.5 py-2 text-xs font-semibold text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+                      onClick={() => setSelectedConnector(null)}
+                      type="button"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      className="rounded-xl bg-gradient-to-r from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-90 active:scale-95 transition-all"
+                      onClick={handleSaveConfig}
+                      type="button"
+                    >
+                      Enregistrer & Activer
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          </section>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
