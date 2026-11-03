@@ -1,5 +1,4 @@
 import {
-  Bot,
   Download,
   LayoutGrid,
   MessageSquare,
@@ -36,7 +35,20 @@ export const Sidebar: React.FC = () => {
     openConfirmModal,
   } = useApp();
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem("idealy.sidebar.collapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("idealy.sidebar.collapsed", collapsed ? "1" : "0");
+    } catch {
+      /* stockage indisponible */
+    }
+  }, [collapsed]);
   const [openActionsId, setOpenActionsId] = useState<string | null>(null);
   const [language, setLanguage] = useState<"fr" | "en">("fr");
 
@@ -86,7 +98,12 @@ export const Sidebar: React.FC = () => {
     const lastWeek: typeof spaceConversations = [];
     const older: typeof spaceConversations = [];
 
+    const pinned: typeof spaceConversations = [];
     for (const conv of spaceConversations) {
+      if (conv.isPinned) {
+        pinned.push(conv);
+        continue;
+      }
       const diff = now - conv.updatedAt;
       if (diff < oneDay) {
         today.push(conv);
@@ -99,38 +116,28 @@ export const Sidebar: React.FC = () => {
       }
     }
 
-    return { today, yesterday, lastWeek, older };
+    return { pinned, today, yesterday, lastWeek, older };
   }, [spaceConversations]);
 
   const navItems = [
-    {
-      key: "agents" as const,
-      label: "Escouade d'Agents",
-      badge: "Multi",
-      icon: Bot,
-      iconColor: "text-[var(--idealy-indigo)]",
-      activeBg: "bg-[var(--idealy-indigo-bg)]",
-      activeText: "text-[var(--idealy-indigo)]",
-      badgeClass: "idealy-badge--indigo",
-    },
     {
       key: "library" as const,
       label: "Bibliothèque",
       badge: null,
       icon: LayoutGrid,
-      iconColor: "text-[var(--idealy-teal-petrol)]",
-      activeBg: "bg-[var(--idealy-teal-bg)]",
-      activeText: "text-[var(--idealy-teal-petrol)]",
+      iconColor: "text-[var(--dsw-alias-label-secondary)]",
+      activeBg: "bg-[var(--dsw-alias-interactive-bg-hover)]",
+      activeText: "text-[var(--dsw-alias-label-primary)]",
       badgeClass: "",
     },
     {
       key: "connectors" as const,
       label: "Connecteurs",
-      badge: "Hub",
+      badge: null,
       icon: Plug,
-      iconColor: "text-violet-400",
-      activeBg: "bg-violet-500/10",
-      activeText: "text-violet-400",
+      iconColor: "text-[var(--dsw-alias-label-secondary)]",
+      activeBg: "bg-[var(--dsw-alias-interactive-bg-hover)]",
+      activeText: "text-[var(--dsw-alias-label-primary)]",
       badgeClass: "idealy-badge--violet",
     },
   ] as const;
@@ -400,6 +407,7 @@ export const Sidebar: React.FC = () => {
 
       {/* ─── 5. CHRONOLOGICAL DISCUSSION HISTORY ──────────────────────────── */}
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 idealy-scroll mt-1">
+        {renderSection("Épinglés", groupedConversations.pinned)}
         {renderSection("Aujourd'hui", groupedConversations.today)}
         {renderSection("Hier", groupedConversations.yesterday)}
         {renderSection("7 derniers jours", groupedConversations.lastWeek)}

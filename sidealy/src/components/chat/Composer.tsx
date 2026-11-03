@@ -1,4 +1,4 @@
-import { ArrowUp, Mic, Paperclip, Plus, Square, X } from "lucide-react";
+import { ArrowUp, Brain, Check, ChevronDown, Globe, Image as ImageIcon, LayoutGrid, Mic, Paperclip, Plug, Plus, Square, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
@@ -34,8 +34,31 @@ type SpeechRecognitionWindow = Window & {
 type ComposerProps = { placement?: "conversation" | "home" };
 
 export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }) => {
-  const { draft, setDraft, sendMessage, stopGeneration, generationStatus } =
-    useApp();
+  const {
+    draft, setDraft, sendMessage, stopGeneration, generationStatus,
+    deepThink, setDeepThink, webSearch, setWebSearch, setActivePage,
+  } = useApp();
+  const [modelMode, setModelMode] = useState<"auto" | "fast" | "deep">(() => {
+    try {
+      const v = window.localStorage.getItem("idealy.model.mode");
+      return v === "fast" || v === "deep" ? v : "auto";
+    } catch {
+      return "auto";
+    }
+  });
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const chooseModel = (mode: "auto" | "fast" | "deep") => {
+    setModelMode(mode);
+    setModelMenuOpen(false);
+    if (mode === "fast") setDeepThink(false);
+    if (mode === "deep") setDeepThink(true);
+    try {
+      window.localStorage.setItem("idealy.model.mode", mode);
+    } catch {
+      /* stockage indisponible */
+    }
+  };
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [dictationActive, setDictationActive] = useState(false);
@@ -408,6 +431,15 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
               ref={fileInputRef}
               type="file"
             />
+            <input
+              accept="image/*"
+              aria-label="Choisir des photos"
+              className="hidden"
+              multiple
+              onChange={handleFileChange}
+              ref={photoInputRef}
+              type="file"
+            />
             <div className="relative" ref={addMenuRef}>
               <button
                 aria-expanded={addMenuOpen}
@@ -435,16 +467,32 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                   role="dialog"
                 >
                   <p className="composer-add-heading">Ajouter</p>
-                  <button
-                    className="composer-add-row"
-                    onClick={() => {
-                      setAddMenuOpen(false);
-                      fileInputRef.current?.click();
-                    }}
-                    type="button"
-                  >
+                  <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); fileInputRef.current?.click(); }} type="button">
                     <Paperclip aria-hidden="true" />
-                    <span>Ajouter des fichiers</span>
+                    <span>Fichier</span>
+                  </button>
+                  <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); photoInputRef.current?.click(); }} type="button">
+                    <ImageIcon aria-hidden="true" />
+                    <span>Photo</span>
+                  </button>
+                  <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); setActivePage("connectors"); }} type="button">
+                    <Plug aria-hidden="true" />
+                    <span>Connecteur</span>
+                  </button>
+                  <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); setActivePage("library"); }} type="button">
+                    <LayoutGrid aria-hidden="true" />
+                    <span>Bibliothèque</span>
+                  </button>
+                  <div className="my-1 h-px bg-[var(--dsw-alias-border-l1)]" />
+                  <button aria-pressed={deepThink} className="composer-add-row" onClick={() => setDeepThink(!deepThink)} type="button">
+                    <Brain aria-hidden="true" />
+                    <span className="flex-1 text-left">Pensée profonde</span>
+                    {deepThink && <Check aria-hidden="true" className="h-4 w-4 text-[var(--idealy-teal-petrol)]" />}
+                  </button>
+                  <button aria-pressed={webSearch} className="composer-add-row" onClick={() => setWebSearch(!webSearch)} type="button">
+                    <Globe aria-hidden="true" />
+                    <span className="flex-1 text-left">Recherche</span>
+                    {webSearch && <Check aria-hidden="true" className="h-4 w-4 text-[var(--idealy-teal-petrol)]" />}
                   </button>
                 </section>
               )}
@@ -452,6 +500,39 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            <div className="relative">
+              <button
+                aria-expanded={modelMenuOpen}
+                aria-haspopup="menu"
+                aria-label="Choisir le mode du modèle"
+                className="flex h-9 items-center gap-1 rounded-full px-2.5 text-[13px] text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] focus-ring"
+                onClick={() => setModelMenuOpen((o) => !o)}
+                type="button"
+              >
+                {modelMode === "fast" ? "Rapide" : modelMode === "deep" ? "Approfondi" : "Auto"}
+                <ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />
+              </button>
+              {modelMenuOpen && (
+                <div
+                  className="absolute bottom-[calc(100%+8px)] right-0 z-50 w-[220px] rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.32)]"
+                  role="menu"
+                >
+                  {([
+                    ["auto", "Auto", "Idealy choisit selon la demande"],
+                    ["fast", "Rapide", "Réponses immédiates"],
+                    ["deep", "Approfondi", "Raisonne plus longtemps"],
+                  ] as const).map(([key, label, hint]) => (
+                    <button className="composer-add-row" key={key} onClick={() => chooseModel(key)} role="menuitemradio" aria-checked={modelMode === key} type="button">
+                      <span className="flex flex-1 flex-col text-left">
+                        <span>{label}</span>
+                        <span className="text-[11.5px] text-[var(--dsw-alias-label-tertiary)]">{hint}</span>
+                      </span>
+                      {modelMode === key && <Check aria-hidden="true" className="h-4 w-4 text-[var(--idealy-teal-petrol)]" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {!isGenerating && (
               <button
                 aria-label={
