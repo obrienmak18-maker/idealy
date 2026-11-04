@@ -19,6 +19,7 @@ import { SettingsPage } from "./components/pages/SettingsPage";
 import { AuthActionPage } from "./components/auth/AuthActionPage";
 import { AuthPage } from "./components/auth/AuthPage";
 import { OnboardingPage } from "./components/auth/OnboardingPage";
+import { CreditAlert } from "./components/credits/CreditAlert";
 import { AppProvider, useApp } from "./context/AppContext";
 
 const AppContent: React.FC = () => {
@@ -34,6 +35,7 @@ const AppContent: React.FC = () => {
         Passer au contenu principal
       </a>
       {/* Desktop Sidebar Navigation */}
+      <CreditAlert />
       <Sidebar />
 
       {/* Mobile Drawer (Accessible on mobile) */}

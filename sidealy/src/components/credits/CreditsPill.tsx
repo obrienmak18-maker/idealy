@@ -1,28 +1,47 @@
-import React, { useEffect, useId, useState } from "react";
-import { fetchPower, powerLevel, type PowerResult } from "../../services/power";
+import React, { useId, useState, useSyncExternalStore } from "react";
+import { fetchPower, powerLevel, toneFor, type PowerResult } from "../../services/power";
 
 const RADIUS = 15;
 const CIRC = 2 * Math.PI * RADIUS;
 
-export function usePower(refreshMs = 60_000) {
-  const [result, setResult] = useState<PowerResult | null>(null);
-  useEffect(() => {
-    const controller = new AbortController();
-    const load = () => {
-      fetchPower(controller.signal).then((r) => {
-        if (!controller.signal.aborted) setResult(r);
-      });
-    };
-    load();
-    const timer = window.setInterval(load, refreshMs);
-    window.addEventListener("focus", load);
-    return () => {
-      controller.abort();
+// Un seul sondage partagé par la pastille, l'alerte et la bannière.
+let current: PowerResult | null = null;
+const listeners = new Set<() => void>();
+let timer: number | undefined;
+let inflight = false;
+
+function refresh() {
+  if (inflight) return;
+  inflight = true;
+  fetchPower().then((r) => {
+    inflight = false;
+    current = r;
+    listeners.forEach((l) => l());
+  });
+}
+
+export function refreshPower() {
+  refresh();
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  if (listeners.size === 1) {
+    refresh();
+    timer = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+  }
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) {
       window.clearInterval(timer);
-      window.removeEventListener("focus", load);
-    };
-  }, [refreshMs]);
-  return result;
+      window.removeEventListener("focus", refresh);
+    }
+  };
+}
+
+export function usePower(): PowerResult | null {
+  return useSyncExternalStore(subscribe, () => current, () => null);
 }
 
 export const CreditsPill: React.FC<{ compact?: boolean }> = ({ compact }) => {
@@ -33,8 +52,8 @@ export const CreditsPill: React.FC<{ compact?: boolean }> = ({ compact }) => {
   const { power } = result;
   const level = powerLevel(power);
   const ratio = Math.max(0, Math.min(1, power.balance / power.walletCap));
-  const tone =
-    level === "critical" ? "#ef4444" : level === "low" ? "#f59e0b" : "var(--idealy-teal-petrol)";
+  const rgb = toneFor(power.way).rgb;
+  const tone = level === "critical" ? "#ef4444" : level === "low" ? "#f59e0b" : `rgb(${rgb})`;
   const text = `${Math.round(power.balance).toLocaleString("fr-FR")} / ${Math.round(power.walletCap).toLocaleString("fr-FR")}`;
 
   return (
@@ -65,7 +84,8 @@ export const CreditsPill: React.FC<{ compact?: boolean }> = ({ compact }) => {
 
       <div
         role="status"
-        className={`pointer-events-none absolute bottom-full left-0 z-40 mb-2 w-[236px] origin-bottom-left rounded-2xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-1)] p-4 shadow-[0_18px_48px_-18px_rgba(0,0,0,0.35)] transition duration-200 ${open ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+        style={{ boxShadow: `0 18px 48px -18px rgba(${rgb},0.45)` }}
+        className={`pointer-events-none absolute bottom-full left-0 z-40 mb-2 w-[236px] origin-bottom-left rounded-2xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-1)] p-4 transition duration-200 ${open ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
       >
         <div className="flex items-center gap-3">
           <svg width="54" height="54" viewBox="0 0 54 54" aria-hidden="true">
