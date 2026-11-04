@@ -1,5 +1,6 @@
 import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
+import type { IdealyRoute } from "./idealy/routing";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { createDocument } from "./ai/tools/create-document";
 import type { editDocument } from "./ai/tools/edit-document";
@@ -110,6 +111,7 @@ export type CustomUIDataTypes = {
   "idealy-intent": IdealyIntentCategory;
   "idealy-mission": string;
   "idealy-plan": MissionPlan;
+  "idealy-route": IdealyRoute;
   "idealy-file-event": MissionFileEvent;
   "idealy-tool-activity": IdealyChatToolActivity;
   "idealy-tree": Array<{ path: string; type?: string }>;
