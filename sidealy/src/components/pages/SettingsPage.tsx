@@ -302,7 +302,7 @@ export const SettingsPage: React.FC = () => {
 
         <nav
           aria-label="Sections des paramètres"
-          className="mt-6 flex gap-1 overflow-x-auto rounded-xl border border-border-subtle bg-bg-surface p-1"
+          className="mt-6 flex gap-1 overflow-x-auto rounded-xl border border-border-subtle bg-bg-surface p-1 scrollbar-none"
         >
           {(
             [
@@ -318,7 +318,7 @@ export const SettingsPage: React.FC = () => {
           ).map(([id, label]) => (
             <button
               aria-current={section === id ? "page" : undefined}
-              className={`shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-colors focus-ring ${section === id ? "bg-bg-subtle text-text-main" : "text-text-muted hover:text-text-main"}`}
+              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition-colors focus-ring ${section === id ? "bg-bg-subtle text-text-main" : "text-text-muted hover:text-text-main"}`}
               key={id}
               onClick={() => openSection(id)}
               type="button"

@@ -22,7 +22,7 @@ import { PageFrame } from "../layout/PageFrame";
 import { PageHeader } from "../layout/PageHeader";
 import { voiesCatalog, type WayAgent } from "../../services/voies-catalog";
 
-type LibraryFilter = "all" | "chats" | "artifacts" | "gems" | "pinned";
+type LibraryFilter = "all" | "chats" | "artifacts" | "creations" | "pinned";
 
 export const LibraryPage: React.FC = () => {
   const {
@@ -45,7 +45,16 @@ export const LibraryPage: React.FC = () => {
 
   const normalizedQuery = query.trim().toLocaleLowerCase();
 
-  // Active non-archived conversations
+  // Total active non-archived conversations (without query / pin filter)
+  const activeConversationsCount = useMemo(
+    () =>
+      conversations
+        .filter((c) => !c.isArchived)
+        .filter((c) => hasConversationActivity(c, messages)).length,
+    [conversations, messages],
+  );
+
+  // Active non-archived conversations matching current filter & query
   const matchingConversations = useMemo(
     () =>
       conversations
@@ -162,7 +171,7 @@ export const LibraryPage: React.FC = () => {
                   Discussions actives
                 </span>
                 <p className="text-2xl font-bold text-[var(--dsw-alias-label-primary)] idealy-stat-number">
-                  {conversations.length}
+                  {activeConversationsCount}
                 </p>
               </div>
             </div>
@@ -203,7 +212,7 @@ export const LibraryPage: React.FC = () => {
               </span>
               <div>
                 <span className="text-[11px] font-medium text-[var(--dsw-alias-label-secondary)]">
-                  Gems & Agents Disponibles
+                  Créations & Agents Disponibles
                 </span>
                 <p className="text-2xl font-bold text-[var(--dsw-alias-label-primary)] idealy-stat-number">
                   {allGems.length}
@@ -259,7 +268,7 @@ export const LibraryPage: React.FC = () => {
               type="button"
             >
               <MessageSquare className="h-3.5 w-3.5" />
-              <span>Discussions ({conversations.length})</span>
+              <span>Discussions ({activeConversationsCount})</span>
             </button>
 
             <button
@@ -277,15 +286,15 @@ export const LibraryPage: React.FC = () => {
 
             <button
               className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all shrink-0 active:scale-95 ${
-                filter === "gems"
+                filter === "creations"
                   ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
                   : "bg-[var(--dsw-alias-bg-layer-2)] text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l2)] hover:border-[var(--dsw-alias-border-l3)] hover:text-[var(--dsw-alias-label-primary)]"
               }`}
-              onClick={() => setFilter("gems")}
+              onClick={() => setFilter("creations")}
               type="button"
             >
               <Bot className="h-3.5 w-3.5" />
-              <span>Gems & Agents ({allGems.length})</span>
+              <span>Créations & Agents ({allGems.length})</span>
             </button>
 
             <button
@@ -452,7 +461,7 @@ export const LibraryPage: React.FC = () => {
                     <div className="mt-3 pt-2 border-t border-[var(--dsw-alias-border-l1)] flex items-center justify-between text-[11px] text-[var(--dsw-alias-label-tertiary)]">
                       <span>{(art.content.length / 1024).toFixed(1)} Ko</span>
                       <span className="flex items-center gap-1 text-[var(--idealy-indigo)] font-semibold">
-                        Ouvrir dans Sidecar <ArrowRight className="h-3 w-3" />
+                        Ouvrir dans Aperçu <ArrowRight className="h-3 w-3" />
                       </span>
                     </div>
                   </div>
@@ -466,13 +475,13 @@ export const LibraryPage: React.FC = () => {
           </section>
         )}
 
-        {/* ─── 5. GEMS & AGENTS GALLERY SECTION (GEMINI STYLE) ─────────────── */}
-        {(filter === "all" || filter === "gems") && (
+        {/* ─── 5. CRÉATIONS & AGENTS GALLERY SECTION ─────────────────────── */}
+        {(filter === "all" || filter === "creations") && (
           <section className="mt-9">
             <div className="flex items-center justify-between mb-3.5">
               <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--dsw-alias-label-tertiary)] flex items-center gap-2">
                 <Bot className="h-4 w-4 text-violet-500" />
-                Gems Spécialisés d'Idealy ({matchingGems.length})
+                Créations & Agents Spécialisés ({matchingGems.length})
               </h3>
               <button
                 className="text-xs font-semibold text-[var(--idealy-teal-petrol)] hover:underline flex items-center gap-1"
@@ -526,7 +535,7 @@ export const LibraryPage: React.FC = () => {
                   </div>
 
                   <div className="mt-4 pt-2.5 border-t border-[var(--dsw-alias-border-l1)] flex items-center justify-between text-xs font-semibold text-violet-500">
-                    <span>Démarrer ce Gem</span>
+                    <span>Mobiliser l'agent</span>
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </div>
                 </div>
