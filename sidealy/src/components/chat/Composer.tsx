@@ -71,6 +71,8 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
   const addMenuRef = useRef<HTMLDivElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const whisperProbe = useRef<boolean | null>(null);
   const dictationDraftRef = useRef(draft);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -196,7 +198,82 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
     animationFrameRef.current = requestAnimationFrame(sample);
   };
 
+  const whisperAvailable = async (): Promise<boolean> => {
+    if (typeof MediaRecorder === "undefined") return false;
+    if (whisperProbe.current !== null) return whisperProbe.current;
+    try {
+      const res = await fetch("/api/idealy/transcribe", { credentials: "include" });
+      whisperProbe.current = res.ok;
+    } catch {
+      whisperProbe.current = false;
+    }
+    return whisperProbe.current;
+  };
+
+  const startWhisperDictation = async () => {
+    dictationDraftRef.current = draft;
+    setDictationStatus("Autorisez le microphone pour commencer…");
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setDictationStatus("Accès au microphone refusé. Vérifiez l’autorisation du navigateur.");
+      return;
+    }
+    mediaStreamRef.current = stream;
+    startAudioMeter(stream);
+    const chunks: Blob[] = [];
+    const recorder = new MediaRecorder(stream);
+    recorderRef.current = recorder;
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    };
+    recorder.onstop = async () => {
+      recorderRef.current = null;
+      releaseAudioCapture();
+      setDictationActive(false);
+      const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+      if (blob.size < 800) {
+        setDictationStatus("Aucune voix détectée. Touchez le micro pour réessayer.");
+        return;
+      }
+      setDictationStatus("Transcription…");
+      try {
+        const body = new FormData();
+        body.append("audio", blob, `dictation.${blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm"}`);
+        body.append("language", (navigator.language || "fr").slice(0, 2));
+        const res = await fetch("/api/idealy/transcribe", { body, credentials: "include", method: "POST" });
+        if (!res.ok) throw new Error("transcribe_failed");
+        const { text } = (await res.json()) as { text?: string };
+        if (text) {
+          const current = dictationDraftRef.current;
+          const separator = current && !/\s$/.test(current) ? " " : "";
+          dictationDraftRef.current = current + separator + text;
+          setDraft(dictationDraftRef.current);
+          setDictationStatus("");
+        } else {
+          setDictationStatus("Aucune voix détectée. Touchez le micro pour réessayer.");
+        }
+      } catch {
+        whisperProbe.current = null;
+        setDictationStatus("La transcription a échoué. Réessayez.");
+      }
+    };
+    recorder.start();
+    setDictationActive(true);
+    setDictationStatus("Écoute en cours…");
+  };
+
   const toggleDictation = async () => {
+    if (dictationActive && recorderRef.current) {
+      setDictationStatus("Transcription…");
+      recorderRef.current.stop();
+      return;
+    }
+    if (!dictationActive && navigator.mediaDevices && (await whisperAvailable())) {
+      await startWhisperDictation();
+      return;
+    }
     if (dictationActive) {
       setDictationStatus("Arrêt de la dictée…");
       recognitionRef.current?.stop();
