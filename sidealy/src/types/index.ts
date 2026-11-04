@@ -2,6 +2,55 @@ export type Theme = "light" | "dark" | "system";
 
 export type IntentionMode = "chat" | "explore" | "produce";
 
+export type AgentState =
+  | "attente"
+  | "réflexion"
+  | "production"
+  | "terminé"
+  | "erreur";
+
+export interface StaticAgent {
+  authority: string;
+  avatar: string;
+  id: string;
+  name: string;
+  role: string;
+  specialty: string;
+  tint: string;
+  voice: string;
+}
+
+export interface RunArtifact {
+  content?: string;
+  kind: string;
+  path: string;
+  revealed?: boolean;
+}
+
+export interface RunHandoff {
+  line: string;
+  to: string;
+}
+
+export interface RunTurn {
+  agentId: string;
+  artifacts?: RunArtifact[];
+  content: string;
+  endedAt?: number;
+  handoff?: RunHandoff;
+  reasoning: string;
+  startedAt: number;
+  state: AgentState;
+}
+
+export interface Run {
+  creditsSpent?: number;
+  id: string;
+  mode: "solo" | "équipe";
+  reason: string;
+  turns: RunTurn[];
+}
+
 export type GenerationStatus =
   | "idle"
   | "sending"
@@ -135,6 +184,7 @@ export interface Message {
   fileEvents?: MissionFileActivity[];
   mission?: MissionRun;
   mode: IntentionMode;
+  run?: Run;
   subagents?: SubAgentProgress[];
   reasoning?: string;
   reasoningDuration?: number;

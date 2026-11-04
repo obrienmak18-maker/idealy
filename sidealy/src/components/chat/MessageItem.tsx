@@ -3,24 +3,25 @@ import {
   Check,
   Copy,
   Paperclip,
-  Volume2,
-  VolumeX,
+  Pencil,
   RotateCcw,
   ThumbsDown,
   ThumbsUp,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext";
-import type { Message } from "../../types";
+import { buildRunForMessage } from "../../services/agentRegistry";
+import type { Message, Run } from "../../types";
 import { ArtifactCard } from "./ArtifactCard";
-import { AssistantActivity } from "./AssistantActivity";
 import { CodeBlock } from "./CodeBlock";
 import { MissionPlanCard } from "./MissionPlanCard";
-import { ReasoningBlock } from "./ReasoningBlock";
+import { RunStage } from "./RunStage";
 
 export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
-  const { artifacts, sendMessage } = useApp();
+  const { artifacts, sendMessage, setDraft } = useApp();
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<"liked" | "disliked" | null>(null);
   const [speaking, setSpeaking] = useState(false);
@@ -42,13 +43,10 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
   };
 
   const isUser = message.role === "user";
-  const timeFormatted = new Date(message.createdAt).toLocaleTimeString(
-    "fr-FR",
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-  );
+  const timeFormatted = new Date(message.createdAt).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   const handleCopyMessage = async () => {
     try {
@@ -62,9 +60,51 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
     }
   };
 
+  const handleEditPrompt = () => {
+    setDraft(message.content);
+    // Autofocus the composer input
+    window.requestAnimationFrame(() => {
+      const textarea = document.querySelector("textarea");
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      }
+    });
+  };
+
   const messageArtifacts = artifacts.filter((a) =>
-    message.artifactIds?.includes(a.id),
+    message.artifactIds?.includes(a.id)
   );
+
+  // Parse inline elements (bold, code)
+  const parseInline = (text: string) => {
+    const regex = /(\*\*.*?\*\*|`.*?`)/g;
+    const parts = text.split(regex);
+
+    return parts.map((chunk, i) => {
+      if (chunk.startsWith("**") && chunk.endsWith("**")) {
+        return (
+          <strong
+            className="font-semibold text-[var(--dsw-alias-label-primary)]"
+            key={i}
+          >
+            {chunk.slice(2, -2)}
+          </strong>
+        );
+      }
+      if (chunk.startsWith("`") && chunk.endsWith("`")) {
+        return (
+          <code
+            className="px-1.5 py-0.5 rounded bg-[var(--dsw-alias-interactive-bg-hover)] border border-[var(--dsw-alias-border-l3)] font-mono text-xs text-[var(--dsw-alias-label-primary)]"
+            key={i}
+          >
+            {chunk.slice(1, -1)}
+          </code>
+        );
+      }
+      return chunk;
+    });
+  };
 
   // Markdown parsing logic for standard blocks
   const renderFormattedContent = (content: string) => {
@@ -89,7 +129,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
       if (part.includes("|") && part.includes("\n")) {
         const lines = part.split("\n");
         const tableLines = lines.filter(
-          (l) => l.trim().startsWith("|") && l.trim().endsWith("|"),
+          (l) => l.trim().startsWith("|") && l.trim().endsWith("|")
         );
         if (tableLines.length >= 2) {
           return (
@@ -104,7 +144,6 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
                       .split("|")
                       .slice(1, -1)
                       .map((c) => c.trim());
-                    // Skip markdown separator row like |:---|:---|
                     if (
                       cells.every((c) => c.replace(/[:-]/g, "").length === 0)
                     ) {
@@ -135,7 +174,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
                             >
                               {parseInline(cell)}
                             </td>
-                          ),
+                          )
                         )}
                       </tr>
                     );
@@ -195,35 +234,14 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
     });
   };
 
-  // Inline formatting (bold, code, links)
-  const parseInline = (text: string) => {
-    const regex = /(\*\*.*?\*\*|`.*?`)/g;
-    const parts = text.split(regex);
-
-    return parts.map((chunk, i) => {
-      if (chunk.startsWith("**") && chunk.endsWith("**")) {
-        return (
-          <strong
-            className="font-semibold text-[var(--dsw-alias-label-primary)]"
-            key={i}
-          >
-            {chunk.slice(2, -2)}
-          </strong>
-        );
-      }
-      if (chunk.startsWith("`") && chunk.endsWith("`")) {
-        return (
-          <code
-            className="px-1.5 py-0.5 rounded bg-[var(--dsw-alias-interactive-bg-hover)] border border-[var(--dsw-alias-border-l3)] font-mono text-xs text-[var(--dsw-alias-label-primary)]"
-            key={i}
-          >
-            {chunk.slice(1, -1)}
-          </code>
-        );
-      }
-      return chunk;
+  // Structured Run resolution
+  const resolvedRun: Run = useMemo(() => {
+    if (message.run) return message.run;
+    return buildRunForMessage(message.content, message.content, {
+      mode: message.mode,
+      reasoning: message.reasoning,
     });
-  };
+  }, [message.run, message.content, message.mode, message.reasoning]);
 
   return (
     <article
@@ -235,9 +253,9 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
       }`}
       data-role={message.role}
     >
-      {/* User Bubble (DeepSeek style right-aligned rounded-xl pill) */}
+      {/* User Bubble with Prompt Actions (Copy + Pencil Edit) */}
       {isUser ? (
-        <div className="flex flex-col items-end gap-1.5 max-w-full">
+        <div className="group/user flex flex-col items-end gap-1.5 max-w-full">
           {/* Attachments preview */}
           {message.attachments && message.attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 justify-end mb-1">
@@ -258,57 +276,60 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
             </div>
           )}
 
-          <div
-            className="px-4 py-2.5 rounded-[var(--dsw-radius-xl)] bg-[var(--dsw-specific-bubble)] text-[var(--dsw-alias-label-primary)] text-sm md:text-[15px] leading-relaxed break-words shadow-sm border border-[var(--dsw-alias-border-l3)]/40"
-            style={{
-              wordBreak: "break-word",
-            }}
-          >
-            <div className="whitespace-pre-wrap">{message.content}</div>
+          <div className="relative group/bubble max-w-full">
+            <div
+              className="px-4 py-2.5 rounded-[var(--dsw-radius-xl)] bg-[var(--dsw-specific-bubble)] text-[var(--dsw-alias-label-primary)] text-sm md:text-[15px] leading-relaxed break-words shadow-sm border border-[var(--dsw-alias-border-l3)]/40"
+              style={{
+                wordBreak: "break-word",
+              }}
+            >
+              <div className="whitespace-pre-wrap">{message.content}</div>
+            </div>
+
+            {/* Actions sur le prompt utilisateur : Copier et Modifier (crayon) */}
+            <div
+              aria-label="Actions sur le prompt"
+              className="opacity-0 group-hover/user:opacity-100 focus-within:opacity-100 transition-opacity absolute -bottom-7 right-0 flex items-center gap-1 bg-[var(--dsw-alias-bg-base)]/95 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-[var(--dsw-alias-border-l2)] shadow-xs z-10"
+            >
+              <button
+                aria-label="Modifier le prompt"
+                className="focus-ring grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                onClick={handleEditPrompt}
+                title="Modifier le prompt"
+                type="button"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+
+              <button
+                aria-label="Copier le prompt"
+                className="focus-ring grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                onClick={handleCopyMessage}
+                title="Copier le prompt"
+                type="button"
+              >
+                {copied ? (
+                  <Check className="w-3 h-3 text-[var(--idealy-teal-petrol)]" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+              </button>
+            </div>
           </div>
+
           <span className="text-[10px] text-[var(--dsw-alias-label-tertiary)] px-1">
             {timeFormatted}
           </span>
         </div>
       ) : (
-        /* Assistant Message (Full column, with Avatar, Model tag, Reasoning block & Markdown) */
-        <div className="space-y-2 max-w-3xl mx-auto py-1">
-          {/* Reasoning / Deep Think disclosure block */}
-          {Boolean(
-            message.reasoning || (message.isPartial && !message.content),
-          ) && (
-            <ReasoningBlock
-              duration={message.reasoningDuration}
-              isStreaming={Boolean(message.isPartial && !message.content)}
-              reasoning={message.reasoning || ""}
-            />
-          )}
-
-          <AssistantActivity
-            activities={message.activities}
-            fileEvents={message.fileEvents}
+        /* Assistant Message : Scène avec Régie (RunStage) */
+        <div className="space-y-4 max-w-3xl mx-auto py-1">
+          {/* Moteur de Scène : En-têtes réelles, Portraits d'agents, Teintes exclusives, Réflexion typographique dans le fil */}
+          <RunStage
             isStreaming={message.isPartial}
-            subagents={message.subagents}
+            renderFormattedContent={renderFormattedContent}
+            run={resolvedRun}
           />
-
-          {/* Body Content */}
-          <div className="text-sm md:text-[15px] leading-relaxed text-[var(--dsw-alias-label-primary)] break-words">
-            {renderFormattedContent(message.content)}
-
-            {/* Content Streaming Indicator */}
-            {message.isPartial && message.content && (
-              <span
-                aria-label="Génération en cours"
-                aria-live="polite"
-                className="inline-flex items-center gap-1 ml-1.5 align-middle"
-                role="status"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--idealy-teal-petrol)] animate-pulse" />
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--idealy-teal-petrol)] animate-pulse delay-75" />
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--idealy-teal-petrol)] animate-pulse delay-150" />
-              </span>
-            )}
-          </div>
 
           {message.mission && (
             <MissionPlanCard messageId={message.id} mission={message.mission} />
@@ -333,12 +354,12 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
             </div>
           )}
 
-          {/* Assistant Action Toolbar (Thumbs, Regenerate, Copy) */}
+          {/* Assistant Action Toolbar (Thumbs, Regenerate, Copy, Speech) */}
           {!message.isPartial && message.content && (
-            <div className="flex items-center gap-1 sm:gap-2 pt-2 text-xs text-[var(--dsw-alias-label-tertiary)]">
+            <div className="flex items-center gap-1 sm:gap-2 pt-2 text-xs text-[var(--dsw-alias-label-tertiary)] border-t border-[var(--dsw-alias-border-l3)]/40 mt-4">
               <button
                 aria-label="Copier"
-                className="grid min-h-[36px] min-w-[36px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
+                className="grid min-h-[34px] min-w-[34px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
                 onClick={handleCopyMessage}
                 title="Copier la réponse"
                 type="button"
@@ -352,7 +373,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
               <button
                 aria-label="Réponse utile"
-                className={`grid min-h-[36px] min-w-[36px] place-items-center rounded-lg transition-all duration-150 active:scale-95 ${
+                className={`grid min-h-[34px] min-w-[34px] place-items-center rounded-lg transition-all duration-150 active:scale-95 ${
                   feedback === "liked"
                     ? "text-[var(--idealy-teal-petrol)] bg-[var(--idealy-teal-bg)]"
                     : "hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
@@ -368,7 +389,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
               <button
                 aria-label="Réponse à améliorer"
-                className={`grid min-h-[36px] min-w-[36px] place-items-center rounded-lg transition-all duration-150 active:scale-95 ${
+                className={`grid min-h-[34px] min-w-[34px] place-items-center rounded-lg transition-all duration-150 active:scale-95 ${
                   feedback === "disliked"
                     ? "text-[var(--dsw-alias-state-error-primary)] bg-red-500/10"
                     : "hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
@@ -385,7 +406,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
               {typeof window !== "undefined" && "speechSynthesis" in window && (
                 <button
                   aria-label={speaking ? "Arrêter la lecture" : "Lire à voix haute"}
-                  className="grid min-h-[36px] min-w-[36px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
+                  className="grid min-h-[34px] min-w-[34px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
                   onClick={toggleSpeech}
                   title={speaking ? "Arrêter la lecture" : "Lire à voix haute"}
                   type="button"
@@ -396,7 +417,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
               <button
                 aria-label="Régénérer"
-                className="grid min-h-[36px] min-w-[36px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
+                className="grid min-h-[34px] min-w-[34px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
                 onClick={() =>
                   sendMessage("Régénérer et approfondir la réponse précédente.")
                 }

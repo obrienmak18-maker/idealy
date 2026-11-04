@@ -26,6 +26,9 @@ import { AppProvider, useApp } from "./context/AppContext";
 const AppContent: React.FC = () => {
   const { activeArtifact, activePage, activeMessages } = useApp();
 
+  // Pages autonomes (hors layout de travail, sans sidebar rétractable)
+  if (activePage === "welcome") return <WelcomePage />;
+  if (activePage === "pricing") return <PricingPage />;
   if (activePage === "login") return <AuthPage />;
   if (activePage === "onboarding") return <OnboardingPage />;
   if (activePage === "authAction") return <AuthActionPage />;
@@ -56,10 +59,6 @@ const AppContent: React.FC = () => {
           <LibraryPage />
         ) : activePage === "settings" ? (
           <SettingsPage />
-        ) : activePage === "pricing" ? (
-          <PricingPage />
-        ) : activePage === "welcome" ? (
-          <WelcomePage />
         ) : activePage === "about" ||
           activePage === "docs" ||
           activePage === "support" ? (

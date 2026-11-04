@@ -10,6 +10,7 @@ import {
 import { AssistantRemoteService } from "../services/assistantRemote";
 import { BackendHistoryService } from "../services/backendHistory";
 import { StorageService } from "../services/storage";
+import { buildRunForMessage } from "../services/agentRegistry";
 import type {
   Artifact,
   AssistantToolActivity,
@@ -689,7 +690,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       renameConversation(currentConvId, suggestedTitle);
     }
 
-    // 2. Create placeholder assistant message
+    // 2. Create placeholder assistant message with routed Run
+    const initialRun = buildRunForMessage(content, "", {
+      mode: currentMode,
+      deepThink: useDeepThink,
+    });
     const assistantMessageId = `msg-${Date.now() + 1}`;
     const initialAssistantMessage: Message = {
       content: "",
@@ -700,6 +705,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       mode: currentMode,
       reasoning: "",
       role: "assistant",
+      run: initialRun,
     };
 
     const nextMessages = [...messages, userMessage, initialAssistantMessage];
@@ -747,11 +753,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           onChunk: (chunk: string) => {
             accumulatedContent += chunk;
             setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMessageId
-                  ? { ...m, content: accumulatedContent }
-                  : m,
-              ),
+              prev.map((m) => {
+                if (m.id !== assistantMessageId) return m;
+                const updatedRun = buildRunForMessage(content, accumulatedContent, {
+                  mode: currentMode,
+                  reasoning: accumulatedReasoning,
+                });
+                return { ...m, content: accumulatedContent, run: updatedRun };
+              }),
             );
           },
           onComplete: (duration?: number) => {
@@ -761,16 +770,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
               : "delivered";
             setGenerationStatus(isAborted ? "aborted" : "completed");
             setMessages((prev) => {
-              const updated: Message[] = prev.map((m) =>
-                m.id === assistantMessageId
-                  ? {
-                      ...m,
-                      isPartial: false,
-                      reasoningDuration: duration ?? m.reasoningDuration,
-                      status: finalStatus,
-                    }
-                  : m,
-              );
+              const updated: Message[] = prev.map((m) => {
+                if (m.id !== assistantMessageId) return m;
+                const finalRun = buildRunForMessage(content, accumulatedContent, {
+                  mode: currentMode,
+                  reasoning: accumulatedReasoning,
+                });
+                return {
+                  ...m,
+                  isPartial: false,
+                  reasoningDuration: duration ?? m.reasoningDuration,
+                  run: finalRun,
+                  status: finalStatus,
+                };
+              });
               StorageService.saveMessages(updated);
               return updated;
             });
@@ -864,11 +877,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           onReasoningChunk: (chunk: string) => {
             accumulatedReasoning += chunk;
             setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMessageId
-                  ? { ...m, reasoning: accumulatedReasoning }
-                  : m,
-              ),
+              prev.map((m) => {
+                if (m.id !== assistantMessageId) return m;
+                const updatedRun = buildRunForMessage(content, accumulatedContent, {
+                  mode: currentMode,
+                  reasoning: accumulatedReasoning,
+                });
+                return { ...m, reasoning: accumulatedReasoning, run: updatedRun };
+              }),
             );
           },
         },
