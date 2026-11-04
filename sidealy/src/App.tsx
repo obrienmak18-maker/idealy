@@ -13,6 +13,7 @@ import { SpaceModal } from "./components/modals/SpaceModal";
 import { AgentsPage } from "./components/pages/AgentsPage";
 import { LegalPage } from "./components/pages/LegalPage";
 import { LibraryPage } from "./components/pages/LibraryPage";
+import { WelcomePage } from "./components/pages/WelcomePage";
 import { PricingPage } from "./components/pages/PricingPage";
 import { ProductInfoPage } from "./components/pages/ProductInfoPage";
 import { SettingsPage } from "./components/pages/SettingsPage";
@@ -57,8 +58,9 @@ const AppContent: React.FC = () => {
           <SettingsPage />
         ) : activePage === "pricing" ? (
           <PricingPage />
-        ) : activePage === "welcome" ||
-          activePage === "about" ||
+        ) : activePage === "welcome" ? (
+          <WelcomePage />
+        ) : activePage === "about" ||
           activePage === "docs" ||
           activePage === "support" ? (
           <ProductInfoPage page={activePage} />
