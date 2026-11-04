@@ -618,3 +618,20 @@ body[data-ds-dark-theme] .sidebar-shell {
     animation: none;
   }
 }
+
+/* Texte « en cours » : balayage de lumière discret (réflexion, étapes). */
+.idealy-shimmer-text {
+  background: linear-gradient(90deg, var(--dsw-alias-label-tertiary) 30%, var(--dsw-alias-label-primary) 50%, var(--dsw-alias-label-tertiary) 70%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: idealy-shimmer 2.2s linear infinite;
+}
+@keyframes idealy-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .idealy-shimmer-text { animation: none; color: var(--dsw-alias-label-tertiary); background: none; }
+}

@@ -90,172 +90,108 @@ export const AssistantActivity: React.FC<{
   if (!latestActivities.length && !latestFileEvents.length && !subagents.length)
     return null;
 
+  const AGENT_TINTS = ["45,212,191", "129,140,248", "167,139,250", "251,146,60", "56,189,248"];
+
+  type Step = { key: string; state: "running" | "done" | "failed"; label: string; detail?: string; icon: React.ReactNode };
+  const steps: Step[] = [
+    ...[...latestActivities].reverse().map<Step>((activity) => ({
+      key: activity.toolCallId,
+      state: activity.state === "output-error" ? "failed" : activity.state === "output-available" ? "done" : "running",
+      label: toolLabels[activity.kind] ?? "Outil Idealy",
+      icon: <ToolIcon kind={activity.kind} />,
+    })),
+    ...[...latestFileEvents].reverse().map<Step>((event) => {
+      const failed = event.eventType === "mission_error";
+      const done = event.eventType === "file_saved" || event.eventType === "mission_completed" || event.eventType === "validation_result";
+      return {
+        key: `${event.missionId}-${event.sequence}`,
+        state: failed ? "failed" : done ? "done" : "running",
+        label: eventLabels[event.eventType] ?? "Activité du projet",
+        detail: event.path || event.file?.path,
+        icon: <FileCode2 aria-hidden="true" className="h-3.5 w-3.5" />,
+      };
+    }),
+  ];
+
   return (
     <div
       aria-label="Activité de l’assistant"
       aria-live={isStreaming ? "polite" : undefined}
-      className="space-y-1.5 rounded-xl bg-[var(--dsw-alias-interactive-bg-hover)]/55 px-3 py-2.5 text-[12px] text-[var(--dsw-alias-label-secondary)]"
+      className="my-2 space-y-4 text-[13px] text-[var(--dsw-alias-label-secondary)]"
       role={isStreaming ? "status" : undefined}
     >
       {subagents.slice(-2).map((group) => {
-        const completedCount = group.agents.filter(
-          (agent) => agent.status === "completed",
-        ).length;
-        const failedCount = group.agents.filter(
-          (agent) => agent.status === "failed",
-        ).length;
-        const runningCount = group.agents.filter(
-          (agent) => agent.status === "running",
-        ).length;
-        const queuedCount = group.agents.filter(
-          (agent) => agent.status === "queued",
-        ).length;
-        const activeCount = runningCount + queuedCount;
-        const statusLabel = activeCount
-          ? `${runningCount} en cours${queuedCount ? ` · ${queuedCount} en attente` : ""}`
-          : failedCount
-            ? `${completedCount} terminés · ${failedCount} échec${failedCount > 1 ? "s" : ""}`
-            : "Travail terminé";
+        const total = group.agents.length || 1;
+        const completed = group.agents.filter((agent) => agent.status === "completed").length;
+        const failed = group.agents.filter((agent) => agent.status === "failed").length;
+        const running = group.agents.filter((agent) => agent.status === "running").length;
+        const active = running + group.agents.filter((agent) => agent.status === "queued").length;
+        const status = active ? `${completed}/${total} · ${running} en cours` : failed ? `${completed}/${total} · ${failed} échec${failed > 1 ? "s" : ""}` : "Terminé";
         return (
-          <details
-            className="idealy-agent-group rounded-lg bg-[var(--dsw-alias-interactive-bg-hover)]/55 px-2.5 py-2"
-            key={group.timestamp}
-            open={isStreaming}
-          >
-            <summary className="flex cursor-pointer list-none items-center gap-2 text-[var(--dsw-alias-label-primary)] [&::-webkit-details-marker]:hidden">
-              <Users
-                aria-hidden="true"
-                className={`h-3.5 w-3.5 shrink-0 ${activeCount ? "text-[var(--idealy-teal-petrol)]" : ""}`}
-              />
-              <span className="min-w-0 flex-1 truncate">Équipe d’agents</span>
-              <span className="ml-auto shrink-0 text-[10px] text-[var(--dsw-alias-label-tertiary)]">
-                {statusLabel}
-              </span>
+          <details className="group/agents rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)]/60" key={group.timestamp} open={isStreaming}>
+            <summary className="flex cursor-pointer list-none items-center gap-2.5 px-3.5 py-3 text-[var(--dsw-alias-label-primary)] [&::-webkit-details-marker]:hidden">
+              <Users aria-hidden="true" className="h-4 w-4 text-[var(--dsw-alias-label-tertiary)]" />
+              <span className="flex-1 text-[13.5px] font-medium">Équipe</span>
+              <span className="text-[12px] text-[var(--dsw-alias-label-tertiary)]">{status}</span>
             </summary>
-            <div aria-hidden="true" className="mt-2 flex gap-1">
-              {group.agents.map((agent) => (
+            <div aria-hidden="true" className="mx-3.5 flex gap-1">
+              {group.agents.map((agent, i) => (
                 <span
-                  className={`h-[3px] flex-1 rounded-full ${
-                    agent.status === "completed"
-                      ? "bg-[var(--idealy-teal-petrol)]"
-                      : agent.status === "failed"
-                        ? "bg-red-400"
-                        : agent.status === "running"
-                          ? "bg-[var(--idealy-teal-petrol)]/55 animate-pulse"
-                          : "bg-[var(--dsw-alias-border-l2)]"
-                  }`}
+                  className={`h-[3px] flex-1 rounded-full ${agent.status === "failed" ? "bg-red-400" : agent.status === "queued" ? "bg-[var(--dsw-alias-border-l2)]" : agent.status === "running" ? "animate-pulse" : ""}`}
                   key={agent.id}
+                  style={agent.status === "failed" || agent.status === "queued" ? undefined : { background: `rgba(${AGENT_TINTS[i % AGENT_TINTS.length]},${agent.status === "running" ? 0.55 : 1})` }}
                 />
               ))}
             </div>
-            <p className="mt-2 text-[11px] leading-4 text-[var(--dsw-alias-label-tertiary)]">
-              {group.objective}
-            </p>
-            <div className="mt-2 space-y-2">
-              {group.agents.map((agent) => (
-                <div className="flex items-start gap-2" key={agent.id}>
-                  <span className="mt-0.5 shrink-0 text-[var(--dsw-alias-label-tertiary)]">
-                    {agent.status === "completed" ? (
-                      <Check aria-hidden="true" className="h-3.5 w-3.5 text-[var(--idealy-teal-petrol)]" />
-                    ) : agent.status === "failed" ? (
-                      <AlertCircle aria-hidden="true" className="h-3.5 w-3.5 text-red-400" />
-                    ) : agent.status === "running" ? (
-                      <LoaderCircle aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <span aria-label="En attente" className="block h-3.5 w-3.5 rounded-full border border-current" />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-medium text-[var(--dsw-alias-label-primary)]">
-                      {agent.name} <span className="font-normal text-[var(--dsw-alias-label-tertiary)]">· {agent.role}</span>
-                    </p>
-                    <p className="text-[11px] leading-4 text-[var(--dsw-alias-label-secondary)]">{agent.task}</p>
-                    {agent.summary && (
-                      <p className="mt-1 whitespace-normal text-[11px] leading-4 text-[var(--dsw-alias-label-tertiary)]">
-                        {agent.summary}
+            {group.objective && <p className="mx-3.5 mt-3 text-[12.5px] leading-snug text-[var(--dsw-alias-label-tertiary)]">{group.objective}</p>}
+            <ul className="space-y-3 px-3.5 pb-3.5 pt-3">
+              {group.agents.map((agent, i) => {
+                const rgb = AGENT_TINTS[i % AGENT_TINTS.length];
+                return (
+                  <li className="flex items-start gap-3" key={agent.id}>
+                    <span
+                      aria-hidden="true"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[12px] font-medium"
+                      style={{ background: `rgba(${rgb},0.14)`, color: `rgb(${rgb})`, boxShadow: agent.status === "running" ? `0 0 0 1px rgba(${rgb},0.5), 0 0 16px -2px rgba(${rgb},0.5)` : `0 0 0 1px rgba(${rgb},0.25)` }}
+                    >
+                      {agent.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] text-[var(--dsw-alias-label-primary)]">
+                        {agent.name} <span className="text-[var(--dsw-alias-label-tertiary)]">· {agent.role}</span>
                       </p>
-                    )}
-                  </div>
-                  <span className="shrink-0 text-[10px] text-[var(--dsw-alias-label-tertiary)]">
-                    {agent.status === "completed"
-                      ? "Terminé"
-                      : agent.status === "failed"
-                        ? "Échec"
-                        : agent.status === "running"
-                          ? "En cours"
-                          : "À venir"}
-                  </span>
-                </div>
-              ))}
-            </div>
+                      <p className={`text-[12.5px] leading-snug ${agent.status === "running" ? "idealy-shimmer-text" : "text-[var(--dsw-alias-label-secondary)]"}`}>{agent.task}</p>
+                      {agent.summary && <p className="mt-1 text-[12.5px] leading-snug text-[var(--dsw-alias-label-tertiary)]">{agent.summary}</p>}
+                    </div>
+                    <span className="mt-1 shrink-0">
+                      {agent.status === "completed" ? <Check aria-label="Terminé" className="h-4 w-4 text-[var(--idealy-teal-petrol)]" /> : agent.status === "failed" ? <AlertCircle aria-label="Échec" className="h-4 w-4 text-red-400" /> : agent.status === "running" ? <LoaderCircle aria-label="En cours" className="h-4 w-4 animate-spin text-[var(--dsw-alias-label-tertiary)]" /> : <span aria-label="En attente" className="block h-3.5 w-3.5 rounded-full border border-[var(--dsw-alias-border-l2)]" />}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </details>
         );
       })}
-      {latestActivities.map((activity) => {
-        const failed = activity.state === "output-error";
-        const finished = activity.state === "output-available";
-        return (
-          <div className="flex min-w-0 items-center gap-2" key={activity.toolCallId}>
-            <span className="shrink-0 text-[var(--dsw-alias-label-tertiary)]">
-              {failed ? (
-                <AlertCircle aria-hidden="true" className="h-3.5 w-3.5 text-red-400" />
-              ) : finished ? (
-                <Check aria-hidden="true" className="h-3.5 w-3.5 text-[var(--idealy-teal-petrol)]" />
-              ) : (
-                <LoaderCircle aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
-              )}
-            </span>
-            <ToolIcon kind={activity.kind} />
-            <span className="truncate">{toolLabels[activity.kind] ?? "Outil Idealy"}</span>
-            <span className="ml-auto shrink-0 text-[var(--dsw-alias-label-tertiary)]">
-              {failed
-                ? "Échec"
-                : activity.kind === "dispatchSubAgents"
-                  ? finished
-                    ? "Plan reçu"
-                    : "Préparation"
-                  : finished
-                    ? "Terminé"
-                    : "En cours"}
-            </span>
-          </div>
-        );
-      })}
-      {latestFileEvents.map((event) => {
-        const failed = event.eventType === "mission_error";
-        const finished =
-          event.eventType === "file_saved" ||
-          event.eventType === "mission_completed" ||
-          event.eventType === "validation_result";
-        return (
-          <div
-            className="flex min-w-0 items-center gap-2"
-            key={`${event.missionId}-${event.sequence}`}
-          >
-            <span className="shrink-0 text-[var(--dsw-alias-label-tertiary)]">
-              {failed ? (
-                <AlertCircle aria-hidden="true" className="h-3.5 w-3.5 text-red-400" />
-              ) : finished ? (
-                <Check aria-hidden="true" className="h-3.5 w-3.5 text-[var(--idealy-teal-petrol)]" />
-              ) : (
-                <LoaderCircle aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
-              )}
-            </span>
-            <FileCode2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">
-              {eventLabels[event.eventType] ?? "Activité du projet"}
-              {(event.path || event.file?.path) && (
-                <span className="ml-1 text-[var(--dsw-alias-label-tertiary)]">
-                  · {event.path || event.file?.path}
-                </span>
-              )}
-            </span>
-            <span className="ml-auto shrink-0 text-[var(--dsw-alias-label-tertiary)]">
-              {failed ? "Échec" : finished ? "Terminé" : "En cours"}
-            </span>
-          </div>
-        );
-      })}
+
+      {steps.length > 0 && (
+        <ol className="relative space-y-2.5">
+          {steps.map((step, i) => (
+            <li className="relative flex min-w-0 items-start gap-3" key={step.key}>
+              {i < steps.length - 1 && <span aria-hidden="true" className="absolute left-[9px] top-5 h-[calc(100%+4px)] w-px bg-[var(--dsw-alias-border-l2)]" />}
+              <span className={`relative z-10 grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full border bg-[var(--dsw-alias-bg-base)] ${step.state === "failed" ? "border-red-400/60 text-red-400" : step.state === "done" ? "border-[var(--idealy-teal-petrol)]/50 text-[var(--idealy-teal-petrol)]" : "border-[var(--dsw-alias-border-l2)] text-[var(--dsw-alias-label-tertiary)]"}`}>
+                {step.state === "failed" ? <AlertCircle className="h-3 w-3" /> : step.state === "done" ? <Check className="h-3 w-3" /> : <LoaderCircle className="h-3 w-3 animate-spin" />}
+              </span>
+              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 pt-px">
+                <span className={step.state === "running" ? "idealy-shimmer-text" : "text-[var(--dsw-alias-label-secondary)]"}>{step.label}</span>
+                {step.detail && (
+                  <code className="max-w-full truncate rounded-md border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] px-1.5 py-0.5 font-mono text-[11.5px] text-[var(--dsw-alias-label-secondary)]">{step.detail}</code>
+                )}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 };

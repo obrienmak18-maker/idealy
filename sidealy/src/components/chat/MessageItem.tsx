@@ -3,8 +3,9 @@ import {
   Check,
   Copy,
   Paperclip,
+  Volume2,
+  VolumeX,
   RotateCcw,
-  Sparkles,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
@@ -12,7 +13,6 @@ import type React from "react";
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import type { Message } from "../../types";
-import { Badge } from "../common/Badge";
 import { ArtifactCard } from "./ArtifactCard";
 import { AssistantActivity } from "./AssistantActivity";
 import { CodeBlock } from "./CodeBlock";
@@ -23,6 +23,23 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
   const { artifacts, sendMessage } = useApp();
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<"liked" | "disliked" | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+
+  const toggleSpeech = () => {
+    const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    if (!synth) return;
+    if (speaking) {
+      synth.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(message.content.replace(/```[\s\S]*?```/g, " "));
+    utterance.lang = navigator.language || "fr-FR";
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    setSpeaking(true);
+    synth.speak(utterance);
+  };
 
   const isUser = message.role === "user";
   const timeFormatted = new Date(message.createdAt).toLocaleTimeString(
@@ -255,61 +272,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
         </div>
       ) : (
         /* Assistant Message (Full column, with Avatar, Model tag, Reasoning block & Markdown) */
-        <div className="space-y-2 max-w-3xl mx-auto">
-          {/* Header Info */}
-          <div className="flex items-center justify-between gap-3 pt-1">
-            <div className="flex items-center gap-2">
-              {/* Idealy Custom Geometric Spark Logo */}
-              <div
-                aria-hidden="true"
-                className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white shadow-sm"
-              >
-                <Sparkles className="w-3.5 h-3.5 fill-current" />
-              </div>
-              <span className="text-xs font-semibold text-[var(--dsw-alias-label-primary)]">
-                Idealy
-              </span>
-              <span className="text-[11px] text-[var(--dsw-alias-label-tertiary)]">
-                {timeFormatted}
-              </span>
-              {message.mode && (
-                <Badge
-                  size="sm"
-                  variant={
-                    message.mode === "produce"
-                      ? "primary"
-                      : message.mode === "explore"
-                        ? "accent"
-                        : "default"
-                  }
-                >
-                  {message.mode === "produce"
-                    ? "Produire"
-                    : message.mode === "explore"
-                      ? "Explorer"
-                      : "Discuter"}
-                </Badge>
-              )}
-            </div>
-
-            {/* Quick Copy Action */}
-            {message.content && (
-              <button
-                aria-label="Copier la réponse"
-                className="p-1 rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors focus-ring"
-                onClick={handleCopyMessage}
-                title="Copier la réponse"
-                type="button"
-              >
-                {copied ? (
-                  <Check className="w-3.5 h-3.5 text-[var(--idealy-teal-petrol)]" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5" />
-                )}
-              </button>
-            )}
-          </div>
-
+        <div className="space-y-2 max-w-3xl mx-auto py-1">
           {/* Reasoning / Deep Think disclosure block */}
           {Boolean(
             message.reasoning || (message.isPartial && !message.content),
@@ -375,7 +338,7 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
             <div className="flex items-center gap-1 sm:gap-2 pt-2 text-xs text-[var(--dsw-alias-label-tertiary)]">
               <button
                 aria-label="Copier"
-                className="flex items-center gap-1.5 min-h-[36px] px-2.5 py-1.5 rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
+                className="grid min-h-[36px] min-w-[36px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
                 onClick={handleCopyMessage}
                 title="Copier la réponse"
                 type="button"
@@ -385,9 +348,6 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
                 ) : (
                   <Copy className="w-3.5 h-3.5" />
                 )}
-                <span className="text-[11px] font-medium">
-                  {copied ? "Copié" : "Copier"}
-                </span>
               </button>
 
               <button
@@ -422,9 +382,21 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
                 <ThumbsDown className="w-3.5 h-3.5" />
               </button>
 
+              {typeof window !== "undefined" && "speechSynthesis" in window && (
+                <button
+                  aria-label={speaking ? "Arrêter la lecture" : "Lire à voix haute"}
+                  className="grid min-h-[36px] min-w-[36px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
+                  onClick={toggleSpeech}
+                  title={speaking ? "Arrêter la lecture" : "Lire à voix haute"}
+                  type="button"
+                >
+                  {speaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </button>
+              )}
+
               <button
                 aria-label="Régénérer"
-                className="flex items-center gap-1.5 min-h-[36px] px-2.5 py-1.5 rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95 ml-auto"
+                className="grid min-h-[36px] min-w-[36px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
                 onClick={() =>
                   sendMessage("Régénérer et approfondir la réponse précédente.")
                 }
@@ -432,7 +404,6 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
                 type="button"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-medium">Régénérer</span>
               </button>
             </div>
           )}
