@@ -5,6 +5,7 @@ import type {
   IntentionMode,
   MissionFileActivity,
   MissionPlan,
+  MissionRoute,
   SubAgentProgress,
 } from "../types";
 
@@ -14,6 +15,7 @@ export interface AssistantStreamCallbacks {
   onComplete?: (reasoningDuration?: number) => void;
   onError?: (error: Error) => void;
   onMissionPlan?: (missionId: string, plan: MissionPlan) => void;
+  onMissionRoute?: (route: MissionRoute) => void;
   onMissionFileEvent?: (event: MissionFileActivity) => void;
   onReasoningChunk?: (chunk: string) => void;
   onSubAgentProgress?: (progress: SubAgentProgress) => void;
@@ -346,6 +348,12 @@ export const AssistantRemoteService = {
         typeof event.data === "object"
       ) {
         callbacks.onMissionPlan?.(missionId, event.data as MissionPlan);
+      } else if (
+        event.type === "data-idealy-route" &&
+        event.data &&
+        typeof event.data === "object"
+      ) {
+        callbacks.onMissionRoute?.(event.data as MissionRoute);
       } else if (
         event.type === "data-idealy-tool-activity" &&
         event.data &&

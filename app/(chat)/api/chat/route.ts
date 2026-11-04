@@ -56,6 +56,7 @@ import { designSpecificationToPrompt, type DesignSpecification } from "@/lib/ide
 import { injectFreeIdealyBadge } from "@/lib/branding/free-badge";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { isSimpleGreeting, getGreetingReply } from "@/lib/ai/greeting-handler";
+import { routeIdealyRequest } from "@/lib/idealy/routing";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
@@ -823,8 +824,10 @@ export async function POST(request: Request) {
                 requestedAgent,
               });
               dataStream.write({ data: missionPlan, type: "data-idealy-plan" });
+              const route = routeIdealyRequest({ intent: intentCategory, prompt: idealyPrompt });
+              dataStream.write({ data: route, type: "data-idealy-route" });
               await updateIdealyMission({
-                dna: { intentCategory, plan: missionPlan, stage: "planned", ...(requestedAgent ? { requestedAgent } : {}) },
+                dna: { intentCategory, plan: missionPlan, route, stage: "planned", ...(requestedAgent ? { requestedAgent } : {}) },
                 missionId,
                 request,
                 status: "planned",

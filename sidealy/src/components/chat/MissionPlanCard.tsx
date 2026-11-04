@@ -36,6 +36,14 @@ export const MissionPlanCard: React.FC<{
           <h3 className="mt-1 truncate text-[15px] font-semibold text-text-main">
             {mission.plan.projectKind}
           </h3>
+          {mission.route && mission.route.lane === "build" && (
+            <p className="mt-1 text-[12px] text-text-muted">
+              {mission.route.depth === "squad"
+                ? `Escouade complète · ${mission.route.agents.length} agents`
+                : `Construction ciblée · ${mission.route.agents.length} agents`}
+              {mission.route.reasons.length > 0 && ` — ${mission.route.reasons.slice(0, 3).join(", ")}`}
+            </p>
+          )}
         </div>
         <span
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${

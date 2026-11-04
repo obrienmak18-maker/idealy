@@ -324,7 +324,14 @@ Deno.serve(async (request) => {
   }).slice(0, 18_000);
   const missionVoice = voiceDirection(mission.way);
   const inputDigest = await sha256(missionContext);
-  const wayAgents = getWayAgents(mission.way);
+  const allWayAgents = getWayAgents(mission.way);
+  // Routage : une mission ciblée mobilise le builder et le reviewer (10 Power) ;
+  // sans décision explicite, l'escouade complète reste le comportement par défaut (50 Power).
+  const routeDepth = (mission.dna as { route?: { depth?: unknown } } | null)?.route?.depth;
+  const focusedRun = routeDepth === "focused" && isMissionPlan((mission.dna as { plan?: unknown } | null)?.plan);
+  const wayAgents = focusedRun
+    ? allWayAgents.filter((agent) => agent.key === "builder" || agent.key === "reviewer")
+    : allWayAgents;
   const { error: insertError } = await admin.from("mission_agent_runs").insert(
     wayAgents.map((agent, index) => ({
       agent_key: agent.key,
@@ -339,15 +346,16 @@ Deno.serve(async (request) => {
   );
   if (insertError) return corsResponse({ error: "Unable to reserve mission run." }, 409, request);
 
-  const squadPowerPoints = 50;
+  const squadPowerPoints = focusedRun ? 10 : SQUAD_POWER_POINTS;
+  const powerOperation = focusedRun ? "mission_simple" : "mission_squad";
   const powerReservationKey = `${runKey}:power:mission_squad:reserve`;
   const { data: powerReservation, error: powerReservationError } = await admin.rpc("reserve_power_points", {
     p_user_id: auth.user.id,
-    p_operation: "mission_squad",
+    p_operation: powerOperation,
     p_reserved_points: squadPowerPoints,
     p_idempotency_key: powerReservationKey,
     p_mission_id: missionId,
-    p_metadata: { actionType: "mission_squad", source: "orchestrate-mission", runKey },
+    p_metadata: { actionType: powerOperation, source: "orchestrate-mission", runKey },
   });
   if (powerReservationError) {
     await admin.from("mission_agent_runs").delete().eq("mission_id", missionId).eq("run_key", runKey);
@@ -380,7 +388,7 @@ Deno.serve(async (request) => {
   }
 
   await appendEvent(admin, "power_reserved", missionId, `${runKey}:power:reserved`, {
-    actionType: "mission_squad",
+    actionType: powerOperation,
     amountReserved: squadPowerPoints,
     reservationId,
     runKey,
@@ -505,11 +513,11 @@ Deno.serve(async (request) => {
       agentTeam: wayAgents,
     });
 
-    const chief = wayAgents.find((agent) => agent.key === "chief")!;
-    const builder = wayAgents.find((agent) => agent.key === "builder")!;
-    const designer = wayAgents.find((agent) => agent.key === "designer")!;
-    const specialist = wayAgents.find((agent) => agent.key === "specialist")!;
-    const reviewer = wayAgents.find((agent) => agent.key === "reviewer")!;
+    const chief = allWayAgents.find((agent) => agent.key === "chief")!;
+    const builder = allWayAgents.find((agent) => agent.key === "builder")!;
+    const designer = allWayAgents.find((agent) => agent.key === "designer")!;
+    const specialist = allWayAgents.find((agent) => agent.key === "specialist")!;
+    const reviewer = allWayAgents.find((agent) => agent.key === "reviewer")!;
 
     const missionVoice = voiceDirection(mission.way);
     const persistedPlan =
@@ -545,7 +553,7 @@ Deno.serve(async (request) => {
     // mission plan first; the designer and specialist are independent planning
     // nodes and can run concurrently; the builder consumes both plans; the
     // reviewer closes the loop. This is the live runtime's first safe DAG edge.
-    [designerReport, specialistReport] = await Promise.all([
+    [designerReport, specialistReport] = focusedRun ? [null, null] : await Promise.all([
       runOptionalAgent(
         designer,
         1,
@@ -689,7 +697,7 @@ Deno.serve(async (request) => {
         ? (rawSettlement as Record<string, unknown>)
         : {};
       await appendEvent(admin, "power_consumed", missionId, `${runKey}:power:consumed`, {
-        actionType: "mission_squad",
+        actionType: powerOperation,
         amountCharged: typeof settlement.charged_points === "number" ? settlement.charged_points : 0,
         powerReleased: typeof settlement.released_points === "number" ? settlement.released_points : squadPowerPoints,
         powerRemaining: typeof settlement.balance === "number" ? settlement.balance : null,
@@ -718,6 +726,7 @@ Deno.serve(async (request) => {
       runs: completedRuns ?? [],
       status: missionStatus,
       validation: finalValidationPayload,
+      powerPoints: squadPowerPoints,
     }, 200, request);
   } catch (error) {
     if (powerReservationHeld) {

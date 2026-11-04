@@ -617,7 +617,8 @@ export async function POST(
         : "needs-fix";
 
     if (finalStatus === "ready") {
-      await settleMissionPower({ idempotencyKey: input.idempotencyKey, missionId, actualPoints: 50 });
+      const reservedPoints = payload.powerPoints === 10 ? 10 : 50;
+      await settleMissionPower({ idempotencyKey: input.idempotencyKey, missionId, actualPoints: reservedPoints });
       await commitFreeGeneration({ idempotencyKey: input.idempotencyKey, userId });
       quotaCommitted = true;
     } else {

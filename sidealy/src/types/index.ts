@@ -103,7 +103,17 @@ export interface MissionBuildVerification {
   stdout?: string;
 }
 
+export interface MissionRoute {
+  agents: string[];
+  depth: "direct" | "focused" | "squad";
+  lane: "quick" | "build";
+  powerPoints: 0 | 10 | 50;
+  reasons: string[];
+  score: number;
+}
+
 export interface MissionRun {
+  route?: MissionRoute;
   buildVerification?: MissionBuildVerification;
   error?: string;
   files?: MissionWorkspaceFile[];

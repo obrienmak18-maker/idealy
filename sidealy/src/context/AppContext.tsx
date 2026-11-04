@@ -793,6 +793,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
               return updated;
             });
           },
+          onMissionRoute: (route) => {
+            setMessages((prev) => {
+              const updated = prev.map((m) =>
+                m.id === assistantMessageId && m.mission
+                  ? { ...m, mission: { ...m.mission, route } }
+                  : m,
+              );
+              StorageService.saveMessages(updated);
+              return updated;
+            });
+          },
           onToolActivity: (activity: AssistantToolActivity) => {
             setMessages((prev) => {
               const updated = prev.map((message) => {
