@@ -78,7 +78,7 @@ export const MessageList: React.FC = () => {
   ] as const;
 
   const hour = new Date().getHours();
-  const greeting = hour < 5 || hour >= 18 ? 'Bonsoir. Que construisons-nous ?' : 'Bonjour. Que construisons-nous ?';
+  const greeting: [string, string] = [hour < 5 || hour >= 18 ? 'Bonsoir. Que' : 'Bonjour. Que', 'construisons-nous ?'];
 
   return (
     <div
@@ -94,9 +94,16 @@ export const MessageList: React.FC = () => {
       <div className="mx-auto flex min-h-full w-full max-w-[900px] flex-col space-y-4">
         {activeMessages.length === 0 ? (
           <div className="idealy-home relative mx-auto flex min-h-full flex-1 w-full max-w-[760px] flex-col justify-end px-3 pb-2 pt-2 sm:justify-center sm:px-8 sm:pb-16 sm:pt-8">
+            <div className="idealy-gradient-mesh" aria-hidden="true" />
             <div className="animate-fade-up flex flex-1 items-center justify-center pb-6 text-center sm:mb-8 sm:flex-none sm:pb-0">
-              <h1 className="max-w-[16ch] text-[26px] font-medium leading-[1.2] tracking-[-0.02em] text-text-main sm:max-w-none sm:text-[34px]">
-                {greeting}
+              <h1 className="max-w-[16ch] text-[27px] font-medium leading-[1.2] tracking-[-0.02em] text-text-main sm:max-w-none sm:text-[36px]">
+                {greeting[0]}{' '}
+                <span
+                  className="bg-gradient-to-r from-[var(--idealy-teal-petrol)] via-[var(--idealy-indigo)] to-[rgb(167,139,250)] bg-clip-text text-transparent"
+                  style={{ backgroundSize: '200% auto', animation: 'gradientShift 6s ease-in-out infinite' }}
+                >
+                  {greeting[1]}
+                </span>
               </h1>
             </div>
 

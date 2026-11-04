@@ -3,10 +3,12 @@
 /* Gradient Mesh Background for Home Hero */
 .idealy-gradient-mesh {
   position: absolute;
-  inset: 0;
+  inset: -12% -30%;
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 52% 50% at 50% 46%, #000 25%, transparent 100%);
+  mask-image: radial-gradient(ellipse 52% 50% at 50% 46%, #000 25%, transparent 100%);
 }
 
 .idealy-gradient-mesh::before {
@@ -18,16 +20,16 @@
   height: 140%;
   background:
     radial-gradient(ellipse 600px 400px at 20% 30%,
-      color-mix(in srgb, var(--idealy-teal-petrol) 8%, transparent),
+      color-mix(in srgb, var(--idealy-teal-petrol) 16%, transparent),
       transparent),
     radial-gradient(ellipse 500px 500px at 70% 20%,
-      color-mix(in srgb, var(--idealy-indigo) 6%, transparent),
+      color-mix(in srgb, var(--idealy-indigo) 14%, transparent),
       transparent),
     radial-gradient(ellipse 400px 300px at 40% 70%,
       color-mix(in srgb, var(--idealy-teal-soft) 4%, transparent),
       transparent),
     radial-gradient(ellipse 300px 400px at 80% 60%,
-      rgba(167, 139, 250, 0.04),
+      rgba(167, 139, 250, 0.10),
       transparent);
   animation: mesh-drift 20s ease-in-out infinite alternate;
   filter: blur(40px);

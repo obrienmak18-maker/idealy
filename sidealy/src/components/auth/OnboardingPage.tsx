@@ -5,6 +5,13 @@ import { voiesCatalog } from "../../services/voies-catalog";
 import { AuthShell, authField, authLink, authPrimary, Message } from "./AuthShell";
 
 const WAYS = ["ninja", "mage", "hunter", "professional"] as const;
+// Teintes par voie ("r,g,b") : halos, bordures et sélection.
+const WAY_RGB: Record<(typeof WAYS)[number], string> = {
+  ninja: "249,115,22",
+  mage: "139,92,246",
+  hunter: "20,184,166",
+  professional: "217,70,239",
+};
 const PROJECTS = [
   ["web", "Application web"],
   ["mobile", "Application mobile"],
@@ -100,7 +107,7 @@ export const OnboardingPage: React.FC = () => {
   ][step];
 
   return (
-    <AuthShell subtitle={titles[1] || undefined} title={titles[0]} width={step === 0 ? 560 : 440}>
+    <AuthShell ambient={way ? WAY_RGB[way] : undefined} subtitle={titles[1] || undefined} title={titles[0]} width={step === 0 ? 600 : 440}>
       <div className="mb-6 flex gap-1.5" aria-label={`Étape ${step + 1} sur 4`}>
         {[0, 1, 2, 3].map((i) => (
           <span className={`h-1 flex-1 rounded-full ${i <= step ? "bg-[var(--dsw-alias-label-primary)]" : "bg-[var(--dsw-alias-border-l2)]"}`} key={i} />
@@ -112,24 +119,43 @@ export const OnboardingPage: React.FC = () => {
           {WAYS.map((key) => {
             const w = voiesCatalog[key];
             const active = way === key;
+            const rgb = WAY_RGB[key];
+            const avatar = w.agents[0]?.avatarUrl;
             return (
               <button
                 aria-pressed={active}
-                className={`focus-ring relative flex flex-col gap-1 rounded-2xl border p-3.5 text-left sm:gap-2 sm:p-4 transition-colors ${
-                  active ? "border-[var(--dsw-alias-label-primary)] bg-[var(--dsw-alias-interactive-bg-hover)]" : "border-[var(--dsw-alias-border-l2)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
-                }`}
+                className="focus-ring group relative flex items-center gap-3.5 overflow-hidden rounded-2xl border p-3.5 text-left transition-all duration-300 hover:-translate-y-0.5 sm:flex-col sm:items-start sm:gap-3 sm:p-4"
                 key={key}
                 onClick={() => setWay(key)}
+                style={{
+                  background: `radial-gradient(120% 90% at 0% 0%, rgba(${rgb},${active ? 0.22 : 0.1}), transparent 65%), var(--dsw-alias-bg-layer-2)`,
+                  borderColor: `rgba(${rgb},${active ? 0.85 : 0.28})`,
+                  boxShadow: active
+                    ? `0 0 0 1px rgba(${rgb},0.5), 0 18px 48px -16px rgba(${rgb},0.55)`
+                    : `0 10px 30px -22px rgba(${rgb},0.6)`,
+                }}
                 type="button"
               >
-                <span className="flex items-center justify-between">
-                  <span className="flex items-baseline gap-2">
-                    <span className="text-[15.5px] font-medium">{w.label}</span>
-                    <span className="text-[11px] uppercase tracking-wide text-[var(--dsw-alias-label-tertiary)]">{w.resourceLabel}</span>
-                  </span>
-                  {active && <Check aria-hidden="true" className="h-4 w-4" />}
+                <span
+                  className="relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl sm:h-14 sm:w-14"
+                  style={{ boxShadow: `0 0 0 1px rgba(${rgb},0.45), 0 0 24px -4px rgba(${rgb},${active ? 0.7 : 0.35})` }}
+                >
+                  {avatar && <img alt="" className="h-full w-full object-cover" onError={(e) => { (e.currentTarget as HTMLElement).style.display = "none"; }} src={avatar} />}
                 </span>
-                <span className="text-[13px] leading-snug text-[var(--dsw-alias-label-secondary)]">{w.tagline}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline gap-2">
+                    <span className={`bg-gradient-to-r ${w.accentClassName} bg-clip-text text-[16px] font-medium text-transparent`}>{w.label}</span>
+                    <span className="text-[11px] uppercase tracking-wider" style={{ color: `rgba(${rgb},0.9)` }}>{w.resourceLabel}</span>
+                  </span>
+                  <span className="mt-1 block text-[13px] leading-snug text-[var(--dsw-alias-label-secondary)]">{w.tagline}</span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  className={`absolute right-3 top-3 grid h-5 w-5 place-items-center rounded-full transition-all duration-300 ${active ? "scale-100 opacity-100" : "scale-75 opacity-0"}`}
+                  style={{ background: `rgb(${rgb})`, boxShadow: `0 0 14px rgba(${rgb},0.8)` }}
+                >
+                  <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                </span>
               </button>
             );
           })}

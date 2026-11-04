@@ -14,8 +14,17 @@ export const AuthShell: React.FC<{
   subtitle?: string;
   children?: React.ReactNode;
   width?: number;
-}> = ({ title, subtitle, children, width = 380 }) => (
-  <main className="flex min-h-[100dvh] w-screen items-center justify-center bg-bg-base px-5 py-8 text-text-main">
+  /** "r,g,b" : teinte l'ambiance de la page (halos doux). */
+  ambient?: string;
+}> = ({ title, subtitle, children, width = 380, ambient = "45,212,191" }) => (
+  <main className="relative isolate flex min-h-[100dvh] w-screen items-center justify-center overflow-hidden bg-bg-base px-5 py-8 text-text-main">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 -z-10 transition-[background] duration-700"
+      style={{
+        background: `radial-gradient(60% 45% at 18% 8%, rgba(${ambient},0.16), transparent 70%), radial-gradient(50% 40% at 88% 92%, rgba(139,92,246,0.14), transparent 70%)`,
+      }}
+    />
     <div className="w-full" style={{ maxWidth: width }}>
       <p className="mb-6 text-[15px] font-medium tracking-tight text-[var(--dsw-alias-label-secondary)]">Idealy</p>
       <h1 className="text-[26px] font-medium tracking-[-0.02em]">{title}</h1>
