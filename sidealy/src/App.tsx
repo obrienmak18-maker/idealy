@@ -1,4 +1,5 @@
 import type React from "react";
+import { useEffect } from "react";
 import { ConnectorsPage } from "./components/ConnectorsPage";
 import { Composer } from "./components/chat/Composer";
 import { MessageList } from "./components/chat/MessageList";
@@ -24,7 +25,33 @@ import { CreditAlert } from "./components/credits/CreditAlert";
 import { AppProvider, useApp } from "./context/AppContext";
 
 const AppContent: React.FC = () => {
-  const { activeArtifact, activePage, activeMessages } = useApp();
+  const { activeArtifact, activePage, activeMessages, setActivePage } =
+    useApp();
+
+  // Portail : un visiteur non connecté (401 explicite) ne voit que l'accueil.
+  const gated = [
+    "chat",
+    "library",
+    "connectors",
+    "agents",
+    "settings",
+    "plugins",
+  ].includes(activePage);
+  useEffect(() => {
+    if (!gated) return;
+    let cancelled = false;
+    fetch("/api/idealy/profile/preferences", {
+      cache: "no-store",
+      credentials: "same-origin",
+    })
+      .then((response) => {
+        if (!cancelled && response.status === 401) setActivePage("welcome");
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [gated, setActivePage]);
 
   // Pages autonomes (hors layout de travail, sans sidebar rétractable)
   if (activePage === "welcome") return <WelcomePage />;

@@ -91,10 +91,10 @@ export const WelcomePage: React.FC = () => {
           </button>
           <button
             className="focus-ring inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs md:text-sm font-medium bg-[var(--dsw-alias-label-primary)] text-[var(--dsw-alias-bg-base)] hover:opacity-90 transition-opacity shadow-xs"
-            onClick={() => setActivePage("chat")}
+            onClick={() => setActivePage("login")}
             type="button"
           >
-            <span>Lancer l'application</span>
+            <span>Commencer</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </nav>
@@ -136,7 +136,7 @@ export const WelcomePage: React.FC = () => {
           <div className="pt-3 flex flex-wrap items-center justify-center gap-3">
             <button
               className="focus-ring inline-flex h-12 items-center gap-2 rounded-full bg-[var(--dsw-alias-label-primary)] px-7 text-sm font-medium text-[var(--dsw-alias-bg-base)] transition-all hover:opacity-90 active:scale-[0.98] shadow-md"
-              onClick={() => setActivePage("chat")}
+              onClick={() => setActivePage("login")}
               type="button"
             >
               <span>Commencer maintenant</span>

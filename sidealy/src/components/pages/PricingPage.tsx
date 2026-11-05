@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, LoaderCircle, Sparkles } from "lucide-react";
+import { Check, LoaderCircle, Sparkles, X } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
@@ -104,48 +104,14 @@ export const PricingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full bg-[var(--dsw-alias-bg-base)] text-[var(--dsw-alias-label-primary)] flex flex-col overflow-y-auto selection:bg-[var(--idealy-indigo)]/20">
-      {/* Top Navbar Autonome (Style ChatGPT / Stripe) */}
-      <header className="sticky top-0 z-40 w-full border-b border-[var(--dsw-alias-border-l3)]/80 bg-[var(--dsw-alias-bg-base)]/85 backdrop-blur-md px-6 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            aria-label="Retour au workspace"
-            className="focus-ring inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs md:text-sm font-medium text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
-            onClick={() => setActivePage("chat")}
-            type="button"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Retour au workspace</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-semibold tracking-tight text-[var(--dsw-alias-label-primary)]">
-              Idealy
-            </span>
-            <span className="text-xs text-[var(--dsw-alias-label-tertiary)]">
-              / Offres & Tarifs
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            className="focus-ring hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
-            onClick={() => setActivePage("login")}
-            type="button"
-          >
-            Se connecter
-          </button>
-          <button
-            className="focus-ring inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-[var(--dsw-alias-label-primary)] text-[var(--dsw-alias-bg-base)] hover:opacity-90 transition-opacity"
-            onClick={() => setActivePage("chat")}
-            type="button"
-          >
-            <span>Accéder à l'app</span>
-          </button>
-        </div>
-      </header>
+      <button
+        aria-label="Fermer les offres"
+        className="focus-ring fixed right-4 top-4 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--dsw-alias-border-l3)] bg-[var(--dsw-alias-bg-base)]/70 text-[var(--dsw-alias-label-secondary)] backdrop-blur-md transition-colors hover:text-[var(--dsw-alias-label-primary)]"
+        onClick={() => setActivePage("chat")}
+        type="button"
+      >
+        <X className="h-4 w-4" />
+      </button>
 
       {/* Main Pricing Hero & Cards */}
       <main className="relative flex-1 max-w-6xl w-full mx-auto px-4 md:px-8 py-12 md:py-16">
