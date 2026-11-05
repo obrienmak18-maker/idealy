@@ -11,6 +11,7 @@ const out = resolve(root, "public", "sidealy");
 const pick = (...values) => values.find((v) => v && String(v).trim()) ?? "";
 const env = {
   ...process.env,
+  SIDEALY_BASE: "/sidealy/",
   NODE_ENV: "development", // keep devDependencies (vite, tsc) available
   VITE_FIREBASE_API_KEY: pick(
     process.env.VITE_FIREBASE_API_KEY,

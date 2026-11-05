@@ -123,7 +123,6 @@ const nextConfig: NextConfig = {
     ];
     return {
       beforeFiles: [
-        { source: "/assets/:path*", destination: "/sidealy/assets/:path*" },
         ...pages.map((source) => ({ source, destination: shell })),
       ],
       afterFiles: [],

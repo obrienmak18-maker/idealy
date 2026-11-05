@@ -6,6 +6,8 @@ const idealyBackendOrigin =
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Vercel : les fichiers sont servis comme statiques sous /sidealy/ (voir scripts/build-sidealy.mjs).
+  base: process.env.SIDEALY_BASE || "/",
   plugins: [react()],
   server: {
     host: true,
