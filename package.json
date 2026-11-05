@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "build": "NODE_ENV=production next build",
+    "build": "node scripts/build-sidealy.mjs && NODE_ENV=production next build",
     "start": "next start",
     "check": "ultracite check",
     "typecheck": "tsc --noEmit",

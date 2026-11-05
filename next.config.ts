@@ -95,6 +95,41 @@ const nextConfig: NextConfig = {
     incomingRequests: false,
   },
   poweredByHeader: false,
+  // Sidealy (Vite) est l'interface publique : Next ne sert plus que le backend.
+  async rewrites() {
+    const shell = "/sidealy/index.html";
+    const pages = [
+      "/",
+      "/welcome",
+      "/login",
+      "/register",
+      "/onboarding",
+      "/pricing",
+      "/settings",
+      "/settings/:path*",
+      "/connectors",
+      "/connectors/:path*",
+      "/library",
+      "/agents",
+      "/plugins",
+      "/about",
+      "/docs",
+      "/docs/:path*",
+      "/support",
+      "/privacy",
+      "/terms",
+      "/eula",
+      "/auth/action",
+    ];
+    return {
+      beforeFiles: [
+        { source: "/assets/:path*", destination: "/sidealy/assets/:path*" },
+        ...pages.map((source) => ({ source, destination: shell })),
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   async headers() {
     return [
       {
