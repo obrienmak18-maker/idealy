@@ -15,6 +15,7 @@ import {
   signInGoogle,
   signUpEmail,
 } from "../../services/firebase";
+import { useApp } from "../../context/AppContext";
 import { AuthShell, authField, authLink, authPrimary, authSecondary, Message, routeAfterAuth } from "./AuthShell";
 
 type View = "login" | "signup" | "magic" | "phone" | "reset" | "sent";
@@ -30,6 +31,7 @@ const GoogleMark = () => (
 );
 
 export const AuthPage: React.FC = () => {
+  const { setActivePage } = useApp();
   const [view, setView] = useState<View>(window.location.pathname.startsWith("/register") ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -117,8 +119,8 @@ export const AuthPage: React.FC = () => {
   };
 
   const titles: Record<View, [string, string]> = {
-    login: ["Bon retour", "Connectez-vous pour retrouver vos projets."],
-    signup: ["Créez votre compte", "Quelques secondes suffisent."],
+    login: ["Bon retour", "Connectez-vous pour retrouver vos projets et votre escouade."],
+    signup: ["Créez votre compte", "Quelques secondes pour commencer à construire avec Idealy."],
     magic: ["Lien de connexion", "Recevez un lien sécurisé par e-mail, sans mot de passe."],
     phone: ["Connexion par téléphone", "Nous vous envoyons un code par SMS."],
     reset: ["Mot de passe oublié", "Saisissez votre e-mail pour recevoir un lien de réinitialisation."],
@@ -152,42 +154,129 @@ export const AuthPage: React.FC = () => {
   const [title, subtitle] = titles[view];
   const needsPassword = view === "login" || view === "signup";
   const submitLabel =
-    view === "login" ? "Se connecter" : view === "signup" ? "Créer mon compte" : view === "phone" ? (codeSent ? "Valider le code" : "Recevoir le code") : view === "reset" ? "Envoyer le lien" : "Envoyer le lien";
+    view === "login"
+      ? "Se connecter"
+      : view === "signup"
+        ? "Créer mon compte"
+        : view === "phone"
+          ? codeSent
+            ? "Valider le code"
+            : "Recevoir le code"
+          : "Envoyer le lien";
 
   return (
     <AuthShell title={title} subtitle={subtitle}>
+      {/* Segmented Switcher for Login / Signup */}
+      {(view === "login" || view === "signup") && (
+        <div className="flex p-1 rounded-xl bg-white/[0.04] border border-white/[0.08] mb-6">
+          <button
+            type="button"
+            onClick={() => go("login")}
+            className={`flex-1 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all ${
+              view === "login"
+                ? "bg-white text-black shadow-sm"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Se connecter
+          </button>
+          <button
+            type="button"
+            onClick={() => go("signup")}
+            className={`flex-1 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all ${
+              view === "signup"
+                ? "bg-white text-black shadow-sm"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Créer un compte
+          </button>
+        </div>
+      )}
+
       {!isFirebaseConfigured() && (
-        <p className="mb-5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-[13px]" role="status">
-          La connexion n’est pas configurée ici (variables VITE_FIREBASE_* manquantes).
-        </p>
+        <div className="mb-5 rounded-xl border border-teal-500/30 bg-teal-500/10 p-3.5 text-xs text-teal-300">
+          <p className="font-medium">Mode Développement Local Détecté</p>
+          <p className="text-zinc-400 mt-1">
+            Les variables Firebase ne sont pas configurées. Vous pouvez tester l'espace de travail immédiatement.
+          </p>
+          <button
+            type="button"
+            onClick={() => setActivePage("chat")}
+            className="mt-2.5 px-3 py-1.5 rounded-lg bg-teal-400 text-black font-semibold text-xs hover:bg-teal-300 transition-colors w-full"
+          >
+            Accéder directement au workspace
+          </button>
+        </div>
       )}
 
       {(view === "login" || view === "signup") && (
         <>
-          <button className={authSecondary} disabled={busy} onClick={() => void run(async () => finish(await signInGoogle()))} type="button">
+          <button
+            className={authSecondary}
+            disabled={busy}
+            onClick={() => void run(async () => finish(await signInGoogle()))}
+            type="button"
+          >
             <GoogleMark />
-            Continuer avec Google
+            <span>Continuer avec Google</span>
           </button>
-          <div className="my-6 flex items-center gap-3 text-[12px] text-[var(--dsw-alias-label-tertiary)]">
-            <span className="h-px flex-1 bg-[var(--dsw-alias-border-l1)]" />
-            ou
-            <span className="h-px flex-1 bg-[var(--dsw-alias-border-l1)]" />
+          <div className="my-5 flex items-center gap-3 text-[12px] text-zinc-500">
+            <span className="h-px flex-1 bg-white/[0.08]" />
+            ou avec e-mail
+            <span className="h-px flex-1 bg-white/[0.08]" />
           </div>
         </>
       )}
 
       <form className="space-y-3" onSubmit={onSubmit}>
         {view !== "phone" && (
-          <input autoComplete="email" className={authField} onChange={(e) => setEmail(e.target.value)} placeholder="Adresse e-mail" required type="email" value={email} />
+          <input
+            autoComplete="email"
+            className={authField}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Adresse e-mail"
+            required
+            type="email"
+            value={email}
+          />
         )}
         {needsPassword && (
-          <input autoComplete={view === "login" ? "current-password" : "new-password"} className={authField} minLength={6} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe" required type="password" value={password} />
+          <input
+            autoComplete={view === "login" ? "current-password" : "new-password"}
+            className={authField}
+            minLength={6}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mot de passe (min. 6 caractères)"
+            required
+            type="password"
+            value={password}
+          />
         )}
         {view === "phone" && (
           <>
-            <input autoComplete="tel" className={authField} disabled={codeSent} inputMode="tel" onChange={(e) => setPhone(e.target.value)} placeholder="+234 801 234 5678" required type="tel" value={phone} />
+            <input
+              autoComplete="tel"
+              className={authField}
+              disabled={codeSent}
+              inputMode="tel"
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+33 6 12 34 56 78"
+              required
+              type="tel"
+              value={phone}
+            />
             {codeSent && (
-              <input autoComplete="one-time-code" className={authField} inputMode="numeric" maxLength={6} onChange={(e) => setCode(e.target.value)} placeholder="Code à 6 chiffres" required value={code} />
+              <input
+                autoComplete="one-time-code"
+                className={authField}
+                inputMode="numeric"
+                maxLength={6}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Code à 6 chiffres"
+                required
+                value={code}
+              />
             )}
             <div ref={recaptchaRef} />
           </>
@@ -198,24 +287,37 @@ export const AuthPage: React.FC = () => {
         </button>
       </form>
 
-      <div className="mt-6 flex flex-col gap-3">
+      <div className="mt-6 flex flex-col gap-3 text-xs">
         {view === "login" && (
           <div className="flex items-center justify-between">
-            <button className={authLink} onClick={() => go("signup")} type="button">Créer un compte</button>
-            <button className={authLink} onClick={() => go("reset")} type="button">Mot de passe oublié</button>
+            <button className={authLink} onClick={() => go("reset")} type="button">
+              Mot de passe oublié ?
+            </button>
+            <button className={authLink} onClick={() => go("magic")} type="button">
+              Lien magique par e-mail
+            </button>
           </div>
         )}
-        {view === "signup" && (
-          <button className={authLink} onClick={() => go("login")} type="button">J’ai déjà un compte</button>
-        )}
+
         {(view === "login" || view === "signup") && (
-          <div className="flex items-center gap-5 pt-1">
-            <button className={authLink} onClick={() => go("magic")} type="button">Lien par e-mail</button>
-            <button className={authLink} onClick={() => go("phone")} type="button">Téléphone</button>
+          <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+            <button
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              onClick={() => setActivePage("welcome")}
+              type="button"
+            >
+              ← Retour à l'accueil
+            </button>
+            <button className={authLink} onClick={() => go("phone")} type="button">
+              Connexion SMS
+            </button>
           </div>
         )}
+
         {(view === "magic" || view === "phone" || view === "reset") && (
-          <button className={authLink} onClick={() => go("login")} type="button">Retour</button>
+          <button className={authLink} onClick={() => go("login")} type="button">
+            ← Revenir à la connexion
+          </button>
         )}
       </div>
     </AuthShell>

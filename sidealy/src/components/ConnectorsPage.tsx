@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   Check,
   Menu,
   Plug,
@@ -19,7 +18,7 @@ import {
 type CategoryFilter = "all" | "dev" | "data" | "ai" | "productivity";
 
 export const ConnectorsPage: React.FC = () => {
-  const { setActivePage, setIsMobileDrawerOpen } = useApp();
+  const { setIsMobileDrawerOpen } = useApp();
 
   const [connectors, setConnectors] = useState<ConnectorDefinition[]>(
     DEFAULT_CONNECTORS_CATALOG,
@@ -121,42 +120,28 @@ export const ConnectorsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full w-full flex-col overflow-y-auto bg-bg-base text-text-main selection:bg-brand-primary/20">
-      {/* ─── TOP BAR (Minimaliste, style Claude & Bolt) ────────────────────── */}
-      <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center justify-between border-b border-border-subtle/60 bg-bg-base/80 px-4 md:px-6 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <button
-            className="md:hidden grid h-8 w-8 place-items-center rounded-lg text-text-muted hover:bg-bg-subtle"
-            onClick={() => setIsMobileDrawerOpen(true)}
-            type="button"
-          >
-            <Menu className="h-4.5 w-4.5" />
-          </button>
-          
-          <button
-            className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-main px-2 py-1 rounded-lg hover:bg-bg-subtle transition-colors"
-            onClick={() => setActivePage("chat")}
-            title="Revenir à la discussion"
-            type="button"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Discussion</span>
-          </button>
-
-          <span className="text-border-subtle">|</span>
-
-          <h1 className="text-sm font-semibold text-text-main tracking-tight">
-            Connecteurs & Outils
-          </h1>
-        </div>
-
-        <span className="text-xs text-text-muted font-mono">
-          {connectors.filter((c) => c.available).length} actif(s)
-        </span>
-      </header>
+    <div className="flex h-full w-full flex-col overflow-y-auto bg-bg-base text-text-main selection:bg-brand-primary/20 relative">
+      {/* Mobile drawer trigger */}
+      <button
+        aria-label="Ouvrir la navigation"
+        className="fixed left-3 top-3 z-30 grid h-8 w-8 place-items-center rounded-xl bg-[var(--dsw-alias-bg-layer-2)] border border-[var(--dsw-alias-border-l2)] text-text-muted hover:text-text-main shadow-xs md:hidden focus-ring"
+        onClick={() => setIsMobileDrawerOpen(true)}
+        type="button"
+      >
+        <Menu className="h-4.5 w-4.5" />
+      </button>
 
       {/* ─── MAIN CONTENT ─────────────────────────────────────────────────── */}
-      <main className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8">
+      <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8">
+        {/* Page Title */}
+        <div className="mb-6">
+          <h1 className="text-xl font-bold tracking-tight text-text-main">
+            Connecteurs & Outils
+          </h1>
+          <p className="text-xs text-text-muted mt-1">
+            Connectez vos plateformes favorites pour amplifier la portée de votre escouade d'agents.
+          </p>
+        </div>
         
         {/* Controls: Search + Category Pills */}
         <div className="flex flex-col gap-3 mb-6">

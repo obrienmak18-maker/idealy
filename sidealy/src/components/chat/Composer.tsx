@@ -1,4 +1,4 @@
-import { ArrowUp, Brain, Check, ChevronDown, Globe, Image as ImageIcon, LayoutGrid, Mic, Paperclip, Plug, Plus, Square, X } from "lucide-react";
+import { ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, Image as ImageIcon, LayoutGrid, Mic, Paperclip, Plug, Plus, Square, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
@@ -36,7 +36,7 @@ type ComposerProps = { placement?: "conversation" | "home" };
 export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }) => {
   const {
     draft, setDraft, sendMessage, stopGeneration, generationStatus,
-    deepThink, setDeepThink, webSearch, setWebSearch, setActivePage,
+    setActivePage,
   } = useApp();
   const [modelMode, setModelMode] = useState<"auto" | "discuter" | "construire">(() => {
     try {
@@ -63,6 +63,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
   const [dictationLevel, setDictationLevel] = useState(0);
   const [dictationStatus, setDictationStatus] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [connectorsSubmenuOpen, setConnectorsSubmenuOpen] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -521,7 +522,12 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                 aria-haspopup="dialog"
                 aria-label="Ajouter au message"
                 className="grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
-                onClick={() => setAddMenuOpen((open) => !open)}
+                onClick={() => {
+                  setAddMenuOpen((open) => {
+                    if (open) setConnectorsSubmenuOpen(false);
+                    return !open;
+                  });
+                }}
                 ref={addButtonRef}
                 title="Ajouter au message"
                 type="button"
@@ -538,37 +544,79 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
               {addMenuOpen && (
                 <section
                   aria-label="Ajouter au message"
-                  className="composer-add-menu absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(264px,calc(100vw-24px))] rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.32)]"
+                  className="composer-add-menu absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(280px,calc(100vw-24px))] rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-2 shadow-[0_12px_32px_rgba(0,0,0,0.32)] animate-scale-in"
                   role="dialog"
                 >
-                  <p className="composer-add-heading">Ajouter</p>
-                  <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); fileInputRef.current?.click(); }} type="button">
-                    <Paperclip aria-hidden="true" />
-                    <span>Fichier</span>
-                  </button>
-                  <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); photoInputRef.current?.click(); }} type="button">
-                    <ImageIcon aria-hidden="true" />
-                    <span>Photo</span>
-                  </button>
-                  <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); setActivePage("connectors"); }} type="button">
-                    <Plug aria-hidden="true" />
-                    <span>Connecteur</span>
-                  </button>
-                  <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); setActivePage("library"); }} type="button">
-                    <LayoutGrid aria-hidden="true" />
-                    <span>Bibliothèque</span>
-                  </button>
-                  <div className="my-1 h-px bg-[var(--dsw-alias-border-l1)]" />
-                  <button aria-pressed={deepThink} className="composer-add-row" onClick={() => setDeepThink(!deepThink)} type="button">
-                    <Brain aria-hidden="true" />
-                    <span className="flex-1 text-left">Pensée profonde</span>
-                    {deepThink && <Check aria-hidden="true" className="h-4 w-4 text-[var(--idealy-teal-petrol)]" />}
-                  </button>
-                  <button aria-pressed={webSearch} className="composer-add-row" onClick={() => setWebSearch(!webSearch)} type="button">
-                    <Globe aria-hidden="true" />
-                    <span className="flex-1 text-left">Recherche</span>
-                    {webSearch && <Check aria-hidden="true" className="h-4 w-4 text-[var(--idealy-teal-petrol)]" />}
-                  </button>
+                  {!connectorsSubmenuOpen ? (
+                    <>
+                      <p className="composer-add-heading">Ajouter</p>
+                      <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); fileInputRef.current?.click(); }} type="button">
+                        <Paperclip aria-hidden="true" />
+                        <span>Fichier</span>
+                      </button>
+                      <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); photoInputRef.current?.click(); }} type="button">
+                        <ImageIcon aria-hidden="true" />
+                        <span>Photo</span>
+                      </button>
+                      <button className="composer-add-row" onClick={() => setConnectorsSubmenuOpen(true)} type="button">
+                        <Plug aria-hidden="true" className="text-violet-400" />
+                        <span className="flex-1 text-left">Connecteurs</span>
+                        <ChevronRight className="h-3.5 w-3.5 text-text-muted" />
+                      </button>
+                      <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); setActivePage("library"); }} type="button">
+                        <LayoutGrid aria-hidden="true" />
+                        <span>Bibliothèque</span>
+                      </button>
+                    </>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-[var(--dsw-alias-border-l1)] px-1">
+                        <button
+                          className="flex items-center gap-1 text-xs text-text-muted hover:text-text-main p-0.5 rounded transition-colors"
+                          onClick={() => setConnectorsSubmenuOpen(false)}
+                          type="button"
+                        >
+                          <ArrowLeft className="h-3.5 w-3.5" />
+                          <span>Retour</span>
+                        </button>
+                        <span className="text-[11px] font-semibold text-text-main">Connecteurs actifs</span>
+                      </div>
+
+                      <div className="space-y-1 px-0.5">
+                        <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-[var(--dsw-alias-bg-layer-1)] text-xs">
+                          <span className="font-medium text-text-main">GitHub</span>
+                          <span className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Actif
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-[var(--dsw-alias-bg-layer-1)] text-xs">
+                          <span className="font-medium text-text-main">Supabase</span>
+                          <span className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Actif
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-[var(--dsw-alias-bg-layer-1)] text-xs">
+                          <span className="font-medium text-text-main">Vercel</span>
+                          <span className="text-[10px] text-text-muted font-normal">Disponible</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-[var(--dsw-alias-border-l1)]">
+                        <button
+                          className="flex w-full items-center justify-between px-2 py-1.5 rounded-lg text-xs font-semibold text-[var(--idealy-teal-petrol)] hover:bg-[var(--idealy-teal-bg)]/20 transition-colors"
+                          onClick={() => {
+                            setAddMenuOpen(false);
+                            setConnectorsSubmenuOpen(false);
+                            setActivePage("connectors");
+                          }}
+                          type="button"
+                        >
+                          <span>Gérer tous les connecteurs</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </section>
               )}
             </div>

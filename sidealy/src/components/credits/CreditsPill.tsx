@@ -58,7 +58,7 @@ export const CreditsPill: React.FC<{ compact?: boolean }> = ({ compact }) => {
 
   return (
     <div
-      className="credits-pill relative"
+      className="credits-pill relative inline-flex"
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
@@ -66,29 +66,45 @@ export const CreditsPill: React.FC<{ compact?: boolean }> = ({ compact }) => {
     >
       <button
         type="button"
-        className={`focus-ring flex items-center gap-2 rounded-full border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-2)] ${compact ? "h-9 w-9 justify-center" : "h-9 px-2.5"} text-[12px] text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] ${level === "critical" ? "animate-pulse" : ""}`}
+        style={{
+          boxShadow: open ? `0 0 16px -2px rgba(${rgb},0.4)` : undefined,
+          borderColor: open ? `rgba(${rgb},0.55)` : undefined,
+        }}
+        className={`focus-ring flex items-center gap-2 rounded-full border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-2)] ${
+          compact ? "h-8 w-8 justify-center" : "h-8 px-2.5"
+        } text-[11.5px] text-[var(--dsw-alias-label-secondary)] transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] ${
+          level === "critical" ? "animate-pulse" : ""
+        }`}
         aria-label={`${power.resourceLabel} : ${text}`}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <svg width="22" height="22" viewBox="0 0 36 36" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 36 36" aria-hidden="true" className="shrink-0 transition-transform duration-300">
           <circle cx="18" cy="18" r={RADIUS} fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="3" />
           <circle
-            cx="18" cy="18" r={RADIUS} fill="none" stroke={tone} strokeWidth="3" strokeLinecap="round"
+            cx="18" cy="18" r={RADIUS} fill="none" stroke={tone} strokeWidth="3.2" strokeLinecap="round"
             strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - ratio)}
             transform="rotate(-90 18 18)" style={{ transition: "stroke-dashoffset 900ms cubic-bezier(.2,0,0,1)" }}
           />
         </svg>
-        {!compact && <span className="tabular-nums">{Math.round(power.balance).toLocaleString("fr-FR")}</span>}
+        {!compact && (
+          <span className="tabular-nums font-medium tracking-tight">
+            {Math.round(power.balance).toLocaleString("fr-FR")}{" "}
+            <span className="text-[10.5px] font-normal text-[var(--dsw-alias-label-tertiary)]">{power.resourceLabel}</span>
+          </span>
+        )}
       </button>
 
+      {/* Tooltip Orbe Magique avec animation et respiration */}
       <div
         role="status"
-        style={{ boxShadow: `0 18px 48px -18px rgba(${rgb},0.45)` }}
-        className={`pointer-events-none absolute bottom-full left-0 z-40 mb-2 w-[236px] origin-bottom-left rounded-2xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-1)] p-4 transition duration-200 ${open ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+        style={{ boxShadow: `0 18px 48px -18px rgba(${rgb},0.5)` }}
+        className={`pointer-events-none absolute bottom-full left-0 z-40 mb-2 w-[236px] origin-bottom-left rounded-2xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-1)] p-4 transition-all duration-200 ${
+          open ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 translate-y-1"
+        }`}
       >
         <div className="flex items-center gap-3">
-          <svg width="54" height="54" viewBox="0 0 54 54" aria-hidden="true">
+          <svg width="50" height="50" viewBox="0 0 54 54" aria-hidden="true" className="shrink-0">
             <defs>
               <radialGradient id={`orb-${gid}`} cx="35%" cy="30%" r="75%">
                 <stop offset="0%" stopColor="#fff" stopOpacity="0.95" />
@@ -100,16 +116,20 @@ export const CreditsPill: React.FC<{ compact?: boolean }> = ({ compact }) => {
             <ellipse cx="20" cy="17" rx="8" ry="4.5" fill="#fff" opacity="0.55" transform="rotate(-25 20 17)" />
           </svg>
           <div className="min-w-0">
-            <div className="text-[11px] uppercase tracking-wide text-[var(--dsw-alias-label-tertiary)]">{power.resourceLabel}</div>
-            <div className="text-[20px] font-semibold leading-tight tabular-nums text-[var(--dsw-alias-label-primary)]">
+            <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--dsw-alias-label-tertiary)]">
+              {power.resourceLabel}
+            </div>
+            <div className="text-[18px] font-semibold leading-tight tabular-nums text-[var(--dsw-alias-label-primary)]">
               {Math.round(power.balance).toLocaleString("fr-FR")}
             </div>
-            <div className="text-[11px] text-[var(--dsw-alias-label-tertiary)]">sur {Math.round(power.walletCap).toLocaleString("fr-FR")}</div>
+            <div className="text-[10.5px] text-[var(--dsw-alias-label-tertiary)]">
+              sur {Math.round(power.walletCap).toLocaleString("fr-FR")} max
+            </div>
           </div>
         </div>
         {level !== "ok" && (
-          <p className="mt-3 text-[12px] leading-snug text-[var(--dsw-alias-label-secondary)]">
-            {level === "critical" ? "Presque épuisé." : "Il en reste peu."}
+          <p className="mt-2.5 text-[11px] leading-snug text-[var(--dsw-alias-label-secondary)] border-t border-[var(--dsw-alias-border-l1)]/60 pt-2">
+            {level === "critical" ? "Réserve presque épuisée." : "Niveau bas."}
           </p>
         )}
       </div>

@@ -1,7 +1,6 @@
 import {
   Download,
   LayoutGrid,
-  MessageSquare,
   MoreHorizontal,
   PanelLeft,
   PanelLeftClose,
@@ -137,6 +136,7 @@ export const Sidebar: React.FC = () => {
   const renderConversation = (
     conversation: (typeof spaceConversations)[number],
   ) => {
+    if (collapsed) return null;
     const isActive = activeConversation?.id === conversation.id && activePage === "chat";
     const menuOpen = openActionsId === conversation.id;
 
@@ -154,23 +154,17 @@ export const Sidebar: React.FC = () => {
     return (
       <div className="relative group/item" key={conversation.id}>
         <div
-          className={`flex items-center transition-all duration-150 rounded-lg ${
+          className={`flex items-center transition-all duration-150 rounded-lg h-8 w-full gap-2 px-2.5 ${
             isActive
               ? "bg-[var(--idealy-teal-bg)]/40 text-[var(--idealy-teal-petrol)] font-medium"
               : "text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"
-          } ${
-            collapsed
-              ? "mx-auto h-8 w-8 justify-center"
-              : "h-8 w-full gap-2 px-2"
           }`}
           data-active={isActive}
         >
-          {/* Main Select Button */}
+          {/* Main Select Button - Clean text title without message icon */}
           <button
             aria-current={isActive ? "true" : undefined}
-            className={`flex flex-1 items-center gap-2 min-w-0 text-left focus-ring rounded-md ${
-              collapsed ? "h-full w-full justify-center" : "h-full"
-            }`}
+            className="flex flex-1 items-center min-w-0 text-left focus-ring rounded-md h-full"
             onClick={() => {
               setActiveConversationId(conversation.id);
               setActivePage("chat");
@@ -178,83 +172,72 @@ export const Sidebar: React.FC = () => {
             title={conversation.title}
             type="button"
           >
-            <MessageSquare
-              className={`h-3.5 w-3.5 shrink-0 ${
-                isActive
-                  ? "text-[var(--idealy-teal-petrol)]"
-                  : "text-[var(--dsw-alias-label-tertiary)] group-hover/item:text-[var(--dsw-alias-label-primary)]"
-              }`}
-            />
-            {!collapsed && (
-              <span className="truncate text-xs tracking-tight">
-                {conversation.title}
-              </span>
-            )}
+            <span className="truncate text-xs tracking-tight">
+              {conversation.title}
+            </span>
           </button>
 
           {/* Options button on hover (Only when expanded) */}
-          {!collapsed && (
-            <div className="relative shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
-              <button
-                aria-expanded={menuOpen}
-                aria-haspopup="menu"
-                aria-label={`Options pour ${conversation.title}`}
-                className="grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:bg-[var(--dsw-alias-bg-layer-3)] hover:text-[var(--dsw-alias-label-primary)] transition-colors focus-ring"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenActionsId(menuOpen ? null : conversation.id);
-                }}
-                ref={menuOpen ? actionsTriggerRef : undefined}
-                type="button"
-              >
-                <MoreHorizontal className="h-3.5 w-3.5" />
-              </button>
+          <div className="relative shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+            <button
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              aria-label={`Options pour ${conversation.title}`}
+              className="grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:bg-[var(--dsw-alias-bg-layer-3)] hover:text-[var(--dsw-alias-label-primary)] transition-colors focus-ring"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenActionsId(menuOpen ? null : conversation.id);
+              }}
+              ref={menuOpen ? actionsTriggerRef : undefined}
+              type="button"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
 
-              {menuOpen && (
-                <div
-                  aria-label="Options de la discussion"
-                  className="absolute right-0 top-7 z-50 w-44 rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1 shadow-lg animate-fade-in"
-                  ref={actionsRef}
-                  role="menu"
+            {menuOpen && (
+              <div
+                aria-label="Options de la discussion"
+                className="absolute right-0 top-7 z-50 w-44 rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1 shadow-lg animate-fade-in"
+                ref={actionsRef}
+                role="menu"
+              >
+                <button
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                  onClick={() => {
+                    setOpenActionsId(null);
+                    togglePinConversation(conversation.id);
+                  }}
+                  role="menuitem"
+                  type="button"
                 >
-                  <button
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
-                    onClick={() => {
-                      setOpenActionsId(null);
-                      togglePinConversation(conversation.id);
-                    }}
-                    role="menuitem"
-                    type="button"
-                  >
-                    <Pin className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
-                    <span>{conversation.isPinned ? "Désépingler" : "Épingler"}</span>
-                  </button>
-                  <button
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
-                    onClick={() => {
-                      setOpenActionsId(null);
-                      exportConversation(conversation.id);
-                    }}
-                    role="menuitem"
-                    type="button"
-                  >
-                    <Download className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
-                    <span>Exporter (JSON)</span>
-                  </button>
-                  <div className="my-1 border-t border-[var(--dsw-alias-border-l1)]" />
-                  <button
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-rose-500 hover:bg-rose-500/10 transition-colors"
-                    onClick={deleteThisConversation}
-                    role="menuitem"
-                    type="button"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Supprimer</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                  <Pin className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
+                  <span>{conversation.isPinned ? "Désépingler" : "Épingler"}</span>
+                </button>
+                <button
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                  onClick={() => {
+                    setOpenActionsId(null);
+                    exportConversation(conversation.id);
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  <Download className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
+                  <span>Exporter (JSON)</span>
+                </button>
+                <div className="my-1 border-t border-[var(--dsw-alias-border-l1)]" />
+                <button
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-rose-500 hover:bg-rose-500/10 transition-colors"
+                  onClick={deleteThisConversation}
+                  role="menuitem"
+                  type="button"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Supprimer</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -264,14 +247,12 @@ export const Sidebar: React.FC = () => {
     label: string,
     items: typeof spaceConversations,
   ) => {
-    if (items.length === 0) return null;
+    if (collapsed || items.length === 0) return null;
     return (
       <section className="mb-2.5">
-        {!collapsed && (
-          <h3 className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--dsw-alias-label-caption)]">
-            {label}
-          </h3>
-        )}
+        <h3 className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--dsw-alias-label-caption)]">
+          {label}
+        </h3>
         <div className="space-y-0.5" role="list">
           {items.map((conv) => renderConversation(conv))}
         </div>
@@ -396,29 +377,33 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* ─── 4. CHRONOLOGICAL DISCUSSION HISTORY ──────────────────────────── */}
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1.5 pb-2 mt-1 idealy-scroll">
-        {renderSection("Épinglés", groupedConversations.pinned)}
-        {renderSection("Aujourd'hui", groupedConversations.today)}
-        {renderSection("Hier", groupedConversations.yesterday)}
-        {renderSection("7 derniers jours", groupedConversations.lastWeek)}
-        {renderSection("Plus ancien", groupedConversations.older)}
+      {/* ─── 4. CHRONOLOGICAL DISCUSSION HISTORY (Caché si replié) ───────── */}
+      {!collapsed ? (
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1.5 pb-2 mt-1 idealy-scroll">
+          {renderSection("Épinglés", groupedConversations.pinned)}
+          {renderSection("Aujourd'hui", groupedConversations.today)}
+          {renderSection("Hier", groupedConversations.yesterday)}
+          {renderSection("7 derniers jours", groupedConversations.lastWeek)}
+          {renderSection("Plus ancien", groupedConversations.older)}
 
-        {/* Empty state when no chats */}
-        {spaceConversations.length === 0 && !collapsed && (
-          <div className="px-2 py-6 text-center text-xs text-[var(--dsw-alias-label-tertiary)]">
-            <p className="font-medium">Aucune discussion</p>
-          </div>
-        )}
-      </div>
+          {/* Empty state when no chats */}
+          {spaceConversations.length === 0 && (
+            <div className="px-2 py-6 text-center text-xs text-[var(--dsw-alias-label-tertiary)]">
+              <p className="font-medium">Aucune discussion</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0" />
+      )}
 
-      {/* ─── 5. FOOTER (UTILISATEUR, CRÉDITS & PARAMÈTRES) ─────────────────── */}
-      <div className={`shrink-0 px-2 pb-1.5 ${collapsed ? "flex justify-center" : ""}`}>
+      {/* ─── 5. FOOTER AVEC RESPIRATION POUR LE QUOTA / MANA ───────────────── */}
+      <div className={`shrink-0 pt-2.5 pb-2 border-t border-[var(--dsw-alias-border-l1)]/60 ${collapsed ? "px-1.5 flex justify-center" : "px-2.5"}`}>
         <CreditsPill compact={collapsed} />
       </div>
 
       <div
-        className={`sidebar-footer shrink-0 flex border-t border-[var(--dsw-alias-border-l1)] ${
+        className={`sidebar-footer shrink-0 flex border-t border-[var(--dsw-alias-border-l1)]/60 ${
           collapsed
             ? "flex-col items-center gap-1.5 py-2"
             : "items-center justify-between h-12 px-2.5"
