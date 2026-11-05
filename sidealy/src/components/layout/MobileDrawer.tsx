@@ -347,7 +347,7 @@ export const MobileDrawer: React.FC = () => {
             type="button"
           >
             <Search aria-hidden="true" className="h-4 w-4" />
-            <span>Palette de commandes</span>
+            <span>Rechercher</span>
           </button>
         </div>
 

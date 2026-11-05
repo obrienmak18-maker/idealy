@@ -1,7 +1,8 @@
 import {
   Download,
   LayoutGrid,
-  MessageSquare,
+  Pencil,
+  Search,
   MoreHorizontal,
   PanelLeft,
   PanelLeftClose,
@@ -33,6 +34,8 @@ export const Sidebar: React.FC = () => {
     exportConversation,
     deleteConversation,
     openConfirmModal,
+    renameConversation,
+    setIsCommandPaletteOpen,
   } = useApp();
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -142,6 +145,9 @@ export const Sidebar: React.FC = () => {
     },
   ] as const;
 
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
   const renderConversation = (
     conversation: (typeof spaceConversations)[number],
   ) => {
@@ -173,7 +179,23 @@ export const Sidebar: React.FC = () => {
           }`}
           data-active={isActive}
         >
-          {/* Main Select Button */}
+          {renamingId === conversation.id ? (
+            <input
+              autoFocus
+              className="h-7 min-w-0 flex-1 rounded-lg border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-1)] px-2 text-[12.5px] text-[var(--dsw-alias-label-primary)] outline-none"
+              onBlur={() => {
+                const next = renameValue.trim();
+                if (next && next !== conversation.title) renameConversation(conversation.id, next);
+                setRenamingId(null);
+              }}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                if (e.key === "Escape") setRenamingId(null);
+              }}
+              value={renameValue}
+            />
+          ) : (
           <button
             aria-current={isActive ? "true" : undefined}
             className={`flex flex-1 items-center gap-2 min-w-0 text-left focus-ring rounded-lg ${
@@ -186,20 +208,13 @@ export const Sidebar: React.FC = () => {
             title={conversation.title}
             type="button"
           >
-            <MessageSquare
-              className={`h-4 w-4 shrink-0 transition-all duration-200 ${
-                isActive
-                  ? "text-[var(--idealy-teal-petrol)] scale-110"
-                  : "text-[var(--dsw-alias-label-tertiary)] group-hover/item:text-[var(--dsw-alias-label-primary)]"
-              }`}
-              strokeWidth={1.8}
-            />
             {!collapsed && (
-              <span className="truncate text-[12.5px] font-normal tracking-tight">
+              <span className="truncate text-[13px] font-normal tracking-tight">
                 {conversation.title}
               </span>
             )}
           </button>
+          )}
 
           {/* Options button on hover (Only when expanded) */}
           {!collapsed && (
@@ -242,6 +257,19 @@ export const Sidebar: React.FC = () => {
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
                     onClick={() => {
                       setOpenActionsId(null);
+                      setRenameValue(conversation.title);
+                      setRenamingId(conversation.id);
+                    }}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
+                    <span>Renommer</span>
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                    onClick={() => {
+                      setOpenActionsId(null);
                       exportConversation(conversation.id);
                     }}
                     role="menuitem"
@@ -273,7 +301,7 @@ export const Sidebar: React.FC = () => {
     label: string,
     items: typeof spaceConversations,
   ) => {
-    if (items.length === 0) return null;
+    if (items.length === 0 || collapsed) return null;
     return (
       <section className="mb-3">
         {!collapsed && (
@@ -297,34 +325,48 @@ export const Sidebar: React.FC = () => {
       id="desktop-sidebar-navigation"
       role="navigation"
     >
-      {/* ─── 1. HEADER (LOGO & COLLAPSE) ─────────────────────────────────── */}
+      {/* ─── 1. HEADER : logo ; replié, le logo devient le bouton d'agrandir au survol ─── */}
       <div
         className={`flex h-[56px] shrink-0 items-center ${
           collapsed ? "justify-center px-0" : "justify-between px-3.5"
         }`}
       >
-        <div
-          className="flex items-center gap-2.5 overflow-hidden cursor-pointer group"
-          onClick={() => setActivePage("chat")}
-        >
-          <IdealyLogo animated compact={collapsed} size={collapsed ? 28 : 30} />
-        </div>
-
-        <button
-          aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"}
-          className={`grid place-items-center rounded-xl text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] active:scale-90 transition-all duration-200 ease-spring focus-ring ${
-            collapsed ? "h-9 w-9" : "h-8 w-8"
-          }`}
-          onClick={() => setCollapsed((v) => !v)}
-          title={collapsed ? "Agrandir" : "Réduire"}
-          type="button"
-        >
-          {collapsed ? (
-            <PanelLeft className="h-4 w-4" strokeWidth={2} />
-          ) : (
-            <PanelLeftClose className="h-4 w-4" strokeWidth={2} />
-          )}
-        </button>
+        {collapsed ? (
+          <button
+            aria-label="Agrandir le menu"
+            className="group relative grid h-10 w-10 place-items-center rounded-xl focus-ring"
+            onClick={() => setCollapsed(false)}
+            title="Agrandir le menu"
+            type="button"
+          >
+            <span className="transition-opacity duration-150 group-hover:opacity-0 group-focus-visible:opacity-0">
+              <IdealyLogo animated compact size={28} />
+            </span>
+            <span className="absolute inset-0 grid place-items-center rounded-xl bg-[var(--dsw-alias-interactive-bg-hover)] text-[var(--dsw-alias-label-primary)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
+              <PanelLeft className="h-[18px] w-[18px]" strokeWidth={1.8} />
+            </span>
+          </button>
+        ) : (
+          <>
+            <button
+              aria-label="Idealy, retour à l'accueil de l'espace"
+              className="flex items-center overflow-hidden rounded-lg focus-ring"
+              onClick={() => setActivePage("chat")}
+              type="button"
+            >
+              <IdealyLogo animated size={30} />
+            </button>
+            <button
+              aria-label="Réduire le menu"
+              className="grid h-8 w-8 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] focus-ring"
+              onClick={() => setCollapsed(true)}
+              title="Réduire le menu"
+              type="button"
+            >
+              <PanelLeftClose className="h-4 w-4" strokeWidth={1.8} />
+            </button>
+          </>
+        )}
       </div>
 
       {/* ─── 2. PRIMARY CTA (NOUVELLE DISCUSSION) ─────────────────────────── */}
@@ -366,6 +408,15 @@ export const Sidebar: React.FC = () => {
 
       {/* ─── 3. NAVIGATION PILLARS ───────────────────────────────────────── */}
       <nav aria-label="Sections principales" className="shrink-0 px-2.5 py-1.5 space-y-0.5">
+        <button
+          className={`flex h-10 w-full items-center rounded-xl text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] focus-ring ${collapsed ? "mx-auto w-10 justify-center" : "gap-2.5 px-2.5"}`}
+          onClick={() => setIsCommandPaletteOpen(true)}
+          title="Rechercher"
+          type="button"
+        >
+          <Search className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
+          {!collapsed && <span className="text-[13px]">Rechercher</span>}
+        </button>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activePage === item.key;
@@ -392,7 +443,7 @@ export const Sidebar: React.FC = () => {
               />
               {!collapsed && (
                 <div className="flex flex-1 items-center justify-between min-w-0">
-                  <span className="text-[12.5px] truncate">{item.label}</span>
+                  <span className="text-[13px] truncate">{item.label}</span>
                   {item.badge && (
                     <span className={`idealy-badge ${item.badgeClass}`}>
                       {item.badge}
@@ -416,9 +467,6 @@ export const Sidebar: React.FC = () => {
         {/* Empty state when no chats */}
         {spaceConversations.length === 0 && !collapsed && (
           <div className="px-3 py-8 text-center text-xs text-[var(--dsw-alias-label-tertiary)]">
-            <div className="mb-2 mx-auto h-10 w-10 rounded-xl bg-[var(--dsw-alias-interactive-bg-hover)] grid place-items-center">
-              <MessageSquare className="h-4 w-4 text-[var(--dsw-alias-label-caption)]" />
-            </div>
             <p className="font-medium">Aucune discussion</p>
             <p className="mt-1 text-[10.5px] text-[var(--dsw-alias-label-caption)]">
               Cliquez sur « Nouvelle discussion » pour commencer.
