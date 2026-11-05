@@ -18,6 +18,25 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Sidealy (interface publique) : fichiers statiques et pages gérées côté client.
+  // Le portail de connexion est appliqué par Sidealy (401 de l'API → Welcome).
+  if (
+    pathname.startsWith("/sidealy/") ||
+    pathname.startsWith("/images/") ||
+    [
+      "/pricing",
+      "/onboarding",
+      "/auth/action",
+      "/settings",
+      "/connectors",
+      "/library",
+      "/agents",
+      "/plugins",
+    ].some((page) => pathname === page || pathname.startsWith(`${page}/`))
+  ) {
+    return NextResponse.next();
+  }
+
   const token = await getSafeToken(request);
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
