@@ -52,8 +52,11 @@ export const RunStage: React.FC<RunStageProps> = ({
           className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-[var(--dsw-alias-bg-layer-2)]/60 border border-[var(--dsw-alias-border-l3)]/80 text-xs"
         >
           <div className="flex items-center gap-2">
-            <span className="font-medium text-[var(--dsw-alias-label-primary)]">
+            <span className="font-semibold text-[var(--dsw-alias-label-primary)]">
               Run à {participants.length}
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary font-mono text-[11px] font-semibold border border-brand-primary/20">
+              Étape {activeAgentId ? Math.max(1, run.turns.findIndex((t) => t.agentId === activeAgentId) + 1) : run.turns.length} sur {run.turns.length}
             </span>
             <span className="text-[var(--dsw-alias-label-tertiary)] hidden sm:inline">
               · {run.reason}

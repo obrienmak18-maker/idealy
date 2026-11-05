@@ -19,6 +19,26 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     >
+    <script>
+      (function() {
+        var saved, theme, prefersDark, isDark;
+        try {
+          saved = localStorage.getItem("idealy_theme_v1");
+          theme = saved ? JSON.parse(saved) : "dark";
+          prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          isDark = theme === "dark" || (theme === "system" ? prefersDark : false) || !theme;
+          if (isDark) {
+            document.documentElement.classList.add("dark");
+            document.documentElement.style.colorScheme = "dark";
+          } else {
+            document.documentElement.classList.remove("dark");
+            document.documentElement.style.colorScheme = "light";
+          }
+        } catch (e) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
   </head>
   <body
     class="h-full bg-bg-base text-text-main antialiased selection:bg-brand-primary selection:text-brand-onPrimary"

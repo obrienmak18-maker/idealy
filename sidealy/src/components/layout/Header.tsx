@@ -1,4 +1,4 @@
-import { Menu, SquarePen, Sparkles } from "lucide-react";
+import { Menu, SquarePen } from "lucide-react";
 import type React from "react";
 import { useApp } from "../../context/AppContext";
 
@@ -11,8 +11,8 @@ export const Header: React.FC = () => {
     <header
       className={`relative z-10 flex shrink-0 items-center justify-between px-3 md:px-5 transition-all duration-300 ${
         hasMessages
-          ? "h-12 border-b border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-base)]/80 backdrop-blur-md"
-          : "h-12 bg-transparent"
+          ? "h-11 border-b border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-base)]/80 backdrop-blur-md"
+          : "h-11 bg-transparent"
       }`}
       data-window-drag
     >
@@ -36,7 +36,7 @@ export const Header: React.FC = () => {
       </div>
 
       {!hasMessages && (
-        <span className="absolute left-1/2 -translate-x-1/2 text-[15px] font-medium tracking-tight text-[var(--dsw-alias-label-primary)] md:hidden">
+        <span className="absolute left-1/2 -translate-x-1/2 text-[13px] font-medium tracking-tight text-[var(--dsw-alias-label-primary)] md:hidden">
           Idealy
         </span>
       )}
@@ -49,15 +49,6 @@ export const Header: React.FC = () => {
       >
         <SquarePen aria-hidden="true" className="h-4.5 w-4.5" />
       </button>
-
-      {hasMessages && (
-        <div className="hidden items-center gap-2 md:flex">
-          <span className="idealy-badge idealy-badge--teal">
-            <Sparkles className="h-2.5 w-2.5" />
-            Escouade Active
-          </span>
-        </div>
-      )}
     </header>
   );
 };

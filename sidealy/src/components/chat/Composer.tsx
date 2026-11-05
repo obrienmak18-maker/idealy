@@ -38,21 +38,19 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
     draft, setDraft, sendMessage, stopGeneration, generationStatus,
     deepThink, setDeepThink, webSearch, setWebSearch, setActivePage,
   } = useApp();
-  const [modelMode, setModelMode] = useState<"auto" | "fast" | "deep">(() => {
+  const [modelMode, setModelMode] = useState<"auto" | "discuter" | "construire">(() => {
     try {
       const v = window.localStorage.getItem("idealy.model.mode");
-      return v === "fast" || v === "deep" ? v : "auto";
+      return v === "discuter" || v === "construire" ? v : "auto";
     } catch {
       return "auto";
     }
   });
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const chooseModel = (mode: "auto" | "fast" | "deep") => {
+  const chooseModel = (mode: "auto" | "discuter" | "construire") => {
     setModelMode(mode);
     setModelMenuOpen(false);
-    if (mode === "fast") setDeepThink(false);
-    if (mode === "deep") setDeepThink(true);
     try {
       window.localStorage.setItem("idealy.model.mode", mode);
     } catch {
@@ -581,28 +579,28 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
               <button
                 aria-expanded={modelMenuOpen}
                 aria-haspopup="menu"
-                aria-label="Choisir le mode du modèle"
-                className="flex h-9 items-center gap-1 rounded-full px-2.5 text-[13px] text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] focus-ring"
+                aria-label="Choisir le mode d'action"
+                className="flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] border border-border-subtle/60 focus-ring"
                 onClick={() => setModelMenuOpen((o) => !o)}
                 type="button"
               >
-                {modelMode === "fast" ? "Rapide" : modelMode === "deep" ? "Approfondi" : "Auto"}
-                <ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />
+                {modelMode === "discuter" ? "Discuter" : modelMode === "construire" ? "Construire" : "Auto"}
+                <ChevronDown aria-hidden="true" className="h-3 w-3" />
               </button>
               {modelMenuOpen && (
                 <div
-                  className="absolute bottom-[calc(100%+8px)] right-0 z-50 w-[220px] rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.32)]"
+                  className="absolute bottom-[calc(100%+8px)] right-0 z-50 w-[240px] rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.32)]"
                   role="menu"
                 >
                   {([
-                    ["auto", "Auto", "Idealy choisit selon la demande"],
-                    ["fast", "Rapide", "Réponses immédiates"],
-                    ["deep", "Approfondi", "Raisonne plus longtemps"],
+                    ["auto", "Auto", "Détection intelligente (discute ou construit)"],
+                    ["discuter", "Discuter", "Échange & analyse sans lancer de build"],
+                    ["construire", "Construire", "Génère du code et crée l'application"],
                   ] as const).map(([key, label, hint]) => (
                     <button className="composer-add-row" key={key} onClick={() => chooseModel(key)} role="menuitemradio" aria-checked={modelMode === key} type="button">
                       <span className="flex flex-1 flex-col text-left">
-                        <span>{label}</span>
-                        <span className="text-[11.5px] text-[var(--dsw-alias-label-tertiary)]">{hint}</span>
+                        <span className="text-xs font-semibold">{label}</span>
+                        <span className="text-[11px] text-[var(--dsw-alias-label-tertiary)]">{hint}</span>
                       </span>
                       {modelMode === key && <Check aria-hidden="true" className="h-4 w-4 text-[var(--idealy-teal-petrol)]" />}
                     </button>

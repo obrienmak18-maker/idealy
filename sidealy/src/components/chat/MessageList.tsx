@@ -1,8 +1,23 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { MessageItem } from './MessageItem';
-import { ArrowDown, Braces, FileText, History, Layers2, Wand2 } from 'lucide-react';
+import { ArrowDown, History, Layers2, Sparkles, X } from 'lucide-react';
 import { Composer } from './Composer';
+
+const GREETINGS = [
+  { prefix: "Ravi de vous revoir.", highlight: "Prêt quand vous l'êtes." },
+  { prefix: "Par quoi", highlight: "voulez-vous commencer ?" },
+  { prefix: "Qu'avez-vous", highlight: "en tête aujourd'hui ?" },
+  { prefix: "Vos agents sont prêts.", highlight: "Que créons-nous ?" },
+  { prefix: "Donnons vie à vos idées,", highlight: "ligne par ligne." },
+];
+
+const APP_IDEAS = [
+  { title: "Dashboard SaaS Temps Réel", prompt: "Crée un dashboard SaaS analytique moderne avec graphiques en temps réel, cartes KPI et filtres dynamiques." },
+  { title: "Calculatrice IA & Synthétiseur Web Audio", prompt: "Crée une calculatrice scientifique complète en HTML/CSS/JS avec un parseur d'expression AST et du son via Web Audio API." },
+  { title: "Générateur de Composants React + Tailwind", prompt: "Conçois une application web de prévisualisation et génération de composants UI React modernes avec Tailwind CSS." },
+  { title: "Tableau Kanban Collaboratif", prompt: "Construis une application de gestion de tâches Kanban avec colonnes glisser-déposer, tags et stockage local." },
+];
 
 export const MessageList: React.FC = () => {
   const { activeMessages, generationStatus, setDraft, conversations, setActiveConversationId } = useApp();
@@ -10,6 +25,21 @@ export const MessageList: React.FC = () => {
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const isAutoScrollEnabled = useRef(true);
+
+  const [activePanel, setActivePanel] = useState<"none" | "ideas" | "recent">("none");
+
+  // Pick a random greeting on first render or based on current session
+  const greeting = useMemo(() => {
+    const idx = Math.floor(Math.random() * GREETINGS.length);
+    return GREETINGS[idx];
+  }, []);
+
+  // Real recent projects from conversations
+  const recentProjects = useMemo(() => {
+    return conversations
+      .filter((c) => c.title && c.title !== "Nouvelle conversation")
+      .slice(0, 4);
+  }, [conversations]);
 
   // Monitor user scroll position to engage or disengage auto-scroll
   const handleScroll = useCallback(() => {
@@ -26,7 +56,6 @@ export const MessageList: React.FC = () => {
     }
   }, []);
 
-  // Keep streaming updates immediate; repeated smooth scrolls fight each token.
   useEffect(() => {
     if (activeMessages.length === 0) {
       isAutoScrollEnabled.current = true;
@@ -36,6 +65,7 @@ export const MessageList: React.FC = () => {
       }
       return;
     }
+
     if (isAutoScrollEnabled.current && bottomAnchorRef.current) {
       bottomAnchorRef.current.scrollIntoView({
         behavior: generationStatus === "receiving" ? "auto" : "smooth",
@@ -50,35 +80,15 @@ export const MessageList: React.FC = () => {
     bottomAnchorRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const chooseStarter = (starter: string) => {
-    if (!starter) {
-      const recent = conversations.find((c) => c.id && (c as { messageCount?: number }).messageCount !== 0);
-      if (recent) setActiveConversationId(recent.id);
-      return;
-    }
-    setDraft(starter);
+  const applyPrompt = (text: string) => {
+    setDraft(text);
+    setActivePanel("none");
     window.requestAnimationFrame(() => {
       const input = document.querySelector<HTMLTextAreaElement>('[data-composer-input]');
       input?.focus();
-      input?.setSelectionRange(starter.length, starter.length);
+      input?.setSelectionRange(text.length, text.length);
     });
   };
-
-  const starters = [
-    { icon: Layers2, title: 'Créer une application', prompt: 'Je veux créer une application qui ' },
-    { icon: History, title: 'Reprendre un projet récent', prompt: '' },
-  ] as const;
-
-  const mobileStarters = [
-    { icon: Layers2, title: 'Créer une application', prompt: 'Je veux créer une application qui ' },
-    { icon: Braces, title: 'Explorer du code', prompt: 'Aide-moi à comprendre ou améliorer ce code : ' },
-    { icon: Wand2, title: 'Générer du contenu', prompt: 'Génère-moi ' },
-    { icon: FileText, title: 'Préparer un plan', prompt: 'Aide-moi à préparer un plan pour ' },
-    { icon: History, title: 'Reprendre un projet', prompt: '' },
-  ] as const;
-
-  const hour = new Date().getHours();
-  const greeting: [string, string] = [hour < 5 || hour >= 18 ? 'Bonsoir. Que' : 'Bonjour. Que', 'construisons-nous ?'];
 
   return (
     <div
@@ -91,63 +101,137 @@ export const MessageList: React.FC = () => {
       aria-relevant="additions"
       role="log"
     >
-      <div className="mx-auto flex min-h-full w-full max-w-[900px] flex-col space-y-4">
+      <div className="mx-auto flex min-h-full w-full max-w-[840px] flex-col space-y-4">
         {activeMessages.length === 0 ? (
-          <div className="idealy-home relative mx-auto flex min-h-full flex-1 w-full max-w-[760px] flex-col justify-end px-3 pb-2 pt-2 sm:justify-center sm:px-8 sm:pb-16 sm:pt-8">
-            <div className="idealy-gradient-mesh" aria-hidden="true" />
-            <div className="animate-fade-up flex flex-1 items-center justify-center pb-6 text-center sm:mb-8 sm:flex-none sm:pb-0">
-              <h1 className="max-w-[16ch] text-[27px] font-medium leading-[1.2] tracking-[-0.02em] text-text-main sm:max-w-none sm:text-[36px]">
-                {greeting[0]}{' '}
-                <span
-                  className="bg-gradient-to-r from-[var(--idealy-teal-petrol)] via-[var(--idealy-indigo)] to-[rgb(167,139,250)] bg-clip-text text-transparent"
-                  style={{ backgroundSize: '200% auto', animation: 'gradientShift 6s ease-in-out infinite' }}
-                >
-                  {greeting[1]}
+          <div className="idealy-home relative mx-auto flex min-h-full flex-1 w-full max-w-[720px] flex-col justify-center px-3 pb-8 pt-6 sm:px-6 sm:pb-12">
+            
+            {/* Header Greeting (Harmonisé & compact, style Gemini / DeepSeek) */}
+            <div className="animate-fade-up text-center mb-6">
+              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-text-main">
+                {greeting.prefix}{' '}
+                <span className="bg-gradient-to-r from-[var(--idealy-teal-petrol)] via-[var(--idealy-indigo)] to-[rgb(167,139,250)] bg-clip-text text-transparent">
+                  {greeting.highlight}
                 </span>
               </h1>
             </div>
 
-            {/* Mobile: suggestions défilent horizontalement au-dessus du champ */}
-            <div
-              className="-mx-3 mb-2.5 flex snap-x gap-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
-              aria-label="Suggestions de départ"
-            >
-              {mobileStarters.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <button
-                    key={s.title}
-                    type="button"
-                    onClick={() => chooseStarter(s.prompt)}
-                    className="focus-ring flex shrink-0 snap-start items-center gap-2 rounded-full border border-[var(--dsw-alias-border-l1)] px-3.5 py-2 text-[13.5px] text-[var(--dsw-alias-label-primary)] active:scale-[0.98]"
-                  >
-                    <Icon className="h-4 w-4 text-[var(--idealy-teal-petrol)]" aria-hidden="true" />
-                    {s.title}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="animate-fade-up-delay">
+            {/* Prompt Composer (Adapté et proportionné) */}
+            <div className="animate-fade-up-delay mb-4">
               <Composer placement="home" />
             </div>
 
-            <div className="mt-5 hidden flex-wrap items-center justify-center gap-2 animate-fade-up-delay-2 sm:flex" aria-label="Suggestions de départ">
-              {starters.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <button
-                    key={s.title}
-                    type="button"
-                    onClick={() => chooseStarter(s.prompt)}
-                    className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--dsw-alias-border-l1)] px-3.5 py-2 text-[13px] text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"
-                  >
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                    {s.title}
-                  </button>
-                );
-              })}
+            {/* Action Buttons : Créer une application vs Reprendre un projet */}
+            <div className="flex flex-wrap items-center justify-center gap-2 animate-fade-up-delay-2" aria-label="Actions de départ">
+              <button
+                type="button"
+                onClick={() => setActivePanel((curr) => curr === "ideas" ? "none" : "ideas")}
+                className={`focus-ring inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  activePanel === "ideas"
+                    ? "border-[var(--idealy-teal-petrol)] bg-[var(--idealy-teal-bg)]/30 text-[var(--idealy-teal-petrol)]"
+                    : "border-[var(--dsw-alias-border-l1)] text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"
+                }`}
+              >
+                <Layers2 className="h-3.5 w-3.5 text-[var(--idealy-teal-petrol)]" aria-hidden="true" />
+                <span>Créer une application</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActivePanel((curr) => curr === "recent" ? "none" : "recent")}
+                className={`focus-ring inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  activePanel === "recent"
+                    ? "border-[var(--idealy-indigo)] bg-[var(--idealy-indigo)]/10 text-[var(--idealy-indigo)]"
+                    : "border-[var(--dsw-alias-border-l1)] text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)]"
+                }`}
+              >
+                <History className="h-3.5 w-3.5 text-[var(--idealy-indigo)]" aria-hidden="true" />
+                <span>Reprendre un projet</span>
+              </button>
             </div>
+
+            {/* Panel Déplié : Idées d'applications (Quand "Créer une application" est cliqué) */}
+            {activePanel === "ideas" && (
+              <div className="mt-4 p-3.5 rounded-2xl bg-[var(--dsw-alias-bg-layer-2)] border border-[var(--dsw-alias-border-l2)] shadow-sm animate-fade-in">
+                <div className="flex items-center justify-between mb-2.5 px-1">
+                  <span className="text-xs font-semibold text-[var(--dsw-alias-label-primary)] flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-[var(--idealy-teal-petrol)]" />
+                    Idées d'applications prêtes à concevoir
+                  </span>
+                  <button
+                    onClick={() => setActivePanel("none")}
+                    className="text-text-muted hover:text-text-main p-1 rounded-md"
+                    type="button"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {APP_IDEAS.map((idea) => (
+                    <button
+                      key={idea.title}
+                      onClick={() => applyPrompt(idea.prompt)}
+                      className="p-2.5 text-left rounded-xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-base)] hover:border-[var(--idealy-teal-petrol)]/50 hover:bg-[var(--idealy-teal-bg)]/10 transition-colors group"
+                      type="button"
+                    >
+                      <h4 className="text-xs font-semibold text-[var(--dsw-alias-label-primary)] group-hover:text-[var(--idealy-teal-petrol)] transition-colors">
+                        {idea.title}
+                      </h4>
+                      <p className="text-[11px] text-[var(--dsw-alias-label-secondary)] line-clamp-2 mt-0.5">
+                        {idea.prompt}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Panel Déplié : Projets récents (Quand "Reprendre un projet" est cliqué) */}
+            {activePanel === "recent" && (
+              <div className="mt-4 p-3.5 rounded-2xl bg-[var(--dsw-alias-bg-layer-2)] border border-[var(--dsw-alias-border-l2)] shadow-sm animate-fade-in">
+                <div className="flex items-center justify-between mb-2.5 px-1">
+                  <span className="text-xs font-semibold text-[var(--dsw-alias-label-primary)] flex items-center gap-1.5">
+                    <History className="h-3.5 w-3.5 text-[var(--idealy-indigo)]" />
+                    Vos projets & discussions récents
+                  </span>
+                  <button
+                    onClick={() => setActivePanel("none")}
+                    className="text-text-muted hover:text-text-main p-1 rounded-md"
+                    type="button"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                {recentProjects.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {recentProjects.map((proj) => (
+                      <button
+                        key={proj.id}
+                        onClick={() => {
+                          setActiveConversationId(proj.id);
+                          setActivePanel("none");
+                        }}
+                        className="p-2.5 text-left rounded-xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-base)] hover:border-[var(--idealy-indigo)]/50 hover:bg-[var(--idealy-indigo)]/10 transition-colors group"
+                        type="button"
+                      >
+                        <h4 className="text-xs font-semibold text-[var(--dsw-alias-label-primary)] group-hover:text-[var(--idealy-indigo)] transition-colors truncate">
+                          {proj.title}
+                        </h4>
+                        <span className="text-[10.5px] text-[var(--dsw-alias-label-tertiary)] mt-0.5 block">
+                          Modifié le {new Date(proj.updatedAt).toLocaleDateString("fr-FR")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-text-muted p-2 text-center">
+                    Aucun projet récent trouvé. Lancez votre première création ci-dessus !
+                  </p>
+                )}
+              </div>
+            )}
+
           </div>
         ) : (
           activeMessages.map((msg) => <MessageItem key={msg.id} message={msg} />)
@@ -163,8 +247,8 @@ export const MessageList: React.FC = () => {
           aria-label="Revenir au dernier message"
           className="fixed bottom-24 right-8 md:right-16 z-20 flex items-center gap-2 px-3.5 py-2 rounded-full idealy-glass text-text-main shadow-elevated hover:bg-bg-subtle active:scale-95 transition-all duration-200 ease-spring focus-ring text-xs font-medium"
         >
-          <ArrowDown className="w-4 h-4 text-brand-primary" />
-          <span>Dernier message</span>
+          <ArrowDown className="h-4 w-4" />
+          <span>Derniers messages</span>
         </button>
       )}
     </div>
