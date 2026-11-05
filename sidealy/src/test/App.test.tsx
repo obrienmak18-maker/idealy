@@ -51,7 +51,7 @@ describe("Idealy Application Suite", () => {
     }
   });
 
-  it("opens and closes the command palette via Ctrl+K and Escape key", async () => {
+  it("opens and closes the search via Ctrl+K and Escape key", async () => {
     render(<App />);
 
     // Open command palette via keyboard shortcut Ctrl+K
@@ -59,7 +59,7 @@ describe("Idealy Application Suite", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("dialog", { name: /Palette de commandes/i }),
+        screen.getByRole("dialog", { name: /Rechercher/i }),
       ).toBeInTheDocument();
     });
 
@@ -68,7 +68,7 @@ describe("Idealy Application Suite", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("dialog", { name: /Palette de commandes/i }),
+        screen.queryByRole("dialog", { name: /Rechercher/i }),
       ).not.toBeInTheDocument();
     });
   });
