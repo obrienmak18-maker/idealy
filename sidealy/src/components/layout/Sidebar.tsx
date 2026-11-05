@@ -286,53 +286,59 @@ export const Sidebar: React.FC = () => {
         collapsed ? "w-14" : "w-60 lg:w-64"
       }`}
     >
-      {/* ─── 1. HEADER (LOGO, SEARCH & COLLAPSE) ─────────────────────────── */}
+      {/* ─── 1. HEADER : logo ; replié, le logo devient le bouton d'agrandir au survol ─── */}
       <div
         className={`flex h-12 shrink-0 items-center ${
           collapsed ? "justify-center px-0" : "justify-between px-3"
         }`}
       >
-        <div
-          className="flex items-center gap-2 overflow-hidden cursor-pointer"
-          onClick={() => setActivePage("chat")}
-        >
-          <IdealyLogo animated compact={collapsed} size={collapsed ? 24 : 26} />
-        </div>
-
-        {!collapsed && (
-          <div className="flex items-center gap-1">
-            <button
-              aria-label="Rechercher"
-              className="grid h-7 w-7 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors focus-ring"
-              onClick={() => setIsCommandPaletteOpen(true)}
-              title="Rechercher (Ctrl+K)"
-              type="button"
-            >
-              <Search className="h-3.5 w-3.5" />
-            </button>
-
-            <button
-              aria-label="Réduire le menu"
-              className="grid h-7 w-7 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors focus-ring"
-              onClick={() => setCollapsed(true)}
-              title="Réduire"
-              type="button"
-            >
-              <PanelLeftClose className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
-
-        {collapsed && (
+        {collapsed ? (
           <button
             aria-label="Agrandir le menu"
-            className="grid h-7 w-7 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors focus-ring mt-1"
+            className="group relative grid h-9 w-9 place-items-center rounded-xl focus-ring"
             onClick={() => setCollapsed(false)}
-            title="Agrandir"
+            title="Agrandir le menu"
             type="button"
           >
-            <PanelLeft className="h-3.5 w-3.5" />
+            <span className="transition-opacity duration-150 group-hover:opacity-0 group-focus-visible:opacity-0">
+              <IdealyLogo animated compact size={24} />
+            </span>
+            <span className="absolute inset-0 grid place-items-center rounded-xl bg-[var(--dsw-alias-interactive-bg-hover)] text-[var(--dsw-alias-label-primary)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
+              <PanelLeft className="h-4 w-4" strokeWidth={1.8} />
+            </span>
           </button>
+        ) : (
+          <>
+            <button
+              aria-label="Idealy, retour à l'accueil"
+              className="flex items-center overflow-hidden rounded-lg focus-ring"
+              onClick={() => setActivePage("chat")}
+              type="button"
+            >
+              <IdealyLogo animated size={26} />
+            </button>
+            <div className="flex items-center gap-1">
+              <button
+                aria-label="Rechercher"
+                className="grid h-7 w-7 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors focus-ring"
+                onClick={() => setIsCommandPaletteOpen(true)}
+                title="Rechercher (Ctrl+K)"
+                type="button"
+              >
+                <Search className="h-3.5 w-3.5" />
+              </button>
+
+              <button
+                aria-label="Réduire le menu"
+                className="grid h-7 w-7 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] active:scale-90 transition-all duration-200 focus-ring"
+                onClick={() => setCollapsed(true)}
+                title="Réduire"
+                type="button"
+              >
+                <PanelLeftClose className="h-3.5 w-3.5" strokeWidth={1.8} />
+              </button>
+            </div>
+          </>
         )}
       </div>
 

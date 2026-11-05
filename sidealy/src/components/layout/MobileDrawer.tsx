@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApp, type AppPage } from "../../context/AppContext";
 import { hasConversationActivity } from "../../services/conversationVisibility";
 import { AccountChip } from "./AccountChip";
+import { CreditsPill } from "../credits/CreditsPill";
 import { IdealyLogo } from "../branding/IdealyLogo";
 
 export const MobileDrawer: React.FC = () => {
@@ -436,6 +437,9 @@ export const MobileDrawer: React.FC = () => {
               )}
             </section>
           )}
+        </div>
+        <div className="shrink-0 px-2.5 pb-2 pt-1.5 border-t border-[var(--dsw-alias-border-l1)]">
+          <CreditsPill />
         </div>
         <footer className="sidebar-footer flex shrink-0 items-center px-2.5 py-1.5">
           <AccountChip

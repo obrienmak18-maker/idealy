@@ -22,6 +22,42 @@ const WAY_LABELS: Record<string, string> = {
   professional: "Énergie",
 };
 
+/**
+ * Quota par défaut et de repli (ex. en local dev ou hors-ligne).
+ * Par défaut sur la voie Mage avec 100 points de Mana / mois (Plan Gratuit).
+ */
+function getFallbackPower(): PowerResult {
+  try {
+    const cached = localStorage.getItem("idealy_power_cache");
+    if (cached) {
+      const parsed = JSON.parse(cached) as PowerStatus;
+      if (
+        parsed &&
+        typeof parsed.balance === "number" &&
+        typeof parsed.walletCap === "number" &&
+        parsed.walletCap > 0
+      ) {
+        return { state: "ok", power: parsed };
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return {
+    state: "ok",
+    power: {
+      balance: 100,
+      walletCap: 100,
+      plan: "free",
+      way: "mage",
+      resourceLabel: "Mana",
+      canExecute: true,
+      periodKey: "",
+    },
+  };
+}
+
 export async function fetchPower(signal?: AbortSignal): Promise<PowerResult> {
   try {
     const response = await fetch("/api/idealy/power", {
@@ -30,33 +66,39 @@ export async function fetchPower(signal?: AbortSignal): Promise<PowerResult> {
       signal,
     });
     if (response.status === 401) return { state: "signed-out" };
-    if (!response.ok) return { state: "unavailable" };
+    if (!response.ok) return getFallbackPower();
     const data = (await response.json()) as Record<string, unknown>;
     const balance = Number(data.balance);
     const walletCap = Number(data.walletCap);
     if (!Number.isFinite(balance) || !Number.isFinite(walletCap) || walletCap <= 0) {
-      return { state: "unavailable" };
+      return getFallbackPower();
     }
-    const way = typeof data.way === "string" ? data.way : "professional";
+    const way = typeof data.way === "string" ? data.way : "mage";
     const label =
       (typeof data.resourceLabel === "string" && data.resourceLabel) ||
       voiesCatalog[way]?.resourceLabel ||
       WAY_LABELS[way] ||
-      "Énergie";
+      "Mana";
+    const power: PowerStatus = {
+      balance,
+      walletCap,
+      plan: typeof data.plan === "string" ? data.plan : "free",
+      way,
+      resourceLabel: label,
+      canExecute: data.canExecute !== false,
+      periodKey: typeof data.lastMonthlyAllocationAt === "string" ? data.lastMonthlyAllocationAt : "",
+    };
+    try {
+      localStorage.setItem("idealy_power_cache", JSON.stringify(power));
+    } catch {
+      // ignore
+    }
     return {
       state: "ok",
-      power: {
-        balance,
-        walletCap,
-        plan: typeof data.plan === "string" ? data.plan : "free",
-        way,
-        resourceLabel: label,
-        canExecute: data.canExecute !== false,
-        periodKey: typeof data.lastMonthlyAllocationAt === "string" ? data.lastMonthlyAllocationAt : "",
-      },
+      power,
     };
   } catch {
-    return { state: "unavailable" };
+    return getFallbackPower();
   }
 }
 
@@ -76,7 +118,7 @@ export const WAY_TONE: Record<string, { rgb: string; low: string; critical: stri
   hunter: { rgb: "20,184,166", low: "Votre Nen se raréfie.", critical: "Votre Nen est presque épuisé.", depleted: "Votre Nen est épuisé." },
   professional: { rgb: "217,70,239", low: "Votre Énergie baisse.", critical: "Votre Énergie est presque épuisée.", depleted: "Votre Énergie est épuisée." },
 };
-export const toneFor = (way: string) => WAY_TONE[way] ?? WAY_TONE.professional;
+export const toneFor = (way: string) => WAY_TONE[way] ?? WAY_TONE.mage;
 
 export type PowerLevelEx = "ok" | "low" | "critical" | "depleted";
 export function powerLevelEx(p: PowerStatus): PowerLevelEx {
