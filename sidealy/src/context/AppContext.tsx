@@ -163,6 +163,17 @@ function pageFromPath(pathname: string): AppPage {
   if (path.startsWith("/settings/")) return "settings";
   if (path.startsWith("/connectors/")) return "connectors";
   if (path.startsWith("/docs/")) return "docs";
+  if (path === "/") {
+    if (typeof window !== "undefined") {
+      const hasSession =
+        window.localStorage.getItem("idealy_session") ||
+        window.localStorage.getItem("idealy_user_profile") ||
+        window.localStorage.getItem("idealy_profile");
+      if (!hasSession) {
+        return "welcome";
+      }
+    }
+  }
   return match?.[0] ?? "chat";
 }
 

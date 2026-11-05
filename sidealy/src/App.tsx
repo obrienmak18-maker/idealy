@@ -26,12 +26,37 @@ import { AppProvider, useApp } from "./context/AppContext";
 const AppContent: React.FC = () => {
   const { activeArtifact, activePage, activeMessages } = useApp();
 
-  // Pages autonomes (hors layout de travail, sans sidebar rétractable)
-  if (activePage === "welcome") return <WelcomePage />;
-  if (activePage === "pricing") return <PricingPage />;
-  if (activePage === "login") return <AuthPage />;
-  if (activePage === "onboarding") return <OnboardingPage />;
-  if (activePage === "authAction") return <AuthActionPage />;
+  // Pages autonomes (hors layout de travail, sans sidebar rétractable) avec défilement garanti
+  if (activePage === "welcome")
+    return (
+      <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-[#08070d]">
+        <WelcomePage />
+      </div>
+    );
+  if (activePage === "pricing")
+    return (
+      <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-[#08070d]">
+        <PricingPage />
+      </div>
+    );
+  if (activePage === "login")
+    return (
+      <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
+        <AuthPage />
+      </div>
+    );
+  if (activePage === "onboarding")
+    return (
+      <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
+        <OnboardingPage />
+      </div>
+    );
+  if (activePage === "authAction")
+    return (
+      <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
+        <AuthActionPage />
+      </div>
+    );
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-base text-text-main font-sans selection:bg-brand-primary/20">

@@ -64,6 +64,37 @@ export const LibraryPage: React.FC = () => {
     [conversations, messages, normalizedQuery, filter],
   );
 
+  const groupedConversations = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    ).getTime();
+    const startOfYesterday = startOfToday - 86400000;
+    const startOfLastWeek = startOfToday - 7 * 86400000;
+
+    const today: typeof matchingConversations = [];
+    const yesterday: typeof matchingConversations = [];
+    const lastWeek: typeof matchingConversations = [];
+    const older: typeof matchingConversations = [];
+
+    for (const conv of matchingConversations) {
+      const time = conv.updatedAt || conv.createdAt;
+      if (time >= startOfToday) {
+        today.push(conv);
+      } else if (time >= startOfYesterday) {
+        yesterday.push(conv);
+      } else if (time >= startOfLastWeek) {
+        lastWeek.push(conv);
+      } else {
+        older.push(conv);
+      }
+    }
+
+    return { today, yesterday, lastWeek, older };
+  }, [matchingConversations]);
+
   const matchingArtifacts = useMemo(
     () =>
       artifacts.filter(
@@ -199,61 +230,77 @@ export const LibraryPage: React.FC = () => {
             </h3>
 
             {matchingConversations.length > 0 ? (
-              <div className="space-y-px rounded-xl border border-[var(--dsw-alias-border-l2)] overflow-hidden bg-[var(--dsw-alias-bg-layer-2)]">
-                {matchingConversations.map((conv) => (
-                  <div
-                    className="group flex items-center gap-3 px-3.5 py-2.5 hover:bg-[var(--dsw-alias-interactive-bg-hover)] cursor-pointer transition-colors"
-                    key={conv.id}
-                    onClick={() => {
-                      setActiveConversationId(conv.id);
-                      setActivePage("chat");
-                    }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-[var(--dsw-alias-label-primary)] truncate">
-                          {conv.title}
-                        </span>
-                        {conv.isPinned && (
-                          <Pin className="h-2.5 w-2.5 shrink-0 text-[var(--idealy-teal-petrol)] fill-current" />
-                        )}
+              <div className="space-y-6">
+                {[
+                  ["Aujourd'hui", groupedConversations.today],
+                  ["Hier", groupedConversations.yesterday],
+                  ["7 derniers jours", groupedConversations.lastWeek],
+                  ["Plus ancien", groupedConversations.older],
+                ].map(([label, items]) => {
+                  const list = items as typeof matchingConversations;
+                  if (list.length === 0) return null;
+                  return (
+                    <div key={label as string} className="space-y-1">
+                      <h4 className="text-[11px] font-semibold text-[var(--dsw-alias-label-tertiary)] uppercase tracking-wider px-2 mb-1.5">
+                        {label as string}
+                      </h4>
+                      <div className="space-y-0.5">
+                        {list.map((conv) => (
+                          <div
+                            className="group flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-[var(--dsw-alias-interactive-bg-hover)] cursor-pointer transition-colors"
+                            key={conv.id}
+                            onClick={() => {
+                              setActiveConversationId(conv.id);
+                              setActivePage("chat");
+                            }}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="text-xs md:text-sm font-medium text-[var(--dsw-alias-label-primary)] group-hover:text-[var(--idealy-teal-petrol)] transition-colors truncate">
+                                {conv.title}
+                              </span>
+                              {conv.isPinned && (
+                                <Pin className="h-2.5 w-2.5 text-[var(--idealy-teal-petrol)] fill-current shrink-0" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <span className="text-[10px] text-[var(--dsw-alias-label-tertiary)] hidden sm:inline">
+                                {formatDate(conv.updatedAt)}
+                              </span>
+                              <button
+                                className="p-1 rounded-lg hover:text-[var(--idealy-teal-petrol)] hover:bg-[var(--dsw-alias-bg-base)] transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  togglePinConversation(conv.id);
+                                }}
+                                title={conv.isPinned ? "Désépingler" : "Épingler"}
+                                type="button"
+                              >
+                                <Pin className="h-3 w-3" />
+                              </button>
+                              <button
+                                className="p-1 rounded-lg hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openConfirmModal({
+                                    title: "Supprimer cette discussion ?",
+                                    confirmLabel: "Supprimer",
+                                    isDestructive: true,
+                                    message: `Supprimer « ${conv.title} » ?`,
+                                    onConfirm: () => deleteConversation(conv.id),
+                                  });
+                                }}
+                                title="Supprimer"
+                                type="button"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <span className="text-[10px] text-[var(--dsw-alias-label-tertiary)] mt-0.5 block">
-                        {formatDate(conv.updatedAt)}
-                      </span>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        className="p-1 rounded hover:text-[var(--idealy-teal-petrol)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePinConversation(conv.id);
-                        }}
-                        title={conv.isPinned ? "Désépingler" : "Épingler"}
-                        type="button"
-                      >
-                        <Pin className="h-3 w-3" />
-                      </button>
-                      <button
-                        className="p-1 rounded hover:text-red-500 hover:bg-red-500/10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openConfirmModal({
-                            title: "Supprimer cette conversation ?",
-                            confirmLabel: "Supprimer",
-                            isDestructive: true,
-                            message: `Supprimer « ${conv.title} » ?`,
-                            onConfirm: () => deleteConversation(conv.id),
-                          });
-                        }}
-                        title="Supprimer"
-                        type="button"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (filter === "chats" || filter === "pinned") ? (
               <div className="rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)]/40 p-6 text-center text-xs text-[var(--dsw-alias-label-secondary)]">

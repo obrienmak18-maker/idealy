@@ -1,6 +1,8 @@
 import {
   AlertTriangle,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   Paperclip,
   Pencil,
@@ -21,10 +23,42 @@ import { MissionPlanCard } from "./MissionPlanCard";
 import { RunStage } from "./RunStage";
 
 export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
-  const { artifacts, sendMessage, setDraft } = useApp();
+  const { artifacts, sendMessage } = useApp();
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<"liked" | "disliked" | null>(null);
   const [speaking, setSpeaking] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
+  const [variants, setVariants] = useState<{ content: string; createdAt: number }[]>(() => {
+    return (message as unknown as { variants?: { content: string; createdAt: number }[] }).variants || [
+      { content: message.content, createdAt: message.createdAt },
+    ];
+  });
+  const [variantIndex, setVariantIndex] = useState(() => Math.max(0, variants.length - 1));
+
+  const handleStartEdit = () => {
+    setEditContent(message.content);
+    setIsEditing(true);
+  };
+
+  const handleSaveAndSend = () => {
+    if (!editContent.trim()) return;
+    const newVariants = [
+      ...variants,
+      { content: editContent.trim(), createdAt: Date.now() },
+    ];
+    setVariants(newVariants);
+    setVariantIndex(newVariants.length - 1);
+    message.content = editContent.trim();
+    setIsEditing(false);
+    sendMessage(editContent.trim());
+  };
+
+  const handleNavigateVariant = (nextIndex: number) => {
+    if (nextIndex < 0 || nextIndex >= variants.length) return;
+    setVariantIndex(nextIndex);
+    message.content = variants[nextIndex].content;
+  };
 
   const toggleSpeech = () => {
     const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
@@ -58,18 +92,6 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
     } catch {
       // Fallback
     }
-  };
-
-  const handleEditPrompt = () => {
-    setDraft(message.content);
-    // Autofocus the composer input
-    window.requestAnimationFrame(() => {
-      const textarea = document.querySelector("textarea");
-      if (textarea) {
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-      }
-    });
   };
 
   const messageArtifacts = artifacts.filter((a) =>
@@ -276,50 +298,105 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
             </div>
           )}
 
-          <div className="relative group/bubble max-w-full">
-            <div
-              className="px-4 py-2.5 rounded-[var(--dsw-radius-xl)] bg-[var(--dsw-specific-bubble)] text-[var(--dsw-alias-label-primary)] text-sm md:text-[15px] leading-relaxed break-words shadow-sm border border-[var(--dsw-alias-border-l3)]/40"
-              style={{
-                wordBreak: "break-word",
-              }}
-            >
-              <div className="whitespace-pre-wrap">{message.content}</div>
+          {isEditing ? (
+            <div className="w-full max-w-2xl rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-3 space-y-2.5 shadow-md">
+              <textarea
+                autoFocus
+                className="w-full min-h-[72px] max-h-[220px] bg-transparent text-sm resize-none focus:outline-none text-[var(--dsw-alias-label-primary)] leading-relaxed"
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={3}
+                value={editContent}
+              />
+              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[var(--dsw-alias-border-l1)]">
+                <button
+                  className="px-3 py-1.5 text-xs rounded-lg text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                  onClick={() => setIsEditing(false)}
+                  type="button"
+                >
+                  Annuler
+                </button>
+                <button
+                  className="px-3.5 py-1.5 text-xs rounded-lg bg-gradient-to-r from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white font-medium hover:opacity-90 shadow-sm transition-opacity"
+                  onClick={handleSaveAndSend}
+                  type="button"
+                >
+                  Enregistrer et envoyer
+                </button>
+              </div>
             </div>
-
-            {/* Actions sur le prompt utilisateur : Copier et Modifier (crayon) */}
-            <div
-              aria-label="Actions sur le prompt"
-              className="opacity-0 group-hover/user:opacity-100 focus-within:opacity-100 transition-opacity absolute -bottom-7 right-0 flex items-center gap-1 bg-[var(--dsw-alias-bg-base)]/95 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-[var(--dsw-alias-border-l2)] shadow-xs z-10"
-            >
-              <button
-                aria-label="Modifier le prompt"
-                className="focus-ring grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
-                onClick={handleEditPrompt}
-                title="Modifier le prompt"
-                type="button"
+          ) : (
+            <div className="relative group/bubble max-w-full">
+              <div
+                className="px-4 py-2.5 rounded-[var(--dsw-radius-xl)] bg-[var(--dsw-specific-bubble)] text-[var(--dsw-alias-label-primary)] text-sm md:text-[15px] leading-relaxed break-words shadow-sm border border-[var(--dsw-alias-border-l3)]/40"
+                style={{
+                  wordBreak: "break-word",
+                }}
               >
-                <Pencil className="w-3 h-3" />
-              </button>
+                <div className="whitespace-pre-wrap">{message.content}</div>
+              </div>
 
-              <button
-                aria-label="Copier le prompt"
-                className="focus-ring grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
-                onClick={handleCopyMessage}
-                title="Copier le prompt"
-                type="button"
+              {/* Actions sur le prompt utilisateur : Copier et Modifier (crayon) */}
+              <div
+                aria-label="Actions sur le prompt"
+                className="opacity-0 group-hover/user:opacity-100 focus-within:opacity-100 transition-opacity absolute -bottom-7 right-0 flex items-center gap-1 bg-[var(--dsw-alias-bg-base)]/95 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-[var(--dsw-alias-border-l2)] shadow-xs z-10"
               >
-                {copied ? (
-                  <Check className="w-3 h-3 text-[var(--idealy-teal-petrol)]" />
-                ) : (
-                  <Copy className="w-3 h-3" />
-                )}
-              </button>
+                <button
+                  aria-label="Modifier le prompt"
+                  className="focus-ring grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                  onClick={handleStartEdit}
+                  title="Modifier le prompt"
+                  type="button"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+
+                <button
+                  aria-label="Copier le prompt"
+                  className="focus-ring grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                  onClick={handleCopyMessage}
+                  title="Copier le prompt"
+                  type="button"
+                >
+                  {copied ? (
+                    <Check className="w-3 h-3 text-[var(--idealy-teal-petrol)]" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
             </div>
+          )}
+
+          <div className="flex items-center gap-2 px-1">
+            {variants.length > 1 && (
+              <div className="inline-flex items-center gap-1 text-[11px] text-[var(--dsw-alias-label-tertiary)]">
+                <button
+                  aria-label="Version précédente"
+                  className="p-0.5 rounded hover:bg-[var(--dsw-alias-interactive-bg-hover)] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  disabled={variantIndex <= 0}
+                  onClick={() => handleNavigateVariant(variantIndex - 1)}
+                  type="button"
+                >
+                  <ChevronLeft className="w-3 h-3" />
+                </button>
+                <span className="font-mono text-[10px]">
+                  {variantIndex + 1} / {variants.length}
+                </span>
+                <button
+                  aria-label="Version suivante"
+                  className="p-0.5 rounded hover:bg-[var(--dsw-alias-interactive-bg-hover)] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  disabled={variantIndex >= variants.length - 1}
+                  onClick={() => handleNavigateVariant(variantIndex + 1)}
+                  type="button"
+                >
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            <span className="text-[10px] text-[var(--dsw-alias-label-tertiary)]">
+              {timeFormatted}
+            </span>
           </div>
-
-          <span className="text-[10px] text-[var(--dsw-alias-label-tertiary)] px-1">
-            {timeFormatted}
-          </span>
         </div>
       ) : (
         /* Assistant Message : Scène avec Régie (RunStage) */

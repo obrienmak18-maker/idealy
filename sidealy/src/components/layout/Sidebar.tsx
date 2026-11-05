@@ -397,8 +397,8 @@ export const Sidebar: React.FC = () => {
         <div className="flex-1 min-h-0" />
       )}
 
-      {/* ─── 5. FOOTER AVEC RESPIRATION POUR LE QUOTA / MANA ───────────────── */}
-      <div className={`shrink-0 pt-2.5 pb-2 border-t border-[var(--dsw-alias-border-l1)]/60 ${collapsed ? "px-1.5 flex justify-center" : "px-2.5"}`}>
+      {/* ─── 5. FOOTER AVEC RESPIRATION POUR LE QUOTA / MANA (Sans ligne visible) ── */}
+      <div className={`shrink-0 pt-2 pb-1.5 ${collapsed ? "px-1.5 flex justify-center" : "px-2.5"}`}>
         <CreditsPill compact={collapsed} />
       </div>
 

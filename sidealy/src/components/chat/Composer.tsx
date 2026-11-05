@@ -61,7 +61,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [dictationActive, setDictationActive] = useState(false);
   const [dictationLevel, setDictationLevel] = useState(0);
-  const [dictationStatus, setDictationStatus] = useState("");
+  const [, setDictationStatus] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [connectorsSubmenuOpen, setConnectorsSubmenuOpen] = useState(false);
 
@@ -91,8 +91,28 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
       return;
     }
     textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
-  }, []);
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 40), 360)}px`;
+  }, [draft]);
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = e.clipboardData.getData("text");
+    if (text && text.length > 5000) {
+      e.preventDefault();
+      const docName = `prompt_doc_${Date.now()}.md`;
+      const blob = new Blob([text], { type: "text/markdown" });
+      const newAttachment: Attachment = {
+        id: `att-${Date.now()}`,
+        name: docName,
+        size: text.length,
+        type: "text/markdown",
+        url: URL.createObjectURL(blob),
+      };
+      setAttachments((prev) => [...prev, newAttachment]);
+      if (!draft.trim()) {
+        setDraft("Consulte le document markdown ci-joint pour les instructions.");
+      }
+    }
+  };
 
   useEffect(() => {
     if (!addMenuOpen) {
@@ -477,13 +497,29 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
           <textarea
             data-composer-input
             aria-label="Message à Idealy"
-            className={`w-full ${placement === "home" ? "min-h-[36px]" : "min-h-[52px]"} max-h-[200px] resize-none overflow-y-auto bg-transparent p-0 text-[15px] leading-6 text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] focus:outline-none focus:ring-0`}
+            className={`w-full ${placement === "home" ? "min-h-[36px]" : "min-h-[44px]"} max-h-[360px] resize-none overflow-y-auto bg-transparent p-0 text-[15px] leading-6 text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] focus:outline-none focus:ring-0`}
             enterKeyHint="enter"
+            onPaste={handlePaste}
             onChange={(event) => {
-              if (dictationActive) {
-                dictationDraftRef.current = event.target.value;
+              const val = event.target.value;
+              if (val.length > 5000) {
+                const docName = `prompt_doc_${Date.now()}.md`;
+                const blob = new Blob([val], { type: "text/markdown" });
+                const newAttachment: Attachment = {
+                  id: `att-${Date.now()}`,
+                  name: docName,
+                  size: val.length,
+                  type: "text/markdown",
+                  url: URL.createObjectURL(blob),
+                };
+                setAttachments((prev) => [...prev, newAttachment]);
+                setDraft("Consulte le document markdown ci-joint pour les instructions.");
+                return;
               }
-              setDraft(event.target.value);
+              if (dictationActive) {
+                dictationDraftRef.current = val;
+              }
+              setDraft(val);
               if (!dictationActive) {
                 setDictationStatus("");
               }
@@ -558,7 +594,12 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                         <ImageIcon aria-hidden="true" />
                         <span>Photo</span>
                       </button>
-                      <button className="composer-add-row" onClick={() => setConnectorsSubmenuOpen(true)} type="button">
+                      <button
+                        className="composer-add-row"
+                        onClick={() => setConnectorsSubmenuOpen(true)}
+                        onMouseEnter={() => setConnectorsSubmenuOpen(true)}
+                        type="button"
+                      >
                         <Plug aria-hidden="true" className="text-violet-400" />
                         <span className="flex-1 text-left">Connecteurs</span>
                         <ChevronRight className="h-3.5 w-3.5 text-text-muted" />
@@ -726,33 +767,19 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                   className="h-4 w-4 fill-current"
                 />
               </button>
-            ) : (
+            ) : !isEmpty ? (
               <button
                 aria-label="Envoyer le message"
-                className={
-                  isEmpty
-                    ? "grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full bg-[var(--dsw-alias-button-info-fill)] text-white opacity-40 cursor-not-allowed transition-all duration-200 focus-ring"
-                    : "grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white hover:opacity-95 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg focus-ring"
-                }
-                disabled={isEmpty}
+                className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white hover:opacity-95 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg focus-ring animate-scale-in"
                 onClick={handleSend}
                 title="Envoyer le message"
                 type="button"
               >
                 <ArrowUp aria-hidden="true" className="h-4 w-4 stroke-[2.2]" />
               </button>
-            )}
+            ) : null}
           </div>
         </div>
-
-        {dictationStatus && (
-          <p
-            aria-live="polite"
-            className="mx-auto max-w-3xl px-4 pb-2 text-xs text-[var(--dsw-alias-label-secondary)]"
-          >
-            {dictationStatus}
-          </p>
-        )}
       </div>
     </div>
   );
