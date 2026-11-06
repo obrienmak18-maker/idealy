@@ -172,7 +172,14 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
     if (isEmpty || isGenerating) {
       return;
     }
-    sendMessage(draft, attachments);
+    sendMessage(draft, attachments, {
+      requestMode:
+        modelMode === "discuter"
+          ? "chat"
+          : modelMode === "construire"
+            ? "produce"
+            : "auto",
+    });
     setAttachments([]);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";

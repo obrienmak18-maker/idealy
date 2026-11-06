@@ -25,10 +25,20 @@ import {
 const env = import.meta.env as Record<string, string | undefined>;
 
 function config() {
-  const apiKey = env.VITE_FIREBASE_API_KEY?.trim();
-  const authDomain = env.VITE_FIREBASE_AUTH_DOMAIN?.trim();
-  const projectId = env.VITE_FIREBASE_PROJECT_ID?.trim();
-  const appId = env.VITE_FIREBASE_APP_ID?.trim();
+  // The Next backend uses NEXT_PUBLIC_FIREBASE_* while Vite projects commonly
+  // use VITE_FIREBASE_*. Both prefixes are public; never read server secrets here.
+  const apiKey = (
+    env.VITE_FIREBASE_API_KEY ?? env.NEXT_PUBLIC_FIREBASE_API_KEY
+  )?.trim();
+  const authDomain = (
+    env.VITE_FIREBASE_AUTH_DOMAIN ?? env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+  )?.trim();
+  const projectId = (
+    env.VITE_FIREBASE_PROJECT_ID ?? env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  )?.trim();
+  const appId = (
+    env.VITE_FIREBASE_APP_ID ?? env.NEXT_PUBLIC_FIREBASE_APP_ID
+  )?.trim();
   if (!(apiKey && authDomain && projectId && appId)) return null;
   return { apiKey, authDomain, projectId, appId };
 }

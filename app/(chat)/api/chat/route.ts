@@ -530,7 +530,11 @@ export async function POST(request: Request) {
       return createUIMessageStreamResponse({ stream: greetingStream });
     }
 
-    const chatModel = DEFAULT_CHAT_MODEL;
+    const chatModel =
+      chatModels.find(
+        (model) => model.id === requestBody.selectedChatModel
+      )?.id ??
+      DEFAULT_CHAT_MODEL;
 
     await checkIpRateLimit(ipAddress(request));
 
@@ -771,11 +775,20 @@ export async function POST(request: Request) {
 
           if (idealyPrompt) {
             writeWaitingStatus("thinking", getChatWaitingMessage(statusLanguage, "analyzing"));
-            try {
-              intentCategory = await classifyIdealyIntent(request, idealyPrompt);
-            } catch (intentErr) {
-              console.warn("Intent classification fallback to CONVERSATION:", intentErr);
+            if (requestBody.idealyMode === "chat") {
               intentCategory = "CONVERSATION";
+            } else if (requestBody.idealyMode === "produce") {
+              intentCategory = "EXECUTION";
+            } else {
+              try {
+                intentCategory = await classifyIdealyIntent(request, idealyPrompt);
+              } catch (intentErr) {
+                console.warn(
+                  "Intent classification fallback to CONVERSATION:",
+                  intentErr
+                );
+                intentCategory = "CONVERSATION";
+              }
             }
             dataStream.write({ data: intentCategory, type: "data-idealy-intent" });
 

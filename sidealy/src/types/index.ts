@@ -1,6 +1,7 @@
 export type Theme = "light" | "dark" | "system";
 
 export type IntentionMode = "chat" | "explore" | "produce";
+export type AssistantRequestMode = "auto" | "chat" | "produce";
 
 export type AgentState =
   | "attente"

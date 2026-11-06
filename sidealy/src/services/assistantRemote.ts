@@ -1,5 +1,6 @@
 import type {
   Artifact,
+  AssistantRequestMode,
   AssistantToolActivity,
   Attachment,
   IntentionMode,
@@ -29,6 +30,7 @@ export interface SendMessageOptions {
   conversationId: string;
   conversationTitle?: string;
   deepThink?: boolean;
+  requestMode?: AssistantRequestMode;
   mode: IntentionMode;
   signal?: AbortSignal;
   spaceInstructions?: string;
@@ -259,6 +261,7 @@ export const AssistantRemoteService = {
           },
           selectedChatModel,
           selectedVisibilityType: "private",
+          idealyMode: options.requestMode ?? "auto",
         }),
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
