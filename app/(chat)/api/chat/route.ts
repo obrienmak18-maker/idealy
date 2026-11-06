@@ -756,7 +756,10 @@ export async function POST(request: Request) {
           return;
         }
 
-        if (shouldUseIdealyEdgeProvider()) {
+        const useIdealyMissionFlow =
+          shouldUseIdealyEdgeProvider() || requestBody.idealyMode === "produce";
+
+        if (useIdealyMissionFlow) {
           let intentCategory:
             | "CONVERSATION"
             | "IDEATION"
