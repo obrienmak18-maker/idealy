@@ -2,14 +2,14 @@
 <html class="h-full" lang="fr">
   <head>
     <meta charset="UTF-8">
-    <link href="/vite.svg" rel="icon" type="image/svg+xml">
+    <link href="/idealy-mark.svg" rel="icon" type="image/svg+xml">
     <meta
       content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
       name="viewport"
     >
-    <title>Idéali — Espace de Conversation & Travail Assisté</title>
+    <title>Idealy — Atelier d’ingénierie IA</title>
     <meta
-      content="Idéali est un espace de travail conversationnel premium conçu pour allier clarté de discussion et concrétisation de livrables."
+      content="Idealy réunit conversation, agents spécialisés, code et aperçu dans un même atelier de création logicielle."
       name="description"
     >
     <!-- Google Fonts Inter -->
@@ -20,24 +20,30 @@
       rel="stylesheet"
     >
     <script>
-      (function() {
-        var saved, theme, prefersDark, isDark;
-        try {
-          saved = localStorage.getItem("idealy_theme_v1");
-          theme = saved ? JSON.parse(saved) : "dark";
-          prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-          isDark = theme === "dark" || (theme === "system" ? prefersDark : false) || !theme;
-          if (isDark) {
-            document.documentElement.classList.add("dark");
-            document.documentElement.style.colorScheme = "dark";
-          } else {
-            document.documentElement.classList.remove("dark");
-            document.documentElement.style.colorScheme = "light";
-          }
-        } catch (e) {
+    "use strict";
+    (() => {
+      var saved, theme, prefersDark, isDark;
+      try {
+        saved = localStorage.getItem("idealy_theme_v1");
+        theme = saved ? JSON.parse(saved) : "dark";
+        prefersDark =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        isDark =
+          theme === "dark" ||
+          (theme === "system" ? prefersDark : false) ||
+          !theme;
+        if (isDark) {
           document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        } else {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.style.colorScheme = "light";
         }
-      })();
+      } catch (e) {
+        document.documentElement.classList.add("dark");
+      }
+    })();
     </script>
   </head>
   <body

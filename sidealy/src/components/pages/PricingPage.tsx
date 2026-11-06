@@ -19,7 +19,9 @@ export const PricingPage: React.FC = () => {
   // Récupération de la Voie active pour adapter le vocabulaire énergétique
   const savedProfile = (() => {
     try {
-      const raw = localStorage.getItem("idealy_profile") || localStorage.getItem("idealy_user_profile");
+      const raw =
+        localStorage.getItem("idealy_profile") ||
+        localStorage.getItem("idealy_user_profile");
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
@@ -28,40 +30,61 @@ export const PricingPage: React.FC = () => {
   const userWay = savedProfile?.way || "mage";
 
   const wayDetails = {
-    ninja: { resource: "Chakra", rgb: "249,115,22", starter: "Genin", pro: "Jonin", team: "Kage" },
-    mage: { resource: "Mana", rgb: "139,92,246", starter: "Apprenti", pro: "Mage", team: "Archimage" },
-    hunter: { resource: "Nen", rgb: "20,184,166", starter: "Candidat", pro: "Hunter Licencié", team: "Double Star" },
-    professional: { resource: "Énergie", rgb: "37,99,235", starter: "Découverte", pro: "Pro", team: "Business" },
+    hunter: {
+      pro: "Hunter Licencié",
+      resource: "Nen",
+      rgb: "20,184,166",
+      starter: "Candidat",
+      team: "Double Star",
+    },
+    mage: {
+      pro: "Mage",
+      resource: "Mana",
+      rgb: "139,92,246",
+      starter: "Apprenti",
+      team: "Archimage",
+    },
+    ninja: {
+      pro: "Jonin",
+      resource: "Chakra",
+      rgb: "249,115,22",
+      starter: "Genin",
+      team: "Kage",
+    },
+    professional: {
+      pro: "Pro",
+      resource: "Énergie",
+      rgb: "37,99,235",
+      starter: "Découverte",
+      team: "Business",
+    },
   }[userWay as "ninja" | "mage" | "hunter" | "professional"] || {
+    pro: "Pro",
     resource: "Mana",
     rgb: "139,92,246",
     starter: "Découverte",
-    pro: "Pro",
     team: "Business",
   };
 
   const plans = [
     {
-      id: "free",
-      name: wayDetails.starter,
-      monthly: 0,
-      yearly: 0,
-      rgb: "45,212,191",
-      description: "Pour explorer le workspace et prototyper vos premières idées.",
+      description:
+        "Pour explorer le workspace et prototyper vos premières idées.",
       features: [
         `200 ${wayDetails.resource} / mois`,
         "Aperçu interactif dans le Sidecar",
         "Génération React & Tailwind complète",
         "Export ZIP et code source propre",
       ],
+      id: "free",
+      monthly: 0,
+      name: wayDetails.starter,
+      rgb: "45,212,191",
+      yearly: 0,
     },
     {
-      id: "pro",
-      name: wayDetails.pro,
-      monthly: 19,
-      yearly: 15.9,
-      rgb: wayDetails.rgb,
-      description: "Pour construire en continu avec la régie complète et des modèles avancés.",
+      description:
+        "Pour construire en continu avec la régie complète et des modèles avancés.",
       features: [
         `2 500 ${wayDetails.resource} / mois`,
         "Régie multi-agents complète (Alvin + Spécialistes)",
@@ -70,14 +93,15 @@ export const PricingPage: React.FC = () => {
         "Historique illimité des sessions",
       ],
       highlighted: true,
+      id: "pro",
+      monthly: 19,
+      name: wayDetails.pro,
+      rgb: wayDetails.rgb,
+      yearly: 15.9,
     },
     {
-      id: "business",
-      name: wayDetails.team,
-      monthly: 49,
-      yearly: 40.9,
-      rgb: "217,70,239",
-      description: "Pour les équipes qui collaborent sur les mêmes applications critiques.",
+      description:
+        "Pour les équipes qui collaborent sur les mêmes applications critiques.",
       features: [
         `4 000 ${wayDetails.resource} / mois`,
         "Espaces partagés et rôles d'équipe",
@@ -85,6 +109,11 @@ export const PricingPage: React.FC = () => {
         "Priorité de bande passante & support dédié",
         "Accès aux nouvelles fonctionnalités en avant-première",
       ],
+      id: "business",
+      monthly: 49,
+      name: wayDetails.team,
+      rgb: "217,70,239",
+      yearly: 40.9,
     },
   ] as const;
 
@@ -127,17 +156,17 @@ export const PricingPage: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#08070d] text-zinc-100 flex flex-col overflow-y-auto selection:bg-teal-500/20 antialiased font-sans">
+    <div className="idealy-pricing relative min-h-screen w-full bg-[#08070d] text-zinc-100 flex flex-col overflow-y-auto selection:bg-teal-500/20 antialiased font-sans">
       {/* Bouton retour discret (Style ChatGPT / Idealy Backend) */}
-      <div className="sticky top-4 left-4 z-50 flex items-center justify-between px-5 py-2 pointer-events-none">
+      <div className="idealy-pricing__back-wrap sticky top-4 left-4 z-50 flex items-center justify-between px-5 py-2 pointer-events-none">
         <button
           aria-label="Retour au workspace"
-          className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/[0.12] bg-[#12131a]/80 backdrop-blur-md px-3.5 py-1.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.1] transition-all shadow-md active:scale-95"
+          className="idealy-pricing__back pointer-events-auto inline-flex items-center justify-center rounded-full border border-white/[0.12] bg-[#12131a]/80 backdrop-blur-md p-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.1] transition-all shadow-md active:scale-95"
           onClick={() => setActivePage("chat")}
           type="button"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Retour au workspace</span>
+          <span className="sr-only">Retour au workspace</span>
         </button>
       </div>
 
@@ -152,7 +181,7 @@ export const PricingPage: React.FC = () => {
       />
 
       {/* Contenu principal défilable */}
-      <main className="relative flex-1 max-w-5xl w-full mx-auto px-4 md:px-8 pt-4 pb-20">
+      <main className="idealy-pricing__main relative flex-1 max-w-6xl w-full mx-auto px-4 md:px-8 pt-4 pb-20">
         <header className="mx-auto max-w-2xl text-center space-y-3">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.05] border border-white/[0.08] text-zinc-300">
             <Sparkles className="w-3 h-3 text-teal-400" />
@@ -162,7 +191,9 @@ export const PricingPage: React.FC = () => {
             Choisissez votre niveau de puissance.
           </h1>
           <p className="text-sm md:text-base text-zinc-400 max-w-xl mx-auto">
-            Chaque formule inclut l'intégralité du moteur Idealy. Votre palier définit votre capacité mensuelle de {wayDetails.resource} et la vitesse d'exécution.
+            Chaque formule inclut l'intégralité du moteur Idealy. Votre palier
+            définit votre capacité mensuelle de {wayDetails.resource} et la
+            vitesse d'exécution.
           </p>
 
           {/* Toggle Facturation Annuel / Mensuel */}
@@ -175,9 +206,9 @@ export const PricingPage: React.FC = () => {
               <button
                 aria-pressed={!yearly}
                 className={`rounded-full px-4 py-1.5 transition-all duration-150 ${
-                  !yearly
-                    ? "bg-white text-black font-semibold shadow-sm"
-                    : "text-zinc-400 hover:text-white"
+                  yearly
+                    ? "text-zinc-400 hover:text-white"
+                    : "bg-white text-black font-semibold shadow-sm"
                 }`}
                 onClick={() => setYearly(false)}
                 type="button"
@@ -204,13 +235,13 @@ export const PricingPage: React.FC = () => {
         </header>
 
         {/* 3 Cartes d'Offres */}
-        <div className="mt-12 grid gap-6 md:grid-cols-3 items-stretch">
+        <div className="idealy-pricing__plans mt-12 grid gap-5 md:grid-cols-3 items-stretch">
           {plans.map((plan) => {
             const highlighted = "highlighted" in plan && plan.highlighted;
             const price = yearly ? plan.yearly : plan.monthly;
             return (
               <article
-                className={`relative flex flex-col rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1 ${
+                className={`idealy-pricing__plan relative flex flex-col rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1 ${
                   highlighted
                     ? "border-white/[0.2] bg-[#12131d] shadow-2xl ring-1 ring-white/[0.15]"
                     : "border-white/[0.08] bg-[#0c0d13]/80"
@@ -226,9 +257,7 @@ export const PricingPage: React.FC = () => {
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-white">
-                    {plan.name}
-                  </h2>
+                  <h2 className="text-xl font-bold text-white">{plan.name}</h2>
                   {highlighted && (
                     <span
                       className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider"
@@ -311,7 +340,9 @@ export const PricingPage: React.FC = () => {
 
         {/* Footer info */}
         <div className="mt-14 text-center text-xs text-zinc-500 space-y-1">
-          <p>Paiement sécurisé via Stripe. Annulable en un clic à tout moment.</p>
+          <p>
+            Paiement sécurisé via Stripe. Annulable en un clic à tout moment.
+          </p>
           <p>Les quotas se renouvellent chaque mois automatiquement.</p>
         </div>
       </main>
