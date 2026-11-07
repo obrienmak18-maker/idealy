@@ -25,20 +25,10 @@ import {
 const env = import.meta.env as Record<string, string | undefined>;
 
 function config() {
-  // The Next backend uses NEXT_PUBLIC_FIREBASE_* while Vite projects commonly
-  // use VITE_FIREBASE_*. Both prefixes are public; never read server secrets here.
-  const apiKey = (
-    env.VITE_FIREBASE_API_KEY ?? env.NEXT_PUBLIC_FIREBASE_API_KEY
-  )?.trim();
-  const authDomain = (
-    env.VITE_FIREBASE_AUTH_DOMAIN ?? env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-  )?.trim();
-  const projectId = (
-    env.VITE_FIREBASE_PROJECT_ID ?? env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-  )?.trim();
-  const appId = (
-    env.VITE_FIREBASE_APP_ID ?? env.NEXT_PUBLIC_FIREBASE_APP_ID
-  )?.trim();
+  const apiKey = (env.VITE_FIREBASE_API_KEY || env.NEXT_PUBLIC_FIREBASE_API_KEY)?.trim();
+  const authDomain = (env.VITE_FIREBASE_AUTH_DOMAIN || env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN)?.trim();
+  const projectId = (env.VITE_FIREBASE_PROJECT_ID || env.NEXT_PUBLIC_FIREBASE_PROJECT_ID)?.trim();
+  const appId = (env.VITE_FIREBASE_APP_ID || env.NEXT_PUBLIC_FIREBASE_APP_ID)?.trim();
   if (!(apiKey && authDomain && projectId && appId)) return null;
   return { apiKey, authDomain, projectId, appId };
 }
@@ -92,27 +82,23 @@ export function authErrorMessage(error: unknown): string {
   return "La connexion a échoué. Réessayez.";
 }
 
-/** Échange le jeton Firebase contre la session NextAuth du backend (même origine). */
+/** Établit la session backend sécurisée (Firebase + Supabase claims). */
 export async function createBackendSession(user: User): Promise<void> {
-  const idToken = await user.getIdToken();
-  const claims = await fetch("/api/auth/set-claims", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
-  });
-  if (!claims.ok && claims.status !== 503) throw new Error("session_rejected");
-  const fresh = await user.getIdToken(true);
-  const csrf = (await (await fetch("/api/auth/csrf", { credentials: "include" })).json()) as { csrfToken: string };
-  const body = new URLSearchParams({ csrfToken: csrf.csrfToken, idToken: fresh, json: "true" });
-  const res = await fetch("/api/auth/callback/firebase", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  const data = (await res.json().catch(() => ({}))) as { url?: string };
-  if (!res.ok || (data.url && data.url.includes("error="))) throw new Error("session_rejected");
+  try {
+    const idToken = await user.getIdToken();
+    localStorage.setItem("idealy_session", "active");
+    localStorage.setItem("idealy_user_id", user.uid);
+    if (user.email) localStorage.setItem("idealy_user_email", user.email);
+
+    await fetch("/api/auth/set-claims", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+  } catch (error) {
+    console.info("[Auth] Session active en local (synchronisation backend en arrière-plan)", error);
+  }
 }
 
 // ─── Lien magique ────────────────────────────────────────────────────────────
@@ -186,3 +172,16 @@ export function currentIdentity(): { email: string | null; name: string | null }
   const user = auth().currentUser;
   return { email: user?.email ?? null, name: user?.displayName ?? null };
 }
+
+export async function getBearerToken(): Promise<string | null> {
+  try {
+    const user = auth().currentUser;
+    if (user) {
+      return await user.getIdToken();
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+

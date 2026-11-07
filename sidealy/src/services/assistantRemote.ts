@@ -1,6 +1,6 @@
+import { getBearerToken } from "./firebase";
 import type {
   Artifact,
-  AssistantRequestMode,
   AssistantToolActivity,
   Attachment,
   IntentionMode,
@@ -30,7 +30,6 @@ export interface SendMessageOptions {
   conversationId: string;
   conversationTitle?: string;
   deepThink?: boolean;
-  requestMode?: AssistantRequestMode;
   mode: IntentionMode;
   signal?: AbortSignal;
   spaceInstructions?: string;
@@ -249,6 +248,12 @@ export const AssistantRemoteService = {
       ...fileParts,
     ];
 
+    const bearerToken = await getBearerToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (bearerToken) {
+      headers["Authorization"] = `Bearer ${bearerToken}`;
+    }
+
     let response: Response;
     try {
       response = await fetch("/api/chat", {
@@ -261,10 +266,9 @@ export const AssistantRemoteService = {
           },
           selectedChatModel,
           selectedVisibilityType: "private",
-          idealyMode: options.requestMode ?? "auto",
         }),
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
+        headers,
         method: "POST",
         signal,
       });

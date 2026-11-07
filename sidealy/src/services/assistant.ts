@@ -20,9 +20,8 @@ export interface SendMessageOptions {
 }
 
 /**
- * AssistantService — Moteur de streaming avec réflexion approfondie (Deep Think).
- * Simule le cycle complet de raisonnement (Reasoning Tokens) suivi de la réponse finale,
- * exactement comme dans l'architecture DeepSeek R1 / DeepSeek Harness.
+ * AssistantService — Moteur de streaming local avec réflexion approfondie (Deep Think).
+ * Exécute le cycle complet de raisonnement suivi de la synthèse opérationnelle Idealy.
  */
 export const AssistantService = {
   isRemoteServiceConfigured(): boolean {
@@ -49,12 +48,12 @@ export const AssistantService = {
     const startTime = Date.now();
     let reasoningDuration = 0;
 
-    // Phase 1: Reasoning / Deep Think (if enabled or in explore/produce modes)
+    // Phase 1: Reasoning / Deep Think
     if (deepThink || mode === "explore" || mode === "produce") {
       const reasoningParagraphs = [
         `1. Analyse sémantique de la requête : « ${content.trim()} ».\n`,
         `2. Définition du cadre d'exécution : Mode [${mode.toUpperCase()}], recherche web : ${webSearch ? "activée" : "inactive"}.\n`,
-        `3. Examen des contraintes structurelles : préservation des règles d'accessibilité WCAG AA, design système inspiré de DeepSeek Harness avec accents vert pétrole doux.\n`,
+        `3. Examen des contraintes structurelles : conformité aux standards WCAG AA, design fluide et typographie native Idealy.\n`,
         "4. Élaboration de la synthèse technique et découpage des composants opérationnels.\n",
         "5. Validation de la réponse pour clarté, pertinence et concision.",
       ];
@@ -86,8 +85,8 @@ export const AssistantService = {
       chunks = [
         "### Spécification et Livrable de Travail\n\n",
         `Voici le document préparé pour votre demande : **« ${content.trim()} »**.\n\n`,
-        "Le livrable structuré a été généré et projeté dans le **panneau latéral (Livrables)** pour vous permettre de le lire, l\u2019éditer et l\u2019exporter en toute simplicité.\n\n",
-        "```typescript\\n// Extrait de configuration généré pour Idealy\\nexport interface ProductionConfig {\\n  readonly taskName: string;\\n  readonly mode: 'produce';\\n  readonly styling: 'deepseek-harness-hybrid';\\n  readonly activePalette: {\\n    readonly tealPetrol: 'rgb(14, 159, 148)';\\n    readonly indigoSoft: 'rgb(129, 140, 248)';\\n  };\\n}\\n```\\n\\n",
+        "Le livrable structuré a été généré et projeté dans le **panneau latéral (Livrables)** pour vous permettre de le lire, l’éditer et l’exporter en toute simplicité.\n\n",
+        "```typescript\n// Extrait de configuration généré pour Idealy\nexport interface ProductionConfig {\n  readonly taskName: string;\n  readonly mode: 'produce';\n  readonly styling: 'idealy-fluid-native';\n  readonly activePalette: {\n    readonly tealPetrol: 'rgb(14, 159, 148)';\n    readonly indigoSoft: 'rgb(129, 140, 248)';\n  };\n}\n```\n\n",
         "#### Points de vigilance :\n",
         "- **Conformité des styles :** Les élévations 0.5px et les rayons squircle sont appliqués.\n",
         `- **Intégrité des données :** L'artefact reste conservé dans votre historique local.\n\n`,
@@ -105,16 +104,16 @@ export const AssistantService = {
 ---
 
 ## 1. Synthèse Exécutive
-Ce document regroupe les éléments d'analyse et de mise en œuvre validés par le moteur d'assistance.
+Ce document regroupe les éléments d'analyse et de mise en œuvre validés par le moteur d'assistance Idealy.
 
 ## 2. Architecture des Composants
-- **ReasoningRow :** Accordéon de pensée rétractable avec chronomètre et premier aperçu.
-- **InputBar :** Composeur flottant élevé avec bords squircle et sélecteur de mode.
-- **CodeBlock :** Cartouche de code avec bandeau adhésif et bouton de copie instantanée.
+- **ReasoningBlock :** Réflexion typographique fluide dans le fil sans accordéon rigide.
+- **Composer :** Champ adaptatif de 40 à 360 px avec dictée vocale et pièces jointes intelligentes.
+- **CodeBlock :** Cartouche de code propre avec coloration syntaxique et copie instantanée.
 
 ## 3. Recommandations
-1. Conserver la fluidité native web sans dépendance Electron inutile.
-2. Garantir la persistance locale continue de chaque session.
+1. Conserver la fluidité native web sans dépendance lourde inutile.
+2. Garantir la persistance locale et cloud continue de chaque session.
 `,
         conversationId: "",
         language: "markdown",
@@ -125,20 +124,20 @@ Ce document regroupe les éléments d'analyse et de mise en œuvre validés par 
       chunks = [
         "### Analyse Comparative et Exploration\n\n",
         `Examen analytique de la requête : **« ${content.trim()} »**.\n\n`,
-        "| Critère | Approche Antérieure | Approche Idealy (Harness) |\n",
+        "| Critère | Approche Standard | Architecture Idealy Native |\n",
         "| :--- | :--- | :--- |\n",
-        "| **Composant Saisie** | Formulaire statique | Carte flottante élevée avec bordures 0.5px |\n",
-        "| **Raisonnement** | Absent ou texte brut | Accordéon repliable avec durée mesurée |\n",
-        "| **Blocs de code** | Pre standard | Cartouche stylé Shiki avec en-tête fixé |\n",
-        "| **Thème & Teinte** | Blancs neutres froids | Blancs bleutés doux + Vert pétrole / Indigo |\n\n",
+        "| **Composant Saisie** | Formulaire statique | Composer adaptatif fluide 40–360 px |\n",
+        "| **Raisonnement** | Absent ou boîte fermée | Ligne verticale sobre et réflexion dans le fil |\n",
+        "| **Blocs de code** | Pre brut | Cartouche stylé Shiki avec bouton de copie instantanée |\n",
+        "| **Thème & Teinte** | Gris générique | Design spatial sobre + accents de Voie (Chakra, Mana, Nen, Énergie) |\n\n",
         `Souhaitez-vous générer un livrable formel ou continuer d'explorer ?`,
       ];
     } else {
       chunks = [
         `Bien reçu. Voici une réponse directe et soignée relative à : **« ${content.trim()} »**.\n\n`,
-        `L'environnement Idealy est désormais configuré avec l'ergonomie DeepSeek Harness adaptée au web :\n\n`,
-        "- **Bloc de raisonnement :** Vous pouvez déplier la section de pensée ci-dessus pour observer le cheminement pas à pas.\n",
-        `- **Palette chromatique :** Blancs bleutés neutres rehaussés d'un vert pétrole très doux et d'accents indigo discrets.\n`,
+        `L'environnement Idealy est désormais configuré avec l'ergonomie native adaptée au web :\n\n`,
+        "- **Flux de réflexion :** La pensée s'écrit de manière fluide dans le fil avant la réponse finale.\n",
+        `- **Palette chromatique :** Contrastes sombres profonds rehaussés d'accents de Voie discrets.\n`,
         "- **Composeur fluide :** Saisie auto-extensible, raccourcis `Entrée` pour envoyer et gestion robuste du focus.\n\n",
         "Que souhaitez-vous réaliser à présent ?",
       ];

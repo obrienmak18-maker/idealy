@@ -2,7 +2,6 @@ import {
   Check,
   Code2,
   Copy,
-  Layers,
   MessageSquare,
   Pin,
   Plus,
@@ -11,6 +10,7 @@ import {
   Trash2,
   X,
   Zap,
+  Layers,
 } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -46,7 +46,7 @@ export const LibraryPage: React.FC = () => {
       conversations
         .filter((c) => !c.isArchived)
         .filter((c) => hasConversationActivity(c, messages)).length,
-    [conversations, messages]
+    [conversations, messages],
   );
 
   const matchingConversations = useMemo(
@@ -57,11 +57,11 @@ export const LibraryPage: React.FC = () => {
         .filter(
           (c) =>
             !normalizedQuery ||
-            c.title.toLocaleLowerCase().includes(normalizedQuery)
+            c.title.toLocaleLowerCase().includes(normalizedQuery),
         )
         .filter((c) => (filter === "pinned" ? c.isPinned : true))
         .sort((a, b) => b.updatedAt - a.updatedAt),
-    [conversations, messages, normalizedQuery, filter]
+    [conversations, messages, normalizedQuery, filter],
   );
 
   const groupedConversations = useMemo(() => {
@@ -69,10 +69,10 @@ export const LibraryPage: React.FC = () => {
     const startOfToday = new Date(
       now.getFullYear(),
       now.getMonth(),
-      now.getDate()
+      now.getDate(),
     ).getTime();
-    const startOfYesterday = startOfToday - 86_400_000;
-    const startOfLastWeek = startOfToday - 7 * 86_400_000;
+    const startOfYesterday = startOfToday - 86400000;
+    const startOfLastWeek = startOfToday - 7 * 86400000;
 
     const today: typeof matchingConversations = [];
     const yesterday: typeof matchingConversations = [];
@@ -92,7 +92,7 @@ export const LibraryPage: React.FC = () => {
       }
     }
 
-    return { lastWeek, older, today, yesterday };
+    return { today, yesterday, lastWeek, older };
   }, [matchingConversations]);
 
   const matchingArtifacts = useMemo(
@@ -101,15 +101,15 @@ export const LibraryPage: React.FC = () => {
         (a) =>
           !normalizedQuery ||
           a.title.toLocaleLowerCase().includes(normalizedQuery) ||
-          a.type.toLocaleLowerCase().includes(normalizedQuery)
+          a.type.toLocaleLowerCase().includes(normalizedQuery),
       ),
-    [artifacts, normalizedQuery]
+    [artifacts, normalizedQuery],
   );
 
   const handleCopyArtifactContent = async (
     e: React.MouseEvent,
     id: string,
-    content: string
+    content: string,
   ) => {
     e.stopPropagation();
     try {
@@ -130,37 +130,35 @@ export const LibraryPage: React.FC = () => {
   };
 
   const filterPillClass = (active: boolean) =>
-    `idealy-library-filter inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-medium transition-all shrink-0 active:scale-95 ${
+    `inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-medium transition-all shrink-0 active:scale-95 ${
       active
-        ? "is-active bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
-        : "border"
+        ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+        : "bg-[var(--dsw-alias-bg-layer-2)] text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l2)] hover:border-[var(--dsw-alias-border-l3)] hover:text-[var(--dsw-alias-label-primary)]"
     }`;
 
   const formatDate = (ts: number) =>
     new Date(ts).toLocaleDateString("fr-FR", {
       day: "numeric",
+      month: "short",
       hour: "2-digit",
       minute: "2-digit",
-      month: "short",
     });
 
   return (
     <PageFrame label="Bibliothèque">
-      <div className="idealy-library-page idealy-page-enter mx-auto max-w-5xl px-5 py-10 pb-16 sm:px-8">
+      <div className="idealy-page-enter mx-auto max-w-4xl px-4 py-8 pb-14">
         {/* ─── En-tête épuré sans top bar robotique ───────────────────────── */}
-        <div className="idealy-library-page__heading flex items-end justify-between gap-5 pb-7">
+        <div className="flex items-center justify-between pb-5">
           <div>
-            <span className="idealy-library-page__eyebrow">VOTRE ESPACE</span>
-            <h1 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--dsw-alias-label-primary)]">
+            <h1 className="text-xl font-bold tracking-tight text-[var(--dsw-alias-label-primary)]">
               Bibliothèque
             </h1>
-            <p className="text-sm text-[var(--dsw-alias-label-secondary)] mt-2 max-w-xl">
-              Retrouvez vos échanges et les productions associées à chaque
-              projet.
+            <p className="text-xs text-[var(--dsw-alias-label-secondary)] mt-0.5">
+              Historique de vos discussions et livrables de code
             </p>
           </div>
           <button
-            className="idealy-library-page__new inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-[var(--idealy-teal-petrol)] px-4 text-sm font-semibold text-white hover:brightness-110 active:scale-95 transition-all focus-ring"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[var(--idealy-teal-petrol)] px-3 text-xs font-semibold text-white hover:brightness-110 active:scale-95 transition-all focus-ring"
             onClick={() => {
               createConversation();
               setActivePage("chat");
@@ -173,11 +171,10 @@ export const LibraryPage: React.FC = () => {
         </div>
 
         {/* ─── Search bar ─────────────────────────────────────────────── */}
-        <div className="idealy-library-page__search relative flex h-12 items-center rounded-2xl bg-[var(--dsw-alias-bg-layer-2)] border border-[var(--dsw-alias-border-l2)] px-4 focus-within:border-[var(--idealy-teal-petrol)]/60 transition-colors">
-          <Search className="h-4 w-4 shrink-0 text-[var(--dsw-alias-label-tertiary)] mr-3" />
+        <div className="relative flex h-9 items-center rounded-xl bg-[var(--dsw-alias-bg-layer-2)] border border-[var(--dsw-alias-border-l2)] px-3 focus-within:border-[var(--idealy-teal-petrol)]/60 transition-colors">
+          <Search className="h-3.5 w-3.5 shrink-0 text-[var(--dsw-alias-label-tertiary)] mr-2" />
           <input
-            aria-label="Rechercher dans la bibliothèque"
-            className="min-w-0 flex-1 bg-transparent text-sm text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] outline-none"
+            className="min-w-0 flex-1 bg-transparent text-xs text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] outline-none"
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher une discussion ou un fichier produit..."
             value={query}
@@ -194,46 +191,26 @@ export const LibraryPage: React.FC = () => {
         </div>
 
         {/* ─── Filter pills ───────────────────────────────────────────── */}
-        <div
-          aria-label="Filtrer la bibliothèque"
-          className="idealy-library-page__filters flex items-center gap-2 mt-5 overflow-x-auto pb-1 scrollbar-none"
-          role="group"
-        >
-          <button
-            className={filterPillClass(filter === "all")}
-            onClick={() => setFilter("all")}
-            type="button"
-          >
+        <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-1 scrollbar-none">
+          <button className={filterPillClass(filter === "all")} onClick={() => setFilter("all")} type="button">
             Tout
           </button>
-          <button
-            className={filterPillClass(filter === "chats")}
-            onClick={() => setFilter("chats")}
-            type="button"
-          >
+          <button className={filterPillClass(filter === "chats")} onClick={() => setFilter("chats")} type="button">
             <MessageSquare className="h-3 w-3" />
             Discussions ({activeConversationsCount})
           </button>
-          <button
-            className={filterPillClass(filter === "artifacts")}
-            onClick={() => setFilter("artifacts")}
-            type="button"
-          >
+          <button className={filterPillClass(filter === "artifacts")} onClick={() => setFilter("artifacts")} type="button">
             <Code2 className="h-3 w-3" />
             Livrables ({artifacts.length})
           </button>
-          <button
-            className={filterPillClass(filter === "pinned")}
-            onClick={() => setFilter("pinned")}
-            type="button"
-          >
+          <button className={filterPillClass(filter === "pinned")} onClick={() => setFilter("pinned")} type="button">
             <Pin className="h-3 w-3" />
             Épinglés
           </button>
         </div>
 
         {/* ─── Inline stats ───────────────────────────────────────────── */}
-        <div className="idealy-library-page__stats mt-5 flex items-center gap-5 text-xs text-[var(--dsw-alias-label-tertiary)]">
+        <div className="mt-4 flex items-center gap-4 text-[11px] text-[var(--dsw-alias-label-tertiary)]">
           <span className="flex items-center gap-1">
             <MessageSquare className="h-3 w-3 text-[var(--idealy-teal-petrol)]" />
             {activeConversationsCount} discussions
@@ -246,8 +223,8 @@ export const LibraryPage: React.FC = () => {
 
         {/* ─── Discussions list ───────────────────────────────────────── */}
         {(filter === "all" || filter === "chats" || filter === "pinned") && (
-          <section className="idealy-library-page__section mt-9">
-            <h3 className="text-sm font-semibold text-[var(--dsw-alias-label-primary)] mb-3 flex items-center gap-2">
+          <section className="mt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--dsw-alias-label-tertiary)] mb-2 flex items-center gap-1.5">
               <MessageSquare className="h-3.5 w-3.5 text-[var(--idealy-teal-petrol)]" />
               Discussions
             </h3>
@@ -261,11 +238,9 @@ export const LibraryPage: React.FC = () => {
                   ["Plus ancien", groupedConversations.older],
                 ].map(([label, items]) => {
                   const list = items as typeof matchingConversations;
-                  if (list.length === 0) {
-                    return null;
-                  }
+                  if (list.length === 0) return null;
                   return (
-                    <div className="space-y-1" key={label as string}>
+                    <div key={label as string} className="space-y-1">
                       <h4 className="text-[11px] font-semibold text-[var(--dsw-alias-label-tertiary)] uppercase tracking-wider px-2 mb-1.5">
                         {label as string}
                       </h4>
@@ -297,9 +272,7 @@ export const LibraryPage: React.FC = () => {
                                   e.stopPropagation();
                                   togglePinConversation(conv.id);
                                 }}
-                                title={
-                                  conv.isPinned ? "Désépingler" : "Épingler"
-                                }
+                                title={conv.isPinned ? "Désépingler" : "Épingler"}
                                 type="button"
                               >
                                 <Pin className="h-3 w-3" />
@@ -309,12 +282,11 @@ export const LibraryPage: React.FC = () => {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openConfirmModal({
+                                    title: "Supprimer cette discussion ?",
                                     confirmLabel: "Supprimer",
                                     isDestructive: true,
                                     message: `Supprimer « ${conv.title} » ?`,
-                                    onConfirm: () =>
-                                      deleteConversation(conv.id),
-                                    title: "Supprimer cette discussion ?",
+                                    onConfirm: () => deleteConversation(conv.id),
                                   });
                                 }}
                                 title="Supprimer"
@@ -330,7 +302,7 @@ export const LibraryPage: React.FC = () => {
                   );
                 })}
               </div>
-            ) : filter === "chats" || filter === "pinned" ? (
+            ) : (filter === "chats" || filter === "pinned") ? (
               <div className="rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)]/40 p-6 text-center text-xs text-[var(--dsw-alias-label-secondary)]">
                 Aucune discussion ne correspond à vos critères.
               </div>
@@ -340,8 +312,8 @@ export const LibraryPage: React.FC = () => {
 
         {/* ─── Artifacts list ─────────────────────────────────────────── */}
         {(filter === "all" || filter === "artifacts") && (
-          <section className="idealy-library-page__section mt-9">
-            <h3 className="text-sm font-semibold text-[var(--dsw-alias-label-primary)] mb-3 flex items-center gap-2">
+          <section className="mt-7">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--dsw-alias-label-tertiary)] mb-2 flex items-center gap-1.5">
               <Code2 className="h-3.5 w-3.5 text-[var(--idealy-indigo)]" />
               Livrables de Code
             </h3>
@@ -367,9 +339,7 @@ export const LibraryPage: React.FC = () => {
                     </div>
                     <button
                       className="p-1 rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) =>
-                        handleCopyArtifactContent(e, art.id, art.content)
-                      }
+                      onClick={(e) => handleCopyArtifactContent(e, art.id, art.content)}
                       title="Copier"
                       type="button"
                     >
@@ -403,7 +373,7 @@ export const LibraryPage: React.FC = () => {
                 onClick={() =>
                   handleLaunchWithPrompt(
                     "Construis une application web React avec Tailwind CSS et dashboard interactif.",
-                    "Application Dashboard React"
+                    "Application Dashboard React",
                   )
                 }
                 type="button"
@@ -425,7 +395,7 @@ export const LibraryPage: React.FC = () => {
                 onClick={() =>
                   handleLaunchWithPrompt(
                     "Conçois une architecture d'API sécurisée avec schéma de base de données PostgreSQL.",
-                    "Architecture Backend & Schéma"
+                    "Architecture Backend & Schéma",
                   )
                 }
                 type="button"

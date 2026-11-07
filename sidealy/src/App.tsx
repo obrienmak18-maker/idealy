@@ -20,6 +20,7 @@ import { SettingsPage } from "./components/pages/SettingsPage";
 import { AuthActionPage } from "./components/auth/AuthActionPage";
 import { AuthPage } from "./components/auth/AuthPage";
 import { OnboardingPage } from "./components/auth/OnboardingPage";
+import { CookieNotice } from "./components/cookies/CookieNotice";
 import { CreditAlert } from "./components/credits/CreditAlert";
 import { AppProvider, useApp } from "./context/AppContext";
 
@@ -30,30 +31,35 @@ const AppContent: React.FC = () => {
   if (activePage === "welcome")
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-[#08070d]">
+        <CookieNotice />
         <WelcomePage />
       </div>
     );
   if (activePage === "pricing")
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-[#08070d]">
+        <CookieNotice />
         <PricingPage />
       </div>
     );
   if (activePage === "login")
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
+        <CookieNotice />
         <AuthPage />
       </div>
     );
   if (activePage === "onboarding")
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
+        <CookieNotice />
         <OnboardingPage />
       </div>
     );
   if (activePage === "authAction")
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
+        <CookieNotice />
         <AuthActionPage />
       </div>
     );
@@ -103,6 +109,7 @@ const AppContent: React.FC = () => {
       {activePage === "chat" && activeArtifact && <SidecarPanel />}
 
       {/* Modals & Dialogues */}
+      <CookieNotice />
       <CommandPalette />
       <ConfirmModal />
       <SpaceModal />

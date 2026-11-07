@@ -1,19 +1,14 @@
 import react from "@vitejs/plugin-react";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { defineConfig, loadEnv } from "vite";
 
-const sidealyRoot = dirname(fileURLToPath(import.meta.url));
-const idealyRepoRoot = resolve(sidealyRoot, "..");
+const idealyRepoRoot = resolve("d:/Idealy");
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  // Sidealy is a Vite frontend next to the Next.js backend. Read the same
-  // project environment file, but only expose explicitly public prefixes to
-  // browser code. Server credentials remain available only to the proxy config.
   const env = loadEnv(mode, idealyRepoRoot, "");
   const idealyBackendOrigin =
-    env.IDEALY_BACKEND_ORIGIN || "http://localhost:3000";
+    env.IDEALY_BACKEND_ORIGIN || process.env.IDEALY_BACKEND_ORIGIN || "http://localhost:3000";
 
   return {
     envDir: idealyRepoRoot,
@@ -53,3 +48,4 @@ export default defineConfig(({ mode }) => {
     },
   };
 });
+

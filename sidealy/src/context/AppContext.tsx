@@ -13,7 +13,6 @@ import { StorageService } from "../services/storage";
 import { buildRunForMessage } from "../services/agentRegistry";
 import type {
   Artifact,
-  AssistantRequestMode,
   AssistantToolActivity,
   Attachment,
   Conversation,
@@ -86,11 +85,7 @@ interface AppContextValue {
   sendMessage: (
     content: string,
     attachments?: Attachment[],
-    options?: {
-      deepThink?: boolean;
-      requestMode?: AssistantRequestMode;
-      webSearch?: boolean;
-    },
+    options?: { deepThink?: boolean; webSearch?: boolean },
   ) => Promise<void>;
   setActiveConversationId: (id: string) => void;
   setActivePage: (page: AppPage) => void;
@@ -662,11 +657,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const sendMessage = async (
     content: string,
     attachments?: Attachment[],
-    sendOpts?: {
-      deepThink?: boolean;
-      requestMode?: AssistantRequestMode;
-      webSearch?: boolean;
-    },
+    sendOpts?: { deepThink?: boolean; webSearch?: boolean },
   ) => {
     if (
       (!content.trim() && !attachments?.length) ||
@@ -913,7 +904,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         conversationId: currentConvId,
         conversationTitle: activeConversation.title,
         deepThink: useDeepThink,
-        requestMode: sendOpts?.requestMode ?? "auto",
         mode: currentMode,
         signal: abortController.signal,
         spaceInstructions: currentSpace?.instructions,

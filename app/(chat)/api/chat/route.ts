@@ -86,6 +86,7 @@ import {
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
+import { verifyFirebaseToken } from "@/lib/firebase/admin";
 import { checkIpRateLimit } from "@/lib/ratelimit";
 import type { ChatMessage, IdealyChatToolActivity, WaitingStatusData } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
@@ -355,6 +356,16 @@ function getStreamContext() {
 
 export { getStreamContext };
 
+
+function resolveMaxOutputTokens(modelId: string): number {
+  const clean = modelId.toLowerCase();
+  if (clean.includes("gemini")) return 65_536;
+  if (clean.includes("openai") || clean.includes("gpt")) return 128_000;
+  if (clean.includes("anthropic") || clean.includes("claude") || clean.includes("deepseek") || clean.includes("moonshot") || clean.includes("openrouter")) return 64_000;
+  if (clean.includes("groq") || clean.includes("together")) return 32_000;
+  return 64_000;
+}
+
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
@@ -435,6 +446,20 @@ export async function POST(request: Request) {
     }
 
     let effectiveUser = session?.user;
+    if (!effectiveUser) {
+      const authHeader = request.headers.get("authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const decoded = await verifyFirebaseToken(token).catch(() => null);
+        if (decoded?.uid) {
+          effectiveUser = {
+            id: decoded.uid,
+            email: decoded.email ?? "user@idealy.app",
+            type: "regular",
+          };
+        }
+      }
+    }
     if (!effectiveUser && isDevelopmentEnvironment) {
       effectiveUser = {
         id: "5ba1542b-5ed1-4d5c-b6de-4c133277d695",
@@ -933,6 +958,7 @@ export async function POST(request: Request) {
                       userWay,
                     })}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty and voice in this reply, while remaining truthful about which tools and agents actually executed. Do not claim a separate agent ran unless the orchestration actually invoked it.` : ""}`,
                     messages: modelMessages,
+                    maxTokens: resolveMaxOutputTokens(chatModel),
                     model: directModel,
                     onAbort() {
                       stopWaitingStatus();
@@ -1049,6 +1075,7 @@ export async function POST(request: Request) {
               userWay,
             })}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty and voice in this reply, while remaining truthful about which tools and agents actually executed. Do not claim a separate agent ran unless the orchestration actually invoked it.` : ""}`,
             messages: modelMessages,
+            maxTokens: resolveMaxOutputTokens(chatModel),
             model: getLanguageModel(chatModel),
             onAbort() {
               stopWaitingStatus();

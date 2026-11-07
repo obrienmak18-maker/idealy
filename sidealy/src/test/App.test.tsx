@@ -5,6 +5,7 @@ import App from "../App";
 describe("Idealy Application Suite", () => {
   beforeEach(() => {
     localStorage.clear();
+    localStorage.setItem("idealy_session", "active");
   });
 
   it("renders the core application layout and welcome message", () => {
@@ -59,7 +60,7 @@ describe("Idealy Application Suite", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("dialog", { name: /Palette de commandes/i }),
+        screen.getByPlaceholderText(/Rechercher dans vos discussions/i),
       ).toBeInTheDocument();
     });
 
@@ -68,7 +69,7 @@ describe("Idealy Application Suite", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("dialog", { name: /Palette de commandes/i }),
+        screen.queryByPlaceholderText(/Rechercher dans vos discussions/i),
       ).not.toBeInTheDocument();
     });
   });
@@ -85,8 +86,10 @@ describe("Idealy Application Suite", () => {
     fireEvent.click(sendBtn);
 
     // Verify user message appears in list
-    expect(
-      screen.getAllByText("Spécification du module d'authentification").length,
-    ).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(
+        screen.getAllByText("Spécification du module d'authentification").length,
+      ).toBeGreaterThan(0);
+    });
   });
 });
