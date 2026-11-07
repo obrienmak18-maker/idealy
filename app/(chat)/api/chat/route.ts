@@ -998,7 +998,7 @@ export async function POST(request: Request) {
                         session: effectiveSession,
                       }),
                       searchImages: searchImages(),
-                      generateImage: generateImage(),
+                      generateImage: generateImage({ modelId: chatModel, userWay }),
                       updateDocument: updateDocument({
                         dataStream,
                         modelId: chatModel,
@@ -1115,7 +1115,7 @@ export async function POST(request: Request) {
                 session: effectiveSession,
               }),
               searchImages: searchImages(),
-              generateImage: generateImage(),
+              generateImage: generateImage({ modelId: chatModel, userWay }),
               updateDocument: updateDocument({
                 dataStream,
                 modelId: chatModel,
