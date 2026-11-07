@@ -22,9 +22,18 @@ import { AuthPage } from "./components/auth/AuthPage";
 import { OnboardingPage } from "./components/auth/OnboardingPage";
 import { CookieNotice } from "./components/cookies/CookieNotice";
 import { CreditAlert } from "./components/credits/CreditAlert";
+import { useState, useEffect } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
+import { LiveVoiceDialog } from "./components/chat/LiveVoiceDialog";
 
 const AppContent: React.FC = () => {
+  const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenLiveVoice = () => setIsLiveVoiceOpen(true);
+    window.addEventListener("idealy:open-live-voice", handleOpenLiveVoice);
+    return () => window.removeEventListener("idealy:open-live-voice", handleOpenLiveVoice);
+  }, []);
   const { activeArtifact, activePage, activeMessages } = useApp();
 
   // Pages autonomes (hors layout de travail, sans sidebar rétractable) avec défilement garanti
@@ -114,6 +123,11 @@ const AppContent: React.FC = () => {
       <ConfirmModal />
       <SpaceModal />
       <SettingsModal />
+      <LiveVoiceDialog
+        isOpen={isLiveVoiceOpen}
+        onClose={() => setIsLiveVoiceOpen(false)}
+        wayName={localStorage.getItem("idealy_user_way") || "Ninja"}
+      />
     </div>
   );
 };

@@ -14,6 +14,7 @@ import type {
   MissionFileActivity,
   SubAgentProgress,
 } from "../../types";
+import { GenerativeUIWidget } from "./GenerativeUIWidget";
 
 const toolLabels: Record<AssistantToolActivity["kind"], string> = {
   dispatchSubAgents: "Préparation du plan d’agents",
@@ -192,6 +193,30 @@ export const AssistantActivity: React.FC<{
           ))}
         </ol>
       )}
+
+      {activities
+        .filter((act) => act.kind === "renderWidget" && (act.output || act.input))
+        .map((act) => {
+          const payload = (act.output || act.input) as Record<string, unknown>;
+          const widgetType = String(payload.type || "chart");
+          const widgetTitle = String(payload.title || "Données interactives");
+          const widgetSubtitle =
+            typeof payload.subtitle === "string" ? payload.subtitle : undefined;
+          const widgetData = (
+            payload.data && typeof payload.data === "object"
+              ? payload.data
+              : payload
+          ) as Record<string, unknown>;
+          return (
+            <GenerativeUIWidget
+              key={act.toolCallId}
+              type={widgetType}
+              title={widgetTitle}
+              subtitle={widgetSubtitle}
+              data={widgetData}
+            />
+          );
+        })}
     </div>
   );
 };

@@ -34,6 +34,7 @@ function config() {
 }
 
 export const isFirebaseConfigured = () => config() !== null;
+export const getFirebaseAuth = () => auth();
 
 let cached: Auth | null = null;
 function auth(): Auth {

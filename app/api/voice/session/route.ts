@@ -1,9 +1,28 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
+import { verifyFirebaseToken } from "@/lib/firebase/admin";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
-  if (!session) {
+  let user = session?.user;
+
+  if (!user) {
+    const authHeader = request.headers.get("authorization");
+    const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (bearer) {
+      const fbUser = await verifyFirebaseToken(bearer);
+      if (fbUser) {
+        user = {
+          id: fbUser.uid,
+          email: fbUser.email ?? undefined,
+          name: fbUser.name ?? undefined,
+          type: "regular",
+        };
+      }
+    }
+  }
+
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

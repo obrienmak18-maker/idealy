@@ -11,6 +11,7 @@ import { AssistantRemoteService } from "../services/assistantRemote";
 import { BackendHistoryService } from "../services/backendHistory";
 import { StorageService } from "../services/storage";
 import { buildRunForMessage } from "../services/agentRegistry";
+import { useFirestoreProjectSync } from "../hooks/useFirestoreSync";
 import type {
   Artifact,
   AssistantToolActivity,
@@ -244,6 +245,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     useState<GenerationStatus>("idle");
   const [deepThink, setDeepThink] = useState<boolean>(true);
   const [webSearch, setWebSearch] = useState<boolean>(false);
+
+  // Firestore Project Sync
+  const { project: syncedProject } = useFirestoreProjectSync(activeConversationId);
+  useEffect(() => {
+    if (!syncedProject?.files?.length || !activeConversationId) return;
+    const firstCodeFile = syncedProject.files.find((f) => f.content);
+    if (!firstCodeFile?.content) return;
+    const hasExisting = artifacts.some((a) => a.conversationId === activeConversationId);
+    if (!hasExisting) {
+      const syncedArtifact: Artifact = {
+        id: crypto.randomUUID(),
+        conversationId: activeConversationId,
+        title: syncedProject.title || "Projet Idealy",
+        type: "code",
+        content: firstCodeFile.content,
+        createdAt: Date.now(),
+      };
+      setArtifacts((prev) => [syncedArtifact, ...prev]);
+    }
+  }, [syncedProject, activeConversationId, artifacts]);
 
   // Modals state
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);

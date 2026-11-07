@@ -253,6 +253,10 @@ export const AssistantRemoteService = {
     if (bearerToken) {
       headers["Authorization"] = `Bearer ${bearerToken}`;
     }
+    const userWay = localStorage.getItem("idealy_user_way") || "ninja";
+    const userTone = localStorage.getItem("idealy_user_tone") || "concise";
+    headers["x-idealy-user-way"] = userWay;
+    headers["x-idealy-user-tone"] = userTone;
 
     let response: Response;
     try {
@@ -266,6 +270,8 @@ export const AssistantRemoteService = {
           },
           selectedChatModel,
           selectedVisibilityType: "private",
+          selectedWay: userWay,
+          selectedTone: userTone,
         }),
         credentials: "same-origin",
         headers,
@@ -382,8 +388,15 @@ export const AssistantRemoteService = {
           )
         ) {
           callbacks.onToolActivity?.({
-            input: {},
+            input:
+              activity.input && typeof activity.input === "object"
+                ? activity.input
+                : {},
             kind: activity.kind,
+            output:
+              activity.output && typeof activity.output === "object"
+                ? activity.output
+                : undefined,
             state: activity.state,
             toolCallId: activity.toolCallId,
           });

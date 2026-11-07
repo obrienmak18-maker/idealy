@@ -1,4 +1,5 @@
 import { voiesCatalog } from "./voies-catalog";
+import { getBearerToken } from "./firebase";
 
 export type PowerStatus = {
   balance: number;
@@ -60,9 +61,19 @@ function getFallbackPower(): PowerResult {
 
 export async function fetchPower(signal?: AbortSignal): Promise<PowerResult> {
   try {
+    const bearer = await getBearerToken();
+    const userWay = localStorage.getItem("idealy_user_way") || "ninja";
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "x-idealy-user-way": userWay,
+    };
+    if (bearer) {
+      headers["Authorization"] = `Bearer ${bearer}`;
+    }
+
     const response = await fetch("/api/idealy/power", {
       credentials: "include",
-      headers: { Accept: "application/json" },
+      headers,
       signal,
     });
     if (response.status === 401) return { state: "signed-out" };

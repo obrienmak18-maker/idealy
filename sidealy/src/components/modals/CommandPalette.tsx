@@ -1,4 +1,4 @@
-import { Search, SquarePen, X } from "lucide-react";
+import { Radio, Search, SquarePen, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
@@ -113,6 +113,17 @@ export const CommandPalette: React.FC = () => {
           >
             <SquarePen aria-hidden="true" className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
             <span>Nouvelle discussion</span>
+          </button>
+          <button
+            className="focus-ring flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("idealy:open-live-voice"));
+              close();
+            }}
+            type="button"
+          >
+            <Radio aria-hidden="true" className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Mode Vocal Live (Gemini Live)</span>
           </button>
           {results.length > 0 && (
             <p className="px-3 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--dsw-alias-label-tertiary)]">

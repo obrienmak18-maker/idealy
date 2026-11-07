@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, Image as ImageIcon, LayoutGrid, Mic, Paperclip, Plug, Plus, Square, X } from "lucide-react";
+import { ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, Image as ImageIcon, LayoutGrid, Mic, Paperclip, Plug, Plus, Radio, Square, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
@@ -698,12 +698,22 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
               )}
             </div>
             {!isGenerating && (
-              <button
-                aria-label={
-                  dictationActive
-                    ? "Arrêter la dictée vocale"
-                    : "Dicter avec le microphone"
-                }
+              <>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("idealy:open-live-voice"))}
+                  aria-label="Mode vocal temps réel (Gemini Live)"
+                  title="Mode vocal temps réel (Gemini Live)"
+                  className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-emerald-500/10 hover:text-emerald-400 transition-all duration-200 active:scale-95 focus-ring"
+                >
+                  <Radio aria-hidden="true" className="h-4 w-4" />
+                </button>
+                <button
+                  aria-label={
+                    dictationActive
+                      ? "Arrêter la dictée vocale"
+                      : "Dicter avec le microphone"
+                  }
                 aria-pressed={dictationActive}
                 className={
                   dictationActive
@@ -753,6 +763,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                   <Mic aria-hidden="true" className="h-4 w-4" />
                 )}
               </button>
+              </>
             )}
             {isGenerating ? (
               <button

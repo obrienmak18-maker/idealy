@@ -9,6 +9,7 @@ import {
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../context/AppContext";
+import { getBearerToken } from "../services/firebase";
 import { getConnectorBrandLogo } from "./connectors/brand-logos";
 import {
   DEFAULT_CONNECTORS_CATALOG,
@@ -33,9 +34,14 @@ export const ConnectorsPage: React.FC = () => {
   // Fetch live backend connectors if available
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/idealy/plugins", {
-      cache: "no-store",
-      credentials: "same-origin",
+    getBearerToken().then((bearer) => {
+      const headers: Record<string, string> = {};
+      if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
+      return fetch("/api/idealy/plugins", {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers,
+      });
     })
       .then(async (response) => {
         if (!response.ok) return;

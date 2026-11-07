@@ -958,7 +958,7 @@ export async function POST(request: Request) {
                       userWay,
                     })}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty and voice in this reply, while remaining truthful about which tools and agents actually executed. Do not claim a separate agent ran unless the orchestration actually invoked it.` : ""}`,
                     messages: modelMessages,
-                    maxTokens: resolveMaxOutputTokens(chatModel),
+                    maxOutputTokens: resolveMaxOutputTokens(chatModel),
                     model: directModel,
                     onAbort() {
                       stopWaitingStatus();
@@ -1075,7 +1075,7 @@ export async function POST(request: Request) {
               userWay,
             })}${requestedAgent ? `\n\nThe user explicitly selected @${requestedAgent} as the primary responder. Prioritize that agent’s specialty and voice in this reply, while remaining truthful about which tools and agents actually executed. Do not claim a separate agent ran unless the orchestration actually invoked it.` : ""}`,
             messages: modelMessages,
-            maxTokens: resolveMaxOutputTokens(chatModel),
+            maxOutputTokens: resolveMaxOutputTokens(chatModel),
             model: getLanguageModel(chatModel),
             onAbort() {
               stopWaitingStatus();
