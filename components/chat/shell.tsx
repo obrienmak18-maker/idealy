@@ -123,6 +123,8 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
   const { setArtifact } = useArtifact();
   const [chatPaneWidth, setChatPaneWidth] = useState(42);
   const [isResizing, setIsResizing] = useState(false);
+  const [isCanvasCollapsed, setIsCanvasCollapsed] = useState(false);
+  const [previousChatPaneWidth, setPreviousChatPaneWidth] = useState(42);
   const [isMobileCanvasOpen, setIsMobileCanvasOpen] = useState(false);
   const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
 
@@ -157,6 +159,15 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
       setAttachments([]);
     }
   }, [chatId, setArtifact]);
+
+  useEffect(() => {
+    const handleOpenCanvas = () => {
+      setIsCanvasCollapsed(false);
+      setChatPaneWidth(Math.min(78, Math.max(20, previousChatPaneWidth)));
+    };
+    window.addEventListener("idealy:open-canvas", handleOpenCanvas);
+    return () => window.removeEventListener("idealy:open-canvas", handleOpenCanvas);
+  }, [previousChatPaneWidth]);
 
   useEffect(() => {
     const handleWorkspaceViewChange = (event: Event) => {
@@ -246,9 +257,15 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
     const handlePointerMove = (event: PointerEvent) => {
       const delta =
         ((event.clientX - resizeStartRef.current.x) / window.innerWidth) * 100;
-      setChatPaneWidth(
-        Math.min(78, Math.max(20, resizeStartRef.current.startWidth + delta))
-      );
+      const nextWidth = resizeStartRef.current.startWidth + delta;
+      if (nextWidth >= 88) {
+        setPreviousChatPaneWidth(resizeStartRef.current.startWidth);
+        setIsCanvasCollapsed(true);
+        setChatPaneWidth(100);
+        return;
+      }
+      setIsCanvasCollapsed(false);
+      setChatPaneWidth(Math.min(78, Math.max(20, nextWidth)));
     };
     const handlePointerUp = () => {
       setIsResizing(false);
@@ -302,6 +319,18 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
             )}
 
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+              {isCanvasCollapsed ? (
+                <button
+                  className="absolute right-4 top-4 z-20 inline-flex min-h-9 items-center gap-2 rounded-xl border border-border/70 bg-card px-3 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => {
+                    setIsCanvasCollapsed(false);
+                    setChatPaneWidth(Math.min(78, Math.max(20, previousChatPaneWidth)));
+                  }}
+                  type="button"
+                >
+                  Afficher l’aperçu
+                </button>
+              ) : null}
               <Messages
                 addToolApprovalResponse={addToolApprovalResponse}
                 chatId={chatId}
