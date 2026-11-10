@@ -84,7 +84,7 @@ describe("conversation workspace files", () => {
         version: 2,
       },
       {
-        content: "{\\"name\\":\\"demo\\",\\"scripts\\":{\\"dev\\":\\"vite\\"}}",
+        content: JSON.stringify({ name: "demo", scripts: { dev: "vite" } }),
         language: "json",
         path: "package.json",
         status: "saved",
