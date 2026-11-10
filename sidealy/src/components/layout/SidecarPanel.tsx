@@ -471,7 +471,7 @@ export const SidecarPanel: React.FC = () => {
 
       if (latestMission?.id) {
         const response = await fetch(
-          \`/api/idealy/missions/\${encodeURIComponent(latestMission.id)}/files/edit\`,
+          `/api/idealy/missions/${encodeURIComponent(latestMission.id)}/files/edit`,
           {
             body: JSON.stringify({
               content: editorDraft,
@@ -955,7 +955,7 @@ export const SidecarPanel: React.FC = () => {
             {projectFiles.length ? projectFiles.map((file) => (
               <button
                 aria-current={selectedFilePath === file.path ? "page" : undefined}
-                className={\`flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-[10px] transition-colors focus-ring \${selectedFilePath === file.path ? "bg-brand-primary/10 text-text-main" : "text-text-muted hover:bg-bg-subtle hover:text-text-main"}\`}
+                className={`flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-[10px] transition-colors focus-ring ${selectedFilePath === file.path ? "bg-brand-primary/10 text-text-main" : "text-text-muted hover:bg-bg-subtle hover:text-text-main"}`}
                 key={file.path}
                 onClick={() => setSelectedFilePath(file.path)}
                 type="button"
@@ -1005,7 +1005,7 @@ export const SidecarPanel: React.FC = () => {
                     ))}
                   </div>
                   <textarea
-                    aria-label={\`Éditer \${selectedFile.path}\`}
+                    aria-label={`Éditer ${selectedFile.path}`}
                     className="min-h-0 min-w-0 flex-1 resize-none overflow-auto bg-transparent px-3 py-3 font-mono text-[11px] leading-5 text-zinc-200 outline-none placeholder:text-zinc-600 focus:ring-0"
                     onChange={(event) => {
                       setEditorDraft(event.target.value);
@@ -1018,7 +1018,7 @@ export const SidecarPanel: React.FC = () => {
                         const target = event.currentTarget;
                         const start = target.selectionStart;
                         const end = target.selectionEnd;
-                        const next = \`\${editorDraft.slice(0, start)}  \${editorDraft.slice(end)}\`;
+                        const next = `${editorDraft.slice(0, start)}  ${editorDraft.slice(end)}`;
                         setEditorDraft(next);
                         requestAnimationFrame(() => {
                           target.selectionStart = start + 2;
