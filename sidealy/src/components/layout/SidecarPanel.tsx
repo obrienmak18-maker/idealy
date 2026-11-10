@@ -984,15 +984,15 @@ export const SidecarPanel: React.FC = () => {
             </div>
             <button
               className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 font-medium text-text-muted hover:bg-bg-subtle hover:text-text-main focus-ring disabled:opacity-40"
-              disabled={!hasManifest}
+              disabled={!hasManifest || isSavingFile}
               onClick={() => {
-                if (isBusy) stopPreview();
+                if (isBusy || runtimeUrl) stopPreview();
                 else void startPreview();
               }}
               type="button"
             >
-              {isBusy ? <Square className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3" />}
-              {isBusy ? "Arrêter" : runtimeUrl ? "Redémarrer" : "Lancer"}
+              {isBusy || runtimeUrl ? <Square className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3" />}
+              {isBusy ? "Arrêter" : runtimeUrl ? "Arrêter" : runtimeState === "stopped" ? "Relancer" : "Lancer"}
             </button>
           </footer>
         </div>
