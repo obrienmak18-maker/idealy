@@ -25,6 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { CodeBlock } from "../chat/CodeBlock";
 import { getRuntimeAdapter, type AllowedCommand, type ProjectRuntimeAdapter, type RuntimeState } from "../../services/runtime";
+import { PREVIEW_BRIDGE_SOURCE, preparePreviewRuntimeFiles } from "../../services/previewRuntimeFiles";
 import {
   getConversationWorkspaceFiles,
   getLatestMissionForConversation,
@@ -47,82 +48,9 @@ const viewportWidths: Record<Viewport, string> = {
   mobile: "390px",
 };
 
-const previewBridge = `
-<script id="idealy-preview-bridge">
-(function () {
-  let mode = "off";
-  let highlight = null;
-  let lastTarget = null;
-
-  function ensureHighlight() {
-    if (highlight || !document.body) return;
-    highlight = document.createElement("div");
-    highlight.id = "__idealy_preview_highlight";
-    highlight.style.cssText = "position:fixed;z-index:2147483646;pointer-events:none;border:2px solid #5b7cfa;background:rgba(91,124,250,.10);border-radius:5px;display:none;transition:all 60ms ease-out";
-    document.body.appendChild(highlight);
-  }
-
-  function selectorFor(element) {
-    if (!element || element === document.body) return "body";
-    if (element.id) return "#" + element.id;
-    const classes = typeof element.className === "string"
-      ? element.className.trim().split(/\\s+/).filter(Boolean).slice(0, 2)
-      : [];
-    return element.tagName.toLowerCase() + classes.map(function (name) {
-      return "." + name.replace(/[^a-zA-Z0-9_-]/g, "");
-    }).join("");
-  }
-
-  function setMode(nextMode) {
-    mode = nextMode === "select" || nextMode === "comment" ? nextMode : "off";
-    ensureHighlight();
-    if (highlight) highlight.style.display = "none";
-    document.documentElement.style.cursor = mode === "off" ? "" : "crosshair";
-  }
-
-  window.addEventListener("message", function (event) {
-    if (event.source !== window.parent || !event.data || event.data.type !== "idealy:preview-mode") return;
-    setMode(event.data.mode);
-  });
-
-  document.addEventListener("pointerover", function (event) {
-    if (mode === "off") return;
-    const element = event.target;
-    if (!(element instanceof Element) || element === highlight) return;
-    ensureHighlight();
-    const rect = element.getBoundingClientRect();
-    highlight.style.display = "block";
-    highlight.style.top = rect.top + "px";
-    highlight.style.left = rect.left + "px";
-    highlight.style.width = rect.width + "px";
-    highlight.style.height = rect.height + "px";
-    lastTarget = element;
-  }, true);
-
-  document.addEventListener("click", function (event) {
-    if (mode === "off") return;
-    const element = event.target;
-    if (!(element instanceof Element) || element === highlight) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const rect = element.getBoundingClientRect();
-    window.parent.postMessage({
-      type: "idealy:preview-element",
-      mode: mode,
-      tag: element.tagName.toLowerCase(),
-      selector: selectorFor(element),
-      classes: typeof element.className === "string" ? element.className.slice(0, 160) : "",
-      text: (element.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 140),
-      dimensions: { width: Math.round(rect.width), height: Math.round(rect.height) }
-    }, "*");
-    setMode("off");
-  }, true);
-})();
-</script>
-`;
 
 function isHtmlDocument(content: string): boolean {
-  return /<!doctype html|<html[\s>]|<body[\s>]/i.test(content);
+  return /<!doctype html|<html[\\s>]|<body[\\s>]/i.test(content);
 }
 
 function wrapHtml(content: string): string {
@@ -131,8 +59,9 @@ function wrapHtml(content: string): string {
     ? normalized
     : `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${normalized}</body></html>`;
   if (document.includes('id="idealy-preview-bridge"')) return document;
-  if (/<\/body>/i.test(document)) return document.replace(/<\/body>/i, `${previewBridge}</body>`);
-  return `${document}${previewBridge}`;
+  const bridge = `<script id="idealy-preview-bridge">${PREVIEW_BRIDGE_SOURCE}</script>`;
+  if (/<\/body>/i.test(document)) return document.replace(/<\/body>/i, `${bridge}</body>`);
+  return `${document}${bridge}`;
 }
 
 function stateLabel(state: RuntimeState, generationActive: boolean): string {
@@ -218,7 +147,11 @@ export const SidecarPanel: React.FC = () => {
     : "";
   const isStaticPreview = Boolean(staticPreviewDocument) && !runtimeUrl;
   const hasPreview = Boolean(runtimeUrl || staticPreviewDocument);
-  const canUseVisualTools = isStaticPreview;
+  const previewRuntimeFiles = useMemo(
+    () => preparePreviewRuntimeFiles(projectFiles),
+    [projectFiles],
+  );
+  const canUseVisualTools = isStaticPreview || (Boolean(runtimeUrl) && previewRuntimeFiles.enabled);
 
   useEffect(() => {
     const nextFile =
@@ -380,7 +313,7 @@ export const SidecarPanel: React.FC = () => {
       if (generation !== generationRef.current) return;
       await adapter.createSession(projectKey);
       if (generation !== generationRef.current) return;
-      await adapter.mountProject(projectFiles);
+      await adapter.mountProject(previewRuntimeFiles.files);
       if (generation !== generationRef.current) return;
       const result = await adapter.startDevServer();
       if (generation !== generationRef.current) {
@@ -397,7 +330,7 @@ export const SidecarPanel: React.FC = () => {
       setRuntimeError(message);
       setRuntimeState("error");
     }
-  }, [appendOutput, hasManifest, projectFiles, projectKey]);
+  }, [appendOutput, hasManifest, previewRuntimeFiles.files, projectFiles.length, projectKey]);
 
   useEffect(() => {
     if (
