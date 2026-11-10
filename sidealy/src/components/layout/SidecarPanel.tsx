@@ -457,10 +457,10 @@ export const SidecarPanel: React.FC = () => {
     runtimeState === "installing" ||
     runtimeState === "starting";
   const statusText = stateLabel(runtimeState, generationActive);
-  const previewFrameStyle = {
+  const previewFrameStyle: React.CSSProperties = {
     width: viewportWidths[viewport],
-    maxWidth: "100%",
     height: "100%",
+    flex: viewport === "desktop" ? "1 1 auto" : "0 0 auto",
   };
 
   const closeOverlay = () => {
@@ -699,7 +699,7 @@ export const SidecarPanel: React.FC = () => {
           <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-[radial-gradient(ellipse_at_center,var(--dsw-alias-bg-layer-2),var(--dsw-alias-bg-base)_75%)] p-2 sm:p-4">
             {hasPreview ? (
               <div
-                className="h-full min-h-0 overflow-hidden rounded-xl border border-border-subtle bg-white shadow-[0_14px_50px_-18px_rgba(0,0,0,0.35)] transition-[width] duration-300"
+                className={`h-full min-h-0 shrink-0 overflow-hidden border border-border-subtle bg-white shadow-[0_14px_50px_-18px_rgba(0,0,0,0.35)] transition-[width] duration-300 ${viewport === "mobile" ? "rounded-[2rem] border-[8px] border-[#17191e]" : viewport === "tablet" ? "rounded-2xl" : "rounded-xl"}`}
                 style={previewFrameStyle}
               >
                 <iframe
