@@ -1,6 +1,5 @@
 import {
   AlertCircle,
-  ArrowUpRight,
   CheckCircle2,
   Code2,
   ExternalLink,
@@ -24,7 +23,6 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
-import type { MissionWorkspaceFile } from "../../types";
 import { CodeBlock } from "../chat/CodeBlock";
 import { getRuntimeAdapter, type ProjectRuntimeAdapter, type RuntimeState } from "../../services/runtime";
 import {
@@ -201,6 +199,7 @@ export const SidecarPanel: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [inspectorMode, setInspectorMode] = useState<"off" | "select" | "comment">("off");
+  const [inspectionIntent, setInspectionIntent] = useState<"select" | "comment">("select");
   const [inspected, setInspected] = useState<InspectedElement | null>(null);
   const [selectedFilePath, setSelectedFilePath] = useState("");
   const [unsupportedReason, setUnsupportedReason] = useState("");
@@ -239,6 +238,7 @@ export const SidecarPanel: React.FC = () => {
     setRuntimeOutput("");
     setTerminalOpen(false);
     setInspectorMode("off");
+    setInspectionIntent("select");
     setInspected(null);
     setUnsupportedReason("");
   }, [projectKey]);
@@ -364,6 +364,7 @@ export const SidecarPanel: React.FC = () => {
         tag: typeof event.data.tag === "string" ? event.data.tag : "element",
         text: typeof event.data.text === "string" ? event.data.text : "",
       });
+      setInspectionIntent(event.data.mode === "comment" ? "comment" : "select");
       setInspectorMode("off");
     };
     window.addEventListener("message", handleFrameMessage);
@@ -381,7 +382,7 @@ export const SidecarPanel: React.FC = () => {
   const requestEdit = useCallback(() => {
     if (!inspected) return;
     const task =
-      inspectorMode === "comment"
+      inspectionIntent === "comment"
         ? "Prends en compte ce commentaire visuel"
         : "Modifie cet élément";
     const context = [
@@ -397,7 +398,7 @@ export const SidecarPanel: React.FC = () => {
     window.requestAnimationFrame(() => {
       document.querySelector<HTMLTextAreaElement>("[data-composer-input]")?.focus();
     });
-  }, [inspected, inspectorMode, setDraft]);
+  }, [inspected, inspectionIntent, setDraft]);
 
   const openPreview = useCallback(() => {
     if (activePreviewUrl) {
@@ -426,8 +427,8 @@ export const SidecarPanel: React.FC = () => {
   };
 
   const closeOverlay = () => {
-    if (isExpanded) setIsExpanded(false);
-    else setIsMobileOpen(false);
+    setIsExpanded(false);
+    setIsMobileOpen(false);
   };
 
   const panelClass = isExpanded || isMobileOpen
@@ -632,7 +633,7 @@ export const SidecarPanel: React.FC = () => {
                   onLoad={() => postInspectorMode(inspectorMode)}
                   ref={iframeRef}
                   referrerPolicy="no-referrer"
-                  sandbox="allow-scripts allow-forms allow-modals"
+                  sandbox={runtimeUrl ? "allow-scripts allow-forms allow-modals allow-same-origin" : "allow-scripts allow-forms allow-modals"}
                   src={runtimeUrl ? activePreviewUrl : undefined}
                   srcDoc={!runtimeUrl ? staticPreviewDocument : undefined}
                   title={`Aperçu interactif — ${activeConversation?.title ?? "Idealy"}`}
@@ -720,12 +721,15 @@ export const SidecarPanel: React.FC = () => {
             </div>
             <button
               className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 font-medium text-text-muted hover:bg-bg-subtle hover:text-text-main focus-ring disabled:opacity-40"
-              disabled={!hasManifest || isBusy}
-              onClick={() => void startPreview()}
+              disabled={!hasManifest}
+              onClick={() => {
+                if (isBusy) stopPreview();
+                else void startPreview();
+              }}
               type="button"
             >
               {isBusy ? <Square className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3" />}
-              {isBusy ? "Préparation…" : runtimeUrl ? "Redémarrer" : "Lancer"}
+              {isBusy ? "Arrêter" : runtimeUrl ? "Redémarrer" : "Lancer"}
             </button>
           </footer>
         </div>
