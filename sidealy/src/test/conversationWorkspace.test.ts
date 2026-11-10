@@ -8,7 +8,7 @@ import {
 
 const artifacts: Artifact[] = [
   {
-    content: "{\"name\":\"demo\",\"scripts\":{\"dev\":\"vite\"}}",
+        content: JSON.stringify({ name: "demo", scripts: { dev: "vite" } }),
     conversationId: "chat-a",
     createdAt: 1,
     id: "package",
