@@ -142,6 +142,7 @@ export const SidecarPanel: React.FC = () => {
   const [inspected, setInspected] = useState<InspectedElement | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [selectedFilePath, setSelectedFilePath] = useState("");
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
   const [editorDraft, setEditorDraft] = useState("");
   const [isSavingFile, setIsSavingFile] = useState(false);
   const [fileSaveNotice, setFileSaveNotice] = useState("");
@@ -457,6 +458,9 @@ export const SidecarPanel: React.FC = () => {
     setFileSaveNotice("");
 
     try {
+      if (new TextEncoder().encode(editorDraft).byteLength > 1_000_000) {
+        throw new Error("Le fichier dépasse la limite de 1 Mo. Scinde-le en plusieurs fichiers avant de l’enregistrer.");
+      }
       let savedContent = editorDraft;
       let savedFile: MissionWorkspaceFile = {
         ...selectedFile,
@@ -863,30 +867,55 @@ export const SidecarPanel: React.FC = () => {
                 />
               </div>
             ) : (
-              <div className="mx-auto flex max-w-sm flex-col items-center px-5 py-10 text-center">
-                <div className="grid h-14 w-14 place-items-center rounded-2xl border border-border-subtle bg-bg-surface text-brand-primary shadow-subtle">
-                  {generationActive || isBusy
-                    ? <LoaderCircle className="h-6 w-6 animate-spin" />
-                    : <FileCode2 className="h-6 w-6" />}
+              <div className="flex h-full w-full items-center justify-center px-3 py-6 sm:px-6">
+                <div className="w-full max-w-[520px] overflow-hidden rounded-2xl border border-border-subtle bg-bg-surface/80 shadow-[0_24px_70px_-38px_rgba(0,0,0,0.35)]">
+                  <div className="flex h-10 items-center gap-2 border-b border-border-subtle bg-bg-base/75 px-3">
+                    <span className="h-2 w-2 rounded-full bg-rose-400/75" />
+                    <span className="h-2 w-2 rounded-full bg-amber-400/75" />
+                    <span className="h-2 w-2 rounded-full bg-emerald-400/75" />
+                    <div className="ml-3 flex h-6 min-w-0 flex-1 items-center gap-2 rounded-md border border-border-subtle bg-bg-surface px-2.5">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted/50" />
+                      <span className="truncate font-mono text-[9px] text-text-muted">
+                        {runtimeUrl ? activePreviewUrl : "preview.idealy.local"}
+                      </span>
+                    </div>
+                    <span className="ml-1 hidden text-[9px] text-text-muted sm:inline">Prévisualisation</span>
+                  </div>
+                  <div className="relative flex min-h-[300px] flex-col items-center justify-center overflow-hidden px-6 py-10 text-center sm:min-h-[360px]">
+                    <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-70">
+                      <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-primary/[0.055] blur-3xl" />
+                      <div className="absolute inset-5 rounded-xl border border-dashed border-border-subtle/80" />
+                    </div>
+                    <div className="relative grid h-12 w-12 place-items-center rounded-xl border border-brand-primary/20 bg-brand-primary/[0.08] text-brand-primary">
+                      {generationActive || isBusy
+                        ? <LoaderCircle className="h-5 w-5 animate-spin" />
+                        : <FileCode2 className="h-5 w-5" />}
+                    </div>
+                    <h3 className="relative mt-5 text-sm font-semibold tracking-tight text-text-main">
+                      {generationActive ? "Votre application prend forme" : "Prêt pour votre première création"}
+                    </h3>
+                    <p className="relative mt-2 max-w-[340px] text-xs leading-5 text-text-muted">
+                      {generationActive
+                        ? "Les fichiers source et les premiers rendus apparaîtront ici pendant que vos agents construisent."
+                        : "Cette fenêtre affichera votre application réelle. Commencez par décrire ce que vous souhaitez construire dans la conversation."}
+                    </p>
+                    <div className="relative mt-6 flex flex-wrap items-center justify-center gap-2 text-[10px] text-text-muted">
+                      <span className="rounded-full border border-border-subtle bg-bg-base/75 px-2.5 py-1">Preview live</span>
+                      <span className="rounded-full border border-border-subtle bg-bg-base/75 px-2.5 py-1">Code source</span>
+                      <span className="rounded-full border border-border-subtle bg-bg-base/75 px-2.5 py-1">Terminal</span>
+                    </div>
+                    {hasManifest && (
+                      <button
+                        className="relative mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-primary px-3.5 text-xs font-semibold text-brand-onPrimary transition-opacity hover:opacity-90 focus-ring"
+                        onClick={() => void startPreview()}
+                        type="button"
+                      >
+                        <Play className="h-3.5 w-3.5" />
+                        Lancer l’aperçu
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <h3 className="mt-5 text-sm font-semibold text-text-main">
-                  {generationActive ? "Votre application prend forme" : "Votre espace de création"}
-                </h3>
-                <p className="mt-2 text-xs leading-5 text-text-muted">
-                  {generationActive
-                    ? "Les fichiers, l’aperçu interactif et les outils de contrôle apparaîtront ici au fil de la construction."
-                    : "Décrivez l’application à créer dans le chat. Idealy affichera ici le résultat, le code source et les diagnostics du projet."}
-                </p>
-                {hasManifest && (
-                  <button
-                    className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-primary px-3 text-xs font-semibold text-brand-onPrimary hover:opacity-90 focus-ring"
-                    onClick={() => void startPreview()}
-                    type="button"
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                    Lancer l’aperçu
-                  </button>
-                )}
               </div>
             )}
             {inspectorMode !== "off" && (
@@ -1023,7 +1052,7 @@ export const SidecarPanel: React.FC = () => {
                   </div>
                 </header>
                 <div className="flex min-h-0 flex-1 overflow-hidden">
-                  <div aria-hidden="true" className="hidden shrink-0 select-none overflow-hidden border-r border-white/[0.06] px-2 py-3 text-right font-mono text-[10px] leading-5 text-zinc-600 sm:block">
+                  <div aria-hidden="true" className="hidden shrink-0 select-none overflow-hidden border-r border-white/[0.06] px-2 py-3 text-right font-mono text-[10px] leading-5 text-zinc-600 sm:block" ref={lineNumbersRef}>
                     {editorDraft.split("\n").map((_, index) => (
                       <div key={index}>{index + 1}</div>
                     ))}
@@ -1035,6 +1064,11 @@ export const SidecarPanel: React.FC = () => {
                       setEditorDraft(event.target.value);
                       setFileSaveNotice("");
                       setFileSaveError("");
+                    }}
+                    onScroll={(event) => {
+                      if (lineNumbersRef.current) {
+                        lineNumbersRef.current.scrollTop = event.currentTarget.scrollTop;
+                      }
                     }}
                     onKeyDown={(event) => {
                       if (event.key === "Tab") {

@@ -707,7 +707,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
               content,
               conversationId,
               createdAt: now,
-              id: `art-${conversationId}-${now}`,
+              id: crypto.randomUUID(),
               language: normalizedPath.split(".").pop() ?? "text",
               title: normalizedPath,
               type: "code",

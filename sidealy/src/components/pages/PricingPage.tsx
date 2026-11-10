@@ -25,7 +25,7 @@ export const PricingPage: React.FC = () => {
       return null;
     }
   })();
-  const userWay = savedProfile?.way || "mage";
+  const userWay = savedProfile?.way || "professional";
 
   const wayDetails = {
     ninja: { resource: "Chakra", rgb: "249,115,22", starter: "Genin", pro: "Jonin", team: "Kage" },
@@ -46,13 +46,15 @@ export const PricingPage: React.FC = () => {
       name: wayDetails.starter,
       monthly: 0,
       yearly: 0,
+      yearlyTotal: 0,
       rgb: "45,212,191",
-      description: "Pour explorer le workspace et prototyper vos premières idées.",
+      description: "Pour découvrir Idealy et lancer vos premiers projets.",
       features: [
-        `200 ${wayDetails.resource} / mois`,
-        "Aperçu interactif dans le Sidecar",
-        "Génération React & Tailwind complète",
-        "Export ZIP et code source propre",
+        `200 ${wayDetails.resource} (Power Points) / mois`,
+        "Accès aux 4 Voies et à l’orchestration multi-agents",
+        "Jusqu’à 3 projets et 1 mission active",
+        "Workspace, aperçu temps réel et export ZIP",
+        "Jusqu’à 50 fichiers par mission",
       ],
     },
     {
@@ -60,14 +62,15 @@ export const PricingPage: React.FC = () => {
       name: wayDetails.pro,
       monthly: 19,
       yearly: 15.9,
+      yearlyTotal: 190.8,
       rgb: wayDetails.rgb,
-      description: "Pour construire en continu avec la régie complète et des modèles avancés.",
+      description: "Pour construire des applications réelles avec plus de capacité et de contrôle.",
       features: [
-        `2 500 ${wayDetails.resource} / mois`,
-        "Régie multi-agents complète (Alvin + Spécialistes)",
-        "Choix des modèles LLM de pointe",
-        "Export GitHub & synchronisation instantanée",
-        "Historique illimité des sessions",
+        `2 500 ${wayDetails.resource} (Power Points) / mois`,
+        "Projets et dépôts illimités",
+        "Jusqu’à 5 missions actives et 300 fichiers par mission",
+        "Intégration GitHub OAuth et synchronisation des branches",
+        "Modèles avancés et support prioritaire",
       ],
       highlighted: true,
     },
@@ -76,14 +79,16 @@ export const PricingPage: React.FC = () => {
       name: wayDetails.team,
       monthly: 49,
       yearly: 40.9,
+      yearlyTotal: 490.8,
       rgb: "217,70,239",
-      description: "Pour les équipes qui collaborent sur les mêmes applications critiques.",
+      description: "Pour les équipes qui pilotent plusieurs applications en parallèle.",
       features: [
-        `4 000 ${wayDetails.resource} / mois`,
-        "Espaces partagés et rôles d'équipe",
-        "Connecteurs sur-mesure & registre MCP",
-        "Priorité de bande passante & support dédié",
-        "Accès aux nouvelles fonctionnalités en avant-première",
+        `4 000 ${wayDetails.resource} (Power Points) / mois`,
+        "Jusqu’à 20 missions actives et 1 000 fichiers par mission",
+        "Orchestration multi-projets en parallèle",
+        "Connecteurs MCP et intégrations cloud avancées",
+        "Auto-correction Reviewer en boucle fermée (3 passes)",
+        "Support prioritaire et accompagnement ingénierie",
       ],
     },
   ] as const;
@@ -251,8 +256,12 @@ export const PricingPage: React.FC = () => {
                   </span>
                 </div>
 
-                <p className="mt-1 min-h-[18px] text-[11.5px] text-zinc-500">
-                  {plan.id !== "free" && yearly ? "Facturé annuellement" : ""}
+                <p className="mt-1 min-h-[30px] text-[11px] leading-4 text-zinc-500">
+                  {plan.id !== "free" && yearly
+                    ? `Soit ${euro(plan.yearlyTotal)} facturés par an`
+                    : plan.id === "free"
+                      ? "Sans frais et sans engagement"
+                      : "Facturation mensuelle"}
                 </p>
 
                 <p className="mt-4 min-h-[44px] text-xs md:text-[13px] leading-snug text-zinc-300">
