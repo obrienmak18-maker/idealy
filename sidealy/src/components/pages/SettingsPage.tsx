@@ -287,8 +287,8 @@ export const SettingsPage: React.FC = () => {
   ];
 
   return (
-    <main className="h-full overflow-y-auto px-5 py-10 sm:px-8">
-      <div className="mx-auto max-w-5xl pb-12">
+    <main className="h-full w-full overflow-y-auto px-5 py-8 sm:px-8 lg:px-10 xl:px-12">
+      <div className="mx-auto w-full max-w-[1280px] pb-12">
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
           Compte et application
         </p>

@@ -91,8 +91,10 @@ export const SidecarPanel: React.FC = () => {
   return (
     <aside
       aria-label={`Livrable : ${activeArtifact.title}`}
-      className={`fixed inset-y-0 right-0 z-30 bg-bg-surface border-l border-border-subtle shadow-elevated flex flex-col transition-all duration-300 ${
-        isExpanded ? "w-full md:w-[75vw] lg:w-[65vw]" : "w-full md:w-[480px] lg:w-[540px]"
+      className={`z-30 h-full min-h-0 shrink-0 bg-bg-surface border-l border-border-subtle shadow-elevated flex flex-col transition-[width,transform] duration-300 ${
+        isExpanded
+          ? "fixed inset-0 w-full md:inset-y-0 md:left-auto md:right-0 xl:relative xl:inset-auto xl:w-[min(64vw,1100px)]"
+          : "fixed inset-y-0 right-0 w-full sm:w-[min(92vw,560px)] xl:relative xl:inset-auto xl:w-[min(44vw,720px)]"
       }`}
     >
       {/* Sidecar Header (Inspiré de Claude Progression / Sorties & Bolt Workbench) */}
@@ -224,7 +226,7 @@ export const SidecarPanel: React.FC = () => {
             <iframe
               className="w-full h-full border-none flex-1"
               key={iframeKey}
-              sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
+              sandbox="allow-scripts allow-forms allow-modals"
               srcDoc={activeArtifact.content}
               title={`Aperçu interactif : ${activeArtifact.title}`}
             />
@@ -247,7 +249,7 @@ export const SidecarPanel: React.FC = () => {
       <div className="px-4 py-2 border-t border-border-subtle bg-bg-subtle/30 text-[11px] text-text-muted flex items-center justify-between">
         <span className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          <span>Environnement sandbox sécurisé</span>
+          <span>Aperçu isolé du workspace</span>
         </span>
         <span>{activeArtifact.content.length.toLocaleString("fr-FR")} caractères</span>
       </div>

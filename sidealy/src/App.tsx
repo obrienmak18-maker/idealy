@@ -115,7 +115,7 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Sidecar Panel for Artifacts / Deliverables */}
-      {activePage === "chat" && activeArtifact && <SidecarPanel />}
+      {activePage === "chat" && activeArtifact && <SidecarPanel key={activeArtifact.id} />}
 
       {/* Modals & Dialogues */}
       <CookieNotice />

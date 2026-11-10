@@ -12,6 +12,7 @@ import { BackendHistoryService } from "../services/backendHistory";
 import { StorageService } from "../services/storage";
 import { buildRunForMessage } from "../services/agentRegistry";
 import { useFirestoreProjectSync } from "../hooks/useFirestoreSync";
+import { getConversationArtifactId } from "../services/conversationArtifacts";
 import type {
   Artifact,
   AssistantToolActivity,
@@ -240,7 +241,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     StorageService.loadArtifacts(),
   );
 
-  const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
+  const [activeArtifactId, setActiveArtifactId] = useState<string | null>(() =>
+    getConversationArtifactId(
+      StorageService.loadArtifacts(),
+      StorageService.loadActiveConversationId(),
+    ),
+  );
   const [generationStatus, setGenerationStatus] =
     useState<GenerationStatus>("idle");
   const [deepThink, setDeepThink] = useState<boolean>(true);
@@ -292,7 +298,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const activeMessages = messages.filter(
     (m) => m.conversationId === activeConversation?.id,
   );
-  const activeArtifact = artifacts.find((a) => a.id === activeArtifactId);
+  // An artifact belongs to exactly one conversation. Never render a stale
+  // sidecar from a different conversation while navigation is updating.
+  const activeArtifact = artifacts.find(
+    (artifact) =>
+      artifact.id === activeArtifactId &&
+      artifact.conversationId === activeConversation?.id,
+  );
 
   // Draft and mode are bound to activeConversation
   const draft = activeConversation?.draft || "";
@@ -471,6 +483,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const setActiveConversationId = (convId: string) => {
+    // Restore only a deliverable owned by the destination conversation.
+    // New conversations therefore start with an empty workbench.
+    setActiveArtifactId(getConversationArtifactId(artifacts, convId));
     setActiveConversationIdState(convId);
     StorageService.saveActiveConversationId(convId);
     setIsMobileDrawerOpen(false);
@@ -667,7 +682,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Artifact management
   const openArtifact = (id: string) => {
-    setActiveArtifactId(id);
+    const belongsToActiveConversation = artifacts.some(
+      (artifact) =>
+        artifact.id === id &&
+        artifact.conversationId === activeConversation?.id,
+    );
+    if (belongsToActiveConversation) setActiveArtifactId(id);
   };
 
   const closeArtifact = () => {
