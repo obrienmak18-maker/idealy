@@ -1,10 +1,23 @@
 // biome-ignore lint/style/useFilenamingConvention: preserved naming convention
 import {
+  configureAPIKey,
   type FileSystemTree,
   WebContainer,
   type WebContainerProcess,
 } from "@webcontainer/api";
 import type { MissionWorkspaceFile } from "../../types";
+
+let configuredCommercialApiKey: string | null = null;
+
+function configureCommercialWebContainerApi(): void {
+  const environment = import.meta.env as Record<string, string | undefined>;
+  const apiKey = environment.VITE_WEBCONTAINER_API_KEY?.trim();
+  if (!apiKey || configuredCommercialApiKey === apiKey) return;
+
+  // StackBlitz requires this to run before the first WebContainer.boot().
+  configureAPIKey(apiKey);
+  configuredCommercialApiKey = apiKey;
+}
 import {
   isAllowedWorkspacePath,
   sanitizeWorkspacePath,
@@ -109,9 +122,12 @@ export class WebcontainerAdapter implements ProjectRuntimeAdapter {
       throw new Error(support.reason || "Environnement non supporté.");
     }
 
-    this.containerPromise ??= WebContainer.boot({
-      coep: "credentialless",
-      workdirName: "idealy",
+    this.containerPromise ??= Promise.resolve().then(() => {
+      configureCommercialWebContainerApi();
+      return WebContainer.boot({
+        coep: "credentialless",
+        workdirName: "idealy",
+      });
     }).catch((error: unknown) => {
       this.containerPromise = null;
       throw error;

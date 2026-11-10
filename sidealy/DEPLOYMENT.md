@@ -39,6 +39,17 @@ Dans Firebase Authentication, ajouter le domaine Vercel Preview de Sidealy aux d
 
 Le frontend et le backend doivent conserver le même parcours de session sur le domaine Preview. Le proxy ne doit pas être remplacé par des appels directs vers une API tierce côté navigateur.
 
+## WebContainer : démonstration et licence commerciale
+
+Idealy utilise le runtime WebContainer de StackBlitz dans le navigateur. L'API est utilisable pour un prototype ou une preuve de concept sans licence commerciale selon la page officielle StackBlitz. Pour une utilisation de production commerciale au service de clients, prospects ou employés, StackBlitz exige une licence commerciale active. Les conditions publiées indiquent une limite de 500 sessions mensuelles pour l'usage via un plan commercial, puis demandent de contacter StackBlitz pour une licence adaptée au-delà de cette limite.
+
+- Variable facultative de configuration : `VITE_WEBCONTAINER_API_KEY`.
+- Lorsque cette variable est fournie, Sidealy appelle `configureAPIKey(key)` avant le premier `WebContainer.boot()`.
+- Ne pas inventer de clé ni réutiliser une clé appartenant à un autre compte. Obtenir la clé et le plan adaptés directement auprès de StackBlitz.
+- Un Preview privé de démonstration/POC peut être utilisé pour valider l'expérience ; ne pas promouvoir l'intégration en production commerciale avant d'avoir confirmé la licence, les limites de sessions et les conditions applicables.
+
+Références officielles : [Commercial Usage](https://webcontainers.io/enterprise), [API Reference — configureAPIKey](https://webcontainers.io/api), [StackBlitz Terms of Service](https://stackblitz.com/terms-of-service).
+
 ## Validation avant diffusion investisseurs
 
 1. Déployer Sidealy en Preview uniquement.
