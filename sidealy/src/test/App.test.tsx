@@ -64,6 +64,70 @@ describe("Idealy Application Suite", () => {
     }
   });
 
+  it("keeps the workbench scoped to the active conversation", async () => {
+    localStorage.setItem(
+      "idealy_messages_v1",
+      JSON.stringify([
+        {
+          id: "message-old-project",
+          conversationId: "conv-welcome",
+          role: "user",
+          content: "Créer une page de présentation",
+          mode: "chat",
+          createdAt: Date.now() - 1000,
+        },
+      ]),
+    );
+    localStorage.setItem(
+      "idealy_artifacts_v1",
+      JSON.stringify([
+        {
+          id: "artifact-old-project",
+          conversationId: "conv-welcome",
+          createdAt: Date.now(),
+          title: "index.html",
+          type: "code",
+          language: "html",
+          content: "<!doctype html><html><body><h1>Ancien projet</h1></body></html>",
+        },
+      ]),
+    );
+
+    render(<App />);
+
+    expect(
+      screen.getByLabelText("Espace de prévisualisation et de création"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTitle(/Aperçu interactif/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByTitle(/Nouvelle conversation/i)[0]);
+
+    expect(
+      await screen.findByText("Prêt pour votre première création"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTitle(/Aperçu interactif/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not render the workbench on the settings page", async () => {
+    render(<App />);
+
+    expect(
+      screen.getByLabelText("Espace de prévisualisation et de création"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle("Paramètres généraux"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByLabelText("Espace de prévisualisation et de création"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("opens and closes the command palette via Ctrl+K and Escape key", async () => {
     render(<App />);
 
