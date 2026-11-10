@@ -34,7 +34,7 @@ const AppContent: React.FC = () => {
     window.addEventListener("idealy:open-live-voice", handleOpenLiveVoice);
     return () => window.removeEventListener("idealy:open-live-voice", handleOpenLiveVoice);
   }, []);
-  const { activeArtifact, activePage, activeMessages } = useApp();
+  const { activeArtifact, activeConversation, activePage, activeMessages } = useApp();
 
   // Pages autonomes (hors layout de travail, sans sidebar rétractable) avec défilement garanti
   if (activePage === "welcome")
@@ -115,7 +115,7 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Sidecar Panel for Artifacts / Deliverables */}
-      {activePage === "chat" && activeArtifact && <SidecarPanel key={activeArtifact.id} />}
+      {activePage === "chat" && <SidecarPanel key={activeConversation?.id ?? "workspace"} />}
 
       {/* Modals & Dialogues */}
       <CookieNotice />
