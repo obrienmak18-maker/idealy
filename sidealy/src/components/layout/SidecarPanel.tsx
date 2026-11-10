@@ -110,7 +110,7 @@ export const SidecarPanel: React.FC = () => {
   const hasManifest = projectFiles.some((file) => file.path === "package.json");
   const requiresProjectRuntime = Boolean(htmlSource) && (
     hasManifest ||
-    /<script\\b[^>]*(?:\\bsrc\\s*=|\\btype\\s*=\\s*["']module["'])|<link\\b[^>]*\\bhref\\s*=|<img\\b[^>]*\\bsrc\\s*=/i.test(htmlSource)
+    /<script\b[^>]*(?:\bsrc\s*=|\btype\s*=\s*["']module["'])|<link\b[^>]*\bhref\s*=|<img\b[^>]*\bsrc\s*=/i.test(htmlSource)
   );
   const staticPreviewDocument = useMemo(
     () => (htmlSource && !requiresProjectRuntime ? wrapHtml(htmlSource) : ""),
