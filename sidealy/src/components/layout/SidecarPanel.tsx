@@ -117,6 +117,11 @@ export const SidecarPanel: React.FC = () => {
     [htmlSource, requiresProjectRuntime],
   );
   const projectKey = latestMission?.id ?? conversationId ?? "empty";
+  const previewRevision = projectFiles
+    .map((file) => `${file.path}:${file.version ?? 0}:${file.checksum ?? file.content.length}:${file.status ?? "saved"}`)
+    .sort()
+    .join("|");
+  const previewBuildKey = `${projectKey}:${previewRevision}`;
   const generationActive =
     generationStatus === "sending" || generationStatus === "receiving";
 
@@ -343,19 +348,20 @@ export const SidecarPanel: React.FC = () => {
     if (
       latestMission?.status !== "ready" ||
       !hasManifest ||
-      autoStartedRef.current === projectKey
+      autoStartedRef.current === previewBuildKey
     ) return;
-    autoStartedRef.current = projectKey;
+    autoStartedRef.current = previewBuildKey;
     void startPreview();
-  }, [hasManifest, latestMission?.status, projectKey, startPreview]);
+  }, [hasManifest, latestMission?.status, previewBuildKey, startPreview]);
 
   useEffect(() => {
     return () => {
       generationRef.current += 1;
       unsubscribeRef.current?.();
       unsubscribeRef.current = null;
+      // Stop the process synchronously on navigation. The next conversation
+      // reuses the singleton adapter but destroys and mounts its own session.
       runtimeRef.current?.stopProcess();
-      void runtimeRef.current?.destroySession();
     };
   }, []);
 
