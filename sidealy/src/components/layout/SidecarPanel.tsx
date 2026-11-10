@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import type React from "react";
+import type { MissionWorkspaceFile } from "../../types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { getRuntimeAdapter, type AllowedCommand, type ProjectRuntimeAdapter, type RuntimeState } from "../../services/runtime";
@@ -151,7 +152,6 @@ export const SidecarPanel: React.FC = () => {
   const [fileSaveNotice, setFileSaveNotice] = useState("");
   const [fileSaveError, setFileSaveError] = useState("");
   const [unsupportedReason, setUnsupportedReason] = useState("");
-  const editorRef = useRef<HTMLTextAreaElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const runtimeRef = useRef<ProjectRuntimeAdapter | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -1026,7 +1026,6 @@ export const SidecarPanel: React.FC = () => {
                         });
                       }
                     }}
-                    ref={editorRef}
                     spellCheck={false}
                     value={editorDraft}
                     wrap="off"
