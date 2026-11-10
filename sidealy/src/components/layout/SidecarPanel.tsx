@@ -155,7 +155,6 @@ export const SidecarPanel: React.FC = () => {
     activeConversation,
     activeMessages,
     artifacts,
-    closeArtifact,
     generationStatus,
     setDraft,
   } = useApp();
@@ -248,6 +247,17 @@ export const SidecarPanel: React.FC = () => {
     window.addEventListener("idealy:open-workspace", openWorkspace);
     return () => window.removeEventListener("idealy:open-workspace", openWorkspace);
   }, []);
+
+  useEffect(() => {
+    if (!isExpanded && !isMobileOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setIsExpanded(false);
+      setIsMobileOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isExpanded, isMobileOpen]);
 
   const appendOutput = useCallback((chunk: string) => {
     if (!chunk) return;
@@ -418,7 +428,10 @@ export const SidecarPanel: React.FC = () => {
     if (next !== "preview") setInspectorMode("off");
   };
 
-  const isBusy = ["booting", "installing", "starting"].includes(runtimeState);
+  const isBusy =
+    runtimeState === "booting" ||
+    runtimeState === "installing" ||
+    runtimeState === "starting";
   const statusText = stateLabel(runtimeState, generationActive);
   const previewFrameStyle = {
     width: viewportWidths[viewport],
@@ -483,16 +496,6 @@ export const SidecarPanel: React.FC = () => {
               aria-label="Fermer l’espace de travail"
               className="grid h-8 w-8 place-items-center rounded-lg text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring"
               onClick={closeOverlay}
-              type="button"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-          {activeArtifact && (
-            <button
-              aria-label="Fermer le livrable sélectionné"
-              className="hidden h-8 w-8 place-items-center rounded-lg text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring 2xl:grid"
-              onClick={closeArtifact}
               type="button"
             >
               <X className="h-4 w-4" />
@@ -784,7 +787,7 @@ export const SidecarPanel: React.FC = () => {
             </span>
           </div>
           <pre aria-live="polite" className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-5 text-zinc-300">
-            {runtimeOutput || (runtimeError ? runtimeError : "Les commandes et sorties du runtime apparaîtront ici pendant la construction du projet.")}
+            {runtimeOutput || runtimeError || unsupportedReason || "Les commandes et sorties du runtime apparaîtront ici pendant la construction du projet."}
           </pre>
           {runtimeError && <p className="border-t border-amber-500/20 bg-amber-500/5 px-4 py-2 text-[11px] text-amber-400">{runtimeError}</p>}
         </section>
