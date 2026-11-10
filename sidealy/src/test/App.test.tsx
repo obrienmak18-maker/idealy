@@ -1,11 +1,23 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
+import { AssistantRemoteService } from "../services/assistantRemote";
+import { BackendHistoryService } from "../services/backendHistory";
 
 describe("Idealy Application Suite", () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem("idealy_session", "active");
+    vi.spyOn(BackendHistoryService, "listAndImport").mockResolvedValue({
+      conversations: [],
+      cursor: null,
+      hasMore: false,
+    });
+    vi.spyOn(BackendHistoryService, "loadMessages").mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("renders the core application layout and welcome message", () => {
@@ -75,6 +87,12 @@ describe("Idealy Application Suite", () => {
   });
 
   it("sends a message and displays it in the conversation", async () => {
+    const remoteStream = vi
+      .spyOn(AssistantRemoteService, "streamResponse")
+      .mockImplementation(async (options) => {
+        options.callbacks.onChunk("Réponse simulée pour le test.");
+        options.callbacks.onComplete?.();
+      });
     render(<App />);
 
     const textarea = screen.getByPlaceholderText(/Message à Idealy/i);
@@ -85,11 +103,13 @@ describe("Idealy Application Suite", () => {
     const sendBtn = screen.getByRole("button", { name: /Envoyer le message/i });
     fireEvent.click(sendBtn);
 
-    // Verify user message appears in list
+    // Verify the user message and a fully completed local stream appear.
     await waitFor(() => {
       expect(
         screen.getAllByText("Spécification du module d'authentification").length,
       ).toBeGreaterThan(0);
+      expect(remoteStream).toHaveBeenCalledTimes(1);
     });
+    expect(await screen.findByText("Réponse simulée pour le test.")).toBeInTheDocument();
   });
 });

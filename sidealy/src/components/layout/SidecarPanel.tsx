@@ -51,7 +51,7 @@ const viewportWidths: Record<Viewport, string> = {
 
 
 function isHtmlDocument(content: string): boolean {
-  return /<!doctype html|<html[\\s>]|<body[\\s>]/i.test(content);
+  return /<!doctype html|<html[\s>]|<body[\s>]/i.test(content);
 }
 
 function wrapHtml(content: string): string {
@@ -107,11 +107,15 @@ export const SidecarPanel: React.FC = () => {
       /<!doctype html|<html[\s>]|<body[\s>]/i.test(activeArtifact.content))
       ? activeArtifact.content
       : "");
-  const staticPreviewDocument = useMemo(
-    () => (htmlSource ? wrapHtml(htmlSource) : ""),
-    [htmlSource],
-  );
   const hasManifest = projectFiles.some((file) => file.path === "package.json");
+  const requiresProjectRuntime = Boolean(htmlSource) && (
+    hasManifest ||
+    /<script\\b[^>]*(?:\\bsrc\\s*=|\\btype\\s*=\\s*["']module["'])|<link\\b[^>]*\\bhref\\s*=|<img\\b[^>]*\\bsrc\\s*=/i.test(htmlSource)
+  );
+  const staticPreviewDocument = useMemo(
+    () => (htmlSource && !requiresProjectRuntime ? wrapHtml(htmlSource) : ""),
+    [htmlSource, requiresProjectRuntime],
+  );
   const projectKey = latestMission?.id ?? conversationId ?? "empty";
   const generationActive =
     generationStatus === "sending" || generationStatus === "receiving";
