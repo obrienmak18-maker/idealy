@@ -55,6 +55,17 @@ describe("preview runtime bridge", () => {
     expect(result.files.find((file) => file.path === "index.html")?.content.match(/idealy-preview-bridge/g)).toHaveLength(1);
   });
 
+  it("chooses a collision-safe filename when the project already owns the bridge path", () => {
+    const source: MissionWorkspaceFile[] = [
+      { path: "index.html", content: "<html><body></body></html>" },
+      { path: PREVIEW_BRIDGE_PATH, content: "user source" },
+    ];
+    const result = preparePreviewRuntimeFiles(source);
+    expect(result.enabled).toBe(true);
+    expect(result.files.find((file) => file.path === PREVIEW_BRIDGE_PATH)?.content).toBe("user source");
+    expect(result.files.some((file) => file.path === "public/__idealy-preview-bridge-runtime.js")).toBe(true);
+  });
+
   it("includes a real JavaScript bridge source", () => {
     expect(PREVIEW_BRIDGE_SOURCE).toContain("idealy:preview-element");
     expect(PREVIEW_BRIDGE_SOURCE).toContain("idealy:preview-mode");

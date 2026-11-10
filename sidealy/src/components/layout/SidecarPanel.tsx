@@ -32,8 +32,9 @@ import {
   getPreviewRoutes,
 } from "../../services/conversationWorkspace";
 
-type WorkspaceTab = "preview" | "files" | "terminal" | "activity";
+type WorkspaceTab = "preview" | "files" | "terminal" | "console" | "activity";
 type Viewport = "desktop" | "tablet" | "mobile";
+type PreviewConsoleEntry = { id: string; level: "error" | "warning"; message: string; time: string };
 type InspectedElement = {
   classes: string;
   dimensions: { height: number; width: number };
@@ -123,6 +124,7 @@ export const SidecarPanel: React.FC = () => {
   const [runtimeUrl, setRuntimeUrl] = useState("");
   const [runtimeError, setRuntimeError] = useState("");
   const [runtimeOutput, setRuntimeOutput] = useState("");
+  const [consoleEntries, setConsoleEntries] = useState<PreviewConsoleEntry[]>([]);
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [runningCheck, setRunningCheck] = useState<"build" | "typecheck" | null>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState<number | null>(null);
@@ -172,6 +174,7 @@ export const SidecarPanel: React.FC = () => {
     setRuntimeUrl("");
     setRuntimeError("");
     setRuntimeOutput("");
+    setConsoleEntries([]);
     setTerminalOpen(false);
     setInspectorMode("off");
     setInspectionIntent("select");
@@ -355,6 +358,18 @@ export const SidecarPanel: React.FC = () => {
   useEffect(() => {
     const handleFrameMessage = (event: MessageEvent) => {
       if (event.source !== iframeRef.current?.contentWindow) return;
+      if (event.data?.type === "idealy:preview-error") {
+        setConsoleEntries((current) => [
+          ...current,
+          {
+            id: `${Date.now()}-${current.length}`,
+            level: event.data.level === "warning" ? "warning" : "error",
+            message: typeof event.data.message === "string" ? event.data.message : "Erreur preview inconnue",
+            time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          },
+        ].slice(-200));
+        return;
+      }
       if (event.data?.type !== "idealy:preview-element") return;
       setInspected({
         classes: typeof event.data.classes === "string" ? event.data.classes : "",
@@ -550,6 +565,7 @@ export const SidecarPanel: React.FC = () => {
             { id: "preview", label: "Aperçu", icon: Monitor },
             { id: "files", label: "Code", icon: Code2 },
             { id: "terminal", label: "Terminal", icon: TerminalSquare },
+            { id: "console", label: "Console", icon: AlertCircle },
             { id: "activity", label: "Activité", icon: FolderTree },
           ] as const).map((item) => {
             const Icon = item.icon;
@@ -846,6 +862,49 @@ export const SidecarPanel: React.FC = () => {
             {runtimeOutput || runtimeError || unsupportedReason || "Les commandes et sorties du runtime apparaîtront ici pendant la construction du projet."}
           </pre>
           {runtimeError && <p className="border-t border-amber-500/20 bg-amber-500/5 px-4 py-2 text-[11px] text-amber-400">{runtimeError}</p>}
+        </section>
+      )}
+
+      {tab === "console" && (
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg-base">
+          <header className="flex h-10 shrink-0 items-center justify-between border-b border-border-subtle px-4">
+            <div className="flex items-center gap-2 text-xs font-medium text-text-main">
+              <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+              Console de l’application
+              <span className="rounded-full bg-bg-subtle px-2 py-0.5 text-[10px] text-text-muted">
+                {consoleEntries.length}
+              </span>
+            </div>
+            <button
+              className="rounded-md px-2.5 py-1 text-[10px] text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring"
+              onClick={() => setConsoleEntries([])}
+              type="button"
+            >
+              Effacer
+            </button>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[10px] leading-5">
+            {consoleEntries.length ? (
+              <ol className="space-y-1.5">
+                {consoleEntries.map((entry) => (
+                  <li
+                    className={`rounded-lg border px-3 py-2 ${entry.level === "error" ? "border-rose-500/20 bg-rose-500/5 text-rose-400" : "border-amber-500/20 bg-amber-500/5 text-amber-500"}`}
+                    key={entry.id}
+                  >
+                    <div className="mb-1 flex items-center gap-2 opacity-70">
+                      <span>{entry.level === "error" ? "ERREUR" : "AVERTISSEMENT"}</span>
+                      <span>{entry.time}</span>
+                    </div>
+                    <p className="whitespace-pre-wrap break-words">{entry.message}</p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <div className="grid h-full place-items-center text-center text-xs text-text-muted">
+                Aucune erreur d’exécution capturée. Les erreurs JavaScript et avertissements de la preview apparaîtront ici.
+              </div>
+            )}
+          </div>
         </section>
       )}
 
