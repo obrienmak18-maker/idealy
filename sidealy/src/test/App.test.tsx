@@ -6,6 +6,7 @@ import { BackendHistoryService } from "../services/backendHistory";
 
 describe("Idealy Application Suite", () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "/");
     localStorage.clear();
     localStorage.setItem("idealy_session", "active");
     vi.spyOn(BackendHistoryService, "listAndImport").mockResolvedValue({
