@@ -119,11 +119,6 @@ export const SidecarPanel: React.FC = () => {
     [htmlSource, requiresProjectRuntime],
   );
   const projectKey = latestMission?.id ?? conversationId ?? "empty";
-  const previewRevision = projectFiles
-    .map((file) => `${file.path}:${file.version ?? 0}:${file.checksum ?? file.content.length}:${file.status ?? "saved"}`)
-    .sort()
-    .join("|");
-  const previewBuildKey = `${projectKey}:${previewRevision}`;
   const generationActive =
     generationStatus === "sending" || generationStatus === "receiving";
 
@@ -160,7 +155,7 @@ export const SidecarPanel: React.FC = () => {
   const resizeStartRef = useRef({ startX: 0, width: 0 });
 
   const selectedFile = projectFiles.find((file) => file.path === selectedFilePath);
-  const editorDirty = Boolean(selectedFile) && editorDraft !== selectedFile.content;
+  const editorDirty = selectedFile ? editorDraft !== selectedFile.content : false;
   const activePreviewUrl = runtimeUrl
     ? `${runtimeUrl.replace(/\/$/, "")}${previewPath === "/" ? "/" : previewPath}`
     : "";
@@ -364,11 +359,11 @@ export const SidecarPanel: React.FC = () => {
     if (
       latestMission?.status !== "ready" ||
       !hasManifest ||
-      autoStartedRef.current === previewBuildKey
+      autoStartedRef.current === projectKey
     ) return;
-    autoStartedRef.current = previewBuildKey;
+    autoStartedRef.current = projectKey;
     void startPreview();
-  }, [hasManifest, latestMission?.status, previewBuildKey, startPreview]);
+  }, [hasManifest, latestMission?.status, projectKey, startPreview]);
 
   useEffect(() => {
     return () => {
@@ -470,12 +465,35 @@ export const SidecarPanel: React.FC = () => {
       };
 
       if (latestMission?.id) {
+        const missionFilesResponse = await fetch(
+          `/api/idealy/missions/${encodeURIComponent(latestMission.id)}/files`,
+          { cache: "no-store", credentials: "same-origin" },
+        );
+        const missionFilesPayload = (await missionFilesResponse.json().catch(() => ({}))) as {
+          error?: string;
+          files?: MissionWorkspaceFile[];
+        };
+        if (!missionFilesResponse.ok || !Array.isArray(missionFilesPayload.files)) {
+          throw new Error(
+            missionFilesPayload.error ??
+              "Impossible de relire la dernière version du workspace avant l’enregistrement.",
+          );
+        }
+        const persistedFile = missionFilesPayload.files.find(
+          (file) => file.path === selectedFile.path,
+        );
+        if (!persistedFile || !Number.isSafeInteger(persistedFile.version)) {
+          throw new Error(
+            "La version enregistrée de ce fichier est introuvable. Rechargez le workspace avant de réessayer.",
+          );
+        }
+
         const response = await fetch(
           `/api/idealy/missions/${encodeURIComponent(latestMission.id)}/files/edit`,
           {
             body: JSON.stringify({
               content: editorDraft,
-              expectedVersion: selectedFile.version,
+              expectedVersion: persistedFile.version,
               path: selectedFile.path,
             }),
             credentials: "same-origin",
@@ -503,18 +521,24 @@ export const SidecarPanel: React.FC = () => {
       if (runtimeRef.current?.getActiveSession()) {
         if (selectedFile.path.replaceAll("\\", "/") === "package.json") {
           stopPreview();
-          setFileSaveNotice("Fichier enregistré. L’aperçu sera relancé pour appliquer les dépendances.");
+          setFileSaveNotice("Fichier enregistré. Relancez l’aperçu pour appliquer les dépendances.");
           return;
         }
-        const updated = await runtimeRef.current.writeFile(
-          savedFile.path,
-          savedContent,
-        );
-        setFileSaveNotice(
-          updated
-            ? "Fichier enregistré et prévisualisation actualisée."
-            : "Fichier enregistré. Relancez l’aperçu pour charger la dernière version.",
-        );
+        try {
+          const updated = await runtimeRef.current.writeFile(
+            savedFile.path,
+            savedContent,
+          );
+          setFileSaveNotice(
+            updated
+              ? "Fichier enregistré et prévisualisation actualisée."
+              : "Fichier enregistré. Relancez l’aperçu pour charger la dernière version.",
+          );
+        } catch {
+          setFileSaveNotice(
+            "Fichier enregistré. Rechargez l’aperçu pour appliquer la dernière version.",
+          );
+        }
       } else {
         setFileSaveNotice(
           latestMission?.id
