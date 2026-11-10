@@ -76,6 +76,20 @@ describe("conversation workspace files", () => {
       },
     }] as Message[];
     expect(getConversationWorkspaceFiles(messages, artifacts, "chat-a")).toEqual([
+      {
+        content: "<div>Bonjour</div>",
+        language: "html",
+        path: "index.html",
+        status: "saved",
+        version: 2,
+      },
+      {
+        content: "{\\"name\\":\\"demo\\",\\"scripts\\":{\\"dev\\":\\"vite\\"}}",
+        language: "json",
+        path: "package.json",
+        status: "saved",
+        version: 1,
+      },
       { content: "new", path: "src/App.tsx", status: "saved", version: 2 },
     ]);
   });
