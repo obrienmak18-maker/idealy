@@ -20,12 +20,12 @@ describe("Idealy Application Suite", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the core application layout and welcome message", () => {
+  it("renders the core application layout and welcome message", async () => {
     render(<App />);
     expect(screen.getAllByText(/Idealy/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Nouvelle discussion/i).length).toBeGreaterThan(0);
     expect(
-      screen.getByPlaceholderText(/Message à Idealy/i),
+      await screen.findByPlaceholderText(/Message à Idealy/i),
     ).toBeInTheDocument();
   });
 
@@ -33,7 +33,7 @@ describe("Idealy Application Suite", () => {
     render(<App />);
 
     // Type in composer in current conversation
-    const textarea = screen.getByPlaceholderText(/Message à Idealy/i);
+    const textarea = await screen.findByPlaceholderText(/Message à Idealy/i);
     fireEvent.change(textarea, {
       target: { value: "Brouillon test pour conv 1" },
     });
@@ -159,7 +159,7 @@ describe("Idealy Application Suite", () => {
       });
     render(<App />);
 
-    const textarea = screen.getByPlaceholderText(/Message à Idealy/i);
+    const textarea = await screen.findByPlaceholderText(/Message à Idealy/i);
     fireEvent.change(textarea, {
       target: { value: "Spécification du module d'authentification" },
     });

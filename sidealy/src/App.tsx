@@ -34,7 +34,7 @@ const AppContent: React.FC = () => {
     window.addEventListener("idealy:open-live-voice", handleOpenLiveVoice);
     return () => window.removeEventListener("idealy:open-live-voice", handleOpenLiveVoice);
   }, []);
-  const { activeConversation, activePage } = useApp();
+  const { activeConversation, activePage, activeMessages } = useApp();
 
   // Pages autonomes (hors layout de travail, sans sidebar rétractable) avec défilement garanti
   if (activePage === "welcome")
@@ -108,7 +108,7 @@ const AppContent: React.FC = () => {
             <Header />
             <main className="flex-1 flex flex-col overflow-hidden relative" id="main-content">
               <MessageList />
-              <Composer />
+              {activeMessages.length > 0 && <Composer />}
             </main>
           </>
         )}
