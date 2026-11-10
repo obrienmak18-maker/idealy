@@ -363,15 +363,22 @@ export const SidecarPanel: React.FC = () => {
     const handleFrameMessage = (event: MessageEvent) => {
       if (event.source !== iframeRef.current?.contentWindow) return;
       if (event.data?.type === "idealy:preview-error") {
-        setConsoleEntries((current) => [
-          ...current,
-          {
-            id: `${Date.now()}-${current.length}`,
-            level: event.data.level === "warning" ? "warning" : "error",
-            message: typeof event.data.message === "string" ? event.data.message : "Erreur preview inconnue",
-            time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-          },
-        ].slice(-200));
+        const level: PreviewConsoleEntry["level"] =
+          event.data.level === "warning" ? "warning" : "error";
+        const entry: PreviewConsoleEntry = {
+          id: `${Date.now()}-${consoleEntries.length}`,
+          level,
+          message:
+            typeof event.data.message === "string"
+              ? event.data.message
+              : "Erreur preview inconnue",
+          time: new Date().toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }),
+        };
+        setConsoleEntries((current) => [...current, entry].slice(-200));
         return;
       }
       if (event.data?.type !== "idealy:preview-element") return;
