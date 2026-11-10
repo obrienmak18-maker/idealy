@@ -36,6 +36,9 @@ jobs:
           cache: npm
           cache-dependency-path: sidealy/package-lock.json
 
+      - name: Verify Sidealy deployment routing contract
+        run: node scripts/verify-vercel-config.mjs
+
       - name: Install locked dependencies
         run: npm ci
 

@@ -9,20 +9,8 @@
       "destination": "https://idealy-ai.vercel.app/api/:path*"
     },
     {
-      "source": "/login/:path*",
-      "destination": "https://idealy-ai.vercel.app/login/:path*"
-    },
-    {
-      "source": "/register/:path*",
-      "destination": "https://idealy-ai.vercel.app/register/:path*"
-    },
-    {
       "source": "/verify-email/:path*",
       "destination": "https://idealy-ai.vercel.app/verify-email/:path*"
-    },
-    {
-      "source": "/onboarding/:path*",
-      "destination": "https://idealy-ai.vercel.app/onboarding/:path*"
     },
     {
       "source": "/_next/:path*",
