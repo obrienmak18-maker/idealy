@@ -112,6 +112,7 @@ interface AppContextValue {
   toggleArchiveConversation: (id: string) => void;
   togglePinConversation: (id: string) => void;
   updateSpace: (id: string, updates: Partial<Space>) => void;
+  updateArtifactContent: (conversationId: string, path: string, content: string) => void;
   webSearch: boolean;
 }
 
@@ -689,6 +690,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     );
     if (belongsToActiveConversation) setActiveArtifactId(id);
   };
+
+  const updateArtifactContent = useCallback(
+    (conversationId: string, path: string, content: string) => {
+      const normalizedPath = path.replaceAll("\\", "/").replace(/^\/+/, "");
+      setArtifacts((current) => {
+        const existing = current.find(
+          (artifact) =>
+            artifact.conversationId === conversationId &&
+            artifact.title.replaceAll("\\", "/").replace(/^\/+/, "") === normalizedPath,
+        );
+        const now = Date.now();
+        const nextArtifact: Artifact = existing
+          ? { ...existing, content, createdAt: now }
+          : {
+              content,
+              conversationId,
+              createdAt: now,
+              id: \`art-\${conversationId}-\${now}\`,
+              language: normalizedPath.split(".").pop() ?? "text",
+              title: normalizedPath,
+              type: "code",
+            };
+        const next = existing
+          ? current.map((artifact) =>
+              artifact.id === existing.id ? nextArtifact : artifact,
+            )
+          : [nextArtifact, ...current];
+        StorageService.saveArtifacts(next);
+        return next;
+      });
+    },
+    [],
+  );
 
   const closeArtifact = () => {
     setActiveArtifactId(null);
@@ -1272,6 +1306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         toggleArchiveConversation,
         togglePinConversation,
         updateSpace,
+        updateArtifactContent,
         webSearch,
       }}
     >

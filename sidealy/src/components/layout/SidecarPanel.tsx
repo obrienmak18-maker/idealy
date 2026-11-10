@@ -14,6 +14,7 @@ import {
   MousePointer2,
   Play,
   RefreshCw,
+  Save,
   Smartphone,
   Square,
   Tablet,
@@ -23,7 +24,6 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { CodeBlock } from "../chat/CodeBlock";
 import { getRuntimeAdapter, type AllowedCommand, type ProjectRuntimeAdapter, type RuntimeState } from "../../services/runtime";
 import { PREVIEW_BRIDGE_SOURCE, preparePreviewRuntimeFiles } from "../../services/previewRuntimeFiles";
 import {
@@ -87,6 +87,7 @@ export const SidecarPanel: React.FC = () => {
     artifacts,
     generationStatus,
     setDraft,
+    updateArtifactContent,
   } = useApp();
 
   const conversationId = activeConversation?.id ?? null;
@@ -145,7 +146,12 @@ export const SidecarPanel: React.FC = () => {
   const [inspected, setInspected] = useState<InspectedElement | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [selectedFilePath, setSelectedFilePath] = useState("");
+  const [editorDraft, setEditorDraft] = useState("");
+  const [isSavingFile, setIsSavingFile] = useState(false);
+  const [fileSaveNotice, setFileSaveNotice] = useState("");
+  const [fileSaveError, setFileSaveError] = useState("");
   const [unsupportedReason, setUnsupportedReason] = useState("");
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const runtimeRef = useRef<ProjectRuntimeAdapter | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -154,6 +160,7 @@ export const SidecarPanel: React.FC = () => {
   const resizeStartRef = useRef({ startX: 0, width: 0 });
 
   const selectedFile = projectFiles.find((file) => file.path === selectedFilePath);
+  const editorDirty = Boolean(selectedFile) && editorDraft !== selectedFile.content;
   const activePreviewUrl = runtimeUrl
     ? `${runtimeUrl.replace(/\/$/, "")}${previewPath === "/" ? "/" : previewPath}`
     : "";
@@ -174,6 +181,13 @@ export const SidecarPanel: React.FC = () => {
       setSelectedFilePath(nextFile.path);
     }
   }, [projectFiles, selectedFilePath]);
+
+  useEffect(() => {
+    setEditorDraft(selectedFile?.content ?? "");
+    setFileSaveNotice("");
+    setFileSaveError("");
+  }, [selectedFile?.path, selectedFile?.version, selectedFile?.content]);
+
 
   useEffect(() => {
     setTab("preview");
@@ -440,6 +454,108 @@ export const SidecarPanel: React.FC = () => {
       document.querySelector<HTMLTextAreaElement>("[data-composer-input]")?.focus();
     });
   }, [commentDraft, inspected, inspectionIntent, setDraft]);
+
+  const saveSelectedFile = useCallback(async () => {
+    if (!selectedFile || !conversationId || !editorDirty || isSavingFile) return;
+    setIsSavingFile(true);
+    setFileSaveError("");
+    setFileSaveNotice("");
+
+    try {
+      let savedContent = editorDraft;
+      let savedFile: MissionWorkspaceFile = {
+        ...selectedFile,
+        content: editorDraft,
+        status: "saved",
+      };
+
+      if (latestMission?.id) {
+        const response = await fetch(
+          \`/api/idealy/missions/\${encodeURIComponent(latestMission.id)}/files/edit\`,
+          {
+            body: JSON.stringify({
+              content: editorDraft,
+              expectedVersion: selectedFile.version,
+              path: selectedFile.path,
+            }),
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            method: "PATCH",
+          },
+        );
+        const payload = (await response.json().catch(() => ({}))) as {
+          error?: string;
+          file?: MissionWorkspaceFile;
+        };
+        if (!response.ok || !payload.file) {
+          throw new Error(
+            payload.error ??
+              "Le backend n’a pas confirmé l’enregistrement de ce fichier.",
+          );
+        }
+        savedFile = payload.file;
+        savedContent = payload.file.content;
+      }
+
+      updateArtifactContent(conversationId, selectedFile.path, savedContent);
+      setEditorDraft(savedContent);
+
+      if (runtimeRef.current?.getActiveSession()) {
+        if (selectedFile.path.replaceAll("\\", "/") === "package.json") {
+          stopPreview();
+          setFileSaveNotice("Fichier enregistré. L’aperçu sera relancé pour appliquer les dépendances.");
+          return;
+        }
+        const updated = await runtimeRef.current.writeFile(
+          savedFile.path,
+          savedContent,
+        );
+        setFileSaveNotice(
+          updated
+            ? "Fichier enregistré et prévisualisation actualisée."
+            : "Fichier enregistré. Relancez l’aperçu pour charger la dernière version.",
+        );
+      } else {
+        setFileSaveNotice(
+          latestMission?.id
+            ? "Fichier enregistré dans l’espace de mission."
+            : "Fichier enregistré dans les livrables locaux de cette conversation.",
+        );
+      }
+    } catch (cause) {
+      setFileSaveError(
+        cause instanceof Error
+          ? cause.message
+          : "Impossible d’enregistrer ce fichier.",
+      );
+    } finally {
+      setIsSavingFile(false);
+    }
+  }, [
+    conversationId,
+    editorDirty,
+    editorDraft,
+    isSavingFile,
+    latestMission?.id,
+    selectedFile,
+    stopPreview,
+    updateArtifactContent,
+  ]);
+
+  useEffect(() => {
+    const handleSaveShortcut = (event: KeyboardEvent) => {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "s" &&
+        tab === "files"
+      ) {
+        event.preventDefault();
+        void saveSelectedFile();
+      }
+    };
+    window.addEventListener("keydown", handleSaveShortcut);
+    return () => window.removeEventListener("keydown", handleSaveShortcut);
+  }, [saveSelectedFile, tab]);
 
   const openPreview = useCallback(() => {
     if (activePreviewUrl) {
@@ -830,12 +946,16 @@ export const SidecarPanel: React.FC = () => {
       )}
 
       {tab === "files" && (
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(132px,0.34fr)_minmax(0,1fr)]">
-          <nav aria-label="Fichiers du projet" className="min-h-0 overflow-y-auto border-r border-border-subtle p-2">
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(132px,0.32fr)_minmax(0,1fr)]">
+          <nav aria-label="Fichiers du projet" className="min-h-0 overflow-y-auto border-r border-border-subtle bg-bg-surface/60 p-2">
+            <div className="mb-2 flex items-center justify-between px-1.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+              <span>Explorer</span>
+              <span>{projectFiles.length}</span>
+            </div>
             {projectFiles.length ? projectFiles.map((file) => (
               <button
                 aria-current={selectedFilePath === file.path ? "page" : undefined}
-                className={`flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-[10px] transition-colors focus-ring ${selectedFilePath === file.path ? "bg-bg-subtle text-text-main" : "text-text-muted hover:bg-bg-surface hover:text-text-main"}`}
+                className={\`flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-[10px] transition-colors focus-ring \${selectedFilePath === file.path ? "bg-brand-primary/10 text-text-main" : "text-text-muted hover:bg-bg-subtle hover:text-text-main"}\`}
                 key={file.path}
                 onClick={() => setSelectedFilePath(file.path)}
                 type="button"
@@ -847,24 +967,86 @@ export const SidecarPanel: React.FC = () => {
               <p className="px-2 py-3 text-[10px] text-text-muted">Les fichiers apparaîtront ici.</p>
             )}
           </nav>
-          <div className="min-h-0 overflow-auto p-3">
+          <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0e1117] text-zinc-200">
             {selectedFile ? (
               <>
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="truncate font-mono text-[10px] text-text-muted">{selectedFile.path}</span>
-                  <span className="shrink-0 text-[9px] text-text-muted">{selectedFile.content.length.toLocaleString("fr-FR")} caractères</span>
+                <header className="flex min-h-10 shrink-0 items-center justify-between gap-2 border-b border-white/[0.08] px-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-[10px] text-zinc-300">{selectedFile.path}</p>
+                    <p className="text-[9px] text-zinc-500">
+                      {editorDraft.length.toLocaleString("fr-FR")} caractères
+                      {editorDirty ? " · Modifications non enregistrées" : " · Enregistré"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      className="inline-flex h-7 items-center rounded-md px-2 text-[10px] text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-white focus-ring disabled:opacity-40"
+                      disabled={!editorDirty || isSavingFile}
+                      onClick={() => setEditorDraft(selectedFile.content)}
+                      type="button"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      className="inline-flex h-7 items-center gap-1.5 rounded-md bg-brand-primary px-2.5 text-[10px] font-semibold text-brand-onPrimary transition-opacity hover:opacity-90 focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={!editorDirty || isSavingFile}
+                      onClick={() => void saveSelectedFile()}
+                      type="button"
+                    >
+                      {isSavingFile ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                      Enregistrer
+                    </button>
+                  </div>
+                </header>
+                <div className="flex min-h-0 flex-1 overflow-hidden">
+                  <div aria-hidden="true" className="hidden shrink-0 select-none overflow-hidden border-r border-white/[0.06] px-2 py-3 text-right font-mono text-[10px] leading-5 text-zinc-600 sm:block">
+                    {editorDraft.split("\n").map((_, index) => (
+                      <div key={index}>{index + 1}</div>
+                    ))}
+                  </div>
+                  <textarea
+                    aria-label={\`Éditer \${selectedFile.path}\`}
+                    className="min-h-0 min-w-0 flex-1 resize-none overflow-auto bg-transparent px-3 py-3 font-mono text-[11px] leading-5 text-zinc-200 outline-none placeholder:text-zinc-600 focus:ring-0"
+                    onChange={(event) => {
+                      setEditorDraft(event.target.value);
+                      setFileSaveNotice("");
+                      setFileSaveError("");
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Tab") {
+                        event.preventDefault();
+                        const target = event.currentTarget;
+                        const start = target.selectionStart;
+                        const end = target.selectionEnd;
+                        const next = \`\${editorDraft.slice(0, start)}  \${editorDraft.slice(end)}\`;
+                        setEditorDraft(next);
+                        requestAnimationFrame(() => {
+                          target.selectionStart = start + 2;
+                          target.selectionEnd = start + 2;
+                        });
+                      }
+                    }}
+                    ref={editorRef}
+                    spellCheck={false}
+                    value={editorDraft}
+                    wrap="off"
+                  />
                 </div>
-                <CodeBlock
-                  code={selectedFile.content}
-                  language={selectedFile.language ?? selectedFile.path.split(".").pop() ?? "text"}
-                />
+                <footer className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] px-3 py-1.5 text-[9px]">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="shrink-0 text-zinc-500">{selectedFile.language ?? selectedFile.path.split(".").pop() ?? "text"}</span>
+                    {fileSaveNotice && <span className="truncate text-emerald-400">{fileSaveNotice}</span>}
+                    {fileSaveError && <span className="truncate text-rose-400">{fileSaveError}</span>}
+                  </div>
+                  <span className="shrink-0 text-zinc-600">Ctrl/⌘ + S pour enregistrer</span>
+                </footer>
               </>
             ) : (
-              <div className="grid h-full place-items-center text-xs text-text-muted">
+              <div className="grid h-full place-items-center px-5 text-center text-xs text-zinc-500">
                 Aucun fichier source disponible pour cette conversation.
               </div>
             )}
-          </div>
+          </section>
         </div>
       )}
 

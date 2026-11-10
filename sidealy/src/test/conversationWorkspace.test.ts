@@ -93,6 +93,36 @@ describe("conversation workspace files", () => {
     ]);
   });
 
+  it("overlays a saved source artifact on top of the original mission snapshot", () => {
+    const messages = [{
+      conversationId: "chat-a",
+      createdAt: 10,
+      id: "m1",
+      content: "",
+      mode: "produce",
+      role: "assistant",
+      mission: {
+        id: "mission-a",
+        plan: { agents: [], intention: "", nextStep: "", projectKind: "", v1Scope: "" },
+        status: "ready",
+        files: [{ content: "old source", path: "src/App.tsx", status: "saved", version: 7 }],
+      },
+    }] as Message[];
+    const editedArtifacts: Artifact[] = [{
+      content: "edited source",
+      conversationId: "chat-a",
+      createdAt: 200,
+      id: "edited-app",
+      language: "tsx",
+      title: "src/App.tsx",
+      type: "code",
+    }];
+    const files = getConversationWorkspaceFiles(messages, editedArtifacts, "chat-a");
+    expect(files).toEqual([
+      { content: "edited source", path: "src/App.tsx", status: "saved", version: 7, language: "tsx" },
+    ]);
+  });
+
   it("returns the latest mission in the requested conversation only", () => {
     const messages = [
       {

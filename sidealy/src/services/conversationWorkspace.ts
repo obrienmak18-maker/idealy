@@ -45,10 +45,9 @@ export function getConversationWorkspaceFiles(
   if (!conversationId) return [];
 
   const mission = getLatestMissionForConversation(messages, conversationId);
-  if (mission?.files?.length) {
-    const fromMission = keepLatestFile(mission.files);
-    if (fromMission.length) return fromMission;
-  }
+  const missionFiles = mission?.files?.length
+    ? keepLatestFile(mission.files)
+    : [];
 
   const artifactFiles = artifacts
     .filter((artifact) => {
@@ -66,7 +65,21 @@ export function getConversationWorkspaceFiles(
       status: "saved" as const,
       version: artifact.createdAt,
     }));
-  return keepLatestFile(artifactFiles);
+  if (!missionFiles.length) return keepLatestFile(artifactFiles);
+
+  // The mission snapshot keeps the backend optimistic-lock version. Locally
+  // saved artifact content overlays it so reopening a chat shows the latest edit.
+  const merged = new Map(missionFiles.map((file) => [file.path, file]));
+  for (const artifact of keepLatestFile(artifactFiles)) {
+    const previous = merged.get(artifact.path);
+    merged.set(artifact.path, {
+      ...artifact,
+      version: previous?.version ?? artifact.version,
+    });
+  }
+  return [...merged.values()].sort((left, right) =>
+    left.path.localeCompare(right.path)
+  );
 }
 
 export function getPreviewRoutes(files: readonly MissionWorkspaceFile[]) {
