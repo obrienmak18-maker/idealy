@@ -24,7 +24,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { CodeBlock } from "../chat/CodeBlock";
-import { getRuntimeAdapter, type ProjectRuntimeAdapter, type RuntimeState } from "../../services/runtime";
+import { getRuntimeAdapter, type AllowedCommand, type ProjectRuntimeAdapter, type RuntimeState } from "../../services/runtime";
 import {
   getConversationWorkspaceFiles,
   getLatestMissionForConversation,
@@ -195,6 +195,9 @@ export const SidecarPanel: React.FC = () => {
   const [runtimeError, setRuntimeError] = useState("");
   const [runtimeOutput, setRuntimeOutput] = useState("");
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [runningCheck, setRunningCheck] = useState<"build" | "typecheck" | null>(null);
+  const [workspaceWidth, setWorkspaceWidth] = useState<number | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [inspectorMode, setInspectorMode] = useState<"off" | "select" | "comment">("off");
@@ -207,6 +210,7 @@ export const SidecarPanel: React.FC = () => {
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const generationRef = useRef(0);
   const autoStartedRef = useRef<string | null>(null);
+  const resizeStartRef = useRef({ startX: 0, width: 0 });
 
   const selectedFile = projectFiles.find((file) => file.path === selectedFilePath);
   const activePreviewUrl = runtimeUrl
@@ -249,6 +253,33 @@ export const SidecarPanel: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!isResizing) return;
+    const previousCursor = document.body.style.cursor;
+    const previousSelection = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMove = (event: PointerEvent) => {
+      const delta = resizeStartRef.current.startX - event.clientX;
+      const maximum = Math.min(1100, Math.round(window.innerWidth * 0.72));
+      const nextWidth = Math.max(460, Math.min(maximum, resizeStartRef.current.width + delta));
+      setWorkspaceWidth(nextWidth);
+    };
+    const handleUp = () => setIsResizing(false);
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleUp);
+    return () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousSelection;
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", handleUp);
+    };
+  }, [isResizing]);
+
+  useEffect(() => {
     if (!isExpanded && !isMobileOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -272,6 +303,34 @@ export const SidecarPanel: React.FC = () => {
     setRuntimeUrl("");
     setRuntimeState("stopped");
   }, []);
+
+  const runDiagnostic = useCallback(async (command: AllowedCommand) => {
+    const adapter = runtimeRef.current;
+    if (!adapter?.getActiveSession() || runtimeUrl) {
+      setRuntimeError("Arrête d’abord le serveur de prévisualisation avant de lancer une vérification.");
+      return;
+    }
+
+    setRuntimeError("");
+    setRunningCheck(command.kind === "tsc-noemit" ? "typecheck" : "build");
+    setTab("terminal");
+    try {
+      const result = await adapter.executeCommand(command);
+      if (result.exitCode === 0) {
+        appendOutput("\\nVérification locale terminée · code 0.\\n");
+      } else {
+        setRuntimeError(
+          `La vérification s’est terminée avec le code ${result.exitCode}. Consulte la sortie du terminal.`,
+        );
+      }
+    } catch (cause) {
+      setRuntimeError(
+        cause instanceof Error ? cause.message : "La vérification n’a pas pu être exécutée.",
+      );
+    } finally {
+      setRunningCheck(null);
+    }
+  }, [appendOutput, runtimeUrl]);
 
   const startPreview = useCallback(async () => {
     if (!hasManifest || !projectFiles.length) {
@@ -448,6 +507,27 @@ export const SidecarPanel: React.FC = () => {
     ? "fixed inset-0 z-50 flex h-dvh w-full flex-col bg-bg-base shadow-elevated"
     : "relative hidden h-full min-h-0 w-[clamp(480px,46vw,880px)] shrink-0 flex-col border-l border-border-subtle bg-bg-base xl:flex";
 
+  const panelStyle: React.CSSProperties | undefined =
+    !isExpanded && !isMobileOpen && workspaceWidth !== null
+      ? { width: `${workspaceWidth}px` }
+      : undefined;
+
+  const resizeWorkspace = (direction: -1 | 1) => {
+    const current = workspaceWidth ?? Math.min(880, Math.max(480, Math.round(window.innerWidth * 0.46)));
+    const maximum = Math.min(1100, Math.round(window.innerWidth * 0.72));
+    setWorkspaceWidth(Math.max(460, Math.min(maximum, current + direction * 24)));
+  };
+
+  const handleResizeKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      resizeWorkspace(1);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      resizeWorkspace(-1);
+    }
+  };
+
   const statusIcon =
     runtimeState === "ready" ? (
       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
@@ -460,7 +540,34 @@ export const SidecarPanel: React.FC = () => {
     );
 
   return (
-    <aside aria-label="Espace de prévisualisation et de création" className={panelClass}>
+    <aside
+      aria-label="Espace de prévisualisation et de création"
+      className={`${panelClass} ${isResizing ? "select-none" : ""}`}
+      style={panelStyle}
+    >
+      {!isExpanded && !isMobileOpen && (
+        <div
+          aria-label="Redimensionner le chat et la prévisualisation"
+          aria-orientation="vertical"
+          aria-valuemax={1100}
+          aria-valuemin={460}
+          aria-valuenow={workspaceWidth ?? Math.min(880, Math.max(480, Math.round(window.innerWidth * 0.46)))}
+          className="absolute inset-y-0 -left-1.5 z-40 hidden w-3 cursor-col-resize items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary xl:flex"
+          onKeyDown={handleResizeKeyDown}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            resizeStartRef.current = {
+              startX: event.clientX,
+              width: event.currentTarget.parentElement?.getBoundingClientRect().width ?? 640,
+            };
+            setIsResizing(true);
+          }}
+          role="separator"
+          tabIndex={0}
+        >
+          <span className="h-12 w-1 rounded-full bg-border-subtle transition-colors group-hover:bg-brand-primary/60" />
+        </div>
+      )}
       <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-3 sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-border-subtle bg-bg-surface text-brand-primary">
@@ -783,8 +890,24 @@ export const SidecarPanel: React.FC = () => {
             <TerminalSquare className="h-4 w-4" />
             Terminal de construction
             <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
-              {isBusy ? "En cours" : runtimeState === "ready" ? "Serveur actif" : "En attente"}
+              {runningCheck ? "Vérification…" : isBusy ? "En cours" : runtimeState === "ready" ? "Serveur actif" : "En attente"}
             </span>
+            <button
+              className="rounded-md border border-white/10 px-2 py-1 text-[10px] text-zinc-300 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!runtimeRef.current?.getActiveSession() || Boolean(runtimeUrl) || Boolean(runningCheck)}
+              onClick={() => void runDiagnostic({ kind: "npm-run", script: "build" })}
+              type="button"
+            >
+              Build
+            </button>
+            <button
+              className="rounded-md border border-white/10 px-2 py-1 text-[10px] text-zinc-300 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!runtimeRef.current?.getActiveSession() || Boolean(runtimeUrl) || Boolean(runningCheck)}
+              onClick={() => void runDiagnostic({ kind: "tsc-noemit" })}
+              type="button"
+            >
+              Typecheck
+            </button>
           </div>
           <pre aria-live="polite" className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-5 text-zinc-300">
             {runtimeOutput || runtimeError || unsupportedReason || "Les commandes et sorties du runtime apparaîtront ici pendant la construction du projet."}
