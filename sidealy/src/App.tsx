@@ -108,7 +108,7 @@ const AppContent: React.FC = () => {
             <Header />
             <main className="flex-1 flex flex-col overflow-hidden relative" id="main-content">
               <MessageList />
-              {activeMessages.length > 0 && <Composer />}
+              <Composer />
             </main>
           </>
         )}
