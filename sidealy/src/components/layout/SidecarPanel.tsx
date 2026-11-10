@@ -143,6 +143,7 @@ export const SidecarPanel: React.FC = () => {
   const [inspectorMode, setInspectorMode] = useState<"off" | "select" | "comment">("off");
   const [inspectionIntent, setInspectionIntent] = useState<"select" | "comment">("select");
   const [inspected, setInspected] = useState<InspectedElement | null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
   const [selectedFilePath, setSelectedFilePath] = useState("");
   const [unsupportedReason, setUnsupportedReason] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -188,6 +189,7 @@ export const SidecarPanel: React.FC = () => {
     setInspectorMode("off");
     setInspectionIntent("select");
     setInspected(null);
+    setCommentDraft("");
     setUnsupportedReason("");
   }, [projectKey]);
 
@@ -399,6 +401,7 @@ export const SidecarPanel: React.FC = () => {
         text: typeof event.data.text === "string" ? event.data.text : "",
       });
       setInspectionIntent(event.data.mode === "comment" ? "comment" : "select");
+      setCommentDraft("");
       setInspectorMode("off");
     };
     window.addEventListener("message", handleFrameMessage);
@@ -415,9 +418,11 @@ export const SidecarPanel: React.FC = () => {
 
   const requestEdit = useCallback(() => {
     if (!inspected) return;
+    const visualComment = commentDraft.trim();
+    if (inspectionIntent === "comment" && !visualComment) return;
     const task =
       inspectionIntent === "comment"
-        ? "Prends en compte ce commentaire visuel"
+        ? "Applique ce commentaire visuel"
         : "Modifie cet élément";
     const context = [
       `${task} dans l’application générée :`,
@@ -425,14 +430,16 @@ export const SidecarPanel: React.FC = () => {
       `- Élément : <${inspected.tag}>`,
       inspected.text ? `- Texte actuel : ${inspected.text}` : "",
       `- Dimensions : ${inspected.dimensions.width} × ${inspected.dimensions.height}px`,
+      visualComment ? `- Commentaire : ${visualComment}` : "",
       "Demande : ",
     ].filter(Boolean).join("\n");
     setDraft(context);
+    setCommentDraft("");
     setIsMobileOpen(false);
     window.requestAnimationFrame(() => {
       document.querySelector<HTMLTextAreaElement>("[data-composer-input]")?.focus();
     });
-  }, [inspected, inspectionIntent, setDraft]);
+  }, [commentDraft, inspected, inspectionIntent, setDraft]);
 
   const openPreview = useCallback(() => {
     if (activePreviewUrl) {
@@ -750,21 +757,32 @@ export const SidecarPanel: React.FC = () => {
           </div>
 
           {inspected && (
-            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border-subtle bg-bg-surface px-3 py-2">
-              <div className="min-w-0">
+            <div className="flex shrink-0 flex-col gap-2 border-t border-border-subtle bg-bg-surface px-3 py-2 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-[11px] font-semibold text-text-main">
                   <span className="font-mono text-brand-primary">&lt;{inspected.selector}&gt;</span>
                   <span className="text-text-muted">{inspected.dimensions.width} × {inspected.dimensions.height}px</span>
                 </div>
                 {inspected.text && <p className="mt-0.5 truncate text-[10px] text-text-muted">{inspected.text}</p>}
+                {inspectionIntent === "comment" && (
+                  <textarea
+                    aria-label="Commentaire sur l’élément sélectionné"
+                    className="mt-2 min-h-12 w-full resize-y rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-xs text-text-main outline-none placeholder:text-text-muted focus:border-brand-primary/60 focus:ring-2 focus:ring-brand-primary/15"
+                    onChange={(event) => setCommentDraft(event.target.value)}
+                    placeholder="Décris ce qui doit changer sur cet élément…"
+                    rows={2}
+                    value={commentDraft}
+                  />
+                )}
               </div>
               <button
-                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-brand-primary px-3 text-[11px] font-semibold text-brand-onPrimary hover:opacity-90 focus-ring"
+                className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 self-end rounded-lg bg-brand-primary px-3 text-[11px] font-semibold text-brand-onPrimary transition-opacity hover:opacity-90 focus-ring disabled:cursor-not-allowed disabled:opacity-40 sm:self-auto"
+                disabled={inspectionIntent === "comment" && !commentDraft.trim()}
                 onClick={requestEdit}
                 type="button"
               >
                 <MessageSquarePlus className="h-3.5 w-3.5" />
-                Envoyer au chat
+                {inspectionIntent === "comment" ? "Envoyer le commentaire" : "Demander une modification"}
               </button>
             </div>
           )}
