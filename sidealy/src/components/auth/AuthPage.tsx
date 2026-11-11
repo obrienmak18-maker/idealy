@@ -14,7 +14,9 @@ import {
   completeMagicLink,
   confirmPhoneCode,
   createBackendSession,
+  completeGoogleRedirect,
   ensureFirebaseConfigured,
+  isGoogleRedirectPending,
   getBearerToken,
   isFirebaseConfigured,
   isMagicLinkUrl,
@@ -32,7 +34,7 @@ import { AuthShell, authPrimary } from "./AuthShell";
 import { IdealyLogo } from "../branding/IdealyLogo";
 
 type View = "login" | "signup" | "magic" | "phone" | "reset" | "sent";
-type FirebaseUser = Awaited<ReturnType<typeof signInGoogle>>;
+type FirebaseUser = NonNullable<Awaited<ReturnType<typeof signInGoogle>>>;
 
 const GoogleIcon = () => (
   <svg aria-hidden="true" className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -145,6 +147,14 @@ export const AuthPage: React.FC = () => {
       setFirebaseReady(true);
       if (!configured) {
         setError("La configuration Firebase publique n’est pas disponible. Le backend doit exposer ses paramètres Firebase.");
+        return;
+      }
+      if (isGoogleRedirectPending()) {
+        await run(async () => {
+          const redirectedUser = await completeGoogleRedirect();
+          if (!redirectedUser) throw new Error("google_redirect_no_result");
+          await finish(redirectedUser);
+        });
         return;
       }
       if (!isMagicLinkUrl()) return;
@@ -350,7 +360,12 @@ export const AuthPage: React.FC = () => {
             <button
               className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-white/[0.11] bg-[#22252e] text-[15px] font-medium text-white transition-colors duration-200 hover:border-white/20 hover:bg-[#292d37] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
               disabled={busy || !firebaseReady || !isFirebaseConfigured()}
-              onClick={() => void run(async () => finish(await signInGoogle()))}
+              onClick={() =>
+                void run(async () => {
+                  const user = await signInGoogle();
+                  if (user) await finish(user);
+                })
+              }
               type="button"
             >
               <GoogleIcon />

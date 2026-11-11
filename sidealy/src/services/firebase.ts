@@ -13,12 +13,14 @@ import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
   getAuth,
+  getRedirectResult,
   GoogleAuthProvider,
   sendEmailVerification,
   sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   type User,
 } from "firebase/auth";
 
@@ -110,9 +112,66 @@ function auth(): Auth {
   return cached;
 }
 
-export async function signInGoogle(): Promise<User> {
-  const result = await signInWithPopup(auth(), new GoogleAuthProvider());
-  return result.user;
+const GOOGLE_REDIRECT_PENDING_KEY = "idealy.google.redirect.pending";
+
+export function isGoogleRedirectPending(): boolean {
+  try {
+    return sessionStorage.getItem(GOOGLE_REDIRECT_PENDING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export async function completeGoogleRedirect(): Promise<User | null> {
+  if (!isGoogleRedirectPending()) return null;
+  try {
+    const result = await getRedirectResult(auth());
+    if (!result?.user) throw new Error("google_redirect_no_result");
+    return result.user;
+  } finally {
+    try {
+      sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+    } catch {
+      // Ignore storage cleanup failures.
+    }
+  }
+}
+
+export async function signInGoogle(): Promise<User | null> {
+  const firebaseAuth = auth();
+  await setPersistence(firebaseAuth, browserLocalPersistence);
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+
+  try {
+    const result = await signInWithPopup(firebaseAuth, provider);
+    return result.user;
+  } catch (error) {
+    const code = (error as { code?: string })?.code ?? "";
+    const canRedirect = new Set([
+      "auth/popup-blocked",
+      "auth/internal-error",
+      "auth/operation-not-supported-in-this-environment",
+    ]).has(code);
+    if (!canRedirect) throw error;
+
+    try {
+      sessionStorage.setItem(GOOGLE_REDIRECT_PENDING_KEY, "1");
+    } catch {
+      throw new Error("google_redirect_unavailable");
+    }
+    try {
+      await signInWithRedirect(firebaseAuth, provider);
+      return null;
+    } catch (redirectError) {
+      try {
+        sessionStorage.removeItem(GOOGLE_REDIRECT_PENDING_KEY);
+      } catch {
+        // Ignore storage cleanup failures.
+      }
+      throw redirectError;
+    }
+  }
 }
 
 export async function signInEmail(email: string, password: string): Promise<User> {
@@ -147,6 +206,8 @@ export function authErrorMessage(error: unknown): string {
   const code = (error as { code?: string })?.code ?? (error as Error)?.message ?? "";
   if (code.includes("firebase_not_configured")) return "La connexion n’est pas encore configurée sur cet environnement.";
   if (code.includes("email_not_verified")) return "Confirmez votre adresse e-mail avant de vous connecter.";
+  if (code.includes("google_redirect_no_result")) return "Google n’a pas terminé la connexion. Recommencez ou utilisez votre e-mail.";
+  if (code.includes("google_redirect_unavailable")) return "La redirection Google n’a pas pu démarrer. Vérifiez les domaines autorisés dans Firebase.";
   if (code.includes("firebase_backend_identity_rejected")) return "Firebase a reconnu votre compte, mais le backend Idealy n’a pas validé cette identité.";
   if (code.includes("firebase_backend_unavailable")) return "Le service d’authentification Idealy est momentanément indisponible. Réessayez dans un instant.";
   if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return "E-mail ou mot de passe incorrect.";
