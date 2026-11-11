@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "../../services/firebase";
 import {
   ChevronRight,
   Clock3,
@@ -363,7 +364,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
   }, [githubReviewOpen, restoreTarget, vercelReviewOpen]);
 
   const loadCheckpoints = async () => {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `/api/idealy/missions/${encodeURIComponent(missionId)}/checkpoints`,
       { cache: "no-store", credentials: "same-origin" },
     );
@@ -376,12 +377,12 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
-      fetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/tasks`, {
+      authenticatedFetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/tasks`, {
         cache: "no-store",
         credentials: "same-origin",
         signal: controller.signal,
       }),
-      fetch(
+      authenticatedFetch(
         `/api/idealy/missions/${encodeURIComponent(missionId)}/checkpoints`,
         {
           cache: "no-store",
@@ -389,7 +390,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
           signal: controller.signal,
         },
       ),
-      fetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/events`, {
+      authenticatedFetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/events`, {
         cache: "no-store",
         credentials: "same-origin",
         signal: controller.signal,
@@ -439,12 +440,12 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
       pollingRef.current = true;
       try {
         const [tasksResponse, eventsResponse] = await Promise.all([
-          fetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/tasks`, {
+          authenticatedFetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/tasks`, {
             cache: "no-store",
             credentials: "same-origin",
             signal: controller.signal,
           }),
-          fetch(
+          authenticatedFetch(
             `/api/idealy/missions/${encodeURIComponent(missionId)}/events?afterSequence=${lastEventSequenceRef.current}`,
             {
               cache: "no-store",
@@ -504,7 +505,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     databaseRequestedRef.current = true;
     setDatabaseLoading(true);
     setDatabaseError("");
-    fetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/database`, {
+    authenticatedFetch(`/api/idealy/missions/${encodeURIComponent(missionId)}/database`, {
       cache: "no-store",
       credentials: "same-origin",
       signal: controller.signal,
@@ -564,7 +565,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     setError("");
     setNotice("");
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/idealy/missions/${encodeURIComponent(missionId)}/files/edit`,
         {
           body: JSON.stringify({
@@ -629,7 +630,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/idealy/missions/${encodeURIComponent(missionId)}/checkpoints`,
         {
           body: JSON.stringify({ name: checkpointName.trim() || undefined }),
@@ -658,7 +659,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/idealy/missions/${encodeURIComponent(missionId)}/rollback`,
         {
           body: JSON.stringify({ checkpointId: restoreTarget.id }),
@@ -668,7 +669,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
         },
       );
       await readPayload(response);
-      const filesResponse = await fetch(
+      const filesResponse = await authenticatedFetch(
         `/api/idealy/missions/${encodeURIComponent(missionId)}/files`,
         { cache: "no-store", credentials: "same-origin" },
       );
@@ -719,7 +720,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
       const confirmationToken = createConfirmationToken();
       const payloadDigest = await githubPayloadDigest(repo, branch, files);
       const confirmationUrl = `/api/idealy/missions/${encodeURIComponent(missionId)}/confirmation`;
-      const preparedResponse = await fetch(confirmationUrl, {
+      const preparedResponse = await authenticatedFetch(confirmationUrl, {
         body: JSON.stringify({
           confirmationToken,
           operation: "github:export",
@@ -733,7 +734,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
       if (prepared.status !== "pending")
         throw new Error("La confirmation GitHub n’a pas été préparée.");
 
-      const approvedResponse = await fetch(confirmationUrl, {
+      const approvedResponse = await authenticatedFetch(confirmationUrl, {
         body: JSON.stringify({ confirmationToken, operation: "github:export" }),
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
@@ -743,7 +744,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
       if (approved.status !== "approved")
         throw new Error("La confirmation GitHub n’a pas été validée.");
 
-      const exportResponse = await fetch(
+      const exportResponse = await authenticatedFetch(
         `/api/idealy/missions/${encodeURIComponent(missionId)}/github`,
         {
           body: JSON.stringify({ branch, confirmationToken, owner, repo }),
@@ -804,7 +805,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
     setError("");
     setNotice("");
     try {
-      const filesResponse = await fetch(
+      const filesResponse = await authenticatedFetch(
         `/api/idealy/missions/${encodeURIComponent(missionId)}/files`,
         { cache: "no-store", credentials: "same-origin" },
       );
@@ -828,7 +829,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
         deployableFiles,
       );
       const confirmationUrl = `/api/idealy/missions/${encodeURIComponent(missionId)}/confirmation`;
-      const preparedResponse = await fetch(confirmationUrl, {
+      const preparedResponse = await authenticatedFetch(confirmationUrl, {
         body: JSON.stringify({
           confirmationToken,
           operation: "vercel:deploy",
@@ -842,7 +843,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
       if (prepared.status !== "pending")
         throw new Error("La confirmation du déploiement n’a pas été préparée.");
 
-      const approvedResponse = await fetch(confirmationUrl, {
+      const approvedResponse = await authenticatedFetch(confirmationUrl, {
         body: JSON.stringify({
           confirmationToken,
           operation: "vercel:deploy",
@@ -855,7 +856,7 @@ export const MissionWorkspace: React.FC<WorkspaceProps> = ({
       if (approved.status !== "approved")
         throw new Error("La confirmation du déploiement n’a pas été validée.");
 
-      const deployResponse = await fetch(
+      const deployResponse = await authenticatedFetch(
         `/api/idealy/missions/${encodeURIComponent(missionId)}/vercel`,
         {
           body: JSON.stringify({

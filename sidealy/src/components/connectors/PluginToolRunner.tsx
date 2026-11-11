@@ -1,3 +1,4 @@
+import { authenticatedFetch } from "../../services/firebase";
 import {
   AlertCircle,
   ChevronDown,
@@ -248,7 +249,7 @@ export const PluginToolRunner: React.FC<Props> = ({
   }, [missionId, missions]);
 
   const loadHistory = async () => {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `/api/idealy/plugins/${encodeURIComponent(pluginId)}/execute`,
       { cache: "no-store", credentials: "same-origin" },
     );
@@ -362,7 +363,7 @@ export const PluginToolRunner: React.FC<Props> = ({
           pluginId,
           selectedTool.id,
         );
-        const response = await fetch(
+        const response = await authenticatedFetch(
           "/api/idealy/missions/" +
             encodeURIComponent(missionId) +
             "/confirmation",
@@ -407,7 +408,7 @@ export const PluginToolRunner: React.FC<Props> = ({
     token: string | null,
     selectedMissionId: string | null,
   ) => {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `/api/idealy/plugins/${encodeURIComponent(pluginId)}/execute`,
       {
         body: JSON.stringify({
@@ -450,7 +451,7 @@ export const PluginToolRunner: React.FC<Props> = ({
     setError("");
     try {
       const url = `/api/idealy/missions/${encodeURIComponent(review.missionId)}/confirmation`;
-      const approvedResponse = await fetch(url, {
+      const approvedResponse = await authenticatedFetch(url, {
         body: JSON.stringify({
           confirmationToken: review.confirmationToken,
           operation: review.operation,
