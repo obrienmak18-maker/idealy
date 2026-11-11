@@ -1,8 +1,8 @@
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession } from "@/lib/auth/session-token";
 import { getFreeQuotaStatus } from "@/lib/idealy/free-quota";
 
-export async function GET() {
-  const session = await auth();
+export async function GET(request: Request) {
+  const session = await getSafeSession(request);
   if (!session?.user?.id) {
     return Response.json(
       { error: "Une session authentifiée est requise." },
