@@ -1,6 +1,4 @@
-import { getToken } from "next-auth/jwt";
-import { auth } from "@/app/(auth)/auth";
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { getSafeSession, getSafeToken } from "@/lib/auth/session-token";
 import { summarizeTasks } from "@/lib/idealy/orchestrator/persistence";
 import {
   loadMissionTasks,
@@ -20,7 +18,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ missionId: string }> }
 ) {
-  const session = await auth();
+  const session = await getSafeSession(request);
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -30,11 +28,7 @@ export async function GET(
     return Response.json({ error: "Invalid mission id" }, { status: 400 });
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const token = await getSafeToken(request);
   const accessToken =
     typeof token?.supabaseAccessToken === "string"
       ? token.supabaseAccessToken
