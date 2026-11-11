@@ -10,6 +10,7 @@ import {
 import type React from "react";
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { getBearerToken } from "../../services/firebase";
 import { voiesCatalog } from "../../services/voies-catalog";
 import { AuthShell, authField, authLink, authPrimary, Message } from "./AuthShell";
 
@@ -81,29 +82,46 @@ export const OnboardingPage: React.FC = () => {
     };
 
     try {
-      // Sauvegarde locale de secours
-      localStorage.setItem("idealy_profile", JSON.stringify(profileData));
+      const bearer = await getBearerToken();
+      if (!bearer) {
+        setActivePage("login");
+        return;
+      }
 
       const res = await fetch("/api/idealy/profile/onboarding", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: {
+          Authorization: `Bearer ${bearer}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(profileData),
       });
+      const result = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        onboardingCompleted?: boolean;
+      };
 
-      if (res.status === 401) {
-        window.location.replace("/login");
-        return;
+      if (!res.ok || result.onboardingCompleted !== true) {
+        throw new Error(
+          typeof result.error === "string"
+            ? result.error
+            : "Idealy n’a pas pu confirmer l’enregistrement de votre profil. Réessayez.",
+        );
       }
-    } catch {
-      // Fallback gracieux en mode déconnecté / dev
-      console.info("Profil sauvegardé localement.");
+
+      // Local storage is only a fast UI cache; the saved profile is authoritative.
+      localStorage.setItem("idealy_profile", JSON.stringify(profileData));
+      localStorage.setItem("idealy_user_way", way);
+      setActivePage("chat");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Impossible d’enregistrer votre profil auprès d’Idealy. Réessayez.",
+      );
     } finally {
       setBusy(false);
-      setActivePage("chat");
-      if (typeof window !== "undefined" && window.location.pathname === "/onboarding") {
-        window.history.pushState({}, "", "/");
-      }
     }
   };
 
