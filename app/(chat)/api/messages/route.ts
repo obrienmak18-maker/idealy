@@ -1,4 +1,4 @@
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession } from "@/lib/auth/session-token";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
 import { convertToUIMessages } from "@/lib/utils";
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   }
 
   const [session, chat, messages] = await Promise.all([
-    auth(),
+    getSafeSession(request),
     getChatById({ id: chatId }),
     getMessagesByChatId({ id: chatId }),
   ]);
