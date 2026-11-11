@@ -279,7 +279,10 @@ export async function getBearerToken(): Promise<string | null> {
       const configured = await ensureFirebaseConfigured();
       if (!configured) return null;
     }
-    const user = auth().currentUser;
+    const firebaseAuth = auth();
+    // Firebase restores browserLocalPersistence asynchronously after a reload.
+    await firebaseAuth.authStateReady();
+    const user = firebaseAuth.currentUser;
     if (user) return await user.getIdToken();
   } catch {
     // A missing or expired Firebase session is handled by the API as unauthenticated.

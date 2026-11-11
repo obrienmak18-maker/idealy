@@ -42,6 +42,8 @@ export function useFirestoreProjectSync(projectId: string | null | undefined) {
 
         const { getFirestore, doc, onSnapshot } = await import("firebase/firestore");
         const firebaseAuth = getFirebaseAuth();
+        await firebaseAuth.authStateReady();
+        if (!active) return;
         if (!firebaseAuth.currentUser) {
           setIsLive(false);
           return;
