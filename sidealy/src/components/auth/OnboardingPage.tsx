@@ -26,7 +26,7 @@ const WAY_RGB: Record<(typeof WAYS)[number], string> = {
 const PROJECTS = [
   { id: "saas", label: "SaaS & Abonnements", desc: "Dashboard, Stripe, gestion utilisateurs", icon: Layout },
   { id: "web", label: "Application Web", desc: "Expérience interactive, API & temps réel", icon: Globe },
-  { id: "ecommerce", label: "E-Commerce", desc: "Catalogue, panier, checkout & inventaire", icon: ShoppingBag },
+  { id: "site", label: "Site e-commerce", desc: "Catalogue, panier, checkout & inventaire", icon: ShoppingBag },
   { id: "internal_tool", label: "Outil Interne / CRM", desc: "Backoffice d'équipe, gestion de tickets", icon: Database },
   { id: "prototype", label: "Prototype Rapide", desc: "Valider une idée ou tester une fonctionnalité", icon: Rocket },
   { id: "other", label: "Autre Création", desc: "Projet sur-mesure ou concept novateur", icon: Compass },
@@ -44,7 +44,7 @@ const SOURCES = [
   ["youtube", "YouTube"],
   ["github", "GitHub"],
   ["google", "Recherche Google"],
-  ["twitter", "Twitter / X"],
+  ["community", "Communauté / Réseaux sociaux"],
   ["friend", "Bouche-à-oreille"],
   ["other", "Autre"],
 ] as const;
@@ -62,7 +62,7 @@ export const OnboardingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const canNext = [
-    !!projectType,
+    !!projectType && goal.trim().length > 0,
     !!way,
     firstName.trim().length > 0 && !!level,
   ][step];
@@ -189,13 +189,19 @@ export const OnboardingPage: React.FC = () => {
           </div>
 
           <div className="pt-2">
-            <input
-              type="text"
-              className={authField}
-              placeholder="En quelques mots : quelle est votre idée ? (ex: CRM pour freelances)"
+            <label className="mb-2 block text-xs font-semibold text-zinc-300" htmlFor="onboarding-goal">
+              Décrivez votre idée en quelques mots
+            </label>
+            <textarea
+              id="onboarding-goal"
+              className={`${authField} min-h-[104px] resize-y py-4`}
+              maxLength={400}
+              placeholder="Ex. : une plateforme de gestion des clients et des ventes pour petites entreprises."
               value={goal}
-              onChange={(e) => setGoal(e.target.value)}
+              onChange={(event) => setGoal(event.target.value)}
+              required
             />
+            <p className="mt-1.5 text-right text-[11px] text-white/40">{goal.length}/400</p>
           </div>
         </div>
       )}
