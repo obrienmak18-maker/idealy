@@ -1,5 +1,6 @@
 "use client";
 
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import {
@@ -234,7 +235,8 @@ export function MissionBuildProgress({
   missionId: string;
   status: string;
 }) {
-  const { metadata, setMetadata } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { metadata, setMetadata } = useArtifact(chatId);
   const isActive = ACTIVE_STATUSES.has(status);
   const [cursor, setCursor] = useState(0);
   const [events, setEvents] = useState<MissionEvent[]>([]);

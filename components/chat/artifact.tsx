@@ -1142,6 +1142,7 @@ function PureArtifact({
       <AnimatePresence>
         {!isCurrentVersion && (
           <VersionFooter
+            chatId={_chatId}
             currentVersionIndex={currentVersionIndex}
             documents={documents}
             handleVersionChange={handleVersionChange}

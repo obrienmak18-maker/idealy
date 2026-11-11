@@ -1,5 +1,6 @@
 "use client";
 
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -171,7 +172,8 @@ const copy = {
 } as const;
 
 export function MissionPlanCard() {
-  const { metadata, setArtifact, setMetadata } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { metadata, setArtifact, setMetadata } = useArtifact(chatId);
   const { currentWay } = useGamificationStore();
   const { language } = useTranslation();
   const locale = language === "en" || language === "es" ? language : "fr";

@@ -59,7 +59,7 @@ function PureMessages({
 }: MessagesProps) {
   const { t } = useTranslation();
   const { currentWay } = useGamificationStore();
-  const { metadata } = useArtifact();
+  const { metadata } = useArtifact(chatId);
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const chiefAgent =
     activeWayData.agents.find((agent) => agent.isChief) ?? activeWayData.agents[0];
