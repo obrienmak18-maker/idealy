@@ -26,6 +26,23 @@ import { useState, useEffect } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { hasConversationWorkspace } from "./services/conversationWorkspace";
 import { LiveVoiceDialog } from "./components/chat/LiveVoiceDialog";
+import { IdealyLogo } from "./components/branding/IdealyLogo";
+import {
+  createBackendSession,
+  ensureFirebaseConfigured,
+  getBearerToken,
+  getFirebaseAuth,
+} from "./services/firebase";
+
+const PROTECTED_PAGES = new Set([
+  "chat",
+  "connectors",
+  "library",
+  "agents",
+  "settings",
+  "plugins",
+  "onboarding",
+]);
 
 const AppContent: React.FC = () => {
   const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
@@ -35,12 +52,140 @@ const AppContent: React.FC = () => {
     window.addEventListener("idealy:open-live-voice", handleOpenLiveVoice);
     return () => window.removeEventListener("idealy:open-live-voice", handleOpenLiveVoice);
   }, []);
-  const { activeConversation, activePage, activeMessages, artifacts } = useApp();
+  const {
+    activeConversation,
+    activePage,
+    activeMessages,
+    artifacts,
+    setActivePage,
+  } = useApp();
   const hasActiveWorkspace = hasConversationWorkspace(
     activeMessages,
     artifacts,
     activeConversation?.id,
   );
+  const requiresAuthentication = PROTECTED_PAGES.has(activePage);
+  const [authGateState, setAuthGateState] = useState<"checking" | "ready" | "error">("checking");
+  const [authGateError, setAuthGateError] = useState<string | null>(null);
+  const [authGateRetry, setAuthGateRetry] = useState(0);
+
+  useEffect(() => {
+    if (!requiresAuthentication) {
+      setAuthGateState("ready");
+      setAuthGateError(null);
+      return;
+    }
+
+    let active = true;
+    setAuthGateState("checking");
+    setAuthGateError(null);
+
+    void (async () => {
+      const configured = await ensureFirebaseConfigured();
+      if (!active) return;
+      if (!configured) {
+        setActivePage("login");
+        return;
+      }
+
+      const firebaseAuth = getFirebaseAuth();
+      await firebaseAuth.authStateReady();
+      if (!active) return;
+
+      const user = firebaseAuth.currentUser;
+      if (!user) {
+        setActivePage("login");
+        return;
+      }
+
+      await createBackendSession(user);
+      const bearer = await getBearerToken();
+      if (!bearer) {
+        setActivePage("login");
+        return;
+      }
+
+      const response = await fetch("/api/idealy/profile/onboarding", {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { Authorization: `Bearer ${bearer}` },
+      });
+      if (!active) return;
+      if (response.status === 401) {
+        setActivePage("login");
+        return;
+      }
+      if (!response.ok) {
+        throw new Error("Le profil Idealy n’a pas pu être vérifié. Réessayez.");
+      }
+
+      const profile = (await response.json()) as {
+        onboardingCompleted?: boolean;
+      };
+      if (profile.onboardingCompleted !== true && activePage !== "onboarding") {
+        setActivePage("onboarding");
+        return;
+      }
+      if (profile.onboardingCompleted === true && activePage === "onboarding") {
+        setActivePage("chat");
+        return;
+      }
+
+      setAuthGateState("ready");
+    })().catch((error: unknown) => {
+      if (!active) return;
+      setAuthGateError(
+        error instanceof Error
+          ? error.message
+          : "La session Idealy n’a pas pu être vérifiée.",
+      );
+      setAuthGateState("error");
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [activePage, authGateRetry, requiresAuthentication, setActivePage]);
+
+  if (requiresAuthentication && authGateState === "checking") {
+    return (
+      <main className="flex min-h-screen w-full items-center justify-center bg-[#0b0d14] px-5 text-white">
+        <div className="flex flex-col items-center gap-5 text-center">
+          <IdealyLogo animated size={48} />
+          <div className="h-1 w-36 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full w-1/2 animate-pulse rounded-full bg-[#858cf8]" />
+          </div>
+          <p className="text-sm text-[#9ca6b8]">Vérification sécurisée de votre espace…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (requiresAuthentication && authGateState === "error") {
+    return (
+      <main className="flex min-h-screen w-full items-center justify-center bg-[#0b0d14] px-5 py-10 text-white">
+        <section className="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#191b22] p-8 shadow-2xl sm:p-10">
+          <IdealyLogo animated={false} size={40} />
+          <h1 className="mt-8 text-2xl font-semibold tracking-tight">Impossible de vérifier votre espace</h1>
+          <p className="mt-3 text-sm leading-relaxed text-[#9ca6b8]">{authGateError}</p>
+          <button
+            className="mt-7 h-12 w-full rounded-xl bg-[#777ff2] text-sm font-semibold text-white transition hover:bg-[#858cf8]"
+            onClick={() => setAuthGateRetry((value) => value + 1)}
+            type="button"
+          >
+            Réessayer
+          </button>
+          <button
+            className="mt-4 w-full text-sm font-medium text-[#aeb6c7] transition hover:text-white"
+            onClick={() => setActivePage("login")}
+            type="button"
+          >
+            Retour à la connexion
+          </button>
+        </section>
+      </main>
+    );
+  }
 
   // Pages autonomes (hors layout de travail, sans sidebar rétractable) avec défilement garanti
   if (activePage === "welcome")
