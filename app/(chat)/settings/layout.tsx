@@ -14,7 +14,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/lib/i18n/provider";
-import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 
 type BillingStatus = {
   active: boolean;
@@ -150,8 +149,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       : `${billing.creditsBalance} ${copy.creditsAvailable}`;
 
   return (
-    <main className="relative min-h-dvh bg-background text-foreground overflow-hidden">
-      <CosmicHorizon />
+    <main className="relative min-h-dvh bg-background text-foreground overflow-x-hidden">
       <div className="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-10 lg:px-10">
         <div className="mb-8">
           <Link
@@ -165,10 +163,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         </div>
 
         {/* Carte facturation */}
-        <section id="billing" className="mb-8 rounded-2xl border border-border/60 bg-gradient-to-br from-violet-500/10 via-card/40 to-orange-400/10 p-6">
+        <section id="billing" className="mb-8 rounded-2xl border border-border/70 bg-card p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="mb-2 flex items-center gap-2 text-violet-400">
+              <div className="mb-2 flex items-center gap-2 text-primary">
                 <CreditCardIcon className="size-4" />
                 <span className="text-xs font-medium uppercase tracking-[0.12em]">
                   {copy.yourPlan}

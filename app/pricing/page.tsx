@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PricingExperience } from "@/components/billing/pricing-experience";
-import { CosmicHorizon } from "@/components/branding/cosmic-horizon";
 import { IdealyMark } from "@/components/branding/idealy-logo";
 
 export const metadata: Metadata = {
@@ -28,7 +27,6 @@ export default async function PricingPage() {
   const backLabel = locale === "en" ? "Back to workspace" : locale === "es" ? "Volver al workspace" : "Retour à l’espace de travail";
   return (
     <main className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
-      <CosmicHorizon />
       <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-6 sm:px-8">
         <Link
           href="/"
