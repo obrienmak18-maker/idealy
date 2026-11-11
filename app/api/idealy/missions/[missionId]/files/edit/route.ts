@@ -1,4 +1,4 @@
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession } from "@/lib/auth/session-token";
 import { normalizeMissionFilePath } from "@/lib/idealy/mission-files";
 import { saveIdealyMissionFile } from "@/lib/idealy/backend-adapter";
 
@@ -10,7 +10,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ missionId: string }> },
 ) {
-  const session = await auth();
+  const session = await getSafeSession(request);
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
