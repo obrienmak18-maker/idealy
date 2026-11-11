@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { isFirebaseConfigured, getFirebaseAuth } from "../services/firebase";
+import { ensureFirebaseConfigured, getFirebaseAuth } from "../services/firebase";
 
 export type FirestoreProjectData = {
   projectId: string;
@@ -22,49 +22,68 @@ export function useFirestoreProjectSync(projectId: string | null | undefined) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!projectId || !isFirebaseConfigured() || typeof window === "undefined") {
-      setIsLive(false);
-      return;
-    }
-
+    let active = true;
     let unsubscribe: (() => void) | undefined;
 
     const setupListener = async () => {
+      if (!projectId || typeof window === "undefined") {
+        setIsLive(false);
+        return;
+      }
+
       try {
+        // Sidealy's Firebase web config is fetched from the existing API project.
+        // Wait for it before initializing Firebase after a hard page refresh.
+        const configured = await ensureFirebaseConfigured();
+        if (!active || !configured) {
+          setIsLive(false);
+          return;
+        }
+
         const { getFirestore, doc, onSnapshot } = await import("firebase/firestore");
-        const auth = getFirebaseAuth();
-        const db = getFirestore(auth.app);
+        const firebaseAuth = getFirebaseAuth();
+        if (!firebaseAuth.currentUser) {
+          setIsLive(false);
+          return;
+        }
+
+        const db = getFirestore(firebaseAuth.app);
         const docRef = doc(db, "idealy_projects", projectId);
 
         unsubscribe = onSnapshot(
           docRef,
           (docSnap) => {
+            if (!active) return;
             if (docSnap.exists()) {
               const data = docSnap.data() as FirestoreProjectData;
               setProject(data);
               setLastSyncedAt(new Date());
               setIsLive(true);
               setError(null);
+            } else {
+              setProject(null);
+              setIsLive(false);
             }
           },
           (err) => {
+            if (!active) return;
             console.warn("[Firestore Realtime Sync]", err.message);
             setError(err.message);
             setIsLive(false);
           }
         );
       } catch (err) {
+        if (!active) return;
         console.warn("[Firestore Hook Fallback]", err);
         setIsLive(false);
       }
     };
 
-    setupListener();
+    void setupListener();
 
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      active = false;
+      unsubscribe?.();
     };
   }, [projectId]);
 
