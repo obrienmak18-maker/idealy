@@ -28,21 +28,21 @@ const PRODUCT_STEPS = [
     icon: Compass,
     title: "Clarifier",
     description:
-      "Décrivez votre intention. Idealy aide à cadrer le besoin, les objectifs et les choix importants avant de construire.",
+      "Transformez votre idée en mission claire : objectifs, périmètre et décisions importantes sont posés avant la construction.",
   },
   {
     number: "02",
     icon: Code2,
     title: "Construire",
     description:
-      "Suivez les décisions, les agents mobilisés, les fichiers créés et l’avancement du travail dans un seul espace.",
+      "Suivez votre Voie, les agents mobilisés, les fichiers créés et l’avancement de la mission dans un seul workspace.",
   },
   {
     number: "03",
     icon: FileCheck2,
     title: "Vérifier et livrer",
     description:
-      "Prévisualisez le résultat, contrôlez les changements et préparez l’export ou le déploiement de votre projet.",
+      "Inspectez le code, testez l’aperçu, ajustez le résultat puis préparez l’export ou le déploiement.",
   },
 ];
 
@@ -122,7 +122,7 @@ export const WelcomePage: React.FC = () => {
               Se connecter
             </button>
             <button
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#777ff2] px-4 text-[13px] font-semibold text-white shadow-[0_8px_26px_-12px_rgba(119,127,242,0.75)] transition hover:bg-[#858cf8] active:scale-[0.98]"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#ee8752] px-4 text-[13px] font-semibold text-white shadow-[0_8px_26px_-12px_rgba(238,135,82,0.48)] transition hover:bg-[#fa9661] active:scale-[0.98]"
               onClick={beginWithSelectedWay}
               type="button"
             >
@@ -150,12 +150,12 @@ export const WelcomePage: React.FC = () => {
             </h1>
 
             <p className="mt-7 max-w-[570px] text-pretty text-[16px] leading-[1.8] text-[#a3adbe] sm:text-[18px]">
-              Décrivez ce que vous souhaitez construire. Idealy structure votre demande, coordonne les étapes de réalisation et vous permet de suivre le résultat dans un workspace interactif.
+              Décrivez votre intention. Alvin la transmet à votre Voie, puis Idealy rassemble la conversation, les agents, les fichiers, le code et l’aperçu dans un seul workspace. Vous suivez chaque étape et gardez la main sur le résultat.
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <button
-                className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-[#777ff2] px-6 text-[14px] font-semibold text-white shadow-[0_14px_34px_-14px_rgba(119,127,242,0.8)] transition hover:-translate-y-0.5 hover:bg-[#858cf8] active:translate-y-0"
+                className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-[#ee8752] px-6 text-[14px] font-semibold text-white shadow-[0_14px_34px_-14px_rgba(238,135,82,0.50)] transition hover:-translate-y-0.5 hover:bg-[#fa9661] active:translate-y-0"
                 onClick={beginWithSelectedWay}
                 type="button"
               >
@@ -173,8 +173,8 @@ export const WelcomePage: React.FC = () => {
             </div>
 
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/[0.08] pt-6 text-[12px] text-white/50">
-              <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-emerald-300" /> Workspace interactif</span>
-              <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-emerald-300" /> Preview et fichiers</span>
+              <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-emerald-300" /> Équipe IA coordonnée</span>
+              <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-emerald-300" /> Code et fichiers visibles</span>
               <span className="inline-flex items-center gap-2"><Check className="size-3.5 text-emerald-300" /> Export du projet</span>
             </div>
           </div>

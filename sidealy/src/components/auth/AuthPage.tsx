@@ -245,331 +245,333 @@ export const AuthPage: React.FC = () => {
     );
   }
 
+
   const isSignup = view === "signup";
   const isLogin = view === "login";
+  const isPrimaryAuthView = isLogin || isSignup;
 
   return (
-    <main className="relative flex min-h-screen w-full items-center justify-center overflow-y-auto bg-[#0b0d14] px-4 py-12 font-sans text-zinc-100 antialiased selection:bg-violet-400/25 sm:px-6">
-      {/* Halo d'ambiance cosmique */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
-      >
-        <div
-          className="absolute -top-[120px] left-1/2 -translate-x-1/2 w-[800px] h-[450px]"
-          style={{
-            background:
-              "radial-gradient(55% 55% at 50% 35%, rgba(104, 116, 245, 0.14), rgba(139, 92, 246, 0.07) 48%, transparent 78%)",
-            filter: "blur(60px)",
-          }}
-        />
+    <main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#0b0d14] px-4 py-10 font-sans text-zinc-100 antialiased selection:bg-violet-400/25 sm:px-6">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-52 left-1/2 h-[520px] w-[760px] -translate-x-1/2 rounded-full bg-violet-500/[0.13] blur-[150px]" />
+        <div className="absolute -bottom-56 -right-40 h-[520px] w-[520px] rounded-full bg-orange-400/[0.08] blur-[145px]" />
+        <div className="absolute -bottom-60 -left-44 h-[480px] w-[480px] rounded-full bg-sky-400/[0.06] blur-[145px]" />
       </div>
 
-      {/* Bouton retour accueil */}
-      <div className="absolute top-5 left-5 z-20">
+      <div className="relative z-10 mx-auto flex w-full max-w-[440px] flex-col">
         <button
-          className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3.5 py-1.5 text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all backdrop-blur-md"
+          className="mb-4 inline-flex min-h-11 w-fit items-center gap-2 rounded-xl px-2 text-[13px] font-medium text-white/55 transition hover:bg-white/[0.045] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
           onClick={() => setActivePage("welcome")}
           type="button"
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Accueil</span>
+          <ArrowLeft className="size-4" />
+          Retour à Idealy
         </button>
-      </div>
 
-      {/* Carte principale d'authentification */}
-      <div className="relative w-full max-w-[560px] rounded-[30px] border border-white/[0.10] bg-[#191b22]/95 p-7 shadow-[0_28px_90px_-38px_rgba(0,0,0,0.9)] backdrop-blur-2xl sm:p-10 lg:p-12">
-        {/* En-tête */}
-        <div className="mb-9 space-y-7 text-left">
-          <IdealyLogo animated={false} size={40} />
-          <div className="space-y-3">
-          <h1 className="text-[32px] font-semibold leading-tight tracking-[-0.035em] text-white sm:text-[40px]">
-            {isLogin
-              ? "Bon retour sur Idealy"
-              : isSignup
-                ? "Créez votre compte Idealy"
-                : view === "reset"
-                  ? "Mot de passe oublié ?"
-                  : view === "magic"
-                    ? "Connexion par lien magique"
-                    : "Connexion par SMS"}
-          </h1>
-          <p className="max-w-[440px] text-base leading-relaxed text-[#9ca6b8] sm:text-[18px]">
-            {isLogin
-              ? "Retrouvez vos workspaces et poursuivez vos développements."
-              : isSignup
-                ? "Créez votre espace et donnez vie à vos projets avec Idealy."
-                : view === "reset"
-                  ? "Choisissez un nouveau mot de passe pour retrouver l’accès à votre espace."
-                  : "Utilisez votre adresse e-mail pour continuer en toute sécurité."}
-          </p>
-          </div>
-        </div>
-
-        {/* Sélecteur d'onglets (Se connecter / Créer un compte) */}
-        {(isLogin || isSignup) && (
-          <div className="mb-7 flex rounded-2xl border border-white/[0.08] bg-[#12141b] p-1.5">
-            <button
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-150 ${
-                isLogin
-                  ? "bg-white text-black shadow-sm"
-                  : "text-zinc-400 hover:text-white"
-              }`}
-              onClick={() => go("login")}
-              type="button"
-            >
-              Se connecter
-            </button>
-            <button
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-150 ${
-                isSignup
-                  ? "bg-white text-black shadow-sm"
-                  : "text-zinc-400 hover:text-white"
-              }`}
-              onClick={() => go("signup")}
-              type="button"
-            >
-              Créer un compte
-            </button>
-          </div>
-        )}
-
-        {/* Message d'erreur avec point pulsant */}
-        {error && (
-          <div
-            aria-live="polite"
-            className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400 flex items-start gap-2.5 shadow-sm"
-            role="alert"
+        <section className="rounded-[26px] border border-white/[0.10] bg-[#191b22]/95 p-6 shadow-[0_28px_90px_-38px_rgba(0,0,0,0.92)] backdrop-blur-2xl sm:p-8">
+          <a
+            aria-label="Accueil Idealy"
+            className="mb-7 inline-flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+            href="/welcome"
           >
-            <span className="w-2 h-2 rounded-full bg-red-400 shrink-0 mt-1 animate-pulse" />
-            <span className="leading-relaxed">{error}</span>
-          </div>
-        )}
+            <IdealyLogo animated={false} size={36} />
+            <span className="text-[15px] font-semibold tracking-[-0.02em] text-white">Idealy</span>
+          </a>
 
-        {/* Notice informative */}
-        {notice && (
-          <div className="mb-5 rounded-xl border border-teal-500/30 bg-teal-500/10 p-3 text-xs text-teal-300 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-teal-400 mt-0.5" />
-            <span>{notice}</span>
-          </div>
-        )}
-
-        {/* Bouton Google OAuth officiel */}
-        {(isLogin || isSignup) && (
-          <>
-            <button
-              className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-white/[0.11] bg-[#22252e] text-[15px] font-medium text-white transition-colors duration-200 hover:border-white/20 hover:bg-[#292d37] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={busy || !firebaseReady || !isFirebaseConfigured()}
-              onClick={() =>
-                void run(async () => {
-                  const user = await signInGoogle();
-                  if (user) await finish(user);
-                })
-              }
-              type="button"
-            >
-              <GoogleIcon />
-              <span>Continuer avec Google</span>
-            </button>
-
-            <div className="my-7 flex items-center gap-4 text-[12px] text-[#7f899b]">
-              <span className="h-px flex-1 bg-white/[0.08]" />
-              ou avec votre e-mail
-              <span className="h-px flex-1 bg-white/[0.08]" />
-            </div>
-          </>
-        )}
-
-        {/* Formulaire Email & Mot de Passe */}
-        <form className="space-y-4" onSubmit={onSubmit}>
-          {view !== "phone" && (
-            <div className="space-y-1.5">
-              <label className="block text-[14px] font-medium text-[#c6ccd6]">
-                Adresse e-mail
-              </label>
-              <div className="relative">
-                <input
-                  autoComplete="email"
-                  className="h-14 w-full rounded-2xl border border-white/[0.10] bg-[#242730] px-4 pl-11 text-[16px] text-white placeholder:text-[#8d97a9] outline-none transition-all focus:border-[#858bf8] focus:ring-4 focus:ring-[#7b83f5]/10"
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="vous@exemple.com"
-                  required
-                  type="email"
-                  value={email}
-                />
-                <Mail className="absolute left-4 top-5 h-4 w-4 text-[#94a0b4] pointer-events-none" />
-              </div>
-            </div>
-          )}
-
-          {(isLogin || isSignup) && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-medium text-zinc-300">
-                  Mot de passe
-                </label>
-                {isLogin && (
-                  <button
-                    className="text-[13px] font-medium text-[#aeb6c7] underline-offset-4 transition-colors hover:text-white hover:underline"
-                    onClick={() => go("reset")}
-                    type="button"
-                  >
-                    Mot de passe oublié ?
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  autoComplete={isLogin ? "current-password" : "new-password"}
-                  className="h-14 w-full rounded-2xl border border-white/[0.10] bg-[#242730] px-4 pl-11 pr-12 text-[16px] text-white placeholder:text-[#8d97a9] outline-none transition-all focus:border-[#858bf8] focus:ring-4 focus:ring-[#7b83f5]/10"
-                  minLength={6}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                />
-                <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5 pointer-events-none" />
-                <button
-                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                  className="absolute right-4 top-4 text-[#9ba6ba] transition-colors hover:text-white"
-                  onClick={() => setShowPassword(!showPassword)}
-                  type="button"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Validation conditions générales pour l'inscription */}
-          {isSignup && (
-            <label className="flex items-start gap-2.5 cursor-pointer pt-1 text-xs text-zinc-400">
-              <input
-                checked={acceptTerms}
-                className="mt-0.5 rounded border-white/[0.2] bg-[#12131c] text-teal-500 focus:ring-0"
-                onChange={(e) => setAcceptTerms(e.target.checked)}
-                type="checkbox"
-              />
-              <span>
-                J'accepte les{" "}
-                <button
-                  className="text-white underline hover:text-teal-300"
-                  onClick={() => setActivePage("terms")}
-                  type="button"
-                >
-                  conditions d'utilisation
-                </button>{" "}
-                et la{" "}
-                <button
-                  className="text-white underline hover:text-teal-300"
-                  onClick={() => setActivePage("privacy")}
-                  type="button"
-                >
-                  politique de confidentialité
-                </button>
-                .
-              </span>
-            </label>
-          )}
-
-          {/* SMS Phone View */}
-          {view === "phone" && (
-            <div className="space-y-3">
-              <label className="block text-xs font-medium text-zinc-300">
-                Numéro de téléphone
-              </label>
-              <div className="relative">
-                <input
-                  autoComplete="tel"
-                  className="w-full h-11 rounded-xl border border-white/[0.1] bg-[#12131c] px-3.5 pl-9 text-xs sm:text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-teal-400 transition-colors"
-                  disabled={codeSent}
-                  inputMode="tel"
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+33 6 12 34 56 78"
-                  required
-                  type="tel"
-                  value={phone}
-                />
-                <Phone className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5 pointer-events-none" />
-              </div>
-              {codeSent && (
-                <input
-                  autoComplete="one-time-code"
-                  className="w-full h-11 rounded-xl border border-white/[0.1] bg-[#12131c] px-3.5 text-center tracking-[0.25em] text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-teal-400 transition-colors"
-                  inputMode="numeric"
-                  maxLength={6}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="123456"
-                  required
-                  value={code}
-                />
-              )}
-              <div ref={recaptchaRef} />
-            </div>
-          )}
-
-          {/* Bouton de soumission principal */}
-          <button
-            className="mt-3 h-16 w-full rounded-2xl bg-[#777ff2] text-[17px] font-semibold text-white shadow-[0_12px_32px_-12px_rgba(113,123,242,0.65)] transition-all duration-200 hover:bg-[#858cf8] hover:shadow-[0_16px_36px_-12px_rgba(113,123,242,0.55)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={busy || !firebaseReady || !isFirebaseConfigured()}
-            type="submit"
-          >
-            {busy
-              ? "Un instant…"
-              : isLogin
-                ? "Se connecter"
+          <div className="space-y-2.5">
+            <h1 className="text-[27px] font-semibold leading-tight tracking-[-0.045em] text-white sm:text-[30px]">
+              {isLogin
+                ? "Heureux de vous revoir"
                 : isSignup
-                  ? "Créer mon compte"
+                  ? "Créez votre compte Idealy"
                   : view === "reset"
-                    ? "Envoyer le lien de réinitialisation"
-                    : view === "phone"
-                      ? codeSent
-                        ? "Valider le code"
-                        : "Recevoir le code SMS"
-                      : "Envoyer le lien magique"}
-          </button>
-        </form>
-
-        {!firebaseReady ? (
-          <p className="mt-5 text-center text-xs text-zinc-500" role="status">
-            Préparation de la connexion sécurisée…
-          </p>
-        ) : !isFirebaseConfigured() ? (
-          <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3 text-center text-xs text-amber-200/90" role="alert">
-            La connexion sécurisée n’est pas configurée pour cet environnement. Aucun accès invité n’est ouvert.
+                    ? "Mot de passe oublié ?"
+                    : view === "magic"
+                      ? "Recevoir un lien de connexion"
+                      : "Connexion par SMS"}
+            </h1>
+            <p className="text-[14px] leading-[1.7] text-[#9ca6b8]">
+              {isLogin
+                ? "Connectez-vous pour retrouver vos projets et reprendre là où vous en étiez."
+                : isSignup
+                  ? "Créez votre espace et commencez à transformer vos idées en applications."
+                  : view === "reset"
+                    ? "Nous vous enverrons un lien sécurisé pour réinitialiser votre mot de passe."
+                    : view === "magic"
+                      ? "Recevez un lien sécurisé directement dans votre boîte mail."
+                      : "Utilisez votre numéro pour recevoir un code de vérification."}
+            </p>
           </div>
-        ) : null}
 
-        {/* Liens secondaires en bas de carte */}
-        <div className="mt-7 border-t border-white/[0.08] pt-6 text-center text-[14px] text-[#9aa5b7]">
-          {(isLogin || isSignup) ? (
-            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-3">
-              <span>{isLogin ? "Pas encore de compte ?" : "Vous avez déjà un compte ?"}</span>
+          {isPrimaryAuthView && (
+            <div className="mt-6 grid grid-cols-2 rounded-xl border border-white/[0.08] bg-[#11141b] p-1" role="tablist" aria-label="Type de compte">
               <button
-                className="font-semibold text-[#aab0ff] transition-colors hover:text-white"
-                onClick={() => go(isLogin ? "signup" : "login")}
+                aria-selected={isLogin}
+                className={"min-h-10 rounded-lg px-3 text-[12px] font-semibold transition " + (isLogin ? "bg-white text-[#171923] shadow-sm" : "text-white/50 hover:text-white")}
+                onClick={() => go("login")}
+                role="tab"
                 type="button"
               >
-                {isLogin ? "Créer mon compte" : "Se connecter"}
+                Se connecter
               </button>
-              <span className="basis-full text-center text-xs text-[#7f899c]">
-                <button className="hover:text-white" onClick={() => go("magic")} type="button">
-                  Recevoir un lien de connexion par e-mail
-                </button>
-              </span>
+              <button
+                aria-selected={isSignup}
+                className={"min-h-10 rounded-lg px-3 text-[12px] font-semibold transition " + (isSignup ? "bg-white text-[#171923] shadow-sm" : "text-white/50 hover:text-white")}
+                onClick={() => go("signup")}
+                role="tab"
+                type="button"
+              >
+                Créer un compte
+              </button>
             </div>
-          ) : (
-            <button
-              className="mx-auto font-medium text-[#aab0ff] transition-colors hover:text-white"
-              onClick={() => go("login")}
-              type="button"
-            >
-              ← Retour à la connexion
-            </button>
           )}
-        </div>
+
+          {error && (
+            <div
+              aria-live="polite"
+              className="mt-5 flex items-start gap-2.5 rounded-xl border border-red-400/20 bg-red-400/[0.07] p-3.5 text-[12px] leading-relaxed text-red-200"
+              role="alert"
+            >
+              <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-300" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {notice && (
+            <div
+              aria-live="polite"
+              className="mt-5 flex items-start gap-2.5 rounded-xl border border-teal-300/20 bg-teal-300/[0.07] p-3.5 text-[12px] leading-relaxed text-teal-100"
+              role="status"
+            >
+              <AlertCircle className="mt-0.5 size-4 shrink-0 text-teal-200" />
+              <span>{notice}</span>
+            </div>
+          )}
+
+          {isPrimaryAuthView && (
+            <>
+              <button
+                className="mt-6 flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-white/[0.11] bg-[#22252e] px-4 text-[13px] font-semibold text-white transition hover:border-white/20 hover:bg-[#292d37] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={busy || !firebaseReady || !isFirebaseConfigured()}
+                onClick={() => {
+                  if (isSignup && !acceptTerms) {
+                    setError("Veuillez accepter les conditions d’utilisation et la politique de confidentialité avant de continuer.");
+                    return;
+                  }
+                  void run(async () => {
+                    const user = await signInGoogle();
+                    if (user) await finish(user);
+                  });
+                }}
+                type="button"
+              >
+                <GoogleIcon />
+                Continuer avec Google
+              </button>
+
+              <div className="my-5 flex items-center gap-3 text-[11px] text-[#737d90]">
+                <span className="h-px flex-1 bg-white/[0.08]" />
+                ou continuer avec votre e-mail
+                <span className="h-px flex-1 bg-white/[0.08]" />
+              </div>
+            </>
+          )}
+
+          <form className="space-y-4" onSubmit={onSubmit}>
+            {view !== "phone" && (
+              <div className="space-y-2">
+                <label className="block text-[12px] font-medium text-[#c6ccd6]" htmlFor="idealy-email">
+                  Adresse e-mail
+                </label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8590a3]" />
+                  <input
+                    autoComplete="email"
+                    autoFocus
+                    className="h-12 w-full rounded-xl border border-white/[0.10] bg-[#242730] pl-10 pr-4 text-[14px] text-white outline-none transition placeholder:text-[#7f899b] hover:border-white/20 focus:border-[#8c94f8] focus:ring-4 focus:ring-violet-400/[0.10]"
+                    id="idealy-email"
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="vous@exemple.com"
+                    required
+                    type="email"
+                    value={email}
+                  />
+                </div>
+              </div>
+            )}
+
+            {(isLogin || isSignup) && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-[12px] font-medium text-[#c6ccd6]" htmlFor="idealy-password">
+                    Mot de passe
+                  </label>
+                  {isLogin && (
+                    <button
+                      className="rounded text-[11px] font-medium text-[#aeb6c7] underline-offset-4 transition hover:text-white hover:underline"
+                      onClick={() => go("reset")}
+                      type="button"
+                    >
+                      Mot de passe oublié ?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8590a3]" />
+                  <input
+                    autoComplete={isLogin ? "current-password" : "new-password"}
+                    className="h-12 w-full rounded-xl border border-white/[0.10] bg-[#242730] pl-10 pr-12 text-[14px] text-white outline-none transition placeholder:text-[#7f899b] hover:border-white/20 focus:border-[#8c94f8] focus:ring-4 focus:ring-violet-400/[0.10]"
+                    id="idealy-password"
+                    minLength={6}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Au moins 6 caractères"
+                    required
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                  />
+                  <button
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    className="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-[#9ba6ba] transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    type="button"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {isSignup && (
+              <label className="flex cursor-pointer items-start gap-2.5 pt-1 text-[11px] leading-relaxed text-[#9ca6b8]">
+                <input
+                  checked={acceptTerms}
+                  className="mt-0.5 size-4 shrink-0 rounded border-white/20 bg-[#12131c] accent-[#ee8752] focus:ring-0"
+                  onChange={(event) => setAcceptTerms(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>
+                  J’accepte les{" "}
+                  <button className="text-white underline underline-offset-2 hover:text-orange-200" onClick={() => setActivePage("terms")} type="button">
+                    conditions d’utilisation
+                  </button>
+                  {" "}et la{" "}
+                  <button className="text-white underline underline-offset-2 hover:text-orange-200" onClick={() => setActivePage("privacy")} type="button">
+                    politique de confidentialité
+                  </button>
+                  .
+                </span>
+              </label>
+            )}
+
+            {view === "phone" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="block text-[12px] font-medium text-[#c6ccd6]" htmlFor="idealy-phone">
+                    Numéro de téléphone
+                  </label>
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8590a3]" />
+                    <input
+                      autoComplete="tel"
+                      className="h-12 w-full rounded-xl border border-white/[0.10] bg-[#242730] pl-10 pr-4 text-[14px] text-white outline-none transition placeholder:text-[#7f899b] focus:border-[#8c94f8] focus:ring-4 focus:ring-violet-400/[0.10]"
+                      disabled={codeSent}
+                      id="idealy-phone"
+                      inputMode="tel"
+                      onChange={(event) => setPhone(event.target.value)}
+                      placeholder="+243…"
+                      required
+                      type="tel"
+                      value={phone}
+                    />
+                  </div>
+                </div>
+                {codeSent && (
+                  <input
+                    autoComplete="one-time-code"
+                    className="h-12 w-full rounded-xl border border-white/[0.10] bg-[#242730] px-4 text-center text-[14px] tracking-[0.25em] text-white outline-none placeholder:text-[#7f899b] focus:border-[#8c94f8]"
+                    inputMode="numeric"
+                    maxLength={6}
+                    onChange={(event) => setCode(event.target.value)}
+                    placeholder="Code de vérification"
+                    required
+                    value={code}
+                  />
+                )}
+                <div ref={recaptchaRef} />
+              </div>
+            )}
+
+            <button
+              className="mt-2 flex min-h-12 w-full items-center justify-center rounded-xl bg-[#ee8752] px-5 text-[13px] font-semibold text-white shadow-[0_8px_24px_-12px_rgba(238,135,82,0.75)] transition hover:bg-[#fa9661] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={busy || !firebaseReady || !isFirebaseConfigured()}
+              type="submit"
+            >
+              {busy
+                ? "Connexion en cours…"
+                : isLogin
+                  ? "Se connecter"
+                  : isSignup
+                    ? "Créer mon compte"
+                    : view === "reset"
+                      ? "Envoyer le lien de réinitialisation"
+                      : view === "phone"
+                        ? codeSent
+                          ? "Valider le code"
+                          : "Recevoir le code SMS"
+                        : "Envoyer le lien de connexion"}
+            </button>
+          </form>
+
+          {!firebaseReady ? (
+            <p className="mt-4 text-center text-[11px] text-[#7f899b]" role="status">
+              Préparation de la connexion sécurisée…
+            </p>
+          ) : !isFirebaseConfigured() ? (
+            <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-center text-[11px] leading-relaxed text-amber-100/90" role="alert">
+              La connexion sécurisée n’est pas configurée pour cet environnement. Aucun accès invité n’est ouvert.
+            </p>
+          ) : null}
+
+          <div className="mt-6 border-t border-white/[0.08] pt-5 text-center">
+            {isPrimaryAuthView ? (
+              <>
+                <p className="text-[12px] text-[#9ca6b8]">
+                  {isLogin ? "Pas encore de compte ?" : "Vous avez déjà un compte ?"}
+                  {" "}
+                  <button
+                    className="font-semibold text-[#b5b9ff] transition hover:text-white"
+                    onClick={() => go(isLogin ? "signup" : "login")}
+                    type="button"
+                  >
+                    {isLogin ? "Créer un compte" : "Se connecter"}
+                  </button>
+                </p>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-[#7f899b]">
+                  <button className="transition hover:text-white" onClick={() => go("magic")} type="button">
+                    Lien de connexion par e-mail
+                  </button>
+                  <button className="transition hover:text-white" onClick={() => { setCodeSent(false); setCode(""); go("phone"); }} type="button">
+                    Connexion par SMS
+                  </button>
+                </div>
+              </>
+            ) : (
+              <button
+                className="text-[12px] font-medium text-[#b5b9ff] transition hover:text-white"
+                onClick={() => go("login")}
+                type="button"
+              >
+                ← Retour à la connexion
+              </button>
+            )}
+          </div>
+        </section>
+
+        <p className="mx-auto mt-5 max-w-[390px] px-3 text-center text-[10px] leading-relaxed text-white/35">
+          L’IA peut se tromper. Vérifiez les informations importantes avant d’agir.
+        </p>
       </div>
     </main>
   );
+
 };
