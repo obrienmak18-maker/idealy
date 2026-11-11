@@ -120,10 +120,12 @@ export async function signInEmail(email: string, password: string): Promise<User
   return result.user;
 }
 
-function actionCodeSettings(mode: "verifyEmail" | "resetPassword") {
+function actionCodeSettings(_mode: "verifyEmail" | "resetPassword") {
   return {
-    handleCodeInApp: true,
-    url: new URL(`/auth/action?mode=${mode}`, window.location.origin).toString(),
+    // The Firebase project's email template must point to /auth/action.
+    // This URL is the destination after the branded action page completes.
+    handleCodeInApp: false,
+    url: new URL("/login", window.location.origin).toString(),
   };
 }
 
@@ -144,6 +146,7 @@ export const resetPassword = (email: string) =>
 export function authErrorMessage(error: unknown): string {
   const code = (error as { code?: string })?.code ?? (error as Error)?.message ?? "";
   if (code.includes("firebase_not_configured")) return "La connexion n’est pas encore configurée sur cet environnement.";
+  if (code.includes("email_not_verified")) return "Confirmez votre adresse e-mail avant de vous connecter.";
   if (code.includes("firebase_backend_identity_rejected")) return "Firebase a reconnu votre compte, mais le backend Idealy n’a pas validé cette identité.";
   if (code.includes("firebase_backend_unavailable")) return "Le service d’authentification Idealy est momentanément indisponible. Réessayez dans un instant.";
   if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return "E-mail ou mot de passe incorrect.";
@@ -163,7 +166,14 @@ export function authErrorMessage(error: unknown): string {
 /** Verify the Firebase identity with Idealy's backend and resolve its Supabase account.
  * No Auth.js / NextAuth cookie is created or required by this flow. */
 export async function createBackendSession(user: User): Promise<void> {
-  const idToken = await user.getIdToken();
+  await user.reload();
+  const currentUser = auth().currentUser ?? user;
+  if (!currentUser.emailVerified) {
+    throw new Error("email_not_verified");
+  }
+
+  // Refresh the token after email verification so its email_verified claim is current.
+  const idToken = await currentUser.getIdToken(true);
   const response = await fetch("/api/auth/firebase/session", {
     method: "GET",
     credentials: "same-origin",
