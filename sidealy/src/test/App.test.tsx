@@ -97,6 +97,7 @@ describe("Idealy Application Suite", () => {
 
   it("renders the core application layout and welcome message", async () => {
     render(<App />);
+    await screen.findByPlaceholderText(/Message à Idealy/i);
     expect(screen.getAllByText(/Idealy/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Nouvelle discussion/i).length).toBeGreaterThan(0);
     expect(
@@ -169,6 +170,7 @@ describe("Idealy Application Suite", () => {
     );
 
     render(<App />);
+    await screen.findByPlaceholderText(/Message à Idealy/i);
 
     expect(
       screen.getByLabelText("Espace de prévisualisation et de création"),
@@ -206,6 +208,7 @@ describe("Idealy Application Suite", () => {
     );
 
     render(<App />);
+    await screen.findByPlaceholderText(/Message à Idealy/i);
     expect(
       screen.getByLabelText("Espace de prévisualisation et de création"),
     ).toBeInTheDocument();
@@ -235,6 +238,7 @@ describe("Idealy Application Suite", () => {
       ]),
     );
     render(<App />);
+    await screen.findByPlaceholderText(/Message à Idealy/i);
 
     expect(
       screen.getByLabelText("Espace de prévisualisation et de création"),
