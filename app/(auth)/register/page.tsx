@@ -85,7 +85,15 @@ export default function Page() {
 
     const params = new URLSearchParams(window.location.search);
     const selectedWay = params.get("way");
+    const requestedNext = params.get("next") ?? params.get("callbackUrl");
+    const safeNext =
+      requestedNext?.startsWith("/") &&
+      !requestedNext.startsWith("//") &&
+      !requestedNext.startsWith("/onboarding")
+        ? requestedNext
+        : "/studio";
     const onboarding = new URLSearchParams();
+    onboarding.set("next", safeNext);
     if (isIdealyWay(selectedWay)) onboarding.set("way", selectedWay);
     for (const key of ["plan", "level", "cycle", "power"]) {
       const value = params.get(key);

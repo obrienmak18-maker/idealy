@@ -1,15 +1,9 @@
-import { auth } from "@/app/(auth)/auth";
-import { getToken } from "next-auth/jwt";
+import { getSafeSession, getSafeToken } from "@/lib/auth/session-token";
 import { getIdealySupabaseFunctionUrl } from "@/lib/idealy/config";
-import { isDevelopmentEnvironment } from "@/lib/constants";
 
 export async function POST(request: Request) {
-  const session = await auth();
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const session = await getSafeSession(request);
+  const token = await getSafeToken(request);
 
   const supabaseAccessToken =
     typeof token?.supabaseAccessToken === "string"

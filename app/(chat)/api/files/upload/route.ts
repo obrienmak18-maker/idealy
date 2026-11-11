@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession } from "@/lib/auth/session-token";
 import {
   CHAT_ATTACHMENT_MAX_BYTES,
   normalizeAttachmentMediaType,
@@ -52,9 +52,9 @@ async function storeFile(
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const session = await getSafeSession(request);
 
-  if (!session) {
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

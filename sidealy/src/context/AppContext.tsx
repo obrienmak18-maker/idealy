@@ -140,20 +140,20 @@ export type AppPage =
 
 const pagePaths: Record<AppPage, string> = {
   about: "/about",
-  agents: "/agents",
+  agents: "/studio/agents",
   chat: "/studio",
   connectors: "/connectors",
   docs: "/docs",
-  library: "/library",
+  library: "/studio/library",
   pricing: "/pricing",
-  plugins: "/plugins",
+  plugins: "/connectors",
   privacy: "/privacy",
   terms: "/terms",
   eula: "/eula",
   login: "/login",
   onboarding: "/onboarding",
   authAction: "/auth/action",
-  settings: "/settings",
+  settings: "/studio/settings",
   support: "/support",
   welcome: "/welcome",
 };
@@ -164,8 +164,10 @@ function pageFromPath(pathname: string): AppPage {
     ([, route]) => route === path,
   );
   if (path === "/register") return "login";
-  if (path.startsWith("/settings/")) return "settings";
-  if (path.startsWith("/connectors/")) return "connectors";
+  if (path === "/studio/settings" || path.startsWith("/studio/settings/")) return "settings";
+  if (path === "/studio/agents" || path.startsWith("/studio/agents/")) return "agents";
+  if (path === "/studio/library" || path.startsWith("/studio/library/")) return "library";
+  if (path === "/studio/plugins" || path === "/studio/connectors") return "connectors";
   if (path.startsWith("/docs/")) return "docs";
   if (path === "/") {
     if (typeof window !== "undefined") {
@@ -338,11 +340,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const setActivePage = useCallback((page: AppPage) => {
+    setIsMobileDrawerOpen(false);
+
+    // These routes belong to the Next.js public/auth/integration surface.
+    if (
+      page === "connectors" ||
+      page === "plugins" ||
+      page === "welcome" ||
+      page === "login" ||
+      page === "onboarding" ||
+      page === "authAction"
+    ) {
+      const destination = pagePaths[page];
+      if (window.location.pathname !== destination) {
+        window.location.assign(destination);
+      }
+      return;
+    }
+
     setActivePageState(page);
     const nextPath = pagePaths[page];
-    if (window.location.pathname !== nextPath)
+    if (window.location.pathname !== nextPath) {
       window.history.pushState(null, "", nextPath);
-    setIsMobileDrawerOpen(false);
+    }
   }, []);
 
   useEffect(() => {

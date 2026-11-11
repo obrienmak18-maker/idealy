@@ -1,22 +1,10 @@
-import { getToken } from "next-auth/jwt";
+import { getSafeToken } from "@/lib/auth/session-token";
 import { getIdealySupabaseFunctionUrl } from "@/lib/idealy/config";
-import { isDevelopmentEnvironment } from "@/lib/constants";
-
-function getAuthorization(request: Request, token: Awaited<ReturnType<typeof getToken>>) {
-  const explicitAuthorization = request.headers.get("authorization");
-  const supabaseAccessToken = typeof token === "object" && token !== null && typeof token.supabaseAccessToken === "string"
-    ? token.supabaseAccessToken
-    : null;
-  return explicitAuthorization ?? (supabaseAccessToken ? `Bearer ${supabaseAccessToken}` : null);
-}
 
 export async function GET(request: Request) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
-  const authorization = getAuthorization(request, token);
+  const token = await getSafeToken(request);
+  const supabaseAccessToken = typeof token?.supabaseAccessToken === "string" ? token.supabaseAccessToken.trim() : "";
+  const authorization = supabaseAccessToken ? `Bearer ${supabaseAccessToken}` : null;
   if (!authorization?.startsWith("Bearer ")) {
     return Response.json({ error: "Une session Idealy authentifiée est requise." }, { status: 401 });
   }

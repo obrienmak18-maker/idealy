@@ -1,6 +1,4 @@
-import { auth } from "@/app/(auth)/auth";
-import { getToken } from "next-auth/jwt";
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { getSafeSession, getSafeToken } from "@/lib/auth/session-token";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
 const MAX_FIELD_LENGTH = 2400;
@@ -86,12 +84,8 @@ export async function PATCH(
     return json({ error: "Le format de la requête doit être JSON." }, 415);
   }
 
-  const session = await auth().catch(() => null);
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const session = await getSafeSession(request);
+  const token = await getSafeToken(request);
   const userId = session?.user?.id ??
     (typeof token?.sub === "string" ? token.sub : null);
   const accessToken =

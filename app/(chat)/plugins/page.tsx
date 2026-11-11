@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { IdealyOrbitalDisc } from "@/components/connectors/idealy-orbital-disc";
 import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import { listConnectorDefinitions } from "@/lib/idealy/connectors";
+import { getFirebaseBearerHeaders } from "@/lib/firebase/client";
 
 const CONNECTOR_CATEGORY_BADGES: Record<string, string> = {
   github: "VERSION CONTROL",
@@ -85,8 +86,11 @@ export default function PluginsPage() {
 
     async function loadConnectorStatus() {
       try {
+        const headers = await getFirebaseBearerHeaders();
         const response = await fetch("/api/idealy/connectors/status", {
           cache: "no-store",
+          credentials: "same-origin",
+          headers,
           signal: controller.signal,
         });
 
@@ -268,9 +272,11 @@ export default function PluginsPage() {
         oauthProvider === "vercel"
           ? "/api/idealy/connectors/vercel/start"
           : "/api/idealy/connectors/start";
+      const authHeaders = await getFirebaseBearerHeaders();
       const response = await fetch(startEndpoint, {
         body: JSON.stringify({ provider: oauthProvider }),
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         method: "POST",
       });
       const payload = (await response.json().catch(() => null)) as {
@@ -312,7 +318,7 @@ export default function PluginsPage() {
         {/* Navigation retour */}
         <Link
           className="mb-6 inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-          href="/"
+          href="/studio"
         >
           <ArrowLeftIcon className="size-3.5" /> Retour au workspace
         </Link>

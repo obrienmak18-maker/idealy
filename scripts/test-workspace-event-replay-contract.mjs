@@ -27,7 +27,7 @@ for (const requiredFragment of [
 }
 
 for (const requiredFragment of [
-  "await auth()",
+  "getSafeSession(request)",
   "Invalid mission id",
   "Invalid afterSequence",
   "lastSequence",

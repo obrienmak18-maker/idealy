@@ -72,26 +72,26 @@ export default function Page() {
 
   const getSafeCallbackUrl = () => {
     if (typeof window === "undefined") {
-      return "/";
+      return "/studio";
     }
 
     const callbackUrl = new URLSearchParams(window.location.search).get(
       "callbackUrl"
     );
 
-    if (!callbackUrl?.startsWith("/")) return "/";
+    if (!callbackUrl?.startsWith("/")) return "/studio";
     try {
       const destination = new URL(callbackUrl, window.location.origin);
-      if (destination.origin !== window.location.origin) return "/";
+      if (destination.origin !== window.location.origin) return "/studio";
       return `${destination.pathname}${destination.search}${destination.hash}`;
     } catch {
-      return "/";
+      return "/studio";
     }
   };
 
   const getDestinationUrl = () => {
     const callbackUrl = getSafeCallbackUrl();
-    return callbackUrl || "/";
+    return callbackUrl || "/studio";
   };
   const getOnboardingUrl = () => {
     const destination = getDestinationUrl();

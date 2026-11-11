@@ -1,4 +1,4 @@
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession } from "@/lib/auth/session-token";
 import { restoreIdealyMissionCheckpoint } from "@/lib/idealy/backend-adapter";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -6,7 +6,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ missionId: string }> }
 ) {
-  const session = await auth();
+  const session = await getSafeSession(request);
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }

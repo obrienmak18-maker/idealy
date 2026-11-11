@@ -1,6 +1,4 @@
-import { auth } from "@/app/(auth)/auth";
-import { getToken } from "next-auth/jwt";
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { getSafeSession, getSafeToken } from "@/lib/auth/session-token";
 import { isIdealyWay } from "@/lib/idealy/product-contract";
 import { getUserById } from "@/lib/db/queries";
 import { signInFirebaseUserThroughSupabase } from "@/lib/idealy/supabase-auth";
@@ -18,11 +16,7 @@ function json(body: Record<string, unknown>, status = 200) {
 }
 
 async function getAuthToken(request: Request) {
-  return getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  return getSafeToken(request);
 }
 
 async function resolveSupabaseIdentity(
@@ -71,7 +65,7 @@ async function getIdentity(request: Request): Promise<RequestIdentity | null> {
   let token = await getAuthToken(request);
 
   if (!token) {
-    const session = await auth().catch(() => null);
+    const session = await getSafeSession(request);
     if (session?.user?.id) {
       token = {
         id: session.user.id,

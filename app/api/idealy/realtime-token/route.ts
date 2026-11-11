@@ -1,12 +1,7 @@
-import { getToken } from "next-auth/jwt";
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { getSafeToken } from "@/lib/auth/session-token";
 
 export async function GET(request: Request) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const token = await getSafeToken(request);
 
   const accessToken =
     typeof token?.supabaseAccessToken === "string"

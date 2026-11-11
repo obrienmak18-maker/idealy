@@ -16,6 +16,12 @@ export default defineConfig(({ mode }) => {
     "http://localhost:3000";
 
   return {
+    // Vite is served by the existing Next deployment under /studio.
+    base: mode === "production" ? "/sidealy/" : "/",
+    build: {
+      outDir: "../public/sidealy",
+      emptyOutDir: true,
+    },
     envDir: idealyRepoRoot,
     envPrefix: ["VITE_", "NEXT_PUBLIC_"],
     plugins: [react()],

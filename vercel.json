@@ -1,3 +1,13 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/studio",
+      "destination": "/sidealy/index.html"
+    },
+    {
+      "source": "/studio/:path*",
+      "destination": "/sidealy/index.html"
+    }
+  ]
 }

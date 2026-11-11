@@ -59,10 +59,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL(`${base}/studio`, request.url));
+  }
+
   const isGuest = guestRegex.test(token?.email ?? "");
 
   if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
-    return NextResponse.redirect(new URL(`${base}/`, request.url));
+    return NextResponse.redirect(new URL(`${base}/studio`, request.url));
   }
 
   return NextResponse.next();

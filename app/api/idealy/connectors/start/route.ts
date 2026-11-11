@@ -1,5 +1,5 @@
-import { getToken } from "next-auth/jwt";
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { getSafeToken } from "@/lib/auth/session-token";
+
 import { getIdealySupabaseFunctionUrl } from "@/lib/idealy/config";
 
 const allowedProviders = new Set([
@@ -12,11 +12,7 @@ const allowedProviders = new Set([
 ]);
 
 export async function POST(request: Request) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const token = await getSafeToken(request);
 
   const accessToken =
     typeof token?.supabaseAccessToken === "string"
