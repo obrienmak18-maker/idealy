@@ -14,6 +14,8 @@ import {
   completeMagicLink,
   confirmPhoneCode,
   createBackendSession,
+  ensureFirebaseConfigured,
+  getBearerToken,
   isFirebaseConfigured,
   isMagicLinkUrl,
   rememberedMagicEmail,
@@ -68,6 +70,7 @@ export const AuthPage: React.FC = () => {
   const [codeSent, setCodeSent] = useState(false);
   const [sentTo, setSentTo] = useState<{ kind: "verify" | "magic" | "reset"; email: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [firebaseReady, setFirebaseReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const recaptchaRef = useRef<HTMLDivElement>(null);
@@ -92,34 +95,62 @@ export const AuthPage: React.FC = () => {
   };
 
   const finish = async (user: FirebaseUser) => {
+    // Do not enter the workspace until the backend has verified Firebase and
+    // resolved the corresponding Supabase/Idealy identity.
+    await createBackendSession(user);
+    const bearer = await getBearerToken();
+    if (!bearer) throw new Error("firebase_backend_identity_rejected");
+
+    const profileResponse = await fetch("/api/idealy/profile/onboarding", {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { Authorization: `Bearer ${bearer}` },
+    });
+    if (!profileResponse.ok) {
+      throw new Error(
+        profileResponse.status === 401
+          ? "firebase_backend_identity_rejected"
+          : "firebase_backend_unavailable",
+      );
+    }
+    const profile = (await profileResponse.json()) as {
+      firstName?: string | null;
+      onboardingCompleted?: boolean;
+      way?: string;
+    };
     try {
       localStorage.setItem("idealy_session", "active");
-      await createBackendSession(user);
+      if (profile.way) localStorage.setItem("idealy_user_way", profile.way);
     } catch {
-      /* ignore */
+      // UI cache only; Firebase remains the source of identity.
     }
-    setActivePage("chat");
+    setActivePage(profile.onboardingCompleted === true ? "chat" : "onboarding");
   };
 
-  const handleGuestEntry = () => {
-    try {
-      localStorage.setItem("idealy_session", "active");
-    } catch {
-      /* ignore */
-    }
-    setActivePage("chat");
-  };
-
-  // Traitement retour Magic Link
+  // Firebase public configuration is loaded from the existing Idealy API
+  // project. Magic links are handled only after the client SDK is initialized.
   useEffect(() => {
-    if (!isMagicLinkUrl()) return;
-    const known = rememberedMagicEmail();
-    if (!known) {
-      setView("magic");
-      setNotice("Confirmez votre adresse e-mail pour terminer la connexion.");
-      return;
-    }
-    void run(async () => finish(await completeMagicLink(known)));
+    let active = true;
+    void (async () => {
+      const configured = await ensureFirebaseConfigured();
+      if (!active) return;
+      setFirebaseReady(true);
+      if (!configured) {
+        setError("La configuration Firebase publique n’est pas disponible. Le backend doit exposer ses paramètres Firebase.");
+        return;
+      }
+      if (!isMagicLinkUrl()) return;
+      const known = rememberedMagicEmail();
+      if (!known) {
+        setView("magic");
+        setNotice("Confirmez votre adresse e-mail pour terminer la connexion.");
+        return;
+      }
+      await run(async () => finish(await completeMagicLink(known)));
+    })();
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -133,8 +164,8 @@ export const AuthPage: React.FC = () => {
     void run(async () => {
       if (view === "login") return finish(await signInEmail(email, password));
       if (view === "signup") {
-        const user = await signUpEmail(email, password);
-        await createBackendSession(user);
+        await signUpEmail(email, password);
+        // No backend session is issued before the email is verified.
         setSentTo({ kind: "verify", email });
         setView("sent");
         return;
@@ -314,7 +345,7 @@ export const AuthPage: React.FC = () => {
           <>
             <button
               className="w-full flex h-11 items-center justify-center gap-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-xs sm:text-sm font-medium text-white hover:bg-white/[0.08] transition-all duration-150 active:scale-[0.98] disabled:opacity-50"
-              disabled={busy}
+              disabled={busy || !firebaseReady || !isFirebaseConfigured()}
               onClick={() => void run(async () => finish(await signInGoogle()))}
               type="button"
             >
@@ -462,7 +493,7 @@ export const AuthPage: React.FC = () => {
           {/* Bouton de soumission principal */}
           <button
             className="w-full h-11 rounded-xl bg-white text-black text-xs sm:text-sm font-semibold hover:bg-zinc-200 transition-all shadow-md active:scale-[0.98] disabled:opacity-50 mt-2"
-            disabled={busy}
+            disabled={busy || !firebaseReady || !isFirebaseConfigured()}
             type="submit"
           >
             {busy
@@ -481,22 +512,15 @@ export const AuthPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Accès Développeur / Mode Invité direct (Zero blocage) */}
-        {!isFirebaseConfigured() && (
-          <div className="mt-5 p-3 rounded-xl bg-teal-500/10 border border-teal-500/20 text-xs text-center space-y-1.5">
-            <span className="font-semibold text-teal-300 block">Environnement Local Détecté</span>
-            <p className="text-zinc-400 text-[11px]">
-              Vous pouvez entrer directement dans l'espace de travail sans mot de passe.
-            </p>
-            <button
-              className="w-full py-2 rounded-lg bg-teal-400 hover:bg-teal-300 text-black font-semibold text-xs transition-colors shadow-sm mt-1"
-              onClick={handleGuestEntry}
-              type="button"
-            >
-              Entrer en mode invité ✦
-            </button>
+        {!firebaseReady ? (
+          <p className="mt-5 text-center text-xs text-zinc-500" role="status">
+            Préparation de la connexion sécurisée…
+          </p>
+        ) : !isFirebaseConfigured() ? (
+          <div className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3 text-center text-xs text-amber-200/90" role="alert">
+            La connexion sécurisée n’est pas configurée pour cet environnement. Aucun accès invité n’est ouvert.
           </div>
-        )}
+        ) : null}
 
         {/* Liens secondaires en bas de carte */}
         <div className="mt-6 pt-4 border-t border-white/[0.08] flex items-center justify-between text-xs text-zinc-400">
