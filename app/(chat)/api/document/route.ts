@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession } from "@/lib/auth/session-token";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import {
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     ).toResponse();
   }
 
-  const session = await auth();
+  const session = await getSafeSession(request);
 
   if (!session?.user) {
     return new ChatbotError("unauthorized:document").toResponse();
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     ).toResponse();
   }
 
-  const session = await auth();
+  const session = await getSafeSession(request);
 
   if (!session?.user) {
     return new ChatbotError("not_found:document").toResponse();
@@ -139,7 +139,7 @@ export async function DELETE(request: Request) {
     ).toResponse();
   }
 
-  const session = await auth();
+  const session = await getSafeSession(request);
 
   if (!session?.user) {
     return new ChatbotError("unauthorized:document").toResponse();
