@@ -23,14 +23,77 @@ import {
 } from "firebase/auth";
 
 const env = import.meta.env as Record<string, string | undefined>;
+type FirebaseClientConfig = {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  appId: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  measurementId?: string;
+};
 
-function config() {
+let remoteConfig: FirebaseClientConfig | null = null;
+let configRequest: Promise<boolean> | null = null;
+
+function envConfig(): FirebaseClientConfig | null {
   const apiKey = (env.VITE_FIREBASE_API_KEY || env.NEXT_PUBLIC_FIREBASE_API_KEY)?.trim();
   const authDomain = (env.VITE_FIREBASE_AUTH_DOMAIN || env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN)?.trim();
   const projectId = (env.VITE_FIREBASE_PROJECT_ID || env.NEXT_PUBLIC_FIREBASE_PROJECT_ID)?.trim();
   const appId = (env.VITE_FIREBASE_APP_ID || env.NEXT_PUBLIC_FIREBASE_APP_ID)?.trim();
   if (!(apiKey && authDomain && projectId && appId)) return null;
-  return { apiKey, authDomain, projectId, appId };
+  return {
+    apiKey,
+    authDomain,
+    projectId,
+    appId,
+    storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  };
+}
+
+function config(): FirebaseClientConfig | null {
+  return remoteConfig ?? envConfig();
+}
+
+/** Loads the public Firebase web configuration from the Idealy API project.
+ * These values are client identifiers, never Firebase Admin credentials. */
+export async function ensureFirebaseConfigured(): Promise<boolean> {
+  if (config()) return true;
+  if (!configRequest) {
+    configRequest = (async () => {
+      try {
+        const response = await fetch("/api/public-config/firebase", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!response.ok) return false;
+        const payload = (await response.json()) as {
+          configured?: boolean;
+          firebase?: FirebaseClientConfig | null;
+        };
+        const candidate = payload.firebase;
+        if (
+          payload.configured === true &&
+          candidate &&
+          typeof candidate.apiKey === "string" &&
+          typeof candidate.authDomain === "string" &&
+          typeof candidate.projectId === "string" &&
+          typeof candidate.appId === "string"
+        ) {
+          remoteConfig = candidate;
+          return true;
+        }
+      } catch {
+        // Keep the sign-in page available with an actionable configuration state.
+      }
+      return false;
+    })().finally(() => {
+      configRequest = null;
+    });
+  }
+  return configRequest;
 }
 
 export const isFirebaseConfigured = () => config() !== null;
@@ -57,13 +120,25 @@ export async function signInEmail(email: string, password: string): Promise<User
   return result.user;
 }
 
+function actionCodeSettings(mode: "verifyEmail" | "resetPassword") {
+  return {
+    handleCodeInApp: true,
+    url: new URL(`/auth/action?mode=${mode}`, window.location.origin).toString(),
+  };
+}
+
+export async function sendVerificationEmail(user: User): Promise<void> {
+  await sendEmailVerification(user, actionCodeSettings("verifyEmail"));
+}
+
 export async function signUpEmail(email: string, password: string): Promise<User> {
   const result = await createUserWithEmailAndPassword(auth(), email, password);
-  await sendEmailVerification(result.user).catch(() => undefined);
+  await sendVerificationEmail(result.user);
   return result.user;
 }
 
-export const resetPassword = (email: string) => sendPasswordResetEmail(auth(), email);
+export const resetPassword = (email: string) =>
+  sendPasswordResetEmail(auth(), email, actionCodeSettings("resetPassword"));
 
 /** Message clair et court pour les erreurs Firebase courantes. */
 export function authErrorMessage(error: unknown): string {
@@ -83,22 +158,34 @@ export function authErrorMessage(error: unknown): string {
   return "La connexion a échoué. Réessayez.";
 }
 
-/** Établit la session backend sécurisée (Firebase + Supabase claims). */
+/** Verify the Firebase identity with Idealy's backend and resolve its Supabase account.
+ * No Auth.js / NextAuth cookie is created or required by this flow. */
 export async function createBackendSession(user: User): Promise<void> {
+  const idToken = await user.getIdToken();
+  const response = await fetch("/api/auth/firebase/session", {
+    method: "GET",
+    credentials: "same-origin",
+    headers: { Authorization: `Bearer ${idToken}` },
+    cache: "no-store",
+  });
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    authenticated?: boolean;
+  };
+  if (!response.ok || payload.authenticated !== true) {
+    throw new Error(
+      response.status === 401
+        ? "firebase_backend_identity_rejected"
+        : "firebase_backend_unavailable",
+    );
+  }
+
   try {
-    const idToken = await user.getIdToken();
     localStorage.setItem("idealy_session", "active");
     localStorage.setItem("idealy_user_id", user.uid);
     if (user.email) localStorage.setItem("idealy_user_email", user.email);
-
-    await fetch("/api/auth/set-claims", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken }),
-    });
-  } catch (error) {
-    console.info("[Auth] Session active en local (synchronisation backend en arrière-plan)", error);
+  } catch {
+    // Firebase remains the source of identity; local storage is only a UI hint.
   }
 }
 
@@ -176,13 +263,29 @@ export function currentIdentity(): { email: string | null; name: string | null }
 
 export async function getBearerToken(): Promise<string | null> {
   try {
-    const user = auth().currentUser;
-    if (user) {
-      return await user.getIdToken();
+    if (!config()) {
+      const configured = await ensureFirebaseConfigured();
+      if (!configured) return null;
     }
+    const user = auth().currentUser;
+    if (user) return await user.getIdToken();
   } catch {
-    // ignore
+    // A missing or expired Firebase session is handled by the API as unauthenticated.
   }
   return null;
+}
+
+export async function authenticatedFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+): Promise<Response> {
+  const token = await getBearerToken();
+  const headers = new Headers(init.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return fetch(input, {
+    ...init,
+    credentials: init.credentials ?? "same-origin",
+    headers,
+  });
 }
 
