@@ -10,6 +10,7 @@ import {
 import { AssistantRemoteService } from "../services/assistantRemote";
 import { BackendHistoryService } from "../services/backendHistory";
 import { StorageService } from "../services/storage";
+import { authenticatedFetch } from "../services/firebase";
 import { buildRunForMessage } from "../services/agentRegistry";
 import { useFirestoreProjectSync } from "../hooks/useFirestoreSync";
 import { getConversationArtifactId } from "../services/conversationArtifacts";
@@ -1065,7 +1066,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     updateMission({ error: undefined, idempotencyKey, status: "building" });
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/idealy/missions/${encodeURIComponent(missionId)}/squad`,
         {
           body: JSON.stringify({ idempotencyKey }),
@@ -1097,7 +1098,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       let files: MissionWorkspaceFile[] = [];
       let fileLoadError: string | undefined;
       try {
-        const filesResponse = await fetch(
+        const filesResponse = await authenticatedFetch(
           `/api/idealy/missions/${encodeURIComponent(missionId)}/files`,
           {
             credentials: "same-origin",

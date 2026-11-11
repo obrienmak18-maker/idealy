@@ -1,4 +1,4 @@
-import { getBearerToken } from "./firebase";
+import { authenticatedFetch, getBearerToken } from "./firebase";
 import type {
   Artifact,
   AssistantToolActivity,
@@ -115,7 +115,7 @@ async function getSelectedModel(): Promise<string> {
   }
 
   try {
-    const response = await fetch("/api/models", { credentials: "same-origin" });
+    const response = await authenticatedFetch("/api/models");
     if (response.ok) {
       const payload = (await response.json()) as
         | {
@@ -207,7 +207,7 @@ export const AssistantRemoteService = {
         }
         const formData = new FormData();
         formData.set("file", attachment.file, attachment.name);
-        const upload = await fetch("/api/files/upload", {
+        const upload = await authenticatedFetch("/api/files/upload", {
           body: formData,
           credentials: "same-origin",
           method: "POST",

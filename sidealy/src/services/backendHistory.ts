@@ -6,6 +6,7 @@ import type {
 } from "../types";
 import { getLinkedBackendChatIds, linkBackendChatId } from "./assistantRemote";
 import { StorageService } from "./storage";
+import { authenticatedFetch } from "./firebase";
 
 type BackendPart = {
   filename?: unknown;
@@ -88,7 +89,7 @@ export const BackendHistoryService = {
     const cursor = endingBefore
       ? `&ending_before=${encodeURIComponent(endingBefore)}`
       : "";
-    const response = await fetch(`/api/history?limit=50${cursor}`, {
+    const response = await authenticatedFetch(`/api/history?limit=50${cursor}`, {
       credentials: "same-origin",
       headers: { Accept: "application/json" },
     });
@@ -156,7 +157,7 @@ export const BackendHistoryService = {
   async loadMessages(localConversationId: string): Promise<Message[] | null> {
     const backendChatId = getLinkedBackendChatIds()[localConversationId];
     if (!backendChatId) return null;
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `/api/messages?chatId=${encodeURIComponent(backendChatId)}`,
       {
         credentials: "same-origin",
