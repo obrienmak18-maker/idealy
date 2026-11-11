@@ -64,7 +64,7 @@ export const AuthPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(true);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
@@ -215,10 +215,10 @@ export const AuthPage: React.FC = () => {
           <div className="pt-2 space-y-3">
             <button
               className="w-full py-3 rounded-xl bg-white text-black font-semibold text-xs sm:text-sm hover:bg-zinc-200 transition-all shadow-md active:scale-95"
-              onClick={() => setActivePage("chat")}
+              onClick={() => go("login")}
               type="button"
             >
-              Accéder au workspace
+              Retour à la connexion
             </button>
             <button
               className="text-xs text-zinc-400 hover:text-white transition-colors block mx-auto"
