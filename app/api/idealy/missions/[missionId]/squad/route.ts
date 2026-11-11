@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { getToken } from "next-auth/jwt";
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession, getSafeToken } from "@/lib/auth/session-token";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { getIdealySupabaseFunctionUrl } from "@/lib/idealy/config";
 import { getSupabaseUserWithAccessToken } from "@/lib/idealy/supabase-auth";
@@ -450,12 +449,8 @@ export async function POST(
 ) {
   const { missionId } = await params;
   const [session, token] = await Promise.all([
-    auth(),
-    getToken({
-      req: request,
-      secret: process.env.AUTH_SECRET,
-      secureCookie: !isDevelopmentEnvironment,
-    }),
+    getSafeSession(request),
+    getSafeToken(request),
   ]);
 
   const supabaseAccessToken =
