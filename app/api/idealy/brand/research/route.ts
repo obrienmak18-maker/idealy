@@ -4,7 +4,7 @@ function ipAddress(req: Request): string | undefined {
 }
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession } from "@/lib/auth/session-token";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { ChatbotError } from "@/lib/errors";
@@ -94,7 +94,7 @@ async function checkDomain(
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const session = await getSafeSession(request);
   if (session?.user?.type !== "regular") {
     return Response.json(
       { error: "Connectez-vous à Idealy pour utiliser le Studio de marque." },
