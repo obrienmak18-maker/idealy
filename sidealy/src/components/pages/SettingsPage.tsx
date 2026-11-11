@@ -12,6 +12,7 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { authenticatedFetch } from "../../services/firebase";
 import { Button } from "../common/Button";
 
 type Preferences = {
@@ -92,7 +93,7 @@ export const SettingsPage: React.FC = () => {
     const controller = new AbortController();
     setBillingLoading(true);
     setBillingError("");
-    fetch("/api/idealy/billing/status", {
+    authenticatedFetch("/api/idealy/billing/status", {
       cache: "no-store",
       credentials: "same-origin",
       signal: controller.signal,
@@ -138,7 +139,7 @@ export const SettingsPage: React.FC = () => {
     setPortalLoading(true);
     setBillingError("");
     try {
-      const response = await fetch("/api/idealy/billing/portal", {
+      const response = await authenticatedFetch("/api/idealy/billing/portal", {
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -197,15 +198,15 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch("/api/idealy/health", {
+      authenticatedFetch("/api/idealy/health", {
         cache: "no-store",
         credentials: "same-origin",
       }),
-      fetch("/api/idealy/profile/preferences", {
+      authenticatedFetch("/api/idealy/profile/preferences", {
         cache: "no-store",
         credentials: "same-origin",
       }),
-      fetch("/api/idealy/quota", {
+      authenticatedFetch("/api/idealy/quota", {
         cache: "no-store",
         credentials: "same-origin",
       }),

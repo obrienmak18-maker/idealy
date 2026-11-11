@@ -9,6 +9,7 @@ import {
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../context/AppContext";
+import { authenticatedFetch } from "../services/firebase";
 import { getBearerToken } from "../services/firebase";
 import { getConnectorBrandLogo } from "./connectors/brand-logos";
 import {
@@ -37,7 +38,7 @@ export const ConnectorsPage: React.FC = () => {
     getBearerToken().then((bearer) => {
       const headers: Record<string, string> = {};
       if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-      return fetch("/api/idealy/plugins", {
+      return authenticatedFetch("/api/idealy/plugins", {
         cache: "no-store",
         credentials: "same-origin",
         headers,
