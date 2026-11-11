@@ -572,13 +572,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           (message) => message.conversationId === activeConversation.id,
         )
       : false;
+    const activeConversationHasArtifacts = activeConversation
+      ? artifacts.some(
+          (artifact) => artifact.conversationId === activeConversation.id,
+        )
+      : false;
     if (
       !title &&
       activeConversation?.id.startsWith("conv-") &&
       activeConversation.spaceId === targetSpace &&
       !activeConversation.isArchived &&
       !activeConversation.draft?.trim() &&
-      !activeConversationHasMessages
+      !activeConversationHasMessages &&
+      !activeConversationHasArtifacts
     ) {
       setActiveConversationId(activeConversation.id);
       return activeConversation.id;
@@ -587,7 +593,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const newConv: Conversation = {
       createdAt: Date.now(),
       draft: "",
-      id: `conv-${Date.now()}`,
+      id: `conv-${crypto.randomUUID()}`,
       isArchived: false,
       isPinned: false,
       selectedMode: "chat",

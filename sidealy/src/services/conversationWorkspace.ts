@@ -20,6 +20,26 @@ export function getLatestMissionForConversation(
   return null;
 }
 
+/**
+ * A workbench belongs to a conversation only when that conversation has an
+ * actual mission or code deliverable. Plain chats must not reserve the canvas.
+ */
+export function hasConversationWorkspace(
+  messages: readonly Message[],
+  artifacts: readonly Artifact[],
+  conversationId: string | null | undefined,
+): boolean {
+  if (!conversationId) return false;
+
+  return (
+    Boolean(getLatestMissionForConversation(messages, conversationId)) ||
+    artifacts.some(
+      (artifact) =>
+        artifact.conversationId === conversationId && artifact.type === "code",
+    )
+  );
+}
+
 function keepLatestFile(
   files: readonly MissionWorkspaceFile[],
 ): MissionWorkspaceFile[] {

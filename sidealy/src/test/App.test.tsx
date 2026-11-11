@@ -105,15 +105,61 @@ describe("Idealy Application Suite", () => {
 
     fireEvent.click(screen.getAllByTitle(/Nouvelle conversation/i)[0]);
 
-    expect(
-      await screen.findByText("Prêt pour votre première création"),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByLabelText("Espace de prévisualisation et de création"),
+      ).not.toBeInTheDocument();
+    });
     expect(
       screen.queryByTitle(/Aperçu interactif/),
     ).not.toBeInTheDocument();
   });
 
+  it("creates a fresh conversation when the current blank chat still owns an artifact", async () => {
+    localStorage.setItem(
+      "idealy_artifacts_v1",
+      JSON.stringify([
+        {
+          id: "orphaned-artifact",
+          conversationId: "conv-welcome",
+          createdAt: Date.now(),
+          title: "index.html",
+          type: "code",
+          language: "html",
+          content: "<!doctype html><html><body><h1>Ancien projet</h1></body></html>",
+        },
+      ]),
+    );
+
+    render(<App />);
+    expect(
+      screen.getByLabelText("Espace de prévisualisation et de création"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByTitle(/Nouvelle conversation/i)[0]);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByLabelText("Espace de prévisualisation et de création"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("does not render the workbench on the settings page", async () => {
+    localStorage.setItem(
+      "idealy_artifacts_v1",
+      JSON.stringify([
+        {
+          id: "artifact-settings-test",
+          conversationId: "conv-welcome",
+          createdAt: Date.now(),
+          title: "index.html",
+          type: "code",
+          language: "html",
+          content: "<!doctype html><html><body><h1>Workspace</h1></body></html>",
+        },
+      ]),
+    );
     render(<App />);
 
     expect(

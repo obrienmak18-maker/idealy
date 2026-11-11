@@ -3,6 +3,7 @@ import type { Artifact, Message, MissionWorkspaceFile } from "../types";
 import {
   getConversationWorkspaceFiles,
   getLatestMissionForConversation,
+  hasConversationWorkspace,
   getPreviewRoutes,
 } from "../services/conversationWorkspace";
 
@@ -46,6 +47,28 @@ const artifacts: Artifact[] = [
 ];
 
 describe("conversation workspace files", () => {
+  it("shows a workspace only for a mission or a code artifact owned by the conversation", () => {
+    const missionMessages = [{
+      conversationId: "chat-a",
+      createdAt: 1,
+      id: "mission-message",
+      content: "",
+      mode: "produce",
+      role: "assistant",
+      mission: {
+        id: "mission-a",
+        plan: { agents: [], intention: "", nextStep: "", projectKind: "", v1Scope: "" },
+        status: "planned",
+      },
+    }] as Message[];
+
+    expect(hasConversationWorkspace([], artifacts, "chat-a")).toBe(true);
+    expect(hasConversationWorkspace(missionMessages, [], "chat-a")).toBe(true);
+    expect(hasConversationWorkspace([], artifacts, "chat-c")).toBe(false);
+    expect(hasConversationWorkspace([], artifacts, null)).toBe(false);
+    expect(hasConversationWorkspace([], [], "chat-empty")).toBe(false);
+  });
+
   it("uses only source artifacts owned by the active conversation", () => {
     const files = getConversationWorkspaceFiles([], artifacts, "chat-a");
     expect(files.map((file) => file.path)).toEqual(["index.html", "package.json"]);

@@ -1,16 +1,23 @@
 import { Menu, PanelRight, SquarePen } from "lucide-react";
 import type React from "react";
 import { useApp } from "../../context/AppContext";
+import { hasConversationWorkspace } from "../../services/conversationWorkspace";
 
 export const Header: React.FC = () => {
   const {
     setIsMobileDrawerOpen,
     activeConversation,
     activeMessages,
+    artifacts,
     createConversation,
   } = useApp();
 
   const hasMessages = activeMessages.length > 0;
+  const hasWorkspace = hasConversationWorkspace(
+    activeMessages,
+    artifacts,
+    activeConversation?.id,
+  );
 
   const openWorkspace = () => {
     window.dispatchEvent(new Event("idealy:open-workspace"));
@@ -45,15 +52,17 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <button
-          aria-label="Ouvrir l’espace de prévisualisation"
-          className="grid h-8 w-8 place-items-center rounded-xl text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] focus-ring xl:hidden"
-          onClick={openWorkspace}
-          title="Ouvrir le workspace"
-          type="button"
-        >
-          <PanelRight aria-hidden="true" className="h-4 w-4" />
-        </button>
+        {hasWorkspace && (
+          <button
+            aria-label="Ouvrir l’espace de prévisualisation"
+            className="grid h-8 w-8 place-items-center rounded-xl text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] focus-ring xl:hidden"
+            onClick={openWorkspace}
+            title="Ouvrir le workspace"
+            type="button"
+          >
+            <PanelRight aria-hidden="true" className="h-4 w-4" />
+          </button>
+        )}
         <button
           aria-label="Nouvelle conversation"
           className="grid h-8 w-8 place-items-center rounded-xl text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] focus-ring md:hidden"

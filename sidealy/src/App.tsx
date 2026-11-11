@@ -24,6 +24,7 @@ import { CookieNotice } from "./components/cookies/CookieNotice";
 import { CreditAlert } from "./components/credits/CreditAlert";
 import { useState, useEffect } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
+import { hasConversationWorkspace } from "./services/conversationWorkspace";
 import { LiveVoiceDialog } from "./components/chat/LiveVoiceDialog";
 
 const AppContent: React.FC = () => {
@@ -34,7 +35,12 @@ const AppContent: React.FC = () => {
     window.addEventListener("idealy:open-live-voice", handleOpenLiveVoice);
     return () => window.removeEventListener("idealy:open-live-voice", handleOpenLiveVoice);
   }, []);
-  const { activeConversation, activePage, activeMessages } = useApp();
+  const { activeConversation, activePage, activeMessages, artifacts } = useApp();
+  const hasActiveWorkspace = hasConversationWorkspace(
+    activeMessages,
+    artifacts,
+    activeConversation?.id,
+  );
 
   // Pages autonomes (hors layout de travail, sans sidebar rétractable) avec défilement garanti
   if (activePage === "welcome")
@@ -115,7 +121,9 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Sidecar Panel for Artifacts / Deliverables */}
-      {activePage === "chat" && <SidecarPanel key={activeConversation?.id ?? "workspace"} />}
+      {activePage === "chat" && hasActiveWorkspace && (
+        <SidecarPanel key={activeConversation?.id ?? "workspace"} />
+      )}
 
       {/* Modals & Dialogues */}
       <CookieNotice />
