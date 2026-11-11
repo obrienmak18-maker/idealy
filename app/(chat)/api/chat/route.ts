@@ -25,10 +25,10 @@ import {
 } from "ai";
 import { checkBotId } from "botid/server";
 import type { UIMessage } from "ai";
-import { getToken } from "next-auth/jwt";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
-import { auth, type UserType } from "@/app/(auth)/auth";
+import type { UserType } from "@/app/(auth)/auth";
+import { getSafeSession, getSafeToken } from "@/lib/auth/session-token";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import {
   chatModels,
@@ -98,11 +98,7 @@ function shouldUseIdealyEdgeProvider() {
 
 async function getSupabaseAccessToken(request: Request) {
   try {
-    const token = await getToken({
-      req: request,
-      secret: process.env.AUTH_SECRET,
-      secureCookie: !isDevelopmentEnvironment,
-    });
+    const token = await getSafeToken(request);
     if (typeof token?.supabaseAccessToken === "string") {
       return token.supabaseAccessToken;
     }
@@ -417,7 +413,7 @@ export async function POST(request: Request) {
 
     const [botIdResult, session] = await Promise.all([
       checkBotId().catch(() => null),
-      auth(),
+      getSafeSession(request),
     ]);
 
     if (botIdResult?.isBot) {
@@ -1216,7 +1212,7 @@ export async function DELETE(request: Request) {
     return new ChatbotError("bad_request:api").toResponse();
   }
 
-  const session = await auth();
+  const session = await getSafeSession(request);
 
   if (!session?.user) {
     return new ChatbotError("unauthorized:chat").toResponse();
@@ -1248,7 +1244,7 @@ export async function PATCH(request: Request) {
     return new ChatbotError("bad_request:api").toResponse();
   }
 
-  const session = await auth();
+  const session = await getSafeSession(request);
 
   if (!session?.user) {
     return new ChatbotError("unauthorized:chat").toResponse();

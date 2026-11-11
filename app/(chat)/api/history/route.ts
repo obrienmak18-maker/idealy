@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession } from "@/lib/auth/session-token";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { deleteAllChatsByUserId, getChatsByUserId } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     ).toResponse();
   }
 
-  const session = await auth();
+  const session = await getSafeSession(request);
 
   if (!session?.user) {
     return new ChatbotError("unauthorized:chat").toResponse();
@@ -41,12 +41,12 @@ export async function GET(request: NextRequest) {
   return Response.json(chats);
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   if (process.env.DEMO_MODE === "true" && isDevelopmentEnvironment) {
     return Response.json({ success: true }, { status: 200 });
   }
 
-  const session = await auth();
+  const session = await getSafeSession(request);
 
   if (!session?.user) {
     return new ChatbotError("unauthorized:chat").toResponse();
