@@ -9,6 +9,7 @@ import {
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { authenticatedFetch, signOutFirebase } from "../../services/firebase";
 
 type AccountProfile = {
   accountEmail: string | null;
@@ -24,7 +25,7 @@ let accountRequest: Promise<AccountResult> | null = null;
 
 function loadAccountProfile(): Promise<AccountResult> {
   if (!accountRequest) {
-    accountRequest = fetch("/api/idealy/profile/preferences", {
+    accountRequest = authenticatedFetch("/api/idealy/profile/preferences", {
       cache: "no-store",
       credentials: "same-origin",
     })
@@ -239,7 +240,11 @@ export const AccountChip: React.FC<{
               className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors text-left"
               onClick={() => {
                 setIsMenuOpen(false);
-                setActivePage("login");
+                void signOutFirebase()
+                  .catch((error) => {
+                    console.error("[Idealy sign-out]", error);
+                  })
+                  .finally(() => setActivePage("login"));
               }}
               type="button"
             >

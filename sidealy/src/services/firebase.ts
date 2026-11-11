@@ -304,3 +304,20 @@ export async function authenticatedFetch(
   });
 }
 
+
+/** End the local Firebase session and clear non-authoritative UI hints. */
+export async function signOutFirebase(): Promise<void> {
+  const firebaseAuth = auth();
+  await firebaseAuth.signOut();
+  try {
+    localStorage.removeItem("idealy_session");
+    localStorage.removeItem("idealy_user_id");
+    localStorage.removeItem("idealy_user_email");
+    localStorage.removeItem("idealy_user_way");
+    localStorage.removeItem("idealy_profile");
+    localStorage.removeItem("idealy_user_profile");
+    localStorage.removeItem(MAGIC_EMAIL_KEY);
+  } catch {
+    // Firebase sign-out succeeded; local UI cache cleanup is best effort.
+  }
+}
