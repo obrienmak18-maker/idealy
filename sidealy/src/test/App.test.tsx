@@ -21,6 +21,20 @@ describe("Idealy Application Suite", () => {
     vi.restoreAllMocks();
   });
 
+  it("opens the Studio route directly without an existing browser session", async () => {
+    localStorage.clear();
+    window.history.replaceState({}, "", "/studio");
+
+    render(<App />);
+
+    expect(
+      await screen.findByPlaceholderText(/Message à Idealy/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Donnons vie à vos idées/i),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders the core application layout and welcome message", async () => {
     render(<App />);
     expect(screen.getAllByText(/Idealy/i).length).toBeGreaterThan(0);

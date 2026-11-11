@@ -37,7 +37,9 @@ Dans Firebase Authentication, ajouter le domaine Vercel Preview de Sidealy aux d
 - `/verify-email/*` et `/_next/*` sont relayés au backend Next.js pour terminer les liens de vérification hébergés.
 - `/login`, `/register`, `/onboarding`, `/auth/action` et les routes de l'application restent servies par le fallback SPA Sidealy.
 
-Le frontend et le backend doivent conserver le même parcours de session sur le domaine Preview. Le proxy ne doit pas être remplacé par des appels directs vers une API tierce côté navigateur.
+Le frontend et le backend doivent conserver le même parcours de session sur le domaine Preview.
+
+Pour ouvrir directement le nouveau workspace Sidealy sans passer par la page marketing, utiliser la route `/studio`. Cette route est la route de démonstration du frontend et ne nécessite pas de session navigateur préexistante pour afficher l’interface. Le proxy ne doit pas être remplacé par des appels directs vers une API tierce côté navigateur.
 
 ## WebContainer : démonstration et licence commerciale
 

@@ -140,7 +140,7 @@ export type AppPage =
 const pagePaths: Record<AppPage, string> = {
   about: "/about",
   agents: "/agents",
-  chat: "/",
+  chat: "/studio",
   connectors: "/connectors",
   docs: "/docs",
   library: "/library",
