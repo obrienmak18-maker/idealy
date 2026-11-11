@@ -8,7 +8,7 @@ Créer un projet Vercel séparé, par exemple `idealy-studio`, avec :
 
 - **Root Directory** : `sidealy`
 - **Framework Preset** : Vite
-- **Node.js** : 20.x
+- **Node.js** : 26.x
 - **Install Command** : `npm ci`
 - **Build Command** : `npm run build`
 - **Output Directory** : `dist`
