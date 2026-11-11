@@ -8,12 +8,9 @@ import {
   FileCheck2,
   Gauge,
   Layers3,
-  LockKeyhole,
   Rocket,
   ShieldCheck,
   Sparkles,
-  Target,
-  Zap,
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
