@@ -20,11 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useActiveChat } from "@/hooks/use-active-chat";
-import {
-  initialArtifactData,
-  useArtifact,
-  useArtifactSelector,
-} from "@/hooks/use-artifact";
+import { useArtifactSelector } from "@/hooks/use-artifact";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Artifact } from "./artifact";
@@ -119,8 +115,7 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
     null
   );
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
-  const { setArtifact } = useArtifact();
+  const isArtifactVisible = useArtifactSelector(chatId, (state) => state.isVisible);
   const [chatPaneWidth, setChatPaneWidth] = useState(42);
   const [isResizing, setIsResizing] = useState(false);
   const [isMobileCanvasOpen, setIsMobileCanvasOpen] = useState(false);
@@ -151,12 +146,11 @@ export function ChatShell({ initialPrompt }: { initialPrompt?: string }) {
     if (prevChatIdRef.current !== chatId) {
       prevChatIdRef.current = chatId;
       stopRef.current();
-      setArtifact(initialArtifactData);
       setIsMobileCanvasOpen(false);
       setEditingMessage(null);
       setAttachments([]);
     }
-  }, [chatId, setArtifact]);
+  }, [chatId]);
 
   useEffect(() => {
     const handleWorkspaceViewChange = (event: Event) => {

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
+import { useActiveChat } from "@/hooks/use-active-chat";
 import {
   readIdealyNotificationPreferences,
   sendIdealyDesktopNotification,
@@ -74,8 +75,9 @@ export function DataStreamHandler() {
   const { dataStream, setDataStream } = useDataStream();
   const { mutate } = useSWRConfig();
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  const { chatId } = useActiveChat();
 
-  const { artifact, metadata, setArtifact, setMetadata } = useArtifact();
+  const { artifact, metadata, setArtifact, setMetadata } = useArtifact(chatId);
 
   const missionId =
     typeof metadata?.missionId === "string" ? metadata.missionId : null;
