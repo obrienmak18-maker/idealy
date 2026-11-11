@@ -337,13 +337,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => window.removeEventListener("popstate", syncRoute);
   }, []);
 
-  const setActivePage = (page: AppPage) => {
+  const setActivePage = useCallback((page: AppPage) => {
     setActivePageState(page);
     const nextPath = pagePaths[page];
     if (window.location.pathname !== nextPath)
       window.history.pushState(null, "", nextPath);
     setIsMobileDrawerOpen(false);
-  };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

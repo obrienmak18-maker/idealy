@@ -98,6 +98,12 @@ const AppContent: React.FC = () => {
         return;
       }
 
+      await user.reload();
+      if (!user.emailVerified) {
+        setActivePage("login");
+        return;
+      }
+
       await createBackendSession(user);
       const bearer = await getBearerToken();
       if (!bearer) {
