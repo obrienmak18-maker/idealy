@@ -28,6 +28,7 @@ import {
   sendVerificationEmail,
 } from "../../services/firebase";
 import { useApp } from "../../context/AppContext";
+import { AuthShell, authPrimary } from "./AuthShell";
 import { IdealyLogo } from "../branding/IdealyLogo";
 
 type View = "login" | "signup" | "magic" | "phone" | "reset" | "sent";
@@ -212,24 +213,25 @@ export const AuthPage: React.FC = () => {
           : `Si un compte correspond à ${sentTo.email}, un lien de réinitialisation vient d’être envoyé.`;
 
     return (
-      <main className="relative min-h-screen w-full bg-[#08070d] text-zinc-100 flex items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-3xl border border-white/[0.1] bg-[#0e1018]/90 p-8 shadow-2xl backdrop-blur-xl text-center space-y-6">
-          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-400 grid place-items-center mx-auto text-xl">
-            ✉
-          </div>
-          <h1 className="text-2xl font-bold text-white">Vérifiez votre boîte mail</h1>
-          <p className="text-sm text-zinc-400 leading-relaxed">{text}</p>
-          <div className="pt-2 space-y-3">
-            <button
-              className="w-full py-3 rounded-xl bg-white text-black font-semibold text-xs sm:text-sm hover:bg-zinc-200 transition-all shadow-md active:scale-95"
-              onClick={() => go("login")}
-              type="button"
-            >
-              Retour à la connexion
-            </button>
-          </div>
+      <AuthShell
+        title="Vérifiez votre boîte mail"
+        subtitle={text}
+        width={560}
+      >
+        <div className="mb-6 grid size-12 place-items-center rounded-2xl border border-violet-300/20 bg-violet-300/[0.08] text-violet-200">
+          <Mail className="size-5" />
         </div>
-      </main>
+        <p className="mb-7 text-sm leading-relaxed text-[#9ca6b8]">
+          Pensez également à vérifier vos courriers indésirables. Vous pourrez revenir ici après avoir ouvert le lien.
+        </p>
+        <button
+          className={authPrimary}
+          onClick={() => go("login")}
+          type="button"
+        >
+          Retour à la connexion
+        </button>
+      </AuthShell>
     );
   }
 

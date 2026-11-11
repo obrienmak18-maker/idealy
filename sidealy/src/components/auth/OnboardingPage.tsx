@@ -54,7 +54,16 @@ export const OnboardingPage: React.FC = () => {
   const [step, setStep] = useState(0);
   const [projectType, setProjectType] = useState<string>("saas");
   const [goal, setGoal] = useState("");
-  const [way, setWay] = useState<(typeof WAYS)[number]>("mage");
+  const [way, setWay] = useState<(typeof WAYS)[number]>(() => {
+    try {
+      const preferred = localStorage.getItem("idealy_preferred_way");
+      return WAYS.includes(preferred as (typeof WAYS)[number])
+        ? (preferred as (typeof WAYS)[number])
+        : "mage";
+    } catch {
+      return "mage";
+    }
+  });
   const [level, setLevel] = useState<string>("intermediate");
   const [source, setSource] = useState<string | null>(null);
   const [firstName, setFirstName] = useState("");
@@ -113,6 +122,7 @@ export const OnboardingPage: React.FC = () => {
       // Local storage is only a fast UI cache; the saved profile is authoritative.
       localStorage.setItem("idealy_profile", JSON.stringify(profileData));
       localStorage.setItem("idealy_user_way", way);
+      localStorage.removeItem("idealy_preferred_way");
       setActivePage("chat");
     } catch (err) {
       setError(
