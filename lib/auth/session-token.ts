@@ -205,5 +205,5 @@ export async function getSafeSession(request: NextRequest | Request) {
     type: token.type === "guest" ? "guest" : "regular",
   };
 
-  return { user };
+  return { expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(), user };
 }
