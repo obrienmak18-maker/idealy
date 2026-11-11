@@ -1,4 +1,4 @@
-import { getToken } from "next-auth/jwt";
+import { getSafeToken } from "@/lib/auth/session-token";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { describePlugins } from "@/lib/idealy/plugins/service";
 import { getVerifiedUserPlan } from "@/lib/idealy/plugins/service";
@@ -10,11 +10,7 @@ import { getVerifiedUserPlan } from "@/lib/idealy/plugins/service";
  * `available` when it is genuinely installed, configured and authorized.
  */
 export async function GET(request: Request) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const token = await getSafeToken(request);
   const accessToken =
     typeof token?.supabaseAccessToken === "string"
       ? token.supabaseAccessToken

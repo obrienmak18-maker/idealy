@@ -1,4 +1,4 @@
-import { getToken } from "next-auth/jwt";
+import { getSafeToken } from "@/lib/auth/session-token";
 import { createClient } from "@supabase/supabase-js";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { pluginRegistry } from "@/lib/idealy/plugins";
@@ -20,11 +20,7 @@ export async function POST(
   { params }: { params: Promise<{ pluginId: string }> },
 ) {
   const { pluginId } = await params;
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const token = await getSafeToken(request);
 
   const accessToken =
     typeof token?.supabaseAccessToken === "string"
