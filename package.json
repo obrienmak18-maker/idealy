@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "build": "npm ci --prefix sidealy --no-audit --no-fund && npm run build --prefix sidealy && NODE_ENV=production next build",
+    "build": "npm ci --include=dev --prefix sidealy --no-audit --no-fund && npm run build --prefix sidealy && NODE_ENV=production next build",
     "start": "next start",
     "check": "ultracite check",
     "typecheck": "tsc --noEmit",

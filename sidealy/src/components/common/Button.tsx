@@ -20,7 +20,7 @@ export const Button = ({
   disabled,
   ref,
   ...props
-}: ButtonProps & { ref?: React.RefObject<HTMLButtonElement | null> }) => {
+}: ButtonProps & { ref?: React.Ref<HTMLButtonElement> }) => {
   const baseStyles =
     "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 cursor-pointer focus-ring select-none disabled:opacity-50 disabled:cursor-not-allowed";
 
