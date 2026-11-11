@@ -1,5 +1,5 @@
-import { getToken } from "next-auth/jwt";
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { getSafeToken } from "@/lib/auth/session-token";
+
 import { pluginRegistry } from "@/lib/idealy/plugins";
 import { authorizeToolExecution } from "@/lib/idealy/plugins/permissions";
 import {
@@ -32,11 +32,7 @@ export async function POST(
 ) {
   const { pluginId } = await params;
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const token = await getSafeToken(request);
   const accessToken =
     typeof token?.supabaseAccessToken === "string"
       ? token.supabaseAccessToken
@@ -183,11 +179,7 @@ export async function GET(
 ) {
   const { pluginId } = await params;
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const token = await getSafeToken(request);
   const accessToken =
     typeof token?.supabaseAccessToken === "string"
       ? token.supabaseAccessToken
