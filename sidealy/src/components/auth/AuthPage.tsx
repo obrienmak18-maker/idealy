@@ -27,6 +27,7 @@ import {
   signUpEmail,
 } from "../../services/firebase";
 import { useApp } from "../../context/AppContext";
+import { IdealyLogo } from "../branding/IdealyLogo";
 
 type View = "login" | "signup" | "magic" | "phone" | "reset" | "sent";
 type FirebaseUser = Awaited<ReturnType<typeof signInGoogle>>;
@@ -237,7 +238,7 @@ export const AuthPage: React.FC = () => {
   const isLogin = view === "login";
 
   return (
-    <main className="relative min-h-screen w-full bg-[#08070d] text-zinc-100 flex items-center justify-center p-4 sm:p-6 antialiased font-sans selection:bg-teal-500/20">
+    <main className="relative flex min-h-screen w-full items-center justify-center overflow-y-auto bg-[#0b0d14] px-4 py-12 font-sans text-zinc-100 antialiased selection:bg-violet-400/25 sm:px-6">
       {/* Halo d'ambiance cosmique */}
       <div
         aria-hidden="true"
@@ -247,7 +248,7 @@ export const AuthPage: React.FC = () => {
           className="absolute -top-[120px] left-1/2 -translate-x-1/2 w-[800px] h-[450px]"
           style={{
             background:
-              "radial-gradient(50% 50% at 50% 40%, rgba(56, 189, 248, 0.15), rgba(139, 92, 246, 0.1) 50%, transparent 80%)",
+              "radial-gradient(55% 55% at 50% 35%, rgba(104, 116, 245, 0.14), rgba(139, 92, 246, 0.07) 48%, transparent 78%),
             filter: "blur(60px)",
           }}
         />
@@ -266,35 +267,37 @@ export const AuthPage: React.FC = () => {
       </div>
 
       {/* Carte principale d'authentification */}
-      <div className="w-full max-w-md rounded-3xl border border-white/[0.1] bg-[#0c0d14]/90 p-7 sm:p-9 shadow-2xl backdrop-blur-2xl">
+      <div className="relative w-full max-w-[560px] rounded-[30px] border border-white/[0.10] bg-[#191b22]/95 p-7 shadow-[0_28px_90px_-38px_rgba(0,0,0,0.9)] backdrop-blur-2xl sm:p-10 lg:p-12">
         {/* En-tête */}
-        <div className="text-center space-y-2 mb-6">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-400 via-indigo-500 to-purple-600 grid place-items-center text-white font-bold text-base shadow-lg mx-auto mb-3">
-            ✦
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+        <div className="mb-9 space-y-7 text-left">
+          <IdealyLogo animated={false} size={40} />
+          <div className="space-y-3">
+          <h1 className="text-[32px] font-semibold leading-tight tracking-[-0.035em] text-white sm:text-[40px]">
             {isLogin
-              ? "Heureux de vous revoir"
+              ? "Bon retour sur Idealy"
               : isSignup
-                ? "Créez votre compte"
+                ? "Créez votre compte Idealy"
                 : view === "reset"
-                  ? "Réinitialisation"
+                  ? "Mot de passe oublié ?"
                   : view === "magic"
-                    ? "Lien magique"
+                    ? "Connexion par lien magique"
                     : "Connexion par SMS"}
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-400">
+          <p className="max-w-[440px] text-base leading-relaxed text-[#9ca6b8] sm:text-[18px]">
             {isLogin
-              ? "Connectez-vous pour retrouver vos projets et votre escouade."
+              ? "Retrouvez vos workspaces et poursuivez vos développements."
               : isSignup
-                ? "Quelques secondes suffisent pour commencer à construire."
-                : "Entrez vos informations ci-dessous."}
+                ? "Créez votre espace et donnez vie à vos projets avec Idealy."
+                : view === "reset"
+                  ? "Choisissez un nouveau mot de passe pour retrouver l’accès à votre espace."
+                  : "Utilisez votre adresse e-mail pour continuer en toute sécurité."}
           </p>
+          </div>
         </div>
 
         {/* Sélecteur d'onglets (Se connecter / Créer un compte) */}
         {(isLogin || isSignup) && (
-          <div className="flex p-1 rounded-xl bg-white/[0.04] border border-white/[0.08] mb-6">
+          <div className="mb-7 flex rounded-2xl border border-white/[0.08] bg-[#12141b] p-1.5">
             <button
               className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-150 ${
                 isLogin
@@ -344,7 +347,7 @@ export const AuthPage: React.FC = () => {
         {(isLogin || isSignup) && (
           <>
             <button
-              className="w-full flex h-11 items-center justify-center gap-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-xs sm:text-sm font-medium text-white hover:bg-white/[0.08] transition-all duration-150 active:scale-[0.98] disabled:opacity-50"
+              className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-white/[0.11] bg-[#22252e] text-[15px] font-medium text-white transition-colors duration-200 hover:border-white/20 hover:bg-[#292d37] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
               disabled={busy || !firebaseReady || !isFirebaseConfigured()}
               onClick={() => void run(async () => finish(await signInGoogle()))}
               type="button"
@@ -353,7 +356,7 @@ export const AuthPage: React.FC = () => {
               <span>Continuer avec Google</span>
             </button>
 
-            <div className="my-5 flex items-center gap-3 text-[11px] text-zinc-500">
+            <div className="my-7 flex items-center gap-4 text-[12px] text-[#7f899b]">
               <span className="h-px flex-1 bg-white/[0.08]" />
               ou avec votre e-mail
               <span className="h-px flex-1 bg-white/[0.08]" />
@@ -365,20 +368,20 @@ export const AuthPage: React.FC = () => {
         <form className="space-y-4" onSubmit={onSubmit}>
           {view !== "phone" && (
             <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-zinc-300">
+              <label className="block text-[14px] font-medium text-[#c6ccd6]">
                 Adresse e-mail
               </label>
               <div className="relative">
                 <input
                   autoComplete="email"
-                  className="w-full h-11 rounded-xl border border-white/[0.1] bg-[#12131c] px-3.5 pl-9 text-xs sm:text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-teal-400 transition-colors"
+                  className="h-14 w-full rounded-2xl border border-white/[0.10] bg-[#242730] px-4 pl-11 text-[16px] text-white placeholder:text-[#8d97a9] outline-none transition-all focus:border-[#858bf8] focus:ring-4 focus:ring-[#7b83f5]/10"
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="vous@exemple.com"
                   required
                   type="email"
                   value={email}
                 />
-                <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5 pointer-events-none" />
+                <Mail className="absolute left-4 top-5 h-4 w-4 text-[#94a0b4] pointer-events-none" />
               </div>
             </div>
           )}
@@ -391,7 +394,7 @@ export const AuthPage: React.FC = () => {
                 </label>
                 {isLogin && (
                   <button
-                    className="text-[11px] text-zinc-400 hover:text-white transition-colors"
+                    className="text-[13px] font-medium text-[#aeb6c7] underline-offset-4 transition-colors hover:text-white hover:underline"
                     onClick={() => go("reset")}
                     type="button"
                   >
@@ -402,7 +405,7 @@ export const AuthPage: React.FC = () => {
               <div className="relative">
                 <input
                   autoComplete={isLogin ? "current-password" : "new-password"}
-                  className="w-full h-11 rounded-xl border border-white/[0.1] bg-[#12131c] px-3.5 pl-9 pr-10 text-xs sm:text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-teal-400 transition-colors"
+                  className="h-14 w-full rounded-2xl border border-white/[0.10] bg-[#242730] px-4 pl-11 pr-12 text-[16px] text-white placeholder:text-[#8d97a9] outline-none transition-all focus:border-[#858bf8] focus:ring-4 focus:ring-[#7b83f5]/10"
                   minLength={6}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -413,7 +416,7 @@ export const AuthPage: React.FC = () => {
                 <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5 pointer-events-none" />
                 <button
                   aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                  className="absolute right-3 top-3 text-zinc-500 hover:text-white transition-colors"
+                  className="absolute right-4 top-4 text-[#9ba6ba] transition-colors hover:text-white"
                   onClick={() => setShowPassword(!showPassword)}
                   type="button"
                 >
@@ -492,7 +495,7 @@ export const AuthPage: React.FC = () => {
 
           {/* Bouton de soumission principal */}
           <button
-            className="w-full h-11 rounded-xl bg-white text-black text-xs sm:text-sm font-semibold hover:bg-zinc-200 transition-all shadow-md active:scale-[0.98] disabled:opacity-50 mt-2"
+            className="mt-3 h-16 w-full rounded-2xl bg-[#777ff2] text-[17px] font-semibold text-white shadow-[0_12px_32px_-12px_rgba(113,123,242,0.65)] transition-all duration-200 hover:bg-[#858cf8] hover:shadow-[0_16px_36px_-12px_rgba(113,123,242,0.55)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             disabled={busy || !firebaseReady || !isFirebaseConfigured()}
             type="submit"
           >
@@ -523,27 +526,26 @@ export const AuthPage: React.FC = () => {
         ) : null}
 
         {/* Liens secondaires en bas de carte */}
-        <div className="mt-6 pt-4 border-t border-white/[0.08] flex items-center justify-between text-xs text-zinc-400">
+        <div className="mt-7 border-t border-white/[0.08] pt-6 text-center text-[14px] text-[#9aa5b7]">
           {(isLogin || isSignup) ? (
-            <>
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-3">
+              <span>{isLogin ? "Pas encore de compte ?" : "Vous avez déjà un compte ?"}</span>
               <button
-                className="hover:text-white transition-colors"
-                onClick={() => go("magic")}
+                className="font-semibold text-[#aab0ff] transition-colors hover:text-white"
+                onClick={() => go(isLogin ? "signup" : "login")}
                 type="button"
               >
-                Lien magique
+                {isLogin ? "Créer mon compte" : "Se connecter"}
               </button>
-              <button
-                className="hover:text-white transition-colors"
-                onClick={() => go("phone")}
-                type="button"
-              >
-                Connexion SMS
-              </button>
-            </>
+              <span className="basis-full text-center text-xs text-[#7f899c]">
+                <button className="hover:text-white" onClick={() => go("magic")} type="button">
+                  Recevoir un lien de connexion par e-mail
+                </button>
+              </span>
+            </div>
           ) : (
             <button
-              className="hover:text-white transition-colors mx-auto"
+              className="mx-auto font-medium text-[#aab0ff] transition-colors hover:text-white"
               onClick={() => go("login")}
               type="button"
             >
