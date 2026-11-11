@@ -25,6 +25,7 @@ import {
   signInEmail,
   signInGoogle,
   signUpEmail,
+  sendVerificationEmail,
 } from "../../services/firebase";
 import { useApp } from "../../context/AppContext";
 import { IdealyLogo } from "../branding/IdealyLogo";
@@ -96,8 +97,14 @@ export const AuthPage: React.FC = () => {
   };
 
   const finish = async (user: FirebaseUser) => {
-    // Do not enter the workspace until the backend has verified Firebase and
-    // resolved the corresponding Supabase/Idealy identity.
+    await user.reload();
+    if (!user.emailVerified) {
+      await sendVerificationEmail(user);
+      setSentTo({ kind: "verify", email: user.email ?? email });
+      setView("sent");
+      return;
+    }
+
     await createBackendSession(user);
     const bearer = await getBearerToken();
     if (!bearer) throw new Error("firebase_backend_identity_rejected");
@@ -115,7 +122,6 @@ export const AuthPage: React.FC = () => {
       );
     }
     const profile = (await profileResponse.json()) as {
-      firstName?: string | null;
       onboardingCompleted?: boolean;
       way?: string;
     };
@@ -123,10 +129,10 @@ export const AuthPage: React.FC = () => {
       localStorage.setItem("idealy_session", "active");
       if (profile.way) localStorage.setItem("idealy_user_way", profile.way);
     } catch {
-      // UI cache only; Firebase remains the source of identity.
+      // UI cache only; Firebase remains the identity source.
     }
     setActivePage(profile.onboardingCompleted === true ? "chat" : "onboarding");
-  };
+  };;
 
   // Firebase public configuration is loaded from the existing Idealy API
   // project. Magic links are handled only after the client SDK is initialized.
@@ -221,13 +227,6 @@ export const AuthPage: React.FC = () => {
             >
               Retour à la connexion
             </button>
-            <button
-              className="text-xs text-zinc-400 hover:text-white transition-colors block mx-auto"
-              onClick={() => go("login")}
-              type="button"
-            >
-              Retour à la connexion
-            </button>
           </div>
         </div>
       </main>
@@ -248,7 +247,7 @@ export const AuthPage: React.FC = () => {
           className="absolute -top-[120px] left-1/2 -translate-x-1/2 w-[800px] h-[450px]"
           style={{
             background:
-              "radial-gradient(55% 55% at 50% 35%, rgba(104, 116, 245, 0.14), rgba(139, 92, 246, 0.07) 48%, transparent 78%),
+              "radial-gradient(55% 55% at 50% 35%, rgba(104, 116, 245, 0.14), rgba(139, 92, 246, 0.07) 48%, transparent 78%)",
             filter: "blur(60px)",
           }}
         />
