@@ -1,11 +1,60 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const firebaseMocks = vi.hoisted(() => {
+  const user = {
+    uid: "firebase-test-user",
+    email: "test@idealy.example",
+    emailVerified: true,
+    reload: vi.fn().mockResolvedValue(undefined),
+    getIdToken: vi.fn().mockResolvedValue("firebase-test-token"),
+  };
+  const auth = {
+    currentUser: user as typeof user | null,
+    authStateReady: vi.fn().mockResolvedValue(undefined),
+  };
+  return {
+    auth,
+    user,
+    ensureFirebaseConfigured: vi.fn().mockResolvedValue(true),
+    getFirebaseAuth: vi.fn(() => auth),
+    createBackendSession: vi.fn().mockResolvedValue(undefined),
+    getBearerToken: vi.fn().mockResolvedValue("firebase-test-token"),
+  };
+});
+
+vi.mock("../services/firebase", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../services/firebase")>();
+  return {
+    ...actual,
+    ensureFirebaseConfigured: firebaseMocks.ensureFirebaseConfigured,
+    getFirebaseAuth: firebaseMocks.getFirebaseAuth,
+    createBackendSession: firebaseMocks.createBackendSession,
+    getBearerToken: firebaseMocks.getBearerToken,
+  };
+});
+
 import App from "../App";
 import { AssistantRemoteService } from "../services/assistantRemote";
 import { BackendHistoryService } from "../services/backendHistory";
 
 describe("Idealy Application Suite", () => {
   beforeEach(() => {
+    firebaseMocks.auth.currentUser = firebaseMocks.user;
+    firebaseMocks.ensureFirebaseConfigured.mockResolvedValue(true);
+    firebaseMocks.createBackendSession.mockResolvedValue(undefined);
+    firebaseMocks.getBearerToken.mockResolvedValue("firebase-test-token");
+    const originalFetch = global.fetch;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("/api/idealy/profile/onboarding")) {
+        return new Response(JSON.stringify({ onboardingCompleted: true }), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+      return originalFetch(input, init);
+    });
     window.history.replaceState({}, "", "/");
     localStorage.clear();
     localStorage.setItem("idealy_session", "active");
@@ -18,10 +67,11 @@ describe("Idealy Application Suite", () => {
   });
 
   afterEach(() => {
+    firebaseMocks.auth.currentUser = firebaseMocks.user;
     vi.restoreAllMocks();
   });
 
-  it("opens the Studio route directly without an existing browser session", async () => {
+  it("restores a valid Firebase identity when the Studio route is opened directly", async () => {
     localStorage.clear();
     window.history.replaceState({}, "", "/studio");
 
@@ -33,6 +83,16 @@ describe("Idealy Application Suite", () => {
     expect(
       screen.queryByText(/Donnons vie à vos idées/i),
     ).not.toBeInTheDocument();
+  });
+
+  it("redirects a direct Studio visit to login when Firebase has no user", async () => {
+    firebaseMocks.auth.currentUser = null;
+    localStorage.clear();
+    window.history.replaceState({}, "", "/studio");
+
+    render(<App />);
+
+    expect(await screen.findByText("Bon retour sur Idealy")).toBeInTheDocument();
   });
 
   it("renders the core application layout and welcome message", async () => {
