@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { authErrorMessage, checkResetCode, confirmEmailCode, readAuthAction, submitNewPassword } from "../../services/firebase";
+import { authErrorMessage, checkResetCode, confirmEmailCode, ensureFirebaseConfigured, readAuthAction, submitNewPassword } from "../../services/firebase";
 import { AuthShell, authField, authLink, authPrimary, Message } from "./AuthShell";
 
 /** Pages d'action e-mail hébergées par Idealy (réinitialisation, vérification). */
@@ -13,29 +13,44 @@ export const AuthActionPage: React.FC = () => {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!action) {
-      setState("error");
-      setError("Ce lien n’est plus valide. Demandez-en un nouveau.");
-      return;
-    }
-    if (action.mode === "resetPassword") {
-      checkResetCode(action.code)
-        .then((email) => {
+    let active = true;
+    void (async () => {
+      const configured = await ensureFirebaseConfigured();
+      if (!active) return;
+      if (!configured || !action) {
+        setState("error");
+        setError(
+          configured
+            ? "Ce lien n’est plus valide. Demandez-en un nouveau."
+            : "Le service de vérification Idealy est momentanément indisponible.",
+        );
+        return;
+      }
+      if (action.mode === "resetPassword") {
+        try {
+          const email = await checkResetCode(action.code);
+          if (!active) return;
           setAccount(email);
           setState("ready");
-        })
-        .catch((e) => {
+        } catch (e) {
+          if (!active) return;
           setError(authErrorMessage(e));
           setState("error");
-        });
-    } else {
-      confirmEmailCode(action.code)
-        .then(() => setState("done"))
-        .catch((e) => {
+        }
+      } else {
+        try {
+          await confirmEmailCode(action.code);
+          if (active) setState("done");
+        } catch (e) {
+          if (!active) return;
           setError(authErrorMessage(e));
           setState("error");
-        });
-    }
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

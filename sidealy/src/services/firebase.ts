@@ -144,6 +144,8 @@ export const resetPassword = (email: string) =>
 export function authErrorMessage(error: unknown): string {
   const code = (error as { code?: string })?.code ?? (error as Error)?.message ?? "";
   if (code.includes("firebase_not_configured")) return "La connexion n’est pas encore configurée sur cet environnement.";
+  if (code.includes("firebase_backend_identity_rejected")) return "Firebase a reconnu votre compte, mais le backend Idealy n’a pas validé cette identité.";
+  if (code.includes("firebase_backend_unavailable")) return "Le service d’authentification Idealy est momentanément indisponible. Réessayez dans un instant.";
   if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return "E-mail ou mot de passe incorrect.";
   if (code.includes("email-already-in-use")) return "Un compte existe déjà avec cet e-mail.";
   if (code.includes("weak-password")) return "Choisissez un mot de passe d’au moins 6 caractères.";
