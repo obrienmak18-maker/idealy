@@ -107,8 +107,8 @@ export const AccountChip: React.FC<{
     };
   }, [isMenuOpen]);
 
-  const name = result.profile?.displayName?.trim() || "O'Brien Makutano";
-  const email = result.profile?.accountEmail?.trim() || "obrien1247@idealy.io";
+  const name = result.profile?.displayName?.trim() || "Compte Idealy";
+  const email = result.profile?.accountEmail?.trim() || "Compte authentifié";
   const initial = name.charAt(0).toLocaleUpperCase("fr-FR");
 
   return (
@@ -170,8 +170,8 @@ export const AccountChip: React.FC<{
               </div>
             </div>
             <div className="mt-2 flex items-center justify-between">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                Abonnement Pro Actif
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/[0.05] text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l1)]">
+                Compte Idealy
               </span>
             </div>
           </div>

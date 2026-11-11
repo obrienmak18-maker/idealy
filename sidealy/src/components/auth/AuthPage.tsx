@@ -133,7 +133,7 @@ export const AuthPage: React.FC = () => {
       // UI cache only; Firebase remains the identity source.
     }
     setActivePage(profile.onboardingCompleted === true ? "chat" : "onboarding");
-  };;
+  };
 
   // Firebase public configuration is loaded from the existing Idealy API
   // project. Magic links are handled only after the client SDK is initialized.
