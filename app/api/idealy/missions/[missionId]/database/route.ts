@@ -1,4 +1,4 @@
-import { auth } from "@/app/(auth)/auth";
+import { getSafeSession } from "@/lib/auth/session-token";
 import {
   getIdealyMissionDatabaseRecord,
   listIdealyMissionAgentRuns,
@@ -20,7 +20,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ missionId: string }> }
 ) {
-  const session = await auth();
+  const session = await getSafeSession(request);
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
