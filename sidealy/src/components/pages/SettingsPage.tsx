@@ -257,7 +257,7 @@ export const SettingsPage: React.FC = () => {
     setSaving(true);
     setNotice("");
     try {
-      const response = await fetch("/api/idealy/profile/preferences", {
+      const response = await authenticatedFetch("/api/idealy/profile/preferences", {
         body: JSON.stringify(updates),
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
