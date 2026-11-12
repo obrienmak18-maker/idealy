@@ -2,6 +2,10 @@
   "framework": "nextjs",
   "rewrites": [
     {
+      "source": "/welcome",
+      "destination": "/sidealy/index.html"
+    },
+    {
       "source": "/studio",
       "destination": "/sidealy/index.html"
     },
