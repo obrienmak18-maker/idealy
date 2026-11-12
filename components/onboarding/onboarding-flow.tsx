@@ -232,7 +232,7 @@ export function OnboardingFlow() {
 
     void loadStatus();
     return () => controller.abort();
-  }, [nextPath, router]);
+  }, [nextPath]);
 
   const updateDraft = <K extends keyof OnboardingDraft>(
     field: K,
