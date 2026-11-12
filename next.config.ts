@@ -110,6 +110,8 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(self), geolocation=()",
           },
+        ],
+      },
       {
         source: "/studio",
         headers: [
@@ -122,8 +124,6 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
           { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
-        ],
-      },
         ],
       },
     ];
