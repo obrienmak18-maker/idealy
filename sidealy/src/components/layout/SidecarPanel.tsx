@@ -1,9 +1,15 @@
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Code2,
+  Copy,
+  Database,
   ExternalLink,
   FileCode2,
+  Folder,
+  FolderOpen,
   FolderTree,
   Home,
   LoaderCircle,
@@ -11,10 +17,12 @@ import {
   MessageSquarePlus,
   Minimize2,
   Monitor,
+  MoreHorizontal,
   MousePointer2,
   Play,
   RefreshCw,
   Save,
+  Search,
   Smartphone,
   Square,
   Tablet,
@@ -25,6 +33,12 @@ import type React from "react";
 import type { MissionWorkspaceFile } from "../../types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { authenticatedFetch } from "../../services/firebase";
+import {
+  buildWorkspaceFileTree,
+  listWorkspaceFolderPaths,
+  type WorkspaceFileTreeNode,
+} from "../../services/workspaceFileTree";
 import { getRuntimeAdapter, type AllowedCommand, type ProjectRuntimeAdapter, type RuntimeState } from "../../services/runtime";
 import { PREVIEW_BRIDGE_SOURCE, preparePreviewRuntimeFiles } from "../../services/previewRuntimeFiles";
 import {
@@ -33,7 +47,37 @@ import {
   getPreviewRoutes,
 } from "../../services/conversationWorkspace";
 
-type WorkspaceTab = "preview" | "files" | "terminal" | "console" | "activity";
+type WorkspaceTab = "preview" | "files" | "database" | "terminal" | "console" | "activity";
+type ExplorerMode = "files" | "search";
+type MissionDatabaseSnapshot = {
+  mission: {
+    created_at: string | null;
+    id: string;
+    status: string | null;
+    title: string | null;
+    way: string | null;
+  } | null;
+  agentRuns: Array<{
+    agent_key: string;
+    completed_at: string | null;
+    id: string;
+    started_at: string | null;
+    status: string;
+    step_index: number;
+  }>;
+  events: Array<{
+    created_at: string;
+    event_type: string;
+    id: string;
+    path: string | null;
+    sequence: number;
+  }>;
+  errors: {
+    mission?: string | null;
+    agentRuns?: string | null;
+    events?: string | null;
+  };
+};
 type Viewport = "desktop" | "tablet" | "mobile";
 type PreviewConsoleEntry = { id: string; level: "error" | "warning"; message: string; time: string };
 type InspectedElement = {
@@ -119,11 +163,40 @@ export const SidecarPanel: React.FC = () => {
     [htmlSource, requiresProjectRuntime],
   );
   const projectKey = latestMission?.id ?? conversationId ?? "empty";
+  const fileTree = useMemo(() => buildWorkspaceFileTree(projectFiles), [projectFiles]);
+  const folderSignature = useMemo(
+    () => listWorkspaceFolderPaths(fileTree).join("\u0000"),
+    [fileTree],
+  );
+  const searchableFiles = useMemo(() => {
+    const query = fileSearch.trim().toLocaleLowerCase();
+    if (!query) return projectFiles;
+    return projectFiles.filter((file) =>
+      file.path.toLocaleLowerCase().includes(query) ||
+      file.content.toLocaleLowerCase().includes(query),
+    );
+  }, [fileSearch, projectFiles]);
   const generationActive =
     generationStatus === "sending" || generationStatus === "receiving";
 
   const [tab, setTab] = useState<WorkspaceTab>("preview");
   const [viewport, setViewport] = useState<Viewport>("desktop");
+  const [explorerMode, setExplorerMode] = useState<ExplorerMode>("files");
+  const [fileSearch, setFileSearch] = useState("");
+  const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
+  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
+  const [previewPathDraft, setPreviewPathDraft] = useState("/");
+  const [terminalHeight, setTerminalHeight] = useState(220);
+  const [isResizingTerminal, setIsResizingTerminal] = useState(false);
+  const [databaseSnapshot, setDatabaseSnapshot] = useState<{
+    missionId: string;
+    data: MissionDatabaseSnapshot;
+  } | null>(null);
+  const [databaseLoading, setDatabaseLoading] = useState(false);
+  const [databaseError, setDatabaseError] = useState("");
+  const databaseLoadKeyRef = useRef<string | null>(null);
+  const moreToolsRef = useRef<HTMLDivElement>(null);
+  const terminalResizeStartRef = useRef({ startY: 0, height: 220 });
   const [previewPath, setPreviewPath] = useState("/");
   const [previewKey, setPreviewKey] = useState(0);
   const [runtimeState, setRuntimeState] = useState<RuntimeState>("idle");
@@ -189,6 +262,7 @@ export const SidecarPanel: React.FC = () => {
     setTab("preview");
     setViewport("desktop");
     setPreviewPath("/");
+    setPreviewPathDraft("/");
     setPreviewKey(0);
     setRuntimeState("idle");
     setRuntimeUrl("");
@@ -201,13 +275,103 @@ export const SidecarPanel: React.FC = () => {
     setInspected(null);
     setCommentDraft("");
     setUnsupportedReason("");
+    setExplorerMode("files");
+    setFileSearch("");
+    setOpenFolders(new Set());
+    setMoreToolsOpen(false);
+    setDatabaseSnapshot(null);
+    setDatabaseError("");
+    databaseLoadKeyRef.current = null;
   }, [projectKey]);
+
+  useEffect(() => {
+    setOpenFolders(new Set(folderSignature ? folderSignature.split("\u0000") : []));
+  }, [projectKey, folderSignature]);
+
+  useEffect(() => {
+    setPreviewPathDraft(previewPath);
+  }, [previewPath]);
+
+  useEffect(() => {
+    const missionId = latestMission?.id;
+    if (tab !== "database" || !missionId) return;
+    if (databaseSnapshot?.missionId === missionId || databaseLoadKeyRef.current === missionId) return;
+
+    const controller = new AbortController();
+    databaseLoadKeyRef.current = missionId;
+    setDatabaseLoading(true);
+    setDatabaseError("");
+    authenticatedFetch("/api/idealy/missions/" + encodeURIComponent(missionId) + "/database", {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({})) as MissionDatabaseSnapshot & { error?: string };
+        if (!response.ok) throw new Error(payload.error || "La lecture des données de mission a échoué.");
+        return payload;
+      })
+      .then((data) => {
+        if (!controller.signal.aborted) setDatabaseSnapshot({ missionId, data });
+      })
+      .catch((cause) => {
+        if (controller.signal.aborted) return;
+        databaseLoadKeyRef.current = null;
+        setDatabaseError(cause instanceof Error ? cause.message : "Les données de mission ne sont pas disponibles.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDatabaseLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [databaseSnapshot?.missionId, latestMission?.id, tab]);
 
   useEffect(() => {
     const openWorkspace = () => setIsMobileOpen(true);
     window.addEventListener("idealy:open-workspace", openWorkspace);
     return () => window.removeEventListener("idealy:open-workspace", openWorkspace);
   }, []);
+
+  useEffect(() => {
+    if (!isResizingTerminal) return;
+    const previousCursor = document.body.style.cursor;
+    const previousSelection = document.body.style.userSelect;
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+    const handleMove = (event: PointerEvent) => {
+      const delta = terminalResizeStartRef.current.startY - event.clientY;
+      setTerminalHeight(Math.max(120, Math.min(440, terminalResizeStartRef.current.height + delta)));
+    };
+    const handleUp = () => setIsResizingTerminal(false);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleUp);
+    return () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousSelection;
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", handleUp);
+    };
+  }, [isResizingTerminal]);
+
+  useEffect(() => {
+    if (!moreToolsOpen) return;
+    const closeOnPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !moreToolsRef.current?.contains(event.target)) {
+        setMoreToolsOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreToolsOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnPointerDown);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnPointerDown);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [moreToolsOpen]);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -621,17 +785,61 @@ export const SidecarPanel: React.FC = () => {
 
   const panelClass = isExpanded || isMobileOpen
     ? "fixed inset-0 z-50 flex h-dvh w-full flex-col bg-bg-base shadow-elevated"
-    : "relative hidden h-full min-h-0 w-[clamp(480px,46vw,880px)] shrink-0 flex-col border-l border-border-subtle bg-bg-base xl:flex";
+    : "relative hidden h-full min-h-0 w-[clamp(600px,60vw,1200px)] shrink-0 flex-col border-l border-border-subtle bg-bg-base xl:flex";
 
   const panelStyle: React.CSSProperties | undefined =
     !isExpanded && !isMobileOpen && workspaceWidth !== null
       ? { width: `${workspaceWidth}px` }
       : undefined;
 
+  const renderFileTree = (nodes: WorkspaceFileTreeNode[], depth = 0): React.ReactNode =>
+    nodes.map((node) => {
+      if (node.kind === "folder") {
+        const isOpen = openFolders.has(node.path);
+        const FolderIcon = isOpen ? FolderOpen : Folder;
+        return (
+          <div key={node.path}>
+            <button
+              aria-expanded={isOpen}
+              className="flex min-h-8 w-full items-center gap-1.5 rounded-md pr-2 text-left text-[10px] text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring"
+              onClick={() => setOpenFolders((current) => {
+                const next = new Set(current);
+                if (next.has(node.path)) next.delete(node.path);
+                else next.add(node.path);
+                return next;
+              })}
+              style={{ paddingLeft: 8 + depth * 13 }}
+              type="button"
+            >
+              <ChevronRight className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+              <FolderIcon className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+              <span className="truncate">{node.name}</span>
+            </button>
+            {isOpen && <div>{renderFileTree(node.children, depth + 1)}</div>}
+          </div>
+        );
+      }
+      return (
+        <button
+          aria-current={selectedFilePath === node.path ? "page" : undefined}
+          className={`flex min-h-8 w-full items-center gap-2 rounded-md pr-2 text-left text-[10px] transition-colors focus-ring ${selectedFilePath === node.path ? "bg-brand-primary/10 text-text-main" : "text-text-muted hover:bg-bg-subtle hover:text-text-main"}`}
+          key={node.path}
+          onClick={() => setSelectedFilePath(node.path)}
+          style={{ paddingLeft: 26 + depth * 13 }}
+          title={node.path}
+          type="button"
+        >
+          <FileCode2 className="h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{node.name}</span>
+          <span className="shrink-0 text-[9px] text-text-muted">{node.file.language || node.name.split(".").pop()}</span>
+        </button>
+      );
+    });
+
   const resizeWorkspace = (direction: -1 | 1) => {
-    const current = workspaceWidth ?? Math.min(880, Math.max(480, Math.round(window.innerWidth * 0.46)));
-    const maximum = Math.min(1100, Math.round(window.innerWidth * 0.72));
-    setWorkspaceWidth(Math.max(460, Math.min(maximum, current + direction * 24)));
+    const current = workspaceWidth ?? Math.min(1280, Math.max(640, Math.round(window.innerWidth * 0.62)));
+    const maximum = Math.min(1560, Math.round(window.innerWidth * 0.86));
+    setWorkspaceWidth(Math.max(600, Math.min(maximum, current + direction * 32)));
   };
 
   const handleResizeKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -665,9 +873,9 @@ export const SidecarPanel: React.FC = () => {
         <div
           aria-label="Redimensionner le chat et la prévisualisation"
           aria-orientation="vertical"
-          aria-valuemax={1100}
-          aria-valuemin={460}
-          aria-valuenow={workspaceWidth ?? Math.min(880, Math.max(480, Math.round(window.innerWidth * 0.46)))}
+          aria-valuemax={1560}
+          aria-valuemin={600}
+          aria-valuenow={workspaceWidth ?? Math.min(1280, Math.max(640, Math.round(window.innerWidth * 0.62)))}
           className="absolute inset-y-0 -left-1.5 z-40 hidden w-3 cursor-col-resize items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary xl:flex"
           onKeyDown={handleResizeKeyDown}
           onPointerDown={(event) => {
@@ -727,39 +935,90 @@ export const SidecarPanel: React.FC = () => {
         </div>
       </header>
 
-      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border-subtle bg-bg-surface/70 px-3">
-        <nav aria-label="Outils du workspace" className="flex min-w-0 items-center gap-1">
+      <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-border-subtle bg-bg-surface/75 px-3 sm:px-4">
+        <nav aria-label="Vues principales du workspace" className="flex min-w-0 items-center gap-1">
           {([
-            { id: "preview", label: "Aperçu", icon: Monitor },
+            { id: "preview", label: "Preview", icon: Monitor },
             { id: "files", label: "Code", icon: Code2 },
-            { id: "terminal", label: "Terminal", icon: TerminalSquare },
-            { id: "console", label: "Console", icon: AlertCircle },
-            { id: "activity", label: "Activité", icon: FolderTree },
+            { id: "database", label: "Database", icon: Database },
           ] as const).map((item) => {
             const Icon = item.icon;
             return (
               <button
                 aria-current={tab === item.id ? "page" : undefined}
-                className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-medium transition-colors focus-ring ${tab === item.id ? "bg-bg-subtle text-text-main shadow-subtle" : "text-text-muted hover:bg-bg-subtle/60 hover:text-text-main"}`}
+                className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-[12px] font-medium transition-colors focus-ring ${tab === item.id ? "bg-bg-base text-text-main shadow-subtle ring-1 ring-border-subtle" : "text-text-muted hover:bg-bg-subtle/70 hover:text-text-main"}`}
                 key={item.id}
                 onClick={() => selectTab(item.id)}
                 type="button"
               >
                 <Icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{item.label}</span>
+                <span>{item.label}</span>
               </button>
             );
           })}
         </nav>
-        <span className="shrink-0 text-[10px] tabular-nums text-text-muted">
-          {projectFiles.length ? `${projectFiles.length} fichiers` : "Nouveau projet"}
-        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="hidden text-[10px] tabular-nums text-text-muted sm:inline">
+            {projectFiles.length ? projectFiles.length + " fichiers" : "Nouveau projet"}
+          </span>
+          <button
+            aria-label={terminalOpen ? "Masquer le terminal" : "Afficher le terminal"}
+            aria-pressed={terminalOpen}
+            className={`grid h-8 w-8 place-items-center rounded-lg transition-colors focus-ring ${terminalOpen ? "bg-bg-base text-brand-primary shadow-subtle" : "text-text-muted hover:bg-bg-subtle hover:text-text-main"}`}
+            onClick={() => {
+              setTab("preview");
+              setTerminalOpen((current) => !current);
+            }}
+            title="Terminal"
+            type="button"
+          >
+            <TerminalSquare className="h-4 w-4" />
+          </button>
+          <div className="relative" ref={moreToolsRef}>
+            <button
+              aria-expanded={moreToolsOpen}
+              aria-label="More workspace tools"
+              className="grid h-8 w-8 place-items-center rounded-lg text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring"
+              onClick={() => setMoreToolsOpen((current) => !current)}
+              title="More options"
+              type="button"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+            {moreToolsOpen && (
+              <div className="absolute right-0 top-10 z-50 w-48 rounded-xl border border-border-subtle bg-bg-surface p-1.5 shadow-elevated">
+                {([
+                  { id: "console", label: "Console", icon: AlertCircle },
+                  { id: "activity", label: "Activité", icon: FolderTree },
+                  { id: "terminal-full", label: "Terminal complet", icon: TerminalSquare },
+                ] as const).map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      className="flex h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs text-text-main transition-colors hover:bg-bg-subtle focus-ring"
+                      key={item.id}
+                      onClick={() => {
+                        setMoreToolsOpen(false);
+                        if (item.id === "terminal-full") selectTab("terminal");
+                        else selectTab(item.id);
+                      }}
+                      type="button"
+                    >
+                      <Icon className="h-3.5 w-3.5 text-text-muted" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {tab === "preview" && (
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3">
-            <div className="flex min-w-0 items-center gap-1">
+          <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border-subtle bg-bg-base px-3 sm:px-4">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <div className="mr-1 hidden items-center gap-1 text-[10px] text-text-muted sm:flex">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 <span>Preview</span>
@@ -830,27 +1089,51 @@ export const SidecarPanel: React.FC = () => {
             </div>
           </div>
 
-          {routes.length > 1 && runtimeUrl && (
-            <div className="flex min-h-9 shrink-0 items-center gap-2 border-b border-border-subtle px-3">
-              <Home className="h-3 w-3 text-text-muted" />
-              <select
-                aria-label="Page de l’application"
-                className="h-8 max-w-[220px] rounded-lg bg-transparent px-2 text-[11px] text-text-main outline-none focus:ring-1 focus:ring-brand-primary"
-                onChange={(event) => setPreviewPath(event.target.value)}
-                value={previewPath}
-              >
-                {routes.map((route) => (
-                  <option key={route.path} value={route.path}>{route.label}</option>
-                ))}
-              </select>
-              <span className="ml-auto truncate font-mono text-[10px] text-text-muted">{previewPath}</span>
-            </div>
-          )}
+          <div className="flex min-h-10 shrink-0 items-center gap-2 border-b border-border-subtle bg-bg-surface/50 px-3">
+            <Home className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+            <select
+              aria-label="Page de l’application"
+              className="h-8 max-w-[180px] rounded-lg border border-border-subtle bg-bg-base px-2 text-[11px] text-text-main outline-none focus:ring-1 focus:ring-brand-primary"
+              onChange={(event) => setPreviewPath(event.target.value)}
+              value={previewPath}
+            >
+              {routes.map((route) => (
+                <option key={route.path} value={route.path}>{route.label}</option>
+              ))}
+            </select>
+            <span className="hidden text-[10px] text-text-muted sm:inline">/</span>
+            <input
+              aria-label="Adresse de la page de prévisualisation"
+              className="h-8 min-w-0 flex-1 rounded-lg border border-border-subtle bg-bg-base px-3 font-mono text-[11px] text-text-main outline-none placeholder:text-text-muted focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/20"
+              onChange={(event) => setPreviewPathDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  const nextPath = previewPathDraft.trim().startsWith("/")
+                    ? previewPathDraft.trim()
+                    : "/" + previewPathDraft.trim();
+                  setPreviewPath(nextPath || "/");
+                }
+              }}
+              onBlur={() => {
+                const nextPath = previewPathDraft.trim().startsWith("/")
+                  ? previewPathDraft.trim()
+                  : "/" + previewPathDraft.trim();
+                setPreviewPath(nextPath || "/");
+              }}
+              placeholder="/"
+              value={previewPathDraft}
+            />
+            {runtimeUrl && (
+              <span className="hidden max-w-40 truncate font-mono text-[10px] text-text-muted xl:inline">
+                {runtimeUrl.replace(/^https?:\/\//, "")}
+              </span>
+            )}
+          </div>
 
-          <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-[radial-gradient(ellipse_at_center,var(--dsw-alias-bg-layer-2),var(--dsw-alias-bg-base)_75%)] p-2 sm:p-4">
+          <div className={`relative flex min-h-0 flex-1 items-center justify-center overflow-auto ${viewport === "desktop" ? "bg-bg-base p-0" : "bg-[radial-gradient(ellipse_at_center,var(--dsw-alias-bg-layer-2),var(--dsw-alias-bg-base)_75%)] p-3 sm:p-5"}`}>
             {hasPreview ? (
               <div
-                className={`h-full min-h-0 shrink-0 overflow-hidden border border-border-subtle bg-white shadow-[0_14px_50px_-18px_rgba(0,0,0,0.35)] transition-[width] duration-300 ${viewport === "mobile" ? "rounded-[2rem] border-[8px] border-[#17191e]" : viewport === "tablet" ? "rounded-2xl" : "rounded-xl"}`}
+                className={`h-full min-h-0 shrink-0 overflow-hidden bg-white transition-[width] duration-300 ${viewport === "mobile" ? "rounded-[2rem] border-[8px] border-[#17191e] shadow-[0_14px_50px_-18px_rgba(0,0,0,0.35)]" : viewport === "tablet" ? "rounded-2xl border border-border-subtle shadow-[0_14px_50px_-18px_rgba(0,0,0,0.35)]" : "w-full border-0 rounded-none"}`}
                 style={previewFrameStyle}
               >
                 <iframe
@@ -867,55 +1150,42 @@ export const SidecarPanel: React.FC = () => {
                 />
               </div>
             ) : (
-              <div className="flex h-full w-full items-center justify-center px-3 py-6 sm:px-6">
-                <div className="w-full max-w-[520px] overflow-hidden rounded-2xl border border-border-subtle bg-bg-surface/80 shadow-[0_24px_70px_-38px_rgba(0,0,0,0.35)]">
-                  <div className="flex h-10 items-center gap-2 border-b border-border-subtle bg-bg-base/75 px-3">
-                    <span className="h-2 w-2 rounded-full bg-rose-400/75" />
-                    <span className="h-2 w-2 rounded-full bg-amber-400/75" />
-                    <span className="h-2 w-2 rounded-full bg-emerald-400/75" />
-                    <div className="ml-3 flex h-6 min-w-0 flex-1 items-center gap-2 rounded-md border border-border-subtle bg-bg-surface px-2.5">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted/50" />
-                      <span className="truncate font-mono text-[9px] text-text-muted">
-                        {runtimeUrl ? activePreviewUrl : "preview.idealy.local"}
-                      </span>
-                    </div>
-                    <span className="ml-1 hidden text-[9px] text-text-muted sm:inline">Prévisualisation</span>
+              <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-bg-base px-6 text-center">
+                {(generationActive || isBusy) ? (
+                  <LoaderCircle className="h-6 w-6 animate-spin text-brand-primary" />
+                ) : (
+                  <div className="grid h-11 w-11 place-items-center rounded-xl border border-border-subtle bg-bg-surface text-text-muted">
+                    <FileCode2 className="h-5 w-5" />
                   </div>
-                  <div className="relative flex min-h-[300px] flex-col items-center justify-center overflow-hidden px-6 py-10 text-center sm:min-h-[360px]">
-                    <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-70">
-                      <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-primary/[0.055] blur-3xl" />
-                      <div className="absolute inset-5 rounded-xl border border-dashed border-border-subtle/80" />
-                    </div>
-                    <div className="relative grid h-12 w-12 place-items-center rounded-xl border border-brand-primary/20 bg-brand-primary/[0.08] text-brand-primary">
-                      {generationActive || isBusy
-                        ? <LoaderCircle className="h-5 w-5 animate-spin" />
-                        : <FileCode2 className="h-5 w-5" />}
-                    </div>
-                    <h3 className="relative mt-5 text-sm font-semibold tracking-tight text-text-main">
-                      {generationActive ? "Votre application prend forme" : "Prêt pour votre première création"}
-                    </h3>
-                    <p className="relative mt-2 max-w-[340px] text-xs leading-5 text-text-muted">
-                      {generationActive
-                        ? "Les fichiers source et les premiers rendus apparaîtront ici pendant que vos agents construisent."
-                        : "Cette fenêtre affichera votre application réelle. Commencez par décrire ce que vous souhaitez construire dans la conversation."}
-                    </p>
-                    <div className="relative mt-6 flex flex-wrap items-center justify-center gap-2 text-[10px] text-text-muted">
-                      <span className="rounded-full border border-border-subtle bg-bg-base/75 px-2.5 py-1">Preview live</span>
-                      <span className="rounded-full border border-border-subtle bg-bg-base/75 px-2.5 py-1">Code source</span>
-                      <span className="rounded-full border border-border-subtle bg-bg-base/75 px-2.5 py-1">Terminal</span>
-                    </div>
-                    {hasManifest && (
-                      <button
-                        className="relative mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-primary px-3.5 text-xs font-semibold text-brand-onPrimary transition-opacity hover:opacity-90 focus-ring"
-                        onClick={() => void startPreview()}
-                        type="button"
-                      >
-                        <Play className="h-3.5 w-3.5" />
-                        Lancer l’aperçu
-                      </button>
-                    )}
-                  </div>
+                )}
+                <div>
+                  <h3 className="text-sm font-semibold text-text-main">
+                    {generationActive || isBusy ? "Préparation de la prévisualisation" : "Aucun aperçu disponible"}
+                  </h3>
+                  <p className="mt-1 max-w-md text-xs leading-5 text-text-muted">
+                    {runtimeError || unsupportedReason || (hasManifest
+                      ? "Le projet contient ses fichiers source. Lancez le runtime pour afficher l’application dans cet espace."
+                      : htmlSource
+                        ? "Le contenu HTML est disponible, mais aucun document autonome ne peut être affiché pour le moment."
+                        : "Les fichiers et le rendu de l’application apparaîtront ici au fur et à mesure de la construction.")}
+                  </p>
                 </div>
+                {hasManifest && !runtimeUrl && (
+                  <button
+                    className="mt-1 inline-flex h-9 items-center gap-2 rounded-lg bg-brand-primary px-3.5 text-xs font-semibold text-brand-onPrimary transition-opacity hover:opacity-90 focus-ring disabled:opacity-50"
+                    disabled={isBusy}
+                    onClick={() => void startPreview()}
+                    type="button"
+                  >
+                    {isBusy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                    Démarrer le runtime
+                  </button>
+                )}
+                {runtimeError && (
+                  <p className="mt-1 max-w-xl rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-left text-[11px] text-amber-500" role="alert">
+                    {runtimeError}
+                  </p>
+                )}
               </div>
             )}
             {inspectorMode !== "off" && (
@@ -956,25 +1226,63 @@ export const SidecarPanel: React.FC = () => {
             </div>
           )}
 
-          {terminalOpen && runtimeOutput && (
-            <div className="max-h-44 shrink-0 border-t border-border-subtle bg-[#111318]">
-              <div className="flex h-8 items-center gap-2 border-b border-white/[0.08] px-3 text-[10px] text-white/70">
+          {terminalOpen && (
+            <section
+              aria-label="Terminal du projet"
+              className="flex shrink-0 flex-col overflow-hidden border-t border-[#343841] bg-[#111318] text-zinc-100"
+              style={{ height: terminalHeight }}
+            >
+              <div
+                aria-label="Redimensionner le terminal"
+                aria-orientation="horizontal"
+                aria-valuemax={440}
+                aria-valuemin={120}
+                aria-valuenow={terminalHeight}
+                className="group flex h-1 shrink-0 cursor-row-resize justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    setTerminalHeight((height) => Math.min(440, height + 16));
+                  } else if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    setTerminalHeight((height) => Math.max(120, height - 16));
+                  }
+                }}
+                onPointerDown={(event) => {
+                  terminalResizeStartRef.current = { startY: event.clientY, height: terminalHeight };
+                  setIsResizingTerminal(true);
+                }}
+                role="separator"
+                tabIndex={0}
+              >
+                <span className="h-0.5 w-12 rounded-full bg-white/20 transition-colors group-hover:bg-brand-primary/70" />
+              </div>
+              <div className="flex h-9 shrink-0 items-center gap-2 border-b border-white/[0.08] px-3 text-[11px] text-white/80">
                 <TerminalSquare className="h-3.5 w-3.5" />
-                Terminal de construction
-                <span className="ml-auto">{isBusy ? "En cours" : runtimeState === "ready" ? "Serveur prêt" : "Sortie"}</span>
+                <span className="font-medium">Terminal</span>
+                <span className="rounded bg-white/[0.08] px-1.5 py-0.5 text-[9px] text-white/55">~/project</span>
+                <span className="ml-auto text-[10px] text-white/45">{isBusy ? statusText : runtimeState === "ready" ? "Serveur actif" : runtimeState === "error" ? "Erreur" : "En attente"}</span>
                 <button
-                  aria-label="Masquer le terminal"
-                  className="grid h-6 w-6 place-items-center rounded text-white/55 hover:bg-white/10 hover:text-white"
-                  onClick={() => setTerminalOpen(false)}
+                  aria-label="Effacer la sortie du terminal"
+                  className="grid h-6 w-6 place-items-center rounded text-white/55 hover:bg-white/10 hover:text-white focus-ring"
+                  onClick={() => setRuntimeOutput("")}
                   type="button"
                 >
                   <X className="h-3 w-3" />
                 </button>
+                <button
+                  aria-label="Masquer le terminal"
+                  className="grid h-6 w-6 place-items-center rounded text-white/55 hover:bg-white/10 hover:text-white focus-ring"
+                  onClick={() => setTerminalOpen(false)}
+                  type="button"
+                >
+                  <Minimize2 className="h-3 w-3" />
+                </button>
               </div>
-              <pre className="max-h-36 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-[10px] leading-4 text-white/75">
-                {runtimeOutput}
+              <pre aria-live="polite" className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-[10px] leading-4 text-white/75">
+                {runtimeOutput || runtimeError || (isBusy ? "Préparation du runtime…" : "Le terminal affichera ici les commandes et sorties réelles du runtime.")}
               </pre>
-            </div>
+            </section>
           )}
 
           <footer className="flex min-h-9 shrink-0 items-center justify-between gap-3 border-t border-border-subtle px-3 text-[10px] text-text-muted">
@@ -999,39 +1307,101 @@ export const SidecarPanel: React.FC = () => {
       )}
 
       {tab === "files" && (
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(132px,0.32fr)_minmax(0,1fr)]">
-          <nav aria-label="Fichiers du projet" className="min-h-0 overflow-y-auto border-r border-border-subtle bg-bg-surface/60 p-2">
-            <div className="mb-2 flex items-center justify-between px-1.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-              <span>Explorer</span>
-              <span>{projectFiles.length}</span>
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(210px,270px)_minmax(0,1fr)] bg-bg-base">
+          <nav aria-label="Files explorer" className="flex min-h-0 flex-col overflow-hidden border-r border-border-subtle bg-bg-surface/55">
+            <div className="flex h-10 shrink-0 items-center justify-between border-b border-border-subtle px-3">
+              <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                <FolderTree className="h-3.5 w-3.5" />
+                Explorer
+              </div>
+              <span className="text-[10px] tabular-nums text-text-muted">{projectFiles.length}</span>
             </div>
-            {projectFiles.length ? projectFiles.map((file) => (
+            <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border-subtle px-2">
               <button
-                aria-current={selectedFilePath === file.path ? "page" : undefined}
-                className={`flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-[10px] transition-colors focus-ring ${selectedFilePath === file.path ? "bg-brand-primary/10 text-text-main" : "text-text-muted hover:bg-bg-subtle hover:text-text-main"}`}
-                key={file.path}
-                onClick={() => setSelectedFilePath(file.path)}
+                aria-pressed={explorerMode === "files"}
+                className={`flex h-7 items-center gap-1 rounded-md px-2 text-[10px] font-medium focus-ring ${explorerMode === "files" ? "bg-bg-base text-text-main" : "text-text-muted hover:bg-bg-subtle"}`}
+                onClick={() => setExplorerMode("files")}
                 type="button"
               >
-                <FileCode2 className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{file.path}</span>
+                <Folder className="h-3 w-3" /> Files
               </button>
-            )) : (
-              <p className="px-2 py-3 text-[10px] text-text-muted">Les fichiers apparaîtront ici.</p>
+              <button
+                aria-pressed={explorerMode === "search"}
+                className={`flex h-7 items-center gap-1 rounded-md px-2 text-[10px] font-medium focus-ring ${explorerMode === "search" ? "bg-bg-base text-text-main" : "text-text-muted hover:bg-bg-subtle"}`}
+                onClick={() => setExplorerMode("search")}
+                type="button"
+              >
+                <Search className="h-3 w-3" /> Search
+              </button>
+            </div>
+            {explorerMode === "search" && (
+              <div className="shrink-0 border-b border-border-subtle p-2">
+                <div className="flex h-8 items-center gap-2 rounded-md border border-border-subtle bg-bg-base px-2">
+                  <Search className="h-3 w-3 shrink-0 text-text-muted" />
+                  <input
+                    aria-label="Search in files"
+                    className="min-w-0 flex-1 bg-transparent text-[10px] text-text-main outline-none placeholder:text-text-muted"
+                    onChange={(event) => setFileSearch(event.target.value)}
+                    placeholder="Search in files"
+                    value={fileSearch}
+                  />
+                  {fileSearch && (
+                    <button aria-label="Clear file search" className="text-text-muted hover:text-text-main" onClick={() => setFileSearch("")} type="button">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
+            <div className="min-h-0 flex-1 overflow-y-auto py-2">
+              {explorerMode === "search" ? (
+                searchableFiles.length ? searchableFiles.map((file) => (
+                  <button
+                    aria-current={selectedFilePath === file.path ? "page" : undefined}
+                    className={`flex min-h-8 w-full items-center gap-2 px-3 text-left text-[10px] focus-ring ${selectedFilePath === file.path ? "bg-brand-primary/10 text-text-main" : "text-text-muted hover:bg-bg-subtle hover:text-text-main"}`}
+                    key={file.path}
+                    onClick={() => setSelectedFilePath(file.path)}
+                    type="button"
+                  >
+                    <FileCode2 className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{file.path}</span>
+                  </button>
+                )) : (
+                  <p className="px-3 py-5 text-center text-[10px] text-text-muted">{fileSearch ? "No matching files." : "Type to search file names and content."}</p>
+                )
+              ) : projectFiles.length ? (
+                renderFileTree(fileTree)
+              ) : (
+                <p className="px-3 py-5 text-center text-[10px] text-text-muted">Les fichiers apparaîtront ici pendant la construction.</p>
+              )}
+            </div>
           </nav>
           <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#0e1117] text-zinc-200">
             {selectedFile ? (
               <>
-                <header className="flex min-h-10 shrink-0 items-center justify-between gap-2 border-b border-white/[0.08] px-3">
+                <header className="flex min-h-11 shrink-0 items-center justify-between gap-2 border-b border-white/[0.08] bg-[#151922] px-3">
                   <div className="min-w-0">
-                    <p className="truncate font-mono text-[10px] text-zinc-300">{selectedFile.path}</p>
-                    <p className="text-[9px] text-zinc-500">
-                      {editorDraft.length.toLocaleString("fr-FR")} caractères
+                    <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
+                      <span>app</span><ChevronRight className="h-3 w-3" />
+                      <span className="truncate font-mono text-zinc-200">{selectedFile.path}</span>
+                    </div>
+                    <p className="mt-0.5 text-[9px] text-zinc-500">
+                      {selectedFile.language ?? selectedFile.path.split(".").pop() ?? "text"}
+                      {" · "}{editorDraft.length.toLocaleString("fr-FR")} caractères
                       {editorDirty ? " · Modifications non enregistrées" : " · Enregistré"}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      aria-label="Copy selected file"
+                      className="grid h-7 w-7 place-items-center rounded-md text-[10px] text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-white focus-ring"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(editorDraft).then(() => setFileSaveNotice("Contenu copié."));
+                      }}
+                      type="button"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       className="inline-flex h-7 items-center rounded-md px-2 text-[10px] text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-white focus-ring disabled:opacity-40"
                       disabled={!editorDirty || isSavingFile}
@@ -1176,6 +1546,109 @@ export const SidecarPanel: React.FC = () => {
             ) : (
               <div className="grid h-full place-items-center text-center text-xs text-text-muted">
                 Aucune erreur d’exécution capturée. Les erreurs JavaScript et avertissements de la preview apparaîtront ici.
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {tab === "database" && (
+        <section className="min-h-0 flex-1 overflow-y-auto bg-bg-base p-4 sm:p-5">
+          <div className="mx-auto max-w-5xl space-y-4">
+            <header className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-text-main">Database</h3>
+                <p className="mt-1 text-[11px] text-text-muted">Read-only snapshot from this mission’s persisted records.</p>
+              </div>
+              <button
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 text-[10px] font-medium text-text-muted hover:bg-bg-subtle hover:text-text-main focus-ring"
+                disabled={!latestMission?.id || databaseLoading}
+                onClick={() => {
+                  if (!latestMission?.id) return;
+                  databaseLoadKeyRef.current = null;
+                  setDatabaseSnapshot(null);
+                  setDatabaseError("");
+                }}
+                type="button"
+              >
+                <RefreshCw className="h-3 w-3" /> Refresh
+              </button>
+            </header>
+            {!latestMission?.id ? (
+              <div className="rounded-xl border border-border-subtle bg-bg-surface p-6 text-center text-xs text-text-muted">
+                No persisted mission is attached to this conversation.
+              </div>
+            ) : databaseLoading ? (
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-border-subtle bg-bg-surface p-8 text-xs text-text-muted">
+                <LoaderCircle className="h-4 w-4 animate-spin" /> Reading mission records…
+              </div>
+            ) : databaseError ? (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-500" role="alert">
+                {databaseError}
+              </div>
+            ) : databaseSnapshot?.missionId === latestMission.id ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="rounded-xl border border-border-subtle bg-bg-surface p-4">
+                    <p className="text-[10px] uppercase tracking-wide text-text-muted">Mission</p>
+                    <p className="mt-2 truncate text-sm font-semibold text-text-main">{databaseSnapshot.data.mission?.title || latestMission.plan.projectKind}</p>
+                    <p className="mt-1 font-mono text-[10px] text-text-muted">{databaseSnapshot.data.mission?.id || latestMission.id}</p>
+                  </div>
+                  <div className="rounded-xl border border-border-subtle bg-bg-surface p-4">
+                    <p className="text-[10px] uppercase tracking-wide text-text-muted">Agent runs</p>
+                    <p className="mt-2 text-2xl font-semibold tabular-nums text-text-main">{databaseSnapshot.data.agentRuns.length}</p>
+                    {databaseSnapshot.data.errors.agentRuns && <p className="mt-1 text-[10px] text-amber-500">Unavailable</p>}
+                  </div>
+                  <div className="rounded-xl border border-border-subtle bg-bg-surface p-4">
+                    <p className="text-[10px] uppercase tracking-wide text-text-muted">File events</p>
+                    <p className="mt-2 text-2xl font-semibold tabular-nums text-text-main">{databaseSnapshot.data.events.length}</p>
+                    {databaseSnapshot.data.errors.events && <p className="mt-1 text-[10px] text-amber-500">Unavailable</p>}
+                  </div>
+                </div>
+                <section className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
+                  <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
+                    <h4 className="text-xs font-semibold text-text-main">Agent runs</h4>
+                    <span className="text-[10px] text-text-muted">Persisted records</span>
+                  </div>
+                  {databaseSnapshot.data.agentRuns.length ? (
+                    <div className="divide-y divide-border-subtle">
+                      {databaseSnapshot.data.agentRuns.map((run) => (
+                        <div className="flex flex-wrap items-center gap-3 px-4 py-3" key={run.id}>
+                          <span className="min-w-0 flex-1 truncate text-xs font-medium text-text-main">{run.agent_key}</span>
+                          <span className="rounded-md bg-bg-subtle px-2 py-1 text-[10px] text-text-muted">{run.status}</span>
+                          <span className="text-[10px] tabular-nums text-text-muted">Step {run.step_index + 1}</span>
+                          <span className="text-[10px] text-text-muted">{run.completed_at ? new Date(run.completed_at).toLocaleString() : run.started_at ? new Date(run.started_at).toLocaleString() : "—"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-4 py-6 text-center text-xs text-text-muted">No persisted agent runs.</p>
+                  )}
+                </section>
+                <section className="overflow-hidden rounded-xl border border-border-subtle bg-bg-surface">
+                  <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
+                    <h4 className="text-xs font-semibold text-text-main">File events</h4>
+                    <span className="text-[10px] text-text-muted">Sequence log</span>
+                  </div>
+                  {databaseSnapshot.data.events.length ? (
+                    <div className="divide-y divide-border-subtle">
+                      {databaseSnapshot.data.events.slice(0, 100).map((entry) => (
+                        <div className="flex flex-wrap items-center gap-3 px-4 py-2.5" key={entry.id}>
+                          <span className="w-12 shrink-0 font-mono text-[10px] text-text-muted">#{entry.sequence}</span>
+                          <span className="min-w-0 flex-1 truncate text-xs text-text-main">{entry.event_type}</span>
+                          {entry.path && <span className="max-w-[45%] truncate font-mono text-[10px] text-text-muted">{entry.path}</span>}
+                          <span className="text-[10px] text-text-muted">{new Date(entry.created_at).toLocaleTimeString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-4 py-6 text-center text-xs text-text-muted">No persisted file events.</p>
+                  )}
+                </section>
+              </>
+            ) : (
+              <div className="rounded-xl border border-border-subtle bg-bg-surface p-8 text-center text-xs text-text-muted">
+                Data has not been loaded yet.
               </div>
             )}
           </div>
