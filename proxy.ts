@@ -40,6 +40,9 @@ export async function proxy(request: NextRequest) {
         "/login",
         "/register",
         "/welcome",
+        "/onboarding",
+        "/connectors",
+        "/plugins",
         "/about",
         "/docs",
         "/docs/vercel",
@@ -49,6 +52,9 @@ export async function proxy(request: NextRequest) {
         "/terms",
         "/verify-email",
       ].includes(pathname) ||
+      pathname.startsWith("/connectors/") ||
+      pathname.startsWith("/studio") ||
+      pathname.startsWith("/sidealy/") ||
       pathname.startsWith("/images/agents/")
     ) {
       return NextResponse.next();

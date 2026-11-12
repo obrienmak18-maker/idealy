@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { useTranslation } from "@/lib/i18n/provider";
+import { getFirebaseBearerHeaders } from "@/lib/firebase/client";
 import {
   idealyDiscoverySources,
   idealyExperienceLevels,
@@ -186,8 +187,11 @@ export function OnboardingFlow() {
 
     async function loadStatus() {
       try {
+        const authHeaders = await getFirebaseBearerHeaders();
         const result = await fetch("/api/idealy/profile/onboarding", {
           cache: "no-store",
+          credentials: "same-origin",
+          headers: authHeaders,
           signal: controller.signal,
         });
         if (result.status === 401) {
@@ -285,9 +289,11 @@ export function OnboardingFlow() {
     setError(null);
 
     try {
+      const authHeaders = await getFirebaseBearerHeaders();
       const result = await fetch("/api/idealy/profile/onboarding", {
         body: JSON.stringify(parsed.data),
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         method: "POST",
       });
 
