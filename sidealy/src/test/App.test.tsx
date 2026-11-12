@@ -92,7 +92,7 @@ describe("Idealy Application Suite", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("Bon retour sur Idealy")).toBeInTheDocument();
+    expect(await screen.findByText("Heureux de vous revoir")).toBeInTheDocument();
   });
 
   it("renders the core application layout and welcome message", async () => {
