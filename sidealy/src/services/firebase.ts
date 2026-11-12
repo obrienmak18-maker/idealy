@@ -152,6 +152,7 @@ export async function signInGoogle(): Promise<User | null> {
       "auth/popup-blocked",
       "auth/internal-error",
       "auth/operation-not-supported-in-this-environment",
+      "auth/cancelled-popup-request",
     ]).has(code);
     if (!canRedirect) throw error;
 
@@ -208,6 +209,11 @@ export function authErrorMessage(error: unknown): string {
   if (code.includes("email_not_verified")) return "Confirmez votre adresse e-mail avant de vous connecter.";
   if (code.includes("google_redirect_no_result")) return "Google n’a pas terminé la connexion. Recommencez ou utilisez votre e-mail.";
   if (code.includes("google_redirect_unavailable")) return "La redirection Google n’a pas pu démarrer. Vérifiez les domaines autorisés dans Firebase.";
+  if (code.includes("auth/unauthorized-domain")) return "Ce domaine n’est pas autorisé dans Firebase Authentication. Ajoutez idealy-ai.vercel.app dans Authentication > Paramètres > Domaines autorisés.";
+  if (code.includes("auth/operation-not-allowed")) return "Le fournisseur Google n’est pas activé dans Firebase Authentication. Activez Google dans la liste des fournisseurs.";
+  if (code.includes("auth/invalid-api-key")) return "La clé Firebase Web est invalide pour cet environnement. Vérifiez la configuration publique Firebase de Vercel.";
+  if (code.includes("auth/operation-not-supported-in-this-environment")) return "Ce navigateur ne permet pas la fenêtre Google. La connexion doit utiliser la redirection sécurisée.";
+  if (code.includes("auth/network-request-failed")) return "La connexion réseau a échoué pendant l’authentification Google. Vérifiez Internet et réessayez.";
   if (code.includes("firebase_backend_identity_rejected")) return "Firebase a reconnu votre compte, mais le backend Idealy n’a pas validé cette identité.";
   if (code.includes("firebase_backend_unavailable")) return "Le service d’authentification Idealy est momentanément indisponible. Réessayez dans un instant.";
   if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return "E-mail ou mot de passe incorrect.";

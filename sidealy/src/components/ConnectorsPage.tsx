@@ -1,5 +1,4 @@
 import {
-  Check,
   Menu,
   Plug,
   Search,
@@ -30,8 +29,6 @@ export const ConnectorsPage: React.FC = () => {
   const [selectedConnector, setSelectedConnector] =
     useState<ConnectorDefinition | null>(null);
   const [_apiKeyInput, _setApiKeyInput] = useState("");
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
   // Fetch live backend connectors if available
   useEffect(() => {
     let cancelled = false;
@@ -93,37 +90,18 @@ export const ConnectorsPage: React.FC = () => {
     });
   }, [connectors, searchQuery, activeCategory]);
 
-  const handleToggleConnection = () => {
+  const openConnectorPermissions = () => {
     if (!selectedConnector) return;
-    const isCurrentlyConnected = selectedConnector.available;
-
-    setConnectors((prev) =>
-      prev.map((c) =>
-        c.id === selectedConnector.id
-          ? {
-              ...c,
-              available: !isCurrentlyConnected,
-              installed: !isCurrentlyConnected,
-              configurationRequired: false,
-            }
-          : c,
-      ),
-    );
-
-    setSelectedConnector((prev) =>
-      prev
-        ? {
-            ...prev,
-            available: !isCurrentlyConnected,
-            installed: !isCurrentlyConnected,
-          }
-        : null,
-    );
-
-    setSaveSuccess(true);
-    setTimeout(() => {
-      setSaveSuccess(false);
-    }, 1500);
+    const detailRoutes: Record<string, string> = {
+      github: "github",
+      supabase: "supabase",
+      vercel: "vercel",
+      google: "google-cloud",
+      slack: "slack",
+      notion: "notion",
+    };
+    const detailRoute = detailRoutes[selectedConnector.id];
+    if (detailRoute) window.location.assign(`/connectors/${detailRoute}`);
   };
 
   return (
@@ -309,12 +287,6 @@ export const ConnectorsPage: React.FC = () => {
                 </ul>
               </div>
 
-              {saveSuccess && (
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs flex items-center gap-2">
-                  <Check className="h-4 w-4" />
-                  <span>Statut mis à jour avec succès !</span>
-                </div>
-              )}
             </div>
 
             {/* Modal Actions */}
@@ -328,15 +300,14 @@ export const ConnectorsPage: React.FC = () => {
               </button>
 
               <button
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  selectedConnector.available
-                    ? "bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20"
-                    : "bg-brand-primary text-white hover:opacity-90 shadow-sm"
-                }`}
-                onClick={handleToggleConnection}
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-primary text-white hover:opacity-90 shadow-sm disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                disabled={!["github", "supabase", "vercel", "google", "slack", "notion"].includes(selectedConnector.id)}
+                onClick={openConnectorPermissions}
                 type="button"
               >
-                {selectedConnector.available ? "Déconnecter l'outil" : "Connecter à mon espace"}
+                {["github", "supabase", "vercel", "google", "slack", "notion"].includes(selectedConnector.id)
+                  ? "Voir les autorisations"
+                  : "Détails bientôt disponibles"}
               </button>
             </div>
           </div>

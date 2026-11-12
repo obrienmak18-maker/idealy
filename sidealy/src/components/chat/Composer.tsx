@@ -557,7 +557,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                 aria-expanded={addMenuOpen}
                 aria-haspopup="dialog"
                 aria-label="Ajouter au message"
-                className="grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
+                className="grid h-9 w-9 sm:h-10 sm:w-10 shrink-0 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
                 onClick={() => {
                   setAddMenuOpen((open) => {
                     if (open) setConnectorsSubmenuOpen(false);
@@ -571,7 +571,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                 <Plus
                   aria-hidden="true"
                   className={
-                    "h-5 w-5 transition-transform duration-200 " +
+                    "h-[18px] w-[18px] transition-transform duration-200 " +
                     (addMenuOpen ? "rotate-45" : "")
                   }
                 />
@@ -704,7 +704,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                   onClick={() => window.dispatchEvent(new CustomEvent("idealy:open-live-voice"))}
                   aria-label="Mode vocal temps réel (Gemini Live)"
                   title="Mode vocal temps réel (Gemini Live)"
-                  className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-emerald-500/10 hover:text-emerald-400 transition-all duration-200 active:scale-95 focus-ring"
+                  className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-emerald-500/10 hover:text-emerald-400 transition-all duration-200 active:scale-95 focus-ring"
                 >
                   <Radio aria-hidden="true" className="h-4 w-4" />
                 </button>
@@ -717,8 +717,8 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                 aria-pressed={dictationActive}
                 className={
                   dictationActive
-                    ? "dictation-button dictation-button-active grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-[var(--idealy-indigo)] text-white shadow-md transition-all duration-200 active:scale-95 focus-ring"
-                    : "dictation-button grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
+                    ? "dictation-button dictation-button-active grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full bg-[var(--idealy-indigo)] text-white shadow-md transition-all duration-200 active:scale-95 focus-ring"
+                    : "dictation-button grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
                 }
                 data-recording={dictationActive || undefined}
                 onClick={toggleDictation}
@@ -768,7 +768,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
             {isGenerating ? (
               <button
                 aria-label="Arrêter la réponse"
-                className="grid h-10 w-10 sm:h-11 sm:w-11 place-items-center rounded-full bg-[var(--dsw-alias-state-error-primary)] text-white shadow-sm transition-all duration-200 active:scale-95 focus-ring"
+                className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full bg-[var(--dsw-alias-state-error-primary)] text-white shadow-sm transition-all duration-200 active:scale-95 focus-ring"
                 onClick={stopGeneration}
                 title="Arrêter la réponse"
                 type="button"
@@ -781,7 +781,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
             ) : !isEmpty ? (
               <button
                 aria-label="Envoyer le message"
-                className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white hover:opacity-95 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg focus-ring animate-scale-in"
+                className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white hover:opacity-95 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg focus-ring animate-scale-in"
                 onClick={handleSend}
                 title="Envoyer le message"
                 type="button"
