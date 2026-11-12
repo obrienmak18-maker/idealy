@@ -5,6 +5,13 @@ import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Keep the original Vite welcome screen on the public /welcome URL.
+  if (pathname === "/welcome") {
+    const destination = request.nextUrl.clone();
+    destination.pathname = "/sidealy/index.html";
+    return NextResponse.rewrite(destination);
+  }
+
   if (pathname.startsWith("/ping")) {
     return new Response("pong", { status: 200 });
   }
