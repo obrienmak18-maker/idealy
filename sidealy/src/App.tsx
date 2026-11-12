@@ -22,7 +22,7 @@ import { AuthPage } from "./components/auth/AuthPage";
 import { OnboardingPage } from "./components/auth/OnboardingPage";
 import { CookieNotice } from "./components/cookies/CookieNotice";
 import { CreditAlert } from "./components/credits/CreditAlert";
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { hasConversationWorkspace } from "./services/conversationWorkspace";
 import { LiveVoiceDialog } from "./components/chat/LiveVoiceDialog";
@@ -68,6 +68,7 @@ const AppContent: React.FC = () => {
   const [authGateState, setAuthGateState] = useState<"checking" | "ready" | "error">("checking");
   const [authGateError, setAuthGateError] = useState<string | null>(null);
   const [authGateRetry, setAuthGateRetry] = useState(0);
+  const verifiedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!requiresAuthentication) {
@@ -75,6 +76,21 @@ const AppContent: React.FC = () => {
       setAuthGateError(null);
       return;
     }
+
+    // A completed verification remains valid while the same user navigates
+    // between protected Vite pages. Avoid a blocking security screen per click.
+    let currentUserId: string | null = null;
+    try {
+      currentUserId = getFirebaseAuth().currentUser?.uid ?? null;
+    } catch {
+      currentUserId = null;
+    }
+    if (currentUserId && verifiedUserIdRef.current === currentUserId) {
+      setAuthGateState("ready");
+      setAuthGateError(null);
+      return;
+    }
+    if (!currentUserId) verifiedUserIdRef.current = null;
 
     let active = true;
     setAuthGateState("checking");
@@ -128,6 +144,7 @@ const AppContent: React.FC = () => {
       const profile = (await response.json()) as {
         onboardingCompleted?: boolean;
       };
+      verifiedUserIdRef.current = user.uid;
       if (profile.onboardingCompleted !== true && activePage !== "onboarding") {
         setActivePage("onboarding");
         return;

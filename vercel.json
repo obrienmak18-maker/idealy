@@ -2,15 +2,31 @@
   "framework": "nextjs",
   "rewrites": [
     {
-      "source": "/welcome",
-      "destination": "/sidealy/index.html"
-    },
-    {
       "source": "/studio",
       "destination": "/sidealy/index.html"
     },
     {
       "source": "/studio/:path*",
+      "destination": "/sidealy/index.html"
+    },
+    {
+      "source": "/connectors",
+      "destination": "/sidealy/index.html"
+    },
+    {
+      "source": "/plugins",
+      "destination": "/sidealy/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/sidealy/index.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/sidealy/index.html"
+    },
+    {
+      "source": "/onboarding",
       "destination": "/sidealy/index.html"
     }
   ]

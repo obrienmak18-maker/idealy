@@ -342,10 +342,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const setActivePage = useCallback((page: AppPage) => {
     setIsMobileDrawerOpen(false);
 
-    // These routes belong to the Next.js public/auth/integration surface.
+    // Welcome and auth transitions intentionally cross the Next/Vite boundary.
+    // Connectors and plugins remain inside Vite to preserve the original catalogue.
     if (
-      page === "connectors" ||
-      page === "plugins" ||
       page === "welcome" ||
       page === "login" ||
       page === "onboarding" ||
