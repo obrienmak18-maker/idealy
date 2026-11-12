@@ -68,7 +68,7 @@ export function LiveVoiceDialog({
           <div className="flex items-center gap-2">
             <Radio className="size-4 animate-pulse text-emerald-400" />
             <h3 className="text-sm font-semibold tracking-tight text-white">
-              Mode Vocal Live (Gemini 2.0 / Flash Live)
+              Mode vocal Live (Gemini 3.8 Live)
             </h3>
           </div>
           <span className="rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-medium text-cyan-400 border border-cyan-500/20">

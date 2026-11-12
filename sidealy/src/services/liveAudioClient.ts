@@ -1,4 +1,3 @@
-// lib/ai/live-audio-client.ts ported to Sidealy
 import { getBearerToken } from "./firebase";
 
 export type LiveSessionStatus =
@@ -16,6 +15,8 @@ export type LiveAudioClientCallbacks = {
   onAudioLevel?: (level: number) => void;
 };
 
+const PCM_CHUNK_SAMPLES = 2048;
+
 export class LiveAudioClient {
   private ws: WebSocket | null = null;
   private audioContext: AudioContext | null = null;
@@ -24,6 +25,10 @@ export class LiveAudioClient {
   private callbacks: LiveAudioClientCallbacks;
   private status: LiveSessionStatus = "disconnected";
   private isMuted = false;
+  private microphoneStarted = false;
+  private connectionFailed = false;
+  private pendingPcm = new Int16Array(PCM_CHUNK_SAMPLES);
+  private pendingPcmCount = 0;
 
   constructor(callbacks: LiveAudioClientCallbacks = {}) {
     this.callbacks = callbacks;
@@ -35,86 +40,143 @@ export class LiveAudioClient {
   }
 
   public async connect(): Promise<void> {
-    if (this.status !== "disconnected") return;
+    if (this.status !== "disconnected" && this.status !== "error") return;
+    this.connectionFailed = false;
+    this.microphoneStarted = false;
     this.setStatus("connecting");
 
     try {
-      // 1. Fetch authorized session from server
       const bearer = await getBearerToken();
       const headers: Record<string, string> = {};
-      if (bearer) {
-        headers["Authorization"] = `Bearer ${bearer}`;
-      }
-      const res = await fetch("/api/voice/session", { headers });
-      if (!res.ok) throw new Error("Impossible de créer la session vocale");
-      const config = await res.json();
+      if (bearer) headers.Authorization = `Bearer ${bearer}`;
 
-      if (!config.configured) {
-        throw new Error(config.error || "Gemini Live API non configurée");
+      const response = await fetch("/api/voice/session", {
+        headers,
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        throw new Error(response.status === 401
+          ? "Reconnectez-vous à Idealy pour utiliser le mode vocal Live."
+          : "Impossible de préparer la session vocale Live.");
+      }
+      const config = (await response.json()) as {
+        configured?: boolean;
+        error?: string;
+        model?: string;
+        voiceName?: string;
+        wsUrl?: string;
+      };
+
+      if (!config.configured || !config.wsUrl || !config.model) {
+        throw new Error(config.error || "Gemini Live n’est pas configuré sur le serveur.");
       }
 
-      // 2. Open WebSocket to Gemini Live endpoint
       this.ws = new WebSocket(config.wsUrl);
-
       this.ws.onopen = () => {
-        // Send initial handshake setup
-        const setupMessage = {
+        if (this.ws?.readyState !== WebSocket.OPEN) return;
+        this.ws.send(JSON.stringify({
           setup: {
             model: `models/${config.model}`,
             generationConfig: {
               responseModalities: ["AUDIO"],
               speechConfig: {
                 voiceConfig: {
-                  prebuiltVoiceConfig: {
-                    voiceName: config.voiceName || "Aoede",
-                  },
+                  prebuiltVoiceConfig: { voiceName: config.voiceName || "Aoede" },
                 },
               },
             },
+            inputAudioTranscription: {},
+            outputAudioTranscription: {},
           },
-        };
-        this.ws?.send(JSON.stringify(setupMessage));
-        this.setStatus("connected");
-        this.startMicrophoneCapture();
+        }));
       };
 
       this.ws.onmessage = async (event) => {
         try {
-          let data: Record<string, unknown>;
-          if (event.data instanceof Blob) {
-            const text = await event.data.text();
-            data = JSON.parse(text);
-          } else {
-            data = JSON.parse(event.data);
-          }
-
-          this.handleServerMessage(data);
-        } catch (e) {
-          console.warn("[LiveAudioClient] parse error:", e);
+          const raw = event.data instanceof Blob ? await event.data.text() : String(event.data);
+          this.handleServerMessage(JSON.parse(raw) as Record<string, unknown>);
+        } catch (error) {
+          console.warn("[LiveAudioClient] message parse error:", error);
         }
       };
 
-      this.ws.onerror = (e) => {
-        console.error("[LiveAudioClient] WebSocket error:", e);
-        this.callbacks.onError?.("Erreur de connexion WebSocket Live Voice");
+      this.ws.onerror = () => {
+        this.connectionFailed = true;
+        this.callbacks.onError?.("La connexion au service vocal Live a échoué. Vérifiez la configuration Gemini et réessayez.");
         this.setStatus("error");
       };
 
-      this.ws.onclose = () => {
-        this.cleanup();
-        this.setStatus("disconnected");
+      this.ws.onclose = (event) => {
+        const abnormal = event.code !== 1000 && event.code !== 1001;
+        this.ws = null;
+        this.cleanup(false);
+        if (this.connectionFailed || abnormal) {
+          const reason = event.reason?.trim();
+          this.callbacks.onError?.(
+            reason
+              ? `La session vocale s’est interrompue (${event.code}) : ${reason.slice(0, 140)}`
+              : `La session vocale s’est interrompue (code ${event.code}). Réessayez.`,
+          );
+          this.setStatus("error");
+        } else {
+          this.setStatus("disconnected");
+        }
       };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erreur de connexion";
-      this.callbacks.onError?.(msg);
-      this.setStatus("error");
+    } catch (error: unknown) {
+      this.connectionFailed = true;
+      const message = error instanceof Error ? error.message : "Erreur de connexion vocale.";
+      this.callbacks.onError?.(message);
       this.cleanup();
+      this.setStatus("error");
     }
   }
 
+  private handleServerMessage(data: Record<string, unknown>) {
+    // Do not stream PCM until Gemini confirms the initial session handshake.
+    if (data.setupComplete !== undefined && !this.microphoneStarted) {
+      this.setStatus("connected");
+      void this.startMicrophoneCapture();
+    }
+
+    const serverContent = data.serverContent as Record<string, unknown> | undefined;
+    if (!serverContent) return;
+
+    const inputTranscription = serverContent.inputTranscription as { text?: unknown } | undefined;
+    if (typeof inputTranscription?.text === "string" && inputTranscription.text.trim()) {
+      this.callbacks.onTranscription?.(inputTranscription.text.trim(), true);
+    }
+
+    const outputTranscription = serverContent.outputTranscription as { text?: unknown } | undefined;
+    if (typeof outputTranscription?.text === "string" && outputTranscription.text.trim()) {
+      this.callbacks.onTranscription?.(outputTranscription.text.trim(), false);
+    }
+
+    const modelTurn = serverContent.modelTurn as { parts?: Array<Record<string, unknown>> } | undefined;
+    for (const part of modelTurn?.parts ?? []) {
+      if (typeof part.text === "string" && part.text.trim() && !outputTranscription?.text) {
+        this.callbacks.onTranscription?.(part.text.trim(), false);
+      }
+      if (part.inlineData && typeof part.inlineData === "object") {
+        const inlineData = part.inlineData as { mimeType?: string; data?: string };
+        if (inlineData.mimeType?.startsWith("audio/") && typeof inlineData.data === "string") {
+          void this.playAudioChunk(inlineData.data);
+        }
+      }
+    }
+
+    if (serverContent.interrupted) this.setStatus("listening");
+  }
+
   private async startMicrophoneCapture() {
+    if (this.microphoneStarted) return;
+    this.microphoneStarted = true;
+
     try {
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Ce navigateur ne permet pas l’accès au microphone. Utilisez une page HTTPS et un navigateur récent.");
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
           sampleRate: 16000,
@@ -122,129 +184,89 @@ export class LiveAudioClient {
           noiseSuppression: true,
         },
       });
+      this.mediaStream = stream;
 
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) throw new Error("L’audio temps réel n’est pas pris en charge par ce navigateur.");
       this.audioContext = new AudioCtx({ sampleRate: 16000 });
-      const source = this.audioContext.createMediaStreamSource(this.mediaStream);
-
-      // Buffer size 512 gives ~32ms chunks at 16kHz
+      await this.audioContext.resume();
+      const source = this.audioContext.createMediaStreamSource(stream);
       this.processor = this.audioContext.createScriptProcessor(512, 1, 1);
 
-      this.processor.onaudioprocess = (e) => {
-        if (this.isMuted || this.status !== "connected" && this.status !== "listening") return;
-
-        const inputData = e.inputBuffer.getChannelData(0);
-
-        // Calculate simple audio level
+      this.processor.onaudioprocess = (event) => {
+        if (this.isMuted || (this.status !== "connected" && this.status !== "listening")) return;
+        const inputData = event.inputBuffer.getChannelData(0);
         let sum = 0;
+        for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
+        this.callbacks.onAudioLevel?.(Math.min(1, Math.sqrt(sum / inputData.length) * 5));
+
         for (let i = 0; i < inputData.length; i++) {
-          sum += inputData[i] * inputData[i];
-        }
-        const rms = Math.sqrt(sum / inputData.length);
-        this.callbacks.onAudioLevel?.(Math.min(1, rms * 5));
-
-        // Convert float32 [-1, 1] to PCM 16-bit
-        const pcm16 = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          const s = Math.max(-1, Math.min(1, inputData[i]));
-          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-        }
-
-        // Base64 encode PCM data
-        const uint8 = new Uint8Array(pcm16.buffer);
-        let binary = "";
-        for (let i = 0; i < uint8.length; i++) {
-          binary += String.fromCharCode(uint8[i]);
-        }
-        const base64Audio = btoa(binary);
-
-        const audioMsg = {
-          realtimeInput: {
-            mediaChunks: [
-              {
-                mimeType: "audio/pcm;rate=16000",
-                data: base64Audio,
-              },
-            ],
-          },
-        };
-
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify(audioMsg));
+          const sample = Math.max(-1, Math.min(1, inputData[i]));
+          this.pendingPcm[this.pendingPcmCount++] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+          if (this.pendingPcmCount === PCM_CHUNK_SAMPLES) {
+            this.sendAudioChunk(this.pendingPcm);
+            this.pendingPcm = new Int16Array(PCM_CHUNK_SAMPLES);
+            this.pendingPcmCount = 0;
+          }
         }
       };
 
       source.connect(this.processor);
       this.processor.connect(this.audioContext.destination);
       this.setStatus("listening");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Impossible d'accéder au micro";
-      this.callbacks.onError?.(msg);
+    } catch (error: unknown) {
+      this.connectionFailed = true;
+      const name = error instanceof Error ? error.name : "";
+      const message =
+        name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError"
+          ? "L’accès au microphone a été refusé. Autorisez le microphone pour idealy-ai.vercel.app dans les paramètres du navigateur, puis relancez le mode Live."
+          : error instanceof Error
+            ? error.message
+            : "Impossible d’accéder au microphone.";
+      this.callbacks.onError?.(message);
+      this.cleanup();
       this.setStatus("error");
     }
   }
 
-  private handleServerMessage(data: Record<string, unknown>) {
-    // 1. Check for audio chunks from model
-    const serverContent = data.serverContent as Record<string, unknown> | undefined;
-    if (serverContent?.modelTurn) {
-      const modelTurn = serverContent.modelTurn as Record<string, unknown>;
-      const parts = modelTurn.parts as Array<Record<string, unknown>> | undefined;
-      if (Array.isArray(parts)) {
-        for (const part of parts) {
-          if (part.inlineData) {
-            const inlineData = part.inlineData as { mimeType: string; data: string };
-            if (inlineData.mimeType.startsWith("audio/")) {
-              this.playAudioChunk(inlineData.data);
-            }
-          }
-          if (typeof part.text === "string" && part.text) {
-            this.callbacks.onTranscription?.(part.text, false);
-          }
-        }
-      }
-    }
-
-    // 2. Check for user transcription
-    if (serverContent?.interrupted) {
-      this.setStatus("listening");
-    }
+  private sendAudioChunk(pcm16: Int16Array) {
+    if (this.ws?.readyState !== WebSocket.OPEN) return;
+    const bytes = new Uint8Array(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    this.ws.send(JSON.stringify({
+      realtimeInput: {
+        mediaChunks: [{ mimeType: "audio/pcm;rate=16000", data: btoa(binary) }],
+      },
+    }));
   }
 
   private async playAudioChunk(base64Data: string) {
     try {
-      this.setStatus("speaking");
       const binary = atob(base64Data);
       const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const pcm16 = new Int16Array(bytes.buffer);
       const float32 = new Float32Array(pcm16.length);
-      for (let i = 0; i < pcm16.length; i++) {
-        float32[i] = pcm16[i] / 32768.0;
-      }
+      for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768;
 
       if (!this.audioContext) {
-        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const AudioCtx = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AudioCtx) return;
         this.audioContext = new AudioCtx({ sampleRate: 24000 });
       }
-
       const audioBuffer = this.audioContext.createBuffer(1, float32.length, 24000);
       audioBuffer.getChannelData(0).set(float32);
-
       const sourceNode = this.audioContext.createBufferSource();
       sourceNode.buffer = audioBuffer;
       sourceNode.connect(this.audioContext.destination);
       sourceNode.onended = () => {
-        if (this.status === "speaking") {
-          this.setStatus("listening");
-        }
+        if (this.status === "speaking") this.setStatus("listening");
       };
+      this.setStatus("speaking");
       sourceNode.start();
-    } catch (e) {
-      console.warn("[LiveAudioClient] playAudio error:", e);
+    } catch (error) {
+      console.warn("[LiveAudioClient] audio playback error:", error);
     }
   }
 
@@ -257,14 +279,11 @@ export class LiveAudioClient {
     this.setStatus("disconnected");
   }
 
-  private cleanup() {
-    if (this.ws) {
-      try {
-        this.ws.close();
-      } catch {
-        // ignore
-      }
-      this.ws = null;
+  private cleanup(closeSocket = true) {
+    const socket = this.ws;
+    this.ws = null;
+    if (closeSocket && socket && socket.readyState < WebSocket.CLOSING) {
+      try { socket.close(); } catch { /* ignore close races */ }
     }
     if (this.processor) {
       this.processor.disconnect();
@@ -275,8 +294,11 @@ export class LiveAudioClient {
       this.mediaStream = null;
     }
     if (this.audioContext && this.audioContext.state !== "closed") {
-      this.audioContext.close().catch(() => undefined);
+      void this.audioContext.close().catch(() => undefined);
       this.audioContext = null;
     }
+    this.pendingPcm = new Int16Array(PCM_CHUNK_SAMPLES);
+    this.pendingPcmCount = 0;
+    this.microphoneStarted = false;
   }
 }
