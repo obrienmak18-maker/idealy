@@ -1,7 +1,15 @@
 import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AuthActionPage } from "./components/auth/AuthActionPage";
+import { AuthPage } from "./components/auth/AuthPage";
+import { OnboardingPage } from "./components/auth/OnboardingPage";
+import { IdealyLogo } from "./components/branding/IdealyLogo";
 import { ConnectorsPage } from "./components/ConnectorsPage";
 import { Composer } from "./components/chat/Composer";
+import { LiveVoiceDialog } from "./components/chat/LiveVoiceDialog";
 import { MessageList } from "./components/chat/MessageList";
+import { CookieNotice } from "./components/cookies/CookieNotice";
+import { CreditAlert } from "./components/credits/CreditAlert";
 import { Header } from "./components/layout/Header";
 import { MobileDrawer } from "./components/layout/MobileDrawer";
 import { Sidebar } from "./components/layout/Sidebar";
@@ -13,20 +21,14 @@ import { SpaceModal } from "./components/modals/SpaceModal";
 import { AgentsPage } from "./components/pages/AgentsPage";
 import { LegalPage } from "./components/pages/LegalPage";
 import { LibraryPage } from "./components/pages/LibraryPage";
-import { WelcomePage } from "./components/pages/WelcomePage";
 import { PricingPage } from "./components/pages/PricingPage";
 import { ProductInfoPage } from "./components/pages/ProductInfoPage";
 import { SettingsPage } from "./components/pages/SettingsPage";
-import { AuthActionPage } from "./components/auth/AuthActionPage";
-import { AuthPage } from "./components/auth/AuthPage";
-import { OnboardingPage } from "./components/auth/OnboardingPage";
-import { CookieNotice } from "./components/cookies/CookieNotice";
-import { CreditAlert } from "./components/credits/CreditAlert";
-import { useRef, useState, useEffect } from "react";
+import { WelcomePage } from "./components/pages/WelcomePage";
+import { ClarifyingQuestionsCard } from "./components/studio/clarifying-questions-card";
+import { NotificationBanner } from "./components/studio/notification-banner";
 import { AppProvider, useApp } from "./context/AppContext";
 import { hasConversationWorkspace } from "./services/conversationWorkspace";
-import { LiveVoiceDialog } from "./components/chat/LiveVoiceDialog";
-import { IdealyLogo } from "./components/branding/IdealyLogo";
 import {
   createBackendSession,
   ensureFirebaseConfigured,
@@ -46,12 +48,15 @@ const PROTECTED_PAGES = new Set([
 
 const AppContent: React.FC = () => {
   const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
+  const handleCloseLiveVoice = useCallback(() => setIsLiveVoiceOpen(false), []);
 
   useEffect(() => {
     const handleOpenLiveVoice = () => setIsLiveVoiceOpen(true);
     window.addEventListener("idealy:open-live-voice", handleOpenLiveVoice);
-    return () => window.removeEventListener("idealy:open-live-voice", handleOpenLiveVoice);
+    return () =>
+      window.removeEventListener("idealy:open-live-voice", handleOpenLiveVoice);
   }, []);
+
   const {
     activeConversation,
     activePage,
@@ -62,15 +67,18 @@ const AppContent: React.FC = () => {
   const hasActiveWorkspace = hasConversationWorkspace(
     activeMessages,
     artifacts,
-    activeConversation?.id,
+    activeConversation?.id
   );
   const requiresAuthentication = PROTECTED_PAGES.has(activePage);
-  const [authGateState, setAuthGateState] = useState<"checking" | "ready" | "error">("checking");
+  const [authGateState, setAuthGateState] = useState<
+    "checking" | "ready" | "error"
+  >("checking");
   const [authGateError, setAuthGateError] = useState<string | null>(null);
   const [authGateRetry, setAuthGateRetry] = useState(0);
   const verifiedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    void authGateRetry;
     if (!requiresAuthentication) {
       setAuthGateState("ready");
       setAuthGateError(null);
@@ -90,7 +98,9 @@ const AppContent: React.FC = () => {
       setAuthGateError(null);
       return;
     }
-    if (!currentUserId) verifiedUserIdRef.current = null;
+    if (!currentUserId) {
+      verifiedUserIdRef.current = null;
+    }
 
     let active = true;
     setAuthGateState("checking");
@@ -98,7 +108,9 @@ const AppContent: React.FC = () => {
 
     void (async () => {
       const configured = await ensureFirebaseConfigured();
-      if (!active) return;
+      if (!active) {
+        return;
+      }
       if (!configured) {
         setActivePage("login");
         return;
@@ -106,7 +118,9 @@ const AppContent: React.FC = () => {
 
       const firebaseAuth = getFirebaseAuth();
       await firebaseAuth.authStateReady();
-      if (!active) return;
+      if (!active) {
+        return;
+      }
 
       const user = firebaseAuth.currentUser;
       if (!user) {
@@ -132,7 +146,9 @@ const AppContent: React.FC = () => {
         credentials: "same-origin",
         headers: { Authorization: `Bearer ${bearer}` },
       });
-      if (!active) return;
+      if (!active) {
+        return;
+      }
       if (response.status === 401) {
         setActivePage("login");
         return;
@@ -156,11 +172,13 @@ const AppContent: React.FC = () => {
 
       setAuthGateState("ready");
     })().catch((error: unknown) => {
-      if (!active) return;
+      if (!active) {
+        return;
+      }
       setAuthGateError(
         error instanceof Error
           ? error.message
-          : "La session Idealy n’a pas pu être vérifiée.",
+          : "La session Idealy n’a pas pu être vérifiée."
       );
       setAuthGateState("error");
     });
@@ -178,7 +196,9 @@ const AppContent: React.FC = () => {
           <div className="h-1 w-36 overflow-hidden rounded-full bg-white/10">
             <div className="h-full w-1/2 animate-pulse rounded-full bg-[#858cf8]" />
           </div>
-          <p className="text-sm text-[#9ca6b8]">Vérification sécurisée de votre espace…</p>
+          <p className="text-sm text-[#9ca6b8]">
+            Vérification sécurisée de votre espace…
+          </p>
         </div>
       </main>
     );
@@ -189,8 +209,12 @@ const AppContent: React.FC = () => {
       <main className="flex min-h-screen w-full items-center justify-center bg-[#0b0d14] px-5 py-10 text-white">
         <section className="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#191b22] p-8 shadow-2xl sm:p-10">
           <IdealyLogo animated={false} size={40} />
-          <h1 className="mt-8 text-2xl font-semibold tracking-tight">Impossible de vérifier votre espace</h1>
-          <p className="mt-3 text-sm leading-relaxed text-[#9ca6b8]">{authGateError}</p>
+          <h1 className="mt-8 text-2xl font-semibold tracking-tight">
+            Impossible de vérifier votre espace
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-[#9ca6b8]">
+            {authGateError}
+          </p>
           <button
             className="mt-7 h-12 w-full rounded-xl bg-[#777ff2] text-sm font-semibold text-white transition hover:bg-[#858cf8]"
             onClick={() => setAuthGateRetry((value) => value + 1)}
@@ -211,41 +235,46 @@ const AppContent: React.FC = () => {
   }
 
   // Pages autonomes (hors layout de travail, sans sidebar rétractable) avec défilement garanti
-  if (activePage === "welcome")
+  if (activePage === "welcome") {
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-[#08070d]">
         <CookieNotice />
         <WelcomePage />
       </div>
     );
-  if (activePage === "pricing")
+  }
+  if (activePage === "pricing") {
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-[#08070d]">
         <CookieNotice />
         <PricingPage />
       </div>
     );
-  if (activePage === "login")
+  }
+  if (activePage === "login") {
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
         <CookieNotice />
         <AuthPage />
       </div>
     );
-  if (activePage === "onboarding")
+  }
+  if (activePage === "onboarding") {
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
         <CookieNotice />
         <OnboardingPage />
       </div>
     );
-  if (activePage === "authAction")
+  }
+  if (activePage === "authAction") {
     return (
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
         <CookieNotice />
         <AuthActionPage />
       </div>
     );
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-base text-text-main font-sans selection:bg-brand-primary/20">
@@ -280,8 +309,13 @@ const AppContent: React.FC = () => {
         ) : (
           <>
             <Header />
-            <main className="flex-1 flex flex-col overflow-hidden relative" id="main-content">
+            <main
+              className="flex-1 flex flex-col overflow-hidden relative"
+              id="main-content"
+            >
               <MessageList />
+              <NotificationBanner />
+              <ClarifyingQuestionsCard />
               {activeMessages.length > 0 && <Composer />}
             </main>
           </>
@@ -301,7 +335,7 @@ const AppContent: React.FC = () => {
       <SettingsModal />
       <LiveVoiceDialog
         isOpen={isLiveVoiceOpen}
-        onClose={() => setIsLiveVoiceOpen(false)}
+        onClose={handleCloseLiveVoice}
         wayName={localStorage.getItem("idealy_user_way") || "Ninja"}
       />
     </div>
