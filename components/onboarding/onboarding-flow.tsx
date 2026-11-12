@@ -11,7 +11,7 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
@@ -104,7 +104,6 @@ const wayCopy: Record<"fr" | "en" | "es", Record<IdealyWay, { label: string; des
 };
 
 export function OnboardingFlow() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { language, t } = useTranslation();
   const langKey = (language === "en" ? "en" : language === "es" ? "es" : "fr") as "fr" | "en" | "es";
@@ -206,7 +205,7 @@ export function OnboardingFlow() {
           onboardingCompleted?: unknown; experienceLevel?: unknown; primaryGoal?: unknown; projectType?: unknown; way?: unknown;
         };
         if (status.onboardingCompleted === true) {
-          router.replace(nextPath);
+          window.location.assign(nextPath);
           return;
         }
         const email = typeof status.accountEmail === "string" && status.accountEmail.trim() ? status.accountEmail.trim() : null;
