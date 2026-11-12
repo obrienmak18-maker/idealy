@@ -157,13 +157,13 @@ export const PricingPage: React.FC = () => {
       />
 
       {/* Contenu principal défilable */}
-      <main className="relative flex-1 max-w-5xl w-full mx-auto px-4 md:px-8 pt-4 pb-20">
+      <main className="relative flex-1 max-w-6xl w-full mx-auto px-4 md:px-8 pt-4 pb-16">
         <header className="mx-auto max-w-2xl text-center space-y-3">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.05] border border-white/[0.08] text-zinc-300">
             <Sparkles className="w-3 h-3 text-teal-400" />
             <span>Offres & Forfaits énergétiques</span>
           </span>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-bold tracking-tight text-white leading-tight">
             Choisissez votre niveau de puissance.
           </h1>
           <p className="text-sm md:text-base text-zinc-400 max-w-xl mx-auto">
@@ -209,13 +209,13 @@ export const PricingPage: React.FC = () => {
         </header>
 
         {/* 3 Cartes d'Offres */}
-        <div className="mt-12 grid gap-6 md:grid-cols-3 items-stretch">
+        <div className="mt-10 grid gap-5 md:grid-cols-3 items-stretch">
           {plans.map((plan) => {
             const highlighted = "highlighted" in plan && plan.highlighted;
             const price = yearly ? plan.yearly : plan.monthly;
             return (
               <article
-                className={`relative flex flex-col rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1 ${
+                className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 ${
                   highlighted
                     ? "border-white/[0.2] bg-[#12131d] shadow-2xl ring-1 ring-white/[0.15]"
                     : "border-white/[0.08] bg-[#0c0d13]/80"
@@ -248,7 +248,7 @@ export const PricingPage: React.FC = () => {
                 </div>
 
                 <div className="mt-6 flex items-baseline gap-1.5">
-                  <span className="text-4xl md:text-5xl font-extrabold tracking-tight text-white">
+                  <span className="text-4xl font-extrabold tracking-tight text-white">
                     {euro(price)}
                   </span>
                   <span className="text-xs text-zinc-400">

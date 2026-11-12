@@ -1,7 +1,7 @@
 import { getSafeSession, getSafeToken } from "@/lib/auth/session-token";
 import { isIdealyWay } from "@/lib/idealy/product-contract";
 import { getUserById } from "@/lib/db/queries";
-import { signInFirebaseUserThroughSupabase } from "@/lib/idealy/supabase-auth";
+import { refreshSupabaseSession, signInFirebaseUserThroughSupabase } from "@/lib/idealy/supabase-auth";
 
 type RequestIdentity = {
   accessToken: string;
@@ -31,8 +31,26 @@ async function resolveSupabaseIdentity(
       ? token.supabaseUserId.trim()
       : null;
 
-  if (storedAccessToken && storedUserId) {
+  const accessTokenExpiresAt =
+    typeof token.supabaseAccessTokenExpiresAt === "number"
+      ? token.supabaseAccessTokenExpiresAt
+      : null;
+  if (storedAccessToken && storedUserId && (!accessTokenExpiresAt || accessTokenExpiresAt > Date.now() + 60_000)) {
     return { accessToken: storedAccessToken, userId: storedUserId };
+  }
+
+  const refreshToken =
+    typeof token.supabaseRefreshToken === "string" && token.supabaseRefreshToken.trim()
+      ? token.supabaseRefreshToken.trim()
+      : null;
+  if (storedUserId && refreshToken) {
+    const refreshed = await refreshSupabaseSession(refreshToken);
+    if (refreshed.status === "authenticated" && refreshed.accessToken && refreshed.userId === storedUserId) {
+      token.supabaseAccessToken = refreshed.accessToken;
+      token.supabaseAccessTokenExpiresAt = refreshed.expiresAt ?? undefined;
+      token.supabaseRefreshToken = refreshed.refreshToken ?? refreshToken;
+      return { accessToken: refreshed.accessToken, userId: storedUserId };
+    }
   }
 
   let email =
