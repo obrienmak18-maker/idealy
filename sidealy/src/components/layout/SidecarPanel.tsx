@@ -1,7 +1,6 @@
 import {
   AlertCircle,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Code2,
   Copy,
@@ -168,6 +167,7 @@ export const SidecarPanel: React.FC = () => {
     () => listWorkspaceFolderPaths(fileTree).join("\u0000"),
     [fileTree],
   );
+  const [fileSearch, setFileSearch] = useState("");
   const searchableFiles = useMemo(() => {
     const query = fileSearch.trim().toLocaleLowerCase();
     if (!query) return projectFiles;
@@ -182,7 +182,6 @@ export const SidecarPanel: React.FC = () => {
   const [tab, setTab] = useState<WorkspaceTab>("preview");
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [explorerMode, setExplorerMode] = useState<ExplorerMode>("files");
-  const [fileSearch, setFileSearch] = useState("");
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [moreToolsOpen, setMoreToolsOpen] = useState(false);
   const [previewPathDraft, setPreviewPathDraft] = useState("/");
