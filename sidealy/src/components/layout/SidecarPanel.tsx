@@ -2,6 +2,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
+  CloudUpload,
   Code2,
   Copy,
   Database,
@@ -22,6 +23,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  Share2,
   Smartphone,
   Square,
   Tablet,
@@ -30,7 +32,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import type { MissionWorkspaceFile } from "../../types";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { authenticatedFetch } from "../../services/firebase";
 import {
@@ -45,6 +47,12 @@ import {
   getLatestMissionForConversation,
   getPreviewRoutes,
 } from "../../services/conversationWorkspace";
+
+const MissionWorkspaceModal = lazy(() =>
+  import("../chat/MissionWorkspace").then((module) => ({
+    default: module.MissionWorkspace,
+  })),
+);
 
 type WorkspaceTab = "preview" | "files" | "database" | "terminal" | "console" | "activity";
 type ExplorerMode = "files" | "search";
@@ -184,6 +192,8 @@ export const SidecarPanel: React.FC = () => {
   const [explorerMode, setExplorerMode] = useState<ExplorerMode>("files");
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [moreToolsOpen, setMoreToolsOpen] = useState(false);
+  const [isPublishWorkspaceOpen, setIsPublishWorkspaceOpen] = useState(false);
+  const [shareStatus, setShareStatus] = useState("");
   const [previewPathDraft, setPreviewPathDraft] = useState("/");
   const [terminalHeight, setTerminalHeight] = useState(220);
   const [isResizingTerminal, setIsResizingTerminal] = useState(false);
@@ -278,6 +288,8 @@ export const SidecarPanel: React.FC = () => {
     setFileSearch("");
     setOpenFolders(new Set());
     setMoreToolsOpen(false);
+    setIsPublishWorkspaceOpen(false);
+    setShareStatus("");
     setDatabaseSnapshot(null);
     setDatabaseError("");
     databaseLoadKeyRef.current = null;
@@ -761,6 +773,28 @@ export const SidecarPanel: React.FC = () => {
     }
   }, [activePreviewUrl, staticPreviewDocument]);
 
+  const sharePreview = useCallback(async () => {
+    if (!activePreviewUrl) return;
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({
+          title: activeConversation?.title || "Idealy preview",
+          url: activePreviewUrl,
+        });
+        setShareStatus("Lien partagé");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(activePreviewUrl);
+        setShareStatus("Lien de prévisualisation copié");
+      } else {
+        window.open(activePreviewUrl, "_blank", "noopener,noreferrer");
+        setShareStatus("Aperçu ouvert dans un nouvel onglet");
+      }
+    } catch (cause) {
+      if (cause instanceof Error && cause.name === "AbortError") return;
+      setShareStatus("Le partage de cette prévisualisation n’a pas abouti.");
+    }
+  }, [activeConversation?.title, activePreviewUrl]);
+
   const selectTab = (next: WorkspaceTab) => {
     setTab(next);
     if (next !== "preview") setInspectorMode("off");
@@ -913,6 +947,27 @@ export const SidecarPanel: React.FC = () => {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <button
+            aria-label="Share preview"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[10px] font-medium text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring disabled:cursor-not-allowed disabled:opacity-35"
+            disabled={!activePreviewUrl}
+            onClick={() => void sharePreview()}
+            title={shareStatus || "Share the running preview"}
+            type="button"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">Share</span>
+          </button>
+          <button
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand-primary px-2.5 text-[10px] font-semibold text-brand-onPrimary transition-opacity hover:opacity-90 focus-ring disabled:cursor-not-allowed disabled:opacity-35"
+            disabled={!latestMission?.id}
+            onClick={() => setIsPublishWorkspaceOpen(true)}
+            title="Review GitHub and Vercel deployment options"
+            type="button"
+          >
+            <CloudUpload className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">Publish</span>
+          </button>
           <button
             aria-label={isExpanded ? "Réduire l’espace de travail" : "Agrandir l’espace de travail"}
             className="grid h-8 w-8 place-items-center rounded-lg text-text-muted transition-colors hover:bg-bg-subtle hover:text-text-main focus-ring"
@@ -1685,6 +1740,24 @@ export const SidecarPanel: React.FC = () => {
             </div>
           )}
         </section>
+      )}
+
+      {isPublishWorkspaceOpen && latestMission?.id && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 text-xs text-white">
+              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Ouverture des options de publication…
+            </div>
+          }
+        >
+          <MissionWorkspaceModal
+            buildVerification={latestMission.buildVerification}
+            initialFiles={projectFiles}
+            missionId={latestMission.id}
+            onClose={() => setIsPublishWorkspaceOpen(false)}
+            projectName={latestMission.plan.projectKind || activeConversation?.title || "Idealy project"}
+          />
+        </Suspense>
       )}
     </aside>
   );
