@@ -14,7 +14,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/api/auth") || pathname === "/api/idealy/health") {
+  if (
+    pathname.startsWith("/api/auth") ||
+    pathname === "/api/public-config/firebase" ||
+    pathname === "/api/idealy/health"
+  ) {
     return NextResponse.next();
   }
 
