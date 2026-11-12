@@ -342,17 +342,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const setActivePage = useCallback((page: AppPage) => {
     setIsMobileDrawerOpen(false);
 
-    // Welcome belongs to the professional Next.js public surface.
-    // Login/onboarding are Vite-owned routes served by the SPA rewrites.
-    // Auth callback remains a full navigation to Next.js.
+    // Authentication and welcome boundaries must load without the Studio's
+    // cross-origin isolation headers, so Google OAuth popups can communicate.
     if (
       page === "welcome" ||
+      page === "login" ||
       page === "authAction"
     ) {
+      setActivePageState(page);
       const destination = pagePaths[page];
       if (window.location.pathname !== destination) {
         window.location.assign(destination);
       }
+      return;
+    }
+
+    // Re-entering Studio from the auth shell must load the document again so
+    // WebContainer receives the isolation headers configured for /studio.
+    if (page === "chat" && window.location.pathname === pagePaths.login) {
+      setActivePageState(page);
+      window.location.assign(pagePaths.chat);
       return;
     }
 

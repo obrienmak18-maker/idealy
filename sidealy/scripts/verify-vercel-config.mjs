@@ -17,8 +17,17 @@ const required = [
   ["email verification proxy", destinationFor("/verify-email/:path*") === "https://idealy-ai.vercel.app/verify-email/:path*"],
   ["Next static asset proxy", destinationFor("/_next/:path*") === "https://idealy-ai.vercel.app/_next/:path*"],
   ["SPA fallback", destinationFor("/(.*)") === "/index.html"],
-  ["COOP", headers.some((header) => header.key === "Cross-Origin-Opener-Policy" && header.value === "same-origin")],
-  ["COEP", headers.some((header) => header.key === "Cross-Origin-Embedder-Policy" && header.value === "credentialless")],
+  ["COOP on Studio only", (
+    config.headers ?? []
+  ).filter((entry) => entry.source === "/studio" || entry.source === "/studio/:path*")
+    .flatMap((entry) => entry.headers ?? [])
+    .some((header) => header.key === "Cross-Origin-Opener-Policy" && header.value === "same-origin")
+    && !headers.some((header) => header.key === "Cross-Origin-Opener-Policy" && header.value === "same-origin-allow-popups")],
+  ["COEP on Studio only", (
+    config.headers ?? []
+  ).filter((entry) => entry.source === "/studio" || entry.source === "/studio/:path*")
+    .flatMap((entry) => entry.headers ?? [])
+    .some((header) => header.key === "Cross-Origin-Embedder-Policy" && header.value === "credentialless")],
 ];
 
 for (const [label, passed] of required) {
