@@ -13,7 +13,9 @@ const read = (relativePath) =>
 const toolbar = read("components/chat/build-top-bar.tsx");
 const artifact = read("components/chat/artifact.tsx");
 const databaseInspector = read("components/chat/database-inspector.tsx");
-const databaseRoute = read("app/api/idealy/missions/[missionId]/database/route.ts");
+const databaseRoute = read(
+  "app/api/idealy/missions/[missionId]/database/route.ts"
+);
 const backendAdapter = read("lib/idealy/backend-adapter.ts");
 const previewCompiler = read("lib/idealy/preview-compiler.ts");
 
@@ -24,25 +26,43 @@ assert.match(toolbar, /selectPage\(nextPage\)/);
 assert.match(toolbar, /activePreviewPage\.path/);
 assert.match(previewCompiler, /function routePathFromFile/);
 assert.match(previewCompiler, /segment\.startsWith\("\("/);
-assert.match(previewCompiler, /routePathFromFile\(file\.path\) === normalizedTarget/);
+assert.match(
+  previewCompiler,
+  /routePathFromFile\(file\.path\) === normalizedTarget/
+);
 
 // Opening another tab must happen in the direct click stack (no delayed custom event).
-assert.match(toolbar, /window\.dispatchEvent\(new Event\("idealy:open-preview"\)\)/);
+assert.match(
+  toolbar,
+  /window\.dispatchEvent\(new Event\("idealy:open-preview"\)\)/
+);
 assert.doesNotMatch(toolbar, /dispatch\("idealy:open-preview"\)/);
 assert.match(artifact, /window\.open\("about:blank", "_blank"\)/);
 assert.match(artifact, /previewHtmlForFrameRef\.current/);
 assert.match(artifact, /Le navigateur a bloqué l’ouverture du nouvel onglet/);
 
 // Code/data tables use the actual authorized API response; no synthetic agent/event rows.
-assert.match(databaseInspector, /\/api\/idealy\/missions\/\$\{encodeURIComponent\(missionId\)\}\/database/);
-assert.doesNotMatch(databaseInspector, /run-dispatch|run-blueprint|run-builder|run-qa/);
+assert.match(
+  databaseInspector,
+  /\/api\/idealy\/missions\/\$\{encodeURIComponent\(missionId\)\}\/database/
+);
+assert.doesNotMatch(
+  databaseInspector,
+  /run-dispatch|run-blueprint|run-builder|run-qa/
+);
 assert.doesNotMatch(databaseInspector, /PostgreSQL RLS Actif/);
 assert.match(databaseInspector, /Aucune donnée simulée n’est affichée/);
-assert.match(databaseRoute, /await auth\(\)/);
+assert.match(databaseRoute, /await (auth\(\)|getSafeSession\(request\))/);
 assert.match(databaseRoute, /getIdealyMissionDatabaseRecord/);
 assert.match(databaseRoute, /listIdealyMissionAgentRuns/);
 assert.match(databaseRoute, /listIdealyMissionFileEvents/);
-assert.match(backendAdapter, /missions\?select=id,title,status,way,dna,validation,created_at/);
-assert.match(backendAdapter, /mission_agent_runs\?select=id,mission_id,run_key,step_index,agent_key,status,started_at,completed_at/);
+assert.match(
+  backendAdapter,
+  /missions\?select=id,title,status,way,dna,validation,created_at/
+);
+assert.match(
+  backendAdapter,
+  /mission_agent_runs\?select=id,mission_id,run_key,step_index,agent_key,status,started_at,completed_at/
+);
 
 console.log("Canvas workspace controls contract verified. ✓");
