@@ -1,0 +1,246 @@
+{
+  "targetUrl": "https://bolt.new",
+  "targetName": "bolt",
+  "extractedAt": "2026-11-02T15:58:56.876Z",
+  "specs": {
+    "title": "Bolt AI builder: Websites, apps & prototypes",
+    "body": {
+      "tagName": "BODY",
+      "fontFamily": "\"Schibsted Grotesk\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgb(23, 23, 25)",
+      "border": "0px solid rgb(229, 231, 235)",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "margin": "0px",
+      "transition": "all"
+    },
+    "buttons": [
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "Silkscreen, monospace",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "18px",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgb(255, 255, 255)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "8px 0px",
+        "margin": "0px",
+        "transition": "opacity 0.22s ease-out, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "21px",
+        "color": "rgba(255, 255, 255, 0.75)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(255, 255, 255, 0.75)",
+        "borderRadius": "4px",
+        "boxShadow": "none",
+        "padding": "8px 14px",
+        "margin": "0px",
+        "transition": "color 0.15s, background 0.15s"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "21px",
+        "color": "rgba(255, 255, 255, 0.75)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(255, 255, 255, 0.75)",
+        "borderRadius": "4px",
+        "boxShadow": "none",
+        "padding": "8px 14px",
+        "margin": "0px",
+        "transition": "color 0.15s, background 0.15s"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "21px",
+        "color": "rgba(255, 255, 255, 0.75)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(255, 255, 255, 0.75)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "color 0.15s"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "22px",
+        "color": "rgb(249, 246, 249)",
+        "backgroundColor": "rgb(20, 136, 252)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "6px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+        "padding": "0px 12px",
+        "margin": "0px",
+        "transition": "color 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), text-decoration-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), fill 0.15s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.15s cubic-bezier(0.4, 0, 0.2, 1)"
+      }
+    ],
+    "inputs": [
+      {
+        "tagName": "INPUT",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "22px",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "INPUT",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "22px",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      }
+    ],
+    "headings": [
+      {
+        "tagName": "H1",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": "48px",
+        "fontWeight": "600",
+        "lineHeight": "57.6px",
+        "color": "rgb(249, 246, 249)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H2",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": "48px",
+        "fontWeight": "600",
+        "lineHeight": "57.6px",
+        "color": "rgb(249, 246, 249)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px 16px",
+        "margin": "0px 0px 16px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "color": "rgb(249, 246, 249)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "color": "rgb(249, 246, 249)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px 0px 8px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H2",
+        "fontFamily": "\"Schibsted Grotesk\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+        "fontSize": "48px",
+        "fontWeight": "600",
+        "lineHeight": "57.6px",
+        "color": "rgba(255, 255, 255, 0.6)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px 16px",
+        "margin": "0px 0px 24px",
+        "transition": "all"
+      }
+    ]
+  },
+  "apiCallsSample": [
+    {
+      "url": "https://bolt.new/api/secrets",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://app.launchdarkly.com/sdk/goals/691f98ebed094f09c14ffbeb",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://stackblitz.com/api/users/auth/google_one_tap/client_id",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://evs.cdp.staticblitz.com/v1/projects/ta1kDK49qdEDEfd8KYxI37mW0GPkLKn1/settings",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://bolt.new/api/design-systems/public",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://events.launchdarkly.com/events/diagnostic/691f98ebed094f09c14ffbeb",
+      "method": "POST",
+      "postData": "{\"kind\":\"diagnostic-combined\",\"id\":{\"diagnosticId\":\"c83bd2af-f0e0-45fc-b4df-675d2e416983\",\"sdkKeySuffix\":\"4ffbeb\"},\"creationDate\":1793635135800,\"dataSinceDate\":1793635135157,\"droppedEvents\":0,\"eventsInLastBatch\":0,\"streamInits\":[],\"sdk\":{\"name\":\"js-client-sdk\",\"version\":\"3.9.3\",\"wrapperName\":\"open-feature-community-js-client\",\"wrapperVersion\":\"0.3.3\"},\"configuration\":{\"customBaseURI\":false,\"customStreamURI\":false,\"customEventsURI\":false,\"eventsCapacity\":100,\"eventsFlushIntervalMillis\":10000,\"reconnectTimeMillis\":1000,\"streamingDisabled\":false,\"allAttributesPrivate\":false,\"diagnosticRecordingIntervalMillis\":900000,\"usingSecureMode\":false,\"bootstrapMode\":true,\"fetchGoalsDisabled\":false,\"sendEventsOnlyForVariation\":false},\"platform\":{\"name\":\"JS\"}}"
+    },
+    {
+      "url": "https://app.launchdarkly.com/sdk/evalx/691f98ebed094f09c14ffbeb/contexts/eyJraW5kIjoidXNlciIsImtleSI6ImE5OTBjNDk0LWM1OWQtNDFiMC1hOGQyLThiODE0ZTZhZDIzNyIsInVuYXV0aGVudGljYXRlZCI6dHJ1ZSwiaW50ZXJuYWwiOmZhbHNlLCJjb3VudHJ5IjoiQ0QiLCJkZXZpY2VDYXRlZ29yeSI6ImRlc2t0b3AiLCJzZXNzaW9uSWQiOiI1OWY0NjM0NGU0ZWI3ZWYyY2Y3Y2NjZDg5ZWI0ZGFiNjAzMzAyZjJmIn0",
+      "method": "GET",
+      "postData": null
+    }
+  ]
+}

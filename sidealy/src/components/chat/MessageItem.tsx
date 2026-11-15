@@ -1,0 +1,513 @@
+import {
+  AlertTriangle,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Paperclip,
+  Pencil,
+  RotateCcw,
+  ThumbsDown,
+  ThumbsUp,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
+import type React from "react";
+import { useMemo, useState } from "react";
+import { useApp } from "../../context/AppContext";
+import { buildRunForMessage } from "../../services/agentRegistry";
+import type { Message, Run } from "../../types";
+import { ArtifactCard } from "./ArtifactCard";
+import { CodeBlock } from "./CodeBlock";
+import { MissionPlanCard } from "./MissionPlanCard";
+import { RunStage } from "./RunStage";
+
+export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
+  const { artifacts, sendMessage, userWay } = useApp();
+  const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState<"liked" | "disliked" | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
+  const [variants, setVariants] = useState<{ content: string; createdAt: number }[]>(() => {
+    return (message as unknown as { variants?: { content: string; createdAt: number }[] }).variants || [
+      { content: message.content, createdAt: message.createdAt },
+    ];
+  });
+  const [variantIndex, setVariantIndex] = useState(() => Math.max(0, variants.length - 1));
+
+  const handleStartEdit = () => {
+    setEditContent(message.content);
+    setIsEditing(true);
+  };
+
+  const handleSaveAndSend = () => {
+    if (!editContent.trim()) return;
+    const newVariants = [
+      ...variants,
+      { content: editContent.trim(), createdAt: Date.now() },
+    ];
+    setVariants(newVariants);
+    setVariantIndex(newVariants.length - 1);
+    message.content = editContent.trim();
+    setIsEditing(false);
+    sendMessage(editContent.trim());
+  };
+
+  const handleNavigateVariant = (nextIndex: number) => {
+    if (nextIndex < 0 || nextIndex >= variants.length) return;
+    setVariantIndex(nextIndex);
+    message.content = variants[nextIndex].content;
+  };
+
+  const toggleSpeech = () => {
+    const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    if (!synth) return;
+    if (speaking) {
+      synth.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(message.content.replace(/```[\s\S]*?```/g, " "));
+    utterance.lang = navigator.language || "fr-FR";
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    setSpeaking(true);
+    synth.speak(utterance);
+  };
+
+  const isUser = message.role === "user";
+  const timeFormatted = new Date(message.createdAt).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const handleCopyMessage = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(message.content);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {
+      // Fallback
+    }
+  };
+
+  const messageArtifacts = artifacts.filter((a) =>
+    message.artifactIds?.includes(a.id)
+  );
+
+  // Parse inline elements (bold, code)
+  const parseInline = (text: string) => {
+    const regex = /(\*\*.*?\*\*|`.*?`)/g;
+    const parts = text.split(regex);
+
+    return parts.map((chunk, i) => {
+      if (chunk.startsWith("**") && chunk.endsWith("**")) {
+        return (
+          <strong
+            className="font-semibold text-[var(--dsw-alias-label-primary)]"
+            key={i}
+          >
+            {chunk.slice(2, -2)}
+          </strong>
+        );
+      }
+      if (chunk.startsWith("`") && chunk.endsWith("`")) {
+        return (
+          <code
+            className="px-1.5 py-0.5 rounded bg-[var(--dsw-alias-interactive-bg-hover)] border border-[var(--dsw-alias-border-l3)] font-mono text-xs text-[var(--dsw-alias-label-primary)]"
+            key={i}
+          >
+            {chunk.slice(1, -1)}
+          </code>
+        );
+      }
+      return chunk;
+    });
+  };
+
+  // Markdown parsing logic for standard blocks
+  const renderFormattedContent = (content: string) => {
+    if (!content.trim()) {
+      return null;
+    }
+
+    // Split code blocks
+    const parts = content.split(/(```[\s\S]*?```)/g);
+
+    return parts.map((part, index) => {
+      if (part.startsWith("```") && part.endsWith("```")) {
+        const lines = part.slice(3, -3).trim().split("\n");
+        const firstLine = lines[0].trim();
+        const hasLang = !firstLine.includes(" ") && firstLine.length < 15;
+        const language = hasLang ? firstLine : "text";
+        const code = hasLang ? lines.slice(1).join("\n") : lines.join("\n");
+        return <CodeBlock code={code} key={index} language={language} />;
+      }
+
+      // Check if this part contains tables
+      if (part.includes("|") && part.includes("\n")) {
+        const lines = part.split("\n");
+        const tableLines = lines.filter(
+          (l) => l.trim().startsWith("|") && l.trim().endsWith("|")
+        );
+        if (tableLines.length >= 2) {
+          return (
+            <div
+              className="my-3 overflow-x-auto rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-base)] shadow-sm"
+              key={index}
+            >
+              <table className="w-full text-left text-xs md:text-sm border-collapse">
+                <tbody>
+                  {tableLines.map((row, rIdx) => {
+                    const cells = row
+                      .split("|")
+                      .slice(1, -1)
+                      .map((c) => c.trim());
+                    if (
+                      cells.every((c) => c.replace(/[:-]/g, "").length === 0)
+                    ) {
+                      return null;
+                    }
+                    const isHeader = rIdx === 0;
+                    return (
+                      <tr
+                        className={
+                          isHeader
+                            ? "bg-[var(--dsw-alias-interactive-bg-hover)]/70 font-semibold border-b border-[var(--dsw-alias-border-l2)]"
+                            : "border-b border-[var(--dsw-alias-border-l3)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]/30 transition-colors"
+                        }
+                        key={rIdx}
+                      >
+                        {cells.map((cell, cIdx) =>
+                          isHeader ? (
+                            <th
+                              className="px-3.5 py-2.5 text-[var(--dsw-alias-label-primary)] font-medium"
+                              key={cIdx}
+                            >
+                              {cell}
+                            </th>
+                          ) : (
+                            <td
+                              className="px-3.5 py-2 text-[var(--dsw-alias-label-primary)]"
+                              key={cIdx}
+                            >
+                              {parseInline(cell)}
+                            </td>
+                          )
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+      }
+
+      // Standard paragraphs, headings, bullet lists
+      const textLines = part.split("\n");
+      return (
+        <div className="space-y-2 leading-relaxed" key={index}>
+          {textLines.map((line, lIdx) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+              return <div className="h-1.5" key={lIdx} />;
+            }
+
+            if (trimmed.startsWith("### ")) {
+              return (
+                <h4
+                  className="text-base font-semibold text-[var(--dsw-alias-label-primary)] mt-4 mb-1"
+                  key={lIdx}
+                >
+                  {parseInline(trimmed.replace("### ", ""))}
+                </h4>
+              );
+            }
+            if (trimmed.startsWith("#### ")) {
+              return (
+                <h5
+                  className="text-sm font-semibold text-[var(--dsw-alias-label-primary)] mt-3 mb-1"
+                  key={lIdx}
+                >
+                  {parseInline(trimmed.replace("#### ", ""))}
+                </h5>
+              );
+            }
+            if (trimmed.startsWith("- ")) {
+              return (
+                <div className="flex items-start gap-2 ml-2 my-0.5" key={lIdx}>
+                  <span className="text-[var(--idealy-teal-petrol)] font-bold mt-1 text-xs">
+                    •
+                  </span>
+                  <span>{parseInline(trimmed.replace("- ", ""))}</span>
+                </div>
+              );
+            }
+
+            return <p key={lIdx}>{parseInline(line)}</p>;
+          })}
+        </div>
+      );
+    });
+  };
+
+  // Structured Run resolution
+  const resolvedRun: Run = useMemo(() => {
+    if (message.run) return message.run;
+    return buildRunForMessage(message.content, message.content, {
+      mode: message.mode,
+      reasoning: message.reasoning,
+      wayId: userWay,
+    });
+  }, [message.run, message.content, message.mode, message.reasoning, userWay]);
+
+  return (
+    <article
+      aria-label={`Message de ${isUser ? "vous" : "Idealy"}`}
+      className={`py-3 px-4 md:px-6 transition-colors ${
+        isUser
+          ? "ml-auto max-w-[85%] md:max-w-[78%] flex flex-col items-end"
+          : "mr-auto w-full max-w-full"
+      }`}
+      data-role={message.role}
+    >
+      {/* User Bubble with Prompt Actions (Copy + Pencil Edit) */}
+      {isUser ? (
+        <div className="group/user flex flex-col items-end gap-1.5 max-w-full">
+          {/* Attachments preview */}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 justify-end mb-1">
+              {message.attachments.map((file) => (
+                <div
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--dsw-specific-input-major)] border border-[var(--dsw-alias-border-l2)] text-xs text-[var(--dsw-alias-label-secondary)] shadow-sm"
+                  key={file.id}
+                >
+                  <Paperclip className="w-3 h-3 text-[var(--idealy-teal-petrol)]" />
+                  <span className="font-medium text-[var(--dsw-alias-label-primary)] truncate max-w-[140px]">
+                    {file.name}
+                  </span>
+                  <span className="text-[10px]">
+                    ({(file.size / 1024).toFixed(0)} Ko)
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isEditing ? (
+            <div className="w-full max-w-2xl rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-3 space-y-2.5 shadow-md">
+              <textarea
+                autoFocus
+                className="w-full min-h-[72px] max-h-[220px] bg-transparent text-sm resize-none focus:outline-none text-[var(--dsw-alias-label-primary)] leading-relaxed"
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={3}
+                value={editContent}
+              />
+              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[var(--dsw-alias-border-l1)]">
+                <button
+                  className="px-3 py-1.5 text-xs rounded-lg text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                  onClick={() => setIsEditing(false)}
+                  type="button"
+                >
+                  Annuler
+                </button>
+                <button
+                  className="px-3.5 py-1.5 text-xs rounded-lg bg-gradient-to-r from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white font-medium hover:opacity-90 shadow-sm transition-opacity"
+                  onClick={handleSaveAndSend}
+                  type="button"
+                >
+                  Enregistrer et envoyer
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="relative group/bubble max-w-full">
+              <div
+                className="px-4 py-2.5 rounded-[var(--dsw-radius-xl)] bg-[var(--dsw-specific-bubble)] text-[var(--dsw-alias-label-primary)] text-sm md:text-[15px] leading-relaxed break-words shadow-sm border border-[var(--dsw-alias-border-l3)]/40"
+                style={{
+                  wordBreak: "break-word",
+                }}
+              >
+                <div className="whitespace-pre-wrap">{message.content}</div>
+              </div>
+
+              {/* Actions sur le prompt utilisateur : Copier et Modifier (crayon) */}
+              <div
+                aria-label="Actions sur le prompt"
+                className="opacity-0 group-hover/user:opacity-100 focus-within:opacity-100 transition-opacity absolute -bottom-7 right-0 flex items-center gap-1 bg-[var(--dsw-alias-bg-base)]/95 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-[var(--dsw-alias-border-l2)] shadow-xs z-10"
+              >
+                <button
+                  aria-label="Modifier le prompt"
+                  className="focus-ring grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                  onClick={handleStartEdit}
+                  title="Modifier le prompt"
+                  type="button"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+
+                <button
+                  aria-label="Copier le prompt"
+                  className="focus-ring grid h-6 w-6 place-items-center rounded text-[var(--dsw-alias-label-tertiary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                  onClick={handleCopyMessage}
+                  title="Copier le prompt"
+                  type="button"
+                >
+                  {copied ? (
+                    <Check className="w-3 h-3 text-[var(--idealy-teal-petrol)]" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 px-1">
+            {variants.length > 1 && (
+              <div className="inline-flex items-center gap-1 text-[11px] text-[var(--dsw-alias-label-tertiary)]">
+                <button
+                  aria-label="Version précédente"
+                  className="p-0.5 rounded hover:bg-[var(--dsw-alias-interactive-bg-hover)] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  disabled={variantIndex <= 0}
+                  onClick={() => handleNavigateVariant(variantIndex - 1)}
+                  type="button"
+                >
+                  <ChevronLeft className="w-3 h-3" />
+                </button>
+                <span className="font-mono text-[10px]">
+                  {variantIndex + 1} / {variants.length}
+                </span>
+                <button
+                  aria-label="Version suivante"
+                  className="p-0.5 rounded hover:bg-[var(--dsw-alias-interactive-bg-hover)] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  disabled={variantIndex >= variants.length - 1}
+                  onClick={() => handleNavigateVariant(variantIndex + 1)}
+                  type="button"
+                >
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            <span className="text-[10px] text-[var(--dsw-alias-label-tertiary)]">
+              {timeFormatted}
+            </span>
+          </div>
+        </div>
+      ) : (
+        /* Assistant Message : Scène avec Régie (RunStage) */
+        <div className="space-y-4 max-w-3xl mx-auto py-1">
+          {/* Moteur de Scène : En-têtes réelles, Portraits d'agents, Teintes exclusives, Réflexion typographique dans le fil */}
+          <RunStage
+            isStreaming={message.isPartial}
+            renderFormattedContent={renderFormattedContent}
+            run={resolvedRun}
+          />
+
+          {message.mission && (
+            <MissionPlanCard messageId={message.id} mission={message.mission} />
+          )}
+
+          {/* Interrupted status alert */}
+          {message.status === "interrupted" && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>
+                Réponse interrompue par l'utilisateur. Contenu partiel conservé.
+              </span>
+            </div>
+          )}
+
+          {/* Linked Artifact Cards */}
+          {messageArtifacts.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {messageArtifacts.map((art) => (
+                <ArtifactCard artifact={art} key={art.id} />
+              ))}
+            </div>
+          )}
+
+          {/* Assistant Action Toolbar (Thumbs, Regenerate, Copy, Speech) */}
+          {!message.isPartial && message.content && (
+            <div className="flex items-center gap-1 sm:gap-2 pt-2 text-xs text-[var(--dsw-alias-label-tertiary)] border-t border-[var(--dsw-alias-border-l3)]/40 mt-4">
+              <button
+                aria-label="Copier"
+                className="grid min-h-[34px] min-w-[34px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
+                onClick={handleCopyMessage}
+                title="Copier la réponse"
+                type="button"
+              >
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-[var(--idealy-teal-petrol)]" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+              </button>
+
+              <button
+                aria-label="Réponse utile"
+                className={`grid min-h-[34px] min-w-[34px] place-items-center rounded-lg transition-all duration-150 active:scale-95 ${
+                  feedback === "liked"
+                    ? "text-[var(--idealy-teal-petrol)] bg-[var(--idealy-teal-bg)]"
+                    : "hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+                }`}
+                onClick={() =>
+                  setFeedback(feedback === "liked" ? null : "liked")
+                }
+                title="Bonne réponse"
+                type="button"
+              >
+                <ThumbsUp className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                aria-label="Réponse à améliorer"
+                className={`grid min-h-[34px] min-w-[34px] place-items-center rounded-lg transition-all duration-150 active:scale-95 ${
+                  feedback === "disliked"
+                    ? "text-[var(--dsw-alias-state-error-primary)] bg-red-500/10"
+                    : "hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+                }`}
+                onClick={() =>
+                  setFeedback(feedback === "disliked" ? null : "disliked")
+                }
+                title="Réponse insatisfaisante"
+                type="button"
+              >
+                <ThumbsDown className="w-3.5 h-3.5" />
+              </button>
+
+              {typeof window !== "undefined" && "speechSynthesis" in window && (
+                <button
+                  aria-label={speaking ? "Arrêter la lecture" : "Lire à voix haute"}
+                  className="grid min-h-[34px] min-w-[34px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
+                  onClick={toggleSpeech}
+                  title={speaking ? "Arrêter la lecture" : "Lire à voix haute"}
+                  type="button"
+                >
+                  {speaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </button>
+              )}
+
+              <button
+                aria-label="Régénérer"
+                className="grid min-h-[34px] min-w-[34px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
+                onClick={() =>
+                  sendMessage("Régénérer et approfondir la réponse précédente.")
+                }
+                title="Régénérer"
+                type="button"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </article>
+  );
+};

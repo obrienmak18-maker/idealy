@@ -3,7 +3,7 @@
  * Provider keys are read in the Edge runtime and never returned to the browser.
  */
 
-export type ChatToolName = "webSearch" | "searchImages" | "generateImage";
+export type ChatToolName = "webSearch" | "searchImages" | "generateImage" | "dispatchSubAgents";
 
 export type ChatToolActivity = {
   toolCallId: string;
@@ -64,6 +64,38 @@ export const IDEALY_CHAT_TOOL_DEFINITIONS = [
           aspectRatio: { type: "string", enum: ["square", "landscape", "portrait"] },
         },
         required: ["prompt"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "dispatchSubAgents",
+      description:
+        "For complex requests that benefit from independent specialist work, launch up to three bounded model calls in parallel. Use generic professional roles and concrete tasks. Do not use for ordinary questions.",
+      parameters: {
+        type: "object",
+        properties: {
+          objective: { type: "string", minLength: 1, maxLength: 1200 },
+          squad: { type: "string", enum: ["ninja", "mage", "hunter", "professional"] },
+          agents: {
+            type: "array",
+            minItems: 1,
+            maxItems: 3,
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", minLength: 1, maxLength: 48 },
+                role: { type: "string", minLength: 1, maxLength: 80 },
+                task: { type: "string", minLength: 1, maxLength: 1200 },
+              },
+              required: ["name", "role", "task"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["objective", "agents"],
         additionalProperties: false,
       },
     },
@@ -309,6 +341,10 @@ function localizeToolMessage(
   return words.unavailable;
 }
 
+function localized(language: "fr" | "en" | "es", fr: string, en: string, es: string) {
+  return language === "en" ? en : language === "es" ? es : fr;
+}
+
 function localizeToolOutput(
   name: ChatToolName,
   output: Record<string, unknown>,
@@ -319,7 +355,7 @@ function localizeToolOutput(
 }
 
 export async function executeIdealyChatTool(input: {
-  name: ChatToolName;
+  name: Exclude<ChatToolName, "dispatchSubAgents">;
   arguments: JsonRecord;
   language: "fr" | "en" | "es";
   signal: AbortSignal;
@@ -343,5 +379,5 @@ export async function executeIdealyChatTool(input: {
 }
 
 export function isChatToolName(value: unknown): value is ChatToolName {
-  return value === "webSearch" || value === "searchImages" || value === "generateImage";
+  return value === "webSearch" || value === "searchImages" || value === "generateImage" || value === "dispatchSubAgents";
 }

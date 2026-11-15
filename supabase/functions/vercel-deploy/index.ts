@@ -68,17 +68,26 @@ Deno.serve(async (request) => {
 
   if (!mission) return corsResponse({ error: "Mission not found." }, 404, request);
 
-  const { data: files, error: filesError } = await admin
+  const { data: fileVersions, error: filesError } = await admin
     .from("mission_files")
     .select("path,content,checksum,status,version")
     .eq("mission_id", missionId)
     .eq("user_id", auth.user.id)
     .eq("status", "saved")
     .order("path")
+    .order("version", { ascending: false })
     .limit(15000);
 
   if (filesError) return corsResponse({ error: "Unable to read workspace files." }, 500, request);
-  if (!files?.length) return corsResponse({ error: "No saved workspace files to deploy." }, 409, request);
+  if (!fileVersions?.length) return corsResponse({ error: "No saved workspace files to deploy." }, 409, request);
+
+  const seenPaths = new Set<string>();
+  const files = fileVersions.filter((file) => {
+    if (file.status !== "saved" || seenPaths.has(file.path)) return false;
+    seenPaths.add(file.path);
+    return true;
+  });
+  if (!files.length) return corsResponse({ error: "No saved workspace files to deploy." }, 409, request);
 
   const manifest = files.map((file) => ({
     path: file.path,

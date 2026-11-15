@@ -1,0 +1,195 @@
+{
+  "targetUrl": "https://gemini.google.com",
+  "targetName": "gemini",
+  "extractedAt": "2026-11-02T16:02:30.893Z",
+  "specs": {
+    "title": "Google Gemini",
+    "body": {
+      "tagName": "BODY",
+      "fontFamily": "\"Times New Roman\"",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "normal",
+      "color": "rgb(31, 31, 31)",
+      "backgroundColor": "rgb(250, 249, 249)",
+      "border": "0px none rgb(31, 31, 31)",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "margin": "0px",
+      "transition": "all"
+    },
+    "buttons": [
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "Arial",
+        "fontSize": "24px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "color": "color(srgb 0.121569 0.121569 0.121569 / 0.38)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none color(srgb 0.121569 0.121569 0.121569 / 0.38)",
+        "borderRadius": "9999px",
+        "boxShadow": "none",
+        "padding": "6px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "Arial",
+        "fontSize": "24px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "color": "rgba(0, 0, 0, 0.55)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(0, 0, 0, 0.55)",
+        "borderRadius": "9999px",
+        "boxShadow": "none",
+        "padding": "6px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Times New Roman\"",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "color": "rgb(31, 31, 31)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgb(31, 31, 31)",
+        "borderRadius": "9999px",
+        "boxShadow": "none",
+        "padding": "0px 8px 0px 6px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Google Sans Flex\", \"Google Sans Text\", \"Google Sans\", sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(157, 210, 255)",
+        "border": "0px none rgb(0, 0, 0)",
+        "borderRadius": "9999px",
+        "boxShadow": "none",
+        "padding": "0px 12px",
+        "margin": "0px",
+        "transition": "box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"Google Sans Flex\", \"Google Sans Text\", \"Google Sans\", sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(242, 240, 240)",
+        "border": "0px none rgb(0, 0, 0)",
+        "borderRadius": "9999px",
+        "boxShadow": "none",
+        "padding": "0px 12px 0px 8px",
+        "margin": "0px",
+        "transition": "box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1)"
+      }
+    ],
+    "inputs": [],
+    "headings": [
+      {
+        "tagName": "H1",
+        "fontFamily": "\"Google Sans Flex\", \"Google Sans\", \"Helvetica Neue\", sans-serif",
+        "fontSize": "36px",
+        "fontWeight": "320",
+        "lineHeight": "44px",
+        "color": "rgb(31, 31, 31)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgb(31, 31, 31)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      }
+    ]
+  },
+  "apiCallsSample": [
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=otAQ7b&source-path=%2F&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=61344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22otAQ7b%22%2C%22%5B1%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://waa-pa.clients6.google.com/$rpc/google.internal.waa.v1.Waa/Create",
+      "method": "POST",
+      "postData": "[\"br1aemAN9owlYRs9NnsA\"]"
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=DYBcR&source-path=%2F&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=161344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22DYBcR%22%2C%22%5B%5C%22en-US%5C%22%2Cnull%2Cnull%2C%5B0%2C40%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://www.google.com/ccm/collect?rcb=15&frm=0&apvc=1&ae=g&auid=78351552.1793635344&dt=%E2%80%8EGoogle%20Gemini&en=page_view&dl=https%3A%2F%2Fgemini.google.com%2F&scrsrc=www.googletagmanager.com&rnd=1933121380.1793635344&navt=n&npa=0&ep.ads_data_redaction=0&gtm=45He6as1v9113054662za200zd9113054662xeaxf1&gcd=13l3l3l3l1l1&dma=0&tag_exp=115938465~115938468~117776795~118897920~118897930~120412526~120469145~120469153~121246026~121246034~123691370~123814945&tft=1793635344147&tfd=3266&_gsid=33rW5X3Sv_WXFRFul8p8CmUVh_BRfPwsWA&fmt=8",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://ad.doubleclick.net/ccm/s/collect?_gsid=33rW5X3Sv_WXFRFul8p8CmUVh_BRfPwsWA&auid=78351552.1793635344&gtm=45He6as1v9113054662za200zd9113054662xeaxf1&fmt=8",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fapp&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=261344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22aPya6c%22%2C%22%5B%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=cYRIkd&source-path=%2Fapp&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=361344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22cYRIkd%22%2C%22%5B%5C%22en-US%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://ogads-pa.clients6.google.com/$rpc/google.internal.onegoogle.asyncdata.v1.AsyncDataService/GetAsyncData",
+      "method": "POST",
+      "postData": "[658,\"https://gemini.google.com/\",658,\"en\",\"cd\",0,null,0,0,\"\",\"\",1,0,null,103135050,null,[1],null,1,1,\"CAMS4wYV5wHM2swNqASxpNAFsCq-BocEzQCMBZMDoA-FBPWF_A64rwUjSwHXkQbIwwa8gQbPIOsC8w7BFKiJBPUGA8usvheQxf4D0g6qBrYCBJeEBLFo4Sy-gAWD0NwGpvwEPrAx-EC-S4sF06IGhacG_i2gAuWjBULvTrQFknyIO-TzBZDlDpl3lX3cGs4JlIgGlwXPVZZbjm0D2GenVPYJuxOyEqQA4N8Go1E6qFmmBserBZw-jEifxQYI5WLXOOiNBsoGMKcj8BewXsxD95oG3R7NE27tALFMsSyLFBSfPrI2uz7xkQbcFFLaC-YR8y3dSyaBEph83RqpGsuqBqFRxxLMtgbjFJ8FzCi4LsdNnB2PD6fD0wbY3p4GsZQF5bs5ggulRsJCnCailgOKAr06cONInG6IftcWpR2OsAbe0wXJC5uOBt4EBakXlUy6C8YotAIDzdMGyWDBmgbDmgU-rLoF8RvPA7JGDwPLGYQT2GPVZoAIlQ_2MY47thMrhD_wPQPriQaDE8v7BvEGmSTpLeoSpDPSCL4kAwOQApo9iCmja4gZzO4GAwOuZYADBNYBsUzNCLtOnhm9dgMDYY0CzQ0DAyPKAwMD-RM8AwPvIgPAE5YXTrYCqTjxOsVoyzGrJE_7feU42AYD2QL_AwMDAwO4Hr8EigTwBY8y0VXIAL8AySUDhwrKCZgBKpoaRAMDAwOHEOEFwkurCYc3ogwDA90JlxviH8ZN-yzBF942iRbCLMQFCY4ZlAbQI_xM5IUGi2MDA4hVA70JlwztHKWABbohhSCMJeIytw-Pfx7MDY5iA-sG-6kGDYkRws8GpyUthgm4LRof5U-GCoMVBAQEzwaODKQkzQXsHK0n_AH7AcUUoQLfAQOIBZMOvhbGXa4NrwWBHAMBhxHYGoUg7AP0GwMDEv9KrS75K9QFkT7sU8k27AaHJbQsrifzBOOhBqgC1wa7A5gC_ATwBs4G7QbwL8UP7BPAFeiJBnOpbKEx_SGPLbFCjwjPIxgYrQG-DmrNDtIeA-4G-A33DpMRlA13AwMDAwMDA6MOujeHDLoSpw7YCQbYAOsPxQaoOQPmDJQI0wkDnQq9LocP4bwG2JYFmhu4JAAAAAAA6gHjXq0UwJcFDgOTZ97ImwGliAulsxb8gnuz5AU=\",{\"1001\":1}]"
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=GPRiHf&source-path=%2Fapp&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=461344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22GPRiHf%22%2C%22%5B%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=Te6DCf&source-path=%2Fapp&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=561344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22Te6DCf%22%2C%22%5B%5B%5C%22en-US%5C%22%5D%2C%5B1%2C2%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=o30O0e&source-path=%2Fapp&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=661344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22o30O0e%22%2C%22%5B%5B%5C%22me%5C%22%5D%2C%5B%5B%5B%5C%22person.photo%5C%22%2C%5C%22person.name%5C%22%2C%5C%22person.email%5C%22%5D%5D%2Cnull%2C%5B1%2C7%5D%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=K4WWud&source-path=%2Fapp&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=761344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22K4WWud%22%2C%22%5B%5B0%5D%2C%5B%5C%22en-US%5C%22%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=CNgdBe&source-path=%2Fapp&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=861344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22CNgdBe%22%2C%22%5B1%2C%5B%5C%22en-US%5C%22%5D%2C0%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=cCSu7&source-path=%2Fapp&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=961344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22cCSu7%22%2C%22%5B%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    },
+    {
+      "url": "https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=whPPme&source-path=%2Fapp&bl=boq_gemini-web-uiserver_20261029.22_p0&f.sid=2207114378404268419&hl=en-US&_reqid=1061344&rt=c",
+      "method": "POST",
+      "postData": "f.req=%5B%5B%5B%22whPPme%22%2C%22%5B%5C%22en-US%5C%22%2Cnull%2C%5B4%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&"
+    }
+  ]
+}

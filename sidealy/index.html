@@ -1,0 +1,57 @@
+<!doctype html>
+<html class="h-full" lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <link href="/favicon.svg" rel="icon" type="image/svg+xml">
+    <link href="/idealy-mark.svg" rel="alternate icon" type="image/svg+xml">
+    <link href="/favicon.ico" rel="alternate icon">
+    <meta
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
+      name="viewport"
+    >
+    <title>Idealy — Atelier d’ingénierie IA</title>
+    <meta
+      content="Idealy réunit conversation, agents spécialisés, code et aperçu dans un même atelier de création logicielle."
+      name="description"
+    >
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    >
+    <script>
+    "use strict";
+    (() => {
+      var saved, theme, prefersDark, isDark;
+      try {
+        saved = localStorage.getItem("idealy_theme_v1");
+        theme = saved ? JSON.parse(saved) : "dark";
+        prefersDark =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        isDark =
+          theme === "dark" ||
+          (theme === "system" ? prefersDark : false) ||
+          !theme;
+        if (isDark) {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        } else {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.style.colorScheme = "light";
+        }
+      } catch (e) {
+        document.documentElement.classList.add("dark");
+      }
+    })();
+    </script>
+  </head>
+  <body
+    class="h-full bg-bg-base text-text-main antialiased selection:bg-brand-primary selection:text-brand-onPrimary"
+  >
+    <div class="h-full" id="root"></div>
+    <script src="/src/main.tsx" type="module"></script>
+  </body>
+</html>

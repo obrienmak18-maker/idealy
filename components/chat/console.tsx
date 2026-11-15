@@ -1,3 +1,4 @@
+import { useActiveChat } from "@/hooks/use-active-chat";
 import {
   type Dispatch,
   type SetStateAction,
@@ -32,7 +33,8 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
   const [height, setHeight] = useState<number>(300);
   const [isResizing, setIsResizing] = useState(false);
 
-  const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
+  const { chatId } = useActiveChat();
+  const isArtifactVisible = useArtifactSelector(chatId, (state) => state.isVisible);
 
   const minHeight = 100;
   const maxHeight = 800;

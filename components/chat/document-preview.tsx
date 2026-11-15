@@ -1,5 +1,6 @@
 "use client";
 
+import { useActiveChat } from "@/hooks/use-active-chat";
 import equal from "fast-deep-equal";
 import {
   type MouseEvent,
@@ -45,7 +46,8 @@ export function DocumentPreview({
   result,
   args,
 }: DocumentPreviewProps) {
-  const { artifact, setArtifact } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { artifact, setArtifact } = useArtifact(chatId);
 
   const { data: documents, isLoading: isDocumentsFetching } = useSWR<
     Document[]
@@ -252,7 +254,8 @@ const DocumentHeader = memo(PureDocumentHeader, (prevProps, nextProps) => {
 });
 
 const DocumentContent = ({ document }: { document: Document }) => {
-  const { artifact } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { artifact } = useArtifact(chatId);
 
   const containerClassName = cn(
     "h-[257px] overflow-hidden rounded-b-2xl border border-t-0 border-border/50 dark:bg-muted",

@@ -1,3 +1,4 @@
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { memo, useCallback } from "react";
 import { toast } from "sonner";
 import { useArtifact } from "@/hooks/use-artifact";
@@ -33,7 +34,8 @@ function PureDocumentToolResult({
   result,
   isReadonly,
 }: DocumentToolResultProps) {
-  const { setArtifact } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { setArtifact } = useArtifact(chatId);
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       if (isReadonly) {
@@ -103,7 +105,8 @@ function PureDocumentToolCall({
   args,
   isReadonly,
 }: DocumentToolCallProps) {
-  const { setArtifact } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { setArtifact } = useArtifact(chatId);
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       if (isReadonly) {

@@ -11,11 +11,12 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { IdealyLogo } from "@/components/branding/idealy-logo";
 import { useTranslation } from "@/lib/i18n/provider";
+import { getFirebaseBearerHeaders } from "@/lib/firebase/client";
 import {
   idealyDiscoverySources,
   idealyExperienceLevels,
@@ -74,7 +75,7 @@ const discoveryLabels: Record<(typeof idealyDiscoverySources)[number], { fr: str
 function getSafeNext(value: string | null) {
   return value && value.startsWith("/") && !value.startsWith("//") && !value.startsWith("/onboarding")
     ? value
-    : "/";
+    : "/studio";
 }
 
 function getInitialWay(value: string | null): IdealyWay {
@@ -103,7 +104,6 @@ const wayCopy: Record<"fr" | "en" | "es", Record<IdealyWay, { label: string; des
 };
 
 export function OnboardingFlow() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { language, t } = useTranslation();
   const langKey = (language === "en" ? "en" : language === "es" ? "es" : "fr") as "fr" | "en" | "es";
@@ -186,8 +186,11 @@ export function OnboardingFlow() {
 
     async function loadStatus() {
       try {
+        const authHeaders = await getFirebaseBearerHeaders();
         const result = await fetch("/api/idealy/profile/onboarding", {
           cache: "no-store",
+          credentials: "same-origin",
+          headers: authHeaders,
           signal: controller.signal,
         });
         if (result.status === 401) {
@@ -202,7 +205,7 @@ export function OnboardingFlow() {
           onboardingCompleted?: unknown; experienceLevel?: unknown; primaryGoal?: unknown; projectType?: unknown; way?: unknown;
         };
         if (status.onboardingCompleted === true) {
-          router.replace(nextPath);
+          window.location.assign(nextPath);
           return;
         }
         const email = typeof status.accountEmail === "string" && status.accountEmail.trim() ? status.accountEmail.trim() : null;
@@ -229,7 +232,7 @@ export function OnboardingFlow() {
 
     void loadStatus();
     return () => controller.abort();
-  }, [nextPath, router]);
+  }, [nextPath]);
 
   const updateDraft = <K extends keyof OnboardingDraft>(
     field: K,
@@ -285,9 +288,11 @@ export function OnboardingFlow() {
     setError(null);
 
     try {
+      const authHeaders = await getFirebaseBearerHeaders();
       const result = await fetch("/api/idealy/profile/onboarding", {
         body: JSON.stringify(parsed.data),
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         method: "POST",
       });
 

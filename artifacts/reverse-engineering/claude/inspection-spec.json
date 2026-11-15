@@ -1,0 +1,331 @@
+{
+  "targetUrl": "https://claude.ai",
+  "targetName": "claude",
+  "extractedAt": "2026-11-02T16:01:47.892Z",
+  "specs": {
+    "title": "Se connecter - Claude",
+    "body": {
+      "tagName": "BODY",
+      "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px",
+      "color": "rgba(0, 0, 0, 0.9)",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "border": "0px solid rgba(0, 0, 0, 0.08)",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "margin": "0px",
+      "transition": "all"
+    },
+    "buttons": [
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "435",
+        "lineHeight": "20px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "8px",
+        "boxShadow": "none",
+        "padding": "0px 9px",
+        "margin": "0px",
+        "transition": "box-shadow 0.06s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "435",
+        "lineHeight": "20px",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "8px",
+        "boxShadow": "none",
+        "padding": "0px 9px",
+        "margin": "0px",
+        "transition": "box-shadow 0.06s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "15px",
+        "fontWeight": "435",
+        "lineHeight": "22px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "10px",
+        "boxShadow": "none",
+        "padding": "0px 16px",
+        "margin": "0px",
+        "transition": "box-shadow 0.06s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "15px",
+        "fontWeight": "435",
+        "lineHeight": "22px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "10px",
+        "boxShadow": "none",
+        "padding": "0px 16px",
+        "margin": "0px",
+        "transition": "box-shadow 0.06s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "15px",
+        "fontWeight": "435",
+        "lineHeight": "22px",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "10px",
+        "boxShadow": "none",
+        "padding": "0px 16px",
+        "margin": "0px",
+        "transition": "box-shadow 0.06s cubic-bezier(0.4, 0, 0.2, 1)"
+      }
+    ],
+    "inputs": [
+      {
+        "tagName": "TEXTAREA",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "TEXTAREA",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "INPUT",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "lineHeight": "22px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(255, 255, 255, 0.5)",
+        "border": "0px none rgba(0, 0, 0, 0.9)",
+        "borderRadius": "10px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px inset",
+        "padding": "0px 16px",
+        "margin": "0px",
+        "transition": "color 0.06s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.06s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.06s cubic-bezier(0.4, 0, 0.2, 1), outline-color 0.06s cubic-bezier(0.4, 0, 0.2, 1), text-decoration-color 0.06s cubic-bezier(0.4, 0, 0.2, 1), fill 0.06s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.06s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-from 0.06s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-via 0.06s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-to 0.06s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.06s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.06s cubic-bezier(0.4, 0, 0.2, 1), transform 0.06s cubic-bezier(0.4, 0, 0.2, 1), translate 0.06s cubic-bezier(0.4, 0, 0.2, 1), scale 0.06s cubic-bezier(0.4, 0, 0.2, 1), rotate 0.06s cubic-bezier(0.4, 0, 0.2, 1), filter 0.06s cubic-bezier(0.4, 0, 0.2, 1), -webkit-backdrop-filter 0.06s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.06s cubic-bezier(0.4, 0, 0.2, 1), display 0.06s cubic-bezier(0.4, 0, 0.2, 1), content-visibility 0.06s cubic-bezier(0.4, 0, 0.2, 1), overlay 0.06s cubic-bezier(0.4, 0, 0.2, 1), pointer-events 0.06s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "INPUT",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(0, 0, 0, 0.9)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "-1px",
+        "transition": "all"
+      },
+      {
+        "tagName": "INPUT",
+        "fontFamily": "anthropic-sans, system-ui, \"Segoe UI\", Roboto, Helvetica, Arial, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", sans-serif, ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, \"PingFang SC\", \"PingFang TC\", \"Hiragino Sans\", \"Apple SD Gothic Neo\", sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(0, 0, 0, 0.9)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "-1px",
+        "transition": "all"
+      }
+    ],
+    "headings": [
+      {
+        "tagName": "H1",
+        "fontFamily": "anthropic-serif, \"Anthropic Serif Fallback Georgia\", \"Anthropic Serif Fallback Times\", \"Anthropic Serif Fallback DejaVu\", \"Anthropic Serif Fallback Noto\", Georgia, \"Arial Hebrew\", \"Noto Sans Hebrew\", \"Times New Roman\", Times, \"Songti SC\", \"Noto Serif CJK SC\", \"Source Han Serif SC\", \"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", \"Songti TC\", \"Noto Serif CJK TC\", \"Source Han Serif TC\", \"PingFang TC\", \"Microsoft JhengHei\", \"Noto Sans CJK TC\", \"Hiragino Mincho ProN\", \"Yu Mincho\", \"Noto Serif CJK JP\", \"Source Han Serif\", \"Hiragino Sans\", \"Yu Gothic\", Meiryo, \"Noto Sans CJK JP\", \"Noto Serif CJK KR\", \"Source Han Serif K\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Noto Sans CJK KR\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", serif",
+        "fontSize": "56px",
+        "fontWeight": "330",
+        "lineHeight": "64.4px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "48px 0px 0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H2",
+        "fontFamily": "anthropic-serif, \"Anthropic Serif Fallback Georgia\", \"Anthropic Serif Fallback Times\", \"Anthropic Serif Fallback DejaVu\", \"Anthropic Serif Fallback Noto\", Georgia, \"Arial Hebrew\", \"Noto Sans Hebrew\", \"Times New Roman\", Times, \"Songti SC\", \"Noto Serif CJK SC\", \"Source Han Serif SC\", \"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", \"Songti TC\", \"Noto Serif CJK TC\", \"Source Han Serif TC\", \"PingFang TC\", \"Microsoft JhengHei\", \"Noto Sans CJK TC\", \"Hiragino Mincho ProN\", \"Yu Mincho\", \"Noto Serif CJK JP\", \"Source Han Serif\", \"Hiragino Sans\", \"Yu Gothic\", Meiryo, \"Noto Sans CJK JP\", \"Noto Serif CJK KR\", \"Source Han Serif K\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Noto Sans CJK KR\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", serif",
+        "fontSize": "30px",
+        "fontWeight": "400",
+        "lineHeight": "36px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "anthropic-serif, \"Anthropic Serif Fallback Georgia\", \"Anthropic Serif Fallback Times\", \"Anthropic Serif Fallback DejaVu\", \"Anthropic Serif Fallback Noto\", Georgia, \"Arial Hebrew\", \"Noto Sans Hebrew\", \"Times New Roman\", Times, \"Songti SC\", \"Noto Serif CJK SC\", \"Source Han Serif SC\", \"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", \"Songti TC\", \"Noto Serif CJK TC\", \"Source Han Serif TC\", \"PingFang TC\", \"Microsoft JhengHei\", \"Noto Sans CJK TC\", \"Hiragino Mincho ProN\", \"Yu Mincho\", \"Noto Serif CJK JP\", \"Source Han Serif\", \"Hiragino Sans\", \"Yu Gothic\", Meiryo, \"Noto Sans CJK JP\", \"Noto Serif CJK KR\", \"Source Han Serif K\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Noto Sans CJK KR\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", serif",
+        "fontSize": "30px",
+        "fontWeight": "400",
+        "lineHeight": "36px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px 0px 4px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "anthropic-serif, \"Anthropic Serif Fallback Georgia\", \"Anthropic Serif Fallback Times\", \"Anthropic Serif Fallback DejaVu\", \"Anthropic Serif Fallback Noto\", Georgia, \"Arial Hebrew\", \"Noto Sans Hebrew\", \"Times New Roman\", Times, \"Songti SC\", \"Noto Serif CJK SC\", \"Source Han Serif SC\", \"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", \"Songti TC\", \"Noto Serif CJK TC\", \"Source Han Serif TC\", \"PingFang TC\", \"Microsoft JhengHei\", \"Noto Sans CJK TC\", \"Hiragino Mincho ProN\", \"Yu Mincho\", \"Noto Serif CJK JP\", \"Source Han Serif\", \"Hiragino Sans\", \"Yu Gothic\", Meiryo, \"Noto Sans CJK JP\", \"Noto Serif CJK KR\", \"Source Han Serif K\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Noto Sans CJK KR\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", serif",
+        "fontSize": "30px",
+        "fontWeight": "400",
+        "lineHeight": "36px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px 0px 4px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "anthropic-serif, \"Anthropic Serif Fallback Georgia\", \"Anthropic Serif Fallback Times\", \"Anthropic Serif Fallback DejaVu\", \"Anthropic Serif Fallback Noto\", Georgia, \"Arial Hebrew\", \"Noto Sans Hebrew\", \"Times New Roman\", Times, \"Songti SC\", \"Noto Serif CJK SC\", \"Source Han Serif SC\", \"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", \"Songti TC\", \"Noto Serif CJK TC\", \"Source Han Serif TC\", \"PingFang TC\", \"Microsoft JhengHei\", \"Noto Sans CJK TC\", \"Hiragino Mincho ProN\", \"Yu Mincho\", \"Noto Serif CJK JP\", \"Source Han Serif\", \"Hiragino Sans\", \"Yu Gothic\", Meiryo, \"Noto Sans CJK JP\", \"Noto Serif CJK KR\", \"Source Han Serif K\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Noto Sans CJK KR\", \"Kohinoor Devanagari\", \"Kohinoor Bangla\", \"Kohinoor Telugu\", \"Tamil Sangam MN\", \"Kohinoor Gujarati\", \"Malayalam Sangam MN\", \"Nirmala UI\", \"Noto Sans Devanagari UI\", \"Noto Sans Devanagari\", \"Noto Sans Bengali UI\", \"Noto Sans Bengali\", \"Noto Sans Telugu UI\", \"Noto Sans Telugu\", \"Noto Sans Tamil UI\", \"Noto Sans Tamil\", \"Noto Sans Gujarati UI\", \"Noto Sans Gujarati\", \"Noto Sans Kannada UI\", \"Noto Sans Kannada\", \"Noto Sans Malayalam UI\", \"Noto Sans Malayalam\", Thonburi, \"Leelawadee UI\", \"Noto Sans Thai UI\", \"Noto Sans Thai\", Kefa, Ebrima, \"Noto Sans Ethiopic\", \"Abyssinica SIL\", serif",
+        "fontSize": "30px",
+        "fontWeight": "400",
+        "lineHeight": "36px",
+        "color": "rgba(0, 0, 0, 0.9)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgba(0, 0, 0, 0.08)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px 0px 4px",
+        "transition": "all"
+      }
+    ]
+  },
+  "apiCallsSample": [
+    {
+      "url": "https://claude.ai/edge-api/bootstrap?statsig_hashing_algorithm=djb2&growthbook_format=sdk&cache_bust=1&include_system_prompts=false",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://claude.ai/i18n/s/fr-FR.json?v=2fce8ee046e0",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://claude.ai/i18n/dynamic/fr-FR.json?v=e3ffcc3a4d42",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://claude.ai/cdn-cgi/challenge-platform/h/b/jsd/oneshot/d0d7f3571048/0.031211884822208935:1793632230:Kp2QOf-hdHbrGY3ZseWZe3VRCz8hxP-1G6Y9EuP8hHw/a5445bd4dea9b323",
+      "method": "POST",
+      "postData": "8H7XMHmcTMz1DN8nmmdVGrPIeSeGTXizVJ6hnunCGDGlBBXmYtsb2LmFW9vMMFvjF$NmCLYMHIoc0xSV2ep1d2rhArxao2O1tCZ5-8QhF2A-53VVIIZZh7Nck+ciO-$6HxCOlvd-wGh4J6OeX9Sf6vWLAxZY0AmjPTZ17aWxrE5IbBtSSSiCGSaUwl7A5I+pMxwS57x+rAgWvyUEbb2O2h+-WmreWF$FLbUn2ggpxfHu-skhe839ABfCI2y-O$ds-GWipyFZdM3M$e2XWAaWv818L0Z3K3zAh5hFC4D02r$l5SJSCNnkICkc$dL0PIGVogDbEVnVHBUI381kZvGCnt$sJyQ1M1Silif5k6P7KkKYPQNCnDxDU2cdXiKfUOaX94n0rBtFAtlclwMQk+Ma5dYmH-1nv-tav5611wbqOD6tnqlhkv9J+$3T-mUyQcS05WpYelfHpAFjTL6tuFjP6nh57wpr0KAX5M2-BAYC4d+4$0ajGktGLv2ye76lkVFWr$O$TnQ6nlY7$+FOcl+5jXvGH0C7bgWXOt3YgeQfgTkyZoX$iYJQxayHlbY7GmuZWzCfkagmP6bIy1YA2BmuJz3EM8ufPma2Vky6KcDITTih5MTIhQUrxlYAblWMpcWuH-HiA-A+DbLSk61MeyqPZmWS-j67e2Hh7iKJQ4$IuXY41AqGekAW+OxrKcZntH5Y5WLVoQ6XDY90JeKSOzoM98p+K1zmwwf+LLgNx0UEx7Pb1bqIZkuAeyijQS5ENGuQLIBseCKQqrMcdk8LuNTZym6ZkOXsv8Oe$bi3kq6wKUpFOxgMNehnV6hJw4TyoSBoPVfFfTIuAqa2GZ5nXo66MeAxwN6dY+6t1dgc3D+80uZxJJ5M7HHkMs+gnZUxj3DNMqgLMJLqzMGZH+knucBSWNnxjO23VptVDGcTfoyCUoHhnxxdSIkausDfA9p0Gg7JotZspBe2+irO5kaj+FGCK2aBx1IL75yw+DqLPv$HS0uHGFZtATyY8X+yxsxT5MBZV83c5CHx-sjFnVvUF0t+YEyh2I6muCZwPCzmKaYaQndzj+4aKziBwi+m8hnbJJh7MlzyYPnwg4DIQr+jYAjouegox+fw2rNYwnx5YzgW0mT5HFpgZzAAwU9m5Ux4OBM-zUUrd1e5ZpaIgHOqfTUuzIbrAIG7SKNpAueN6JSJpB9DfEiDoi14$oYnP$+uJs+QLw69LDuJLtiWsznc42w0FUQjLMBKK0E8dZsopdj$5aEnaiX+x+Dp8KP9QdyybEb3VBX31J0XA9AskXj883HaCCu5WvC2r$sA5rT7y$DqgAMbwP4dtL1QKrH5LulpOtKwyDOX+CTeN$DHfKSnjBGDzGftpX-iQYGNMfOJ8yxn+dNyTg$9-TDkvg5fQdrEKKcoVfqgfAzi5hdb5UwzGssFZX+Ba1HLga4EOmmzu18jFkTWiwtZfalyLjToxE4oBt7GYBX$Fm9cGaBDJFLcTF9N5XHd-0gBPk57Uqc5XDsNafQjmP1oAqAyo0DA8eMevjQkhkLzumUSv71-XkwrzF1iwnby72upJCSwK+yU0GpGvCAjWagtN7bzajWp28u4rpyFblTUwZlepI7O1y3A9Gbxilaz4WjEjx1mAkpPoFeIMIu1oJYOmkmBYK6jfH3XYk72zQlPACv$md2$xVy0aQV9XrYcT0VurHJ7Umkl8GtbgqoaxCp1kAjdwHjmjQjODkqn2rgNX0HEFLkXoD$tK36OXim9JjkSmGI0FJMvhqAIv+NvSPJ3wPWJyJ8nw8Gza0l1p+n+AOdtDfCTJ3Z2AO0FSUgckMZmMk6vA1SoUPNV4J7nCDoIrmvm6jJLl$p46vnWjWcVCjLuUWnNvB1eGHVlVFqIUe+oEBeeXfzKB7FFPtPP69wTDpOgcXpCP$U7Oji59bDyyNrpSj4vNuN9cL3yVhUfq74ArKSQdbe99ve66Wt-K2SYv3u4ht50M6AYCajxZvPyt$qA-pZ9YW-9Scy9veaeONNNHryli8aS61znxD3iWYvK8O$-mY8awAyn7dKgKkrZW2H-zqz$v+xjF$0pwKmDHqXC-1G6n8KcSmuMyx$o7-JL0iWxxC8Vfmv+UUDV5uqCiEnIgI2d-3Pw7G+ZvL+QJXtpvIp1F7zp8Q7qPVAzed4fJhkeF0NNk4zajITU8Tb6D+B-UDwwN4mI7$gZaTb1TGe0400V4I+4OQjpbgCMqbItzcEn$ZzaFPDJ5H-AT-Ku4K+20t96pIHEc3SBmQNYI1sX5FKXvrh2EDfYoT-kuukuEUy-wCkGJGu7yIEz6aVyAP1bhQTxhrbNp6Y$eqmGs2DJebdAeq-+mkN-JPJnxAHLPoevdlJlws6gC2D3yea+eQZz9TSFim$10sFFSyGzKXIKzVAv0oE$-Uhg3JUp3wcpGgcLdjI8tzjJ2tbn650szYBxYkI7o0+qEEp8r$tWQiG9v79Q4Ktv$ZzDOlLWPrZtFNC6AIilnZcN6pVj3vMsb3PjHTUPnqZiZvX5xVVB+oUiVDni6l8mquHiwLYlQbsbpxi3QSSE3D6usFH0UzBodoBh4CjBpTMUB6V+t4D$$F5ZDVmeE8L3IvFdlPkGdtD-4C8MEhrKPltTxH2Z3LJb6rkHFWr3hZI7r$fa7-3nNHK1A7H4AI8cBc$jE$F3Uwk69MV-WcoeHYYbxMv2768ag6abPpCmMMPCVP12N-PbJ4LzfSfW4rubZqXIqmvKdcbAkzDpos9VEvrvorwdcK4ZPhxc0smsGUWSQH5isThtzHA$AG63IiwhQrosQGGXCFhbTrOU7LLyF-O3$G9Ddk8HPW0xkeJYq-y9Cn$tNL0p8EFDzwwaVlOwjPoxCUiVTPq+mm546imU9tmeQuAHkansIrtu2GjbM5VCX-M60F6+mtJOIXVo+srXzXok4PpYBFn+OenxurzfVLsvgZFMDXL5CAJLH-B+6BO6BQoBfwxE8zU0j3ovq7MTfvb1q4m4k-1MBaniKmGAGbX7S$ILE3vOoLxKCf6vja89a5gGmaI4LcBZVVtsEofeITqGhOc8y5AUnH$HcSMxr804O3cCdPLPJ-Ie4A1ZAe2zLZKLayAl3EVdjbIaoNCTMHlZPDfVJrtLrAl5TtV6PxkAhLO+z9bUFTZ+cWjqd7IuhDgSwAAIAop2G3llbxX8fGpxzhJ1Lys47TWJTshLyju7HtfIS1iYjC3F7lm5EwbL8ToEtB6CPSJsGqyk3XA3vThdr4pfS-6GEcQVdA$CDBcAbLaB$BBWnjUWOQyaMBpieKVvLGcjNWI+VaDczmfBrzr124hTIYsatdSXK7Zn-73vaPKXem4l5ZtL8NJ2lAIpdmIn31wcg4c9ETWGYZCqiCFUZMSd0QKoQp7JsGyE9ToUdQoIhaB9ecHvUU5NhbHiikj2MY-SfzPp90M93190uF9NOrf8XGrF0SQbT2AexXqpokr6CWcIv$wkb1mWXJW6r9h3xS52rQQk8NWL$ETBPplTWavjeWdjDm77nGla6nEmOYCQ6-qe8dSI$VCh4-zo8EWZxjXingnAnhhjrX3wBErleBAmrUfMaud6KoW2pVxPgIB4JCimhrP3aTg7z+1tqk2d2-yf0Gs6Z$xo0NcJW1c0434ZZJFlmNOt4MOZFY9NK+koYNaX2WLqHUKTdhxyfoXT1Qv$EStQm-733eGfJ6ZDenUZC6tLoPmF80T9kx5FPMySK$jDuv5cXuu62jOZUpKbBt8XKjC6wcspjjuLuwOhySI$+HqLM8S8jCF$wEhSL1kx$limi$ZjhgEesl9uxGHJl0ktdLzOAEd3O5w0fMcGo0ucahaEqypDm4IZNXEmjHEPaxCAAClx2KZFaF7usvuXjQB7XOyUprS2YxWUTlnn$PLZuHyDcDTXO0Wf5DMzUxiAGsXbLE9BwvImsEoKqrE2S48Un+XNdF4H7OLu+zHjdcUsYgZre++ldVFKCMoobI+Um$onlY-XQ$rmeXfFiyuVF2jJbEyLt4ETj283-sSznEsC4SfMxCfh-MBV9OxhOd6vsT1BBANs$zrxQwrmHZjK3uewVSWEj3J005c-7hgKJlCh51HVeqi6EitIQP2mLEndXogsW1OjcKqWEu-PNE7puVyFBPbhZ3yN54uY73mNrj0CMLFE+QyL21lS3POry35IjSZwtLPZHcWMBbWg7tspE2-bxGV-TOIH4uqnsoB5ZhhOqeQ6jBgPXXcFvTuOfvNfLxNSFqV$YA9IYxXgM-WxXqyO64$LYPYJHA-VSh83MU02HiOG6wPH-F4aLoXhL2JBH+H4iAxvp-Q4Sr6aGDwwVgaeGU28T4X2ZrfCjsC6KzHdWifWFFPFM4Xw8mdXHMc2bIphd-on$97IAJuexgp714st3G3qbEo3Bb-7gw4Y7Mjt3ECuCyyE2+56We0s15vP6pOg9ethYKcrPyHyFAALHSKdAVifav1980t+wwhXcIl7yhgAw$IKYOaHNXa6ODAcPYickrAM5c526jG9bw-4TEeEtJMf1e6rNVrGFkoEpZbBI$onUHPBpPyqELlfeFjbFgeFXkMe$gUGjoIn0Ss-JhdPe$zuglQOpooQAZxW8MVGuL2ec4Oba5+43t0mdGW2DTyWDCNsL43H$2L4le3r+t5rIdl$8KHEeETWXSzhkzAHGxe$Viu-LJp1fmGX1ukgPQz8UGhGxpdu+2l$v6c7n3vpVDPZSJDCqgmzanxpZ5Il97AkK6kB6oWClcHQaJ2SQLLA3llv+z7obaSMKwNZ-2LvfDpHDiXdDMIPdKnCLEsO2H3H2ZwKNzplQ02MLNZ74Ekx$vxJrONGqGJNw+1S7rAaon1dl5$8C6cgD1nl+KU-DYI795W08eYbfANpmG5NE6SMkseiUvvZ+p8f8JS8jmNMEAPa7MUuBiTiYFvyckhhAGMnl3pFuuJ-QMS0qp0PVSo81X1sW$qljHk4ct-kJwry9-rABh025anf0GDZjVcVuAeUJtawKqwO4qJTFCa2kSh2OuLrgEup3mJuC-F4SMpcJjjiWrMl5gFrF2UkWxTOoXkymo$KoKis7kFLPNQr8MqD87WFNpxP12ZAmXwfoCtKvxYh8rOkP7XawAiznoTqnaYPQtCFEVCBsabbO5+NAieChQSopbKTXTfYLUpbSTdwUWwQ+n1ULDsQGLefMratim7PxcDNFPJj53S$4BLMcdKS+k7caftrPQpY0uCmg7Cri03GKlILM89y$KOi2OSL56BisEhAhZXtVFClBbEj15BpLOgfx8HZYqstXgqecfHtqKDEvCc9UyPJS$Y-rL+fD+iwoxed--3WFLm3+kvf-uKulsIhbhCQyvVZaKCgXp9ZWosZhDgXtm6S624PDtiLIxljOCcEo0ctxrNENF8Qsi++bmcWiJ5v7cCzC7S$VWik3WDsuwdTdefy53F7ArNXdWsnhQUAqdEJP3UWHyJae6FkKrvwAcGeXzTZZjKgeIYP2v0a3PtB2iGJ8s2gi4VadyATLTeb+lvX+E7MQMuf6x3jTKO60bqgfaID+GoWMAEGrWT3YyuBwimZFB$APMOHY63gKhxBobm-BEMP3S940qUn3Y5aMYyf+c9ux0SJK3200yKYxqUekZrwt-rjoxP2cdw-4DxUrpSe2QVNDhC7Msc0y5DmhntDnDlHTCF4n+Vj3WshbecOoclKqwz5rCBDDQDsuikc0x8CHJkxami+Fnlcmo0QuytSg+J1yc-n83xDc-PXZ+qGg7tJvJmcAF1YL4MjcuwZppwd-3sdLHLTC4GmoNEU9sYEgOBtoi3H-yUMmJutyC1yBJCWIEzy0bJdX$2Atap3OgiasQvy1iuZfsaD3rp7cG1G+j0qI2jlmjiFJ9J7nSY9kM7J4UcXCSATS7XC264WsoBEE$3obfFxBr8bT5xfsKCuMLbF2wsFKA$qecyrkCOB36Pz$elgHmYD5E+vPSEZJBhuhhc4DT$ad--9yYLw3Bz8NClCVzte-z6BTSTEmmufZIeeBBbxE6XnKajztbiO+bn9uhQMv901Ag5lBCCuZFgC5zx18cVbGbg2uip6xwhGZqvHU78cM-5-ToZ90Hl31sBBTWYeV91F8a8ZQlDfMTGVByiPN82X-E1V2M48Hegr0cOhAeVBHSsBIeL02Q3KlsDjOdqAqYkcOT7trH4rZysaB1q1zGSg3jmeV4dMsmlSFsqsbgLEoHWJoVW5FLX2F2UF89qYVbJdm817i4tP0onSqjE-Dnpec5jbh$eZfYqvexxJ5r1K-elWDnBkkQQrwGb880$NtxqHzFBijXrY5rIpE9Uzh+bwAx2Efr-FYpnk6I9+znITWhfvyHAavAbjJ6EO9LU9hEF6rY5yyUuPHi96KMIFXBOXSBgv6W+LlLOxWWPLQ8zdG3rKEvfGhM4O1Z687$2pQDS2WpjEfk97Qg-STyuxc6FTQUBh9WXr0GtHx5h0joBT5eFta62wZpoc$2zoNbtKScBjsqOpstL+W2win4kOhyFu2JauWDmk49BZ2U5chAsdZynUvE21DUaLr5re$tJUxjUbptrFtclK-QNY1DnIqWqu7uv2Wf+YfYGp8nh7PLyIKdD78kjB00HxzdhshprVd0rKoJxppza5w6JxL$yspGhv3eacIwHscCDBoO-dySojSlrfWZGHjEe0kluSwFTEdKhYqz5ZxcT38MAoJ8JDmQNzcz8Wd9IZ0kH1txN14EUAwsNiPOed43x-tEDbAKnE0jl680UN+X0XDw5oMbEvLYiHZf-fS$IFIoMOiN5T$H4kZ6c3MylrtoozJ-qILKzf3e0WmyTj1CpkEZKDTZ$XlqWDhyl5FBCppbpBWFOM2DB7JPImn+G1NDgPU2PLrBPNNDF72i48OxYwyMlM8MQX$wxgC4el17yM1cme1WGGWDb7jBQqzKFcW8sEwsYiMHeypsmLhlX$lnVsybIPMDlxOH6I-oYPpPV691TZtOQwbL4YW6OGoehh6mlM7x$q3rW9fqJjWm1QCsv8rxgEJP6nbOVaXCF4vezrs20QHBoAb-j20aS3hq3krtO75q2GzVB79YXYggTs1+-$Jwn7dTj4D1PJdwLgU4FAyI+k-JN9pQm377Sh6pOGA7WuCmX1vHrdG1igPNtdsCW8teVVtB9HHzYxk9gAiSf4$N$IfxH5rpLmfEvxdIBUo1UZyxpW$vrE6kj0UJcE9X5V9AxQfJI7JAogAHfqEiGp3-ZQ21Hsr8lD$Q$cAm$HK28YXO$1Xo$CfuQ02ziyxeH-2TtDeOw1Pdkc-fumaYEonXMu-r4sPPDJp7sd5idXd919qYy4Cwit1-rbXFG0NiHygeSSuL7H6ncIL3s4ZrsE3bwwmlv+B8axabFfKqKwCn2GXn1YN2Km7iv4sC29+4OtjCyaqXZ-QP7hIXdApGp7rYugkU0h38JtsBs1B5eLleEIynOqU0QwKKFgVe-2JBh$4TXrtYI-$klhWdyrQ$6d5pwhlUyclYmfvc1jZ9luOToywWt9b7gXADgKHFfGdIC0yUBYzb8+e0$8Jn7QODPbnl19X0Pch95WaicDwEAMw7HBWjg97WPbUFsuPYT-7PUQhD62fpOuHipIMJ9L3EYDffj9ASiCZ7MNqpELbup1h0ictH2e+5dEObFDbH4MLa0k7vaVa19qXGefGU42YFKIWYe5SFQIEeY7kyc15-4vAb2HK7JzqvbdvfVfoimuQMosBLP02gmnX9q$XOL6gePC+BBz+glvuT$Y7890gWoa6eHSLL98FH4q6PPOq9UKiYmNPWneqzEl1zTOP3ZtNoq2QoOMslcamrObPOT9nLwwq0boT-IY+wbPli+nZqlWa+uOWJycmsBGUiUcB8NQh+OT$mg3wt3ojCXvuEwg0-N0tXK0Hpey9j202MBnQJlAohLrLL59bwn4Y6egaDcoElfK0p+khil4xh7l2y+Y9Auqow1X-EBV5U9c4EZAg$cpz1fcx2SujKm2eZrAxpdami-ecx-GiDUHf+845AkIe1X$YU-Jb$6TxTTuUNVq2yD9nmi48MduX3XOUWUGCF1+OYjW3u1HavcAKYyZnji45m$uQi8A-+xo5syIOHwsL4fi+j3Jnt5-qGxllhftBWgyC28WOW+5X$q1nkW2lvNYXIVEk+4bez8532LDArKW4X2OqkMfOOnfGgxXWUXr4BfczBe3$GP9KOP--D+AOjolOyg-9I-t1sFKdqM6Mp+Wets3Cn7$XuohVQyqfliG0Dsbqb1i5+EVph4cyTLwMgFrVm+naYYN6-EcmvE9zxnrk3qQ+3CmWemZdb5abeZ1FBeL6y$eSoOcoSSOCLKx1oQ-Ou50QO1zUxKh5xSTY8qDt3uZpaXvaygzfaHGUfou8+A4c8kxkjkZAZ-W9bvxHPbLf-8fkYWi0K5hI563e6TGxP-V3KPKsDhLp5fnwwlPVVr4qA26bObJlJgfsCgwhr+-j7U329evwp1glk6o9KXGeLOp65uMOhT92+hggbuGHkyM5u3kg-hYo3Wtd$DourZCqAAdnLlBEq+S4x3OD1+HFI+jrB-TgkpY5EJy0Bvrh6lDwqPIEnnD$u2lz9T45moo0cDP1AmUsDIfc91xq$46zuUhZGdVwbcje1lc9fgt8TCUdopNQQ1u6TXiQXFnmCveWZOZ4SX9oKrrSnTJ1C4QgjeX$8vA3Ab4GuujahhEaxQlm90J8TkFuldnCiw$91-ZhbDwKB2doeVefxDvTrtupI$xHY8yj7ztI$bJE4B4vL-dHJXqH3mJbAZx7P5S2YmYGVj4U55v$rdyZuMM98gB1XlMq7O5lN6A+WbwXMBFGD8g6aKf4vkU98UhFOEn64wfI$OgIeEbGM82lM1eDSQWcsIE1naN07pr2v0EglTAC2mlHY2z-E8JJOwLcGu9uVaETqBF-S0O0sKLnbYc66Jp3MSHIj9c0xF8PFHOwVd3hlPTHWLrTENmnM6KcYrjJXHABZpyCQfu27YVawMbmhgbHi2UC+nrDzwh5sr84Bg1SOqMFAcY6Fj7wdIoqfVwUcxv9w2SDZoxOVkkunwLWISEgHWWmsd7MbHqrvhKb3MXBasPeNgwpXYbqr+QKt2zxrDezVUe3hWMZFitLNWHO7fkheMW4G-LMIGE2D1gIVW+yhkmd+LDmtIKx0G4678Qskep3F+OcQHP3CgItKh+nPEFOrUKPWnE4ssd5zL-iLyfjP+Az1iLNd9H6cofOnUY+2JuZFnAPFsBtEai2f1g+ej9o7fcaOeGrkAX7aU-Naan9eHvaY$3tqIj-AKmEmqMq7bUZhbuCD1exynb4vC5U3Q-PBGIMA+sXgtrD0822oWy-Y8q$1YPl44jCAfGjw7PSMGqkjaPQ9a0kF00aVmkMcYvjegNmLT++$0IWXOKW8xi-PbOQFqT75vcJz5cpnJU1W6KauxpmekMJssN8IsIqtNFvFr3CYVuEDDKxsAl-cbSSAfFpPCjso6cfkYQE0xYFOflFNeWZ7W+4YuvjJ$OG$0xddG+nx8PiQjXCdN6XAJ3D3ylaBMqNvcAwvWOuuD7zfhIzPog8o8GVxpJYpoDYNWt8+ebO7CCz+La+jOlXPnr+M5wSaP-7$eovu1BUbMTBbb0XCr-+h06zD1aMWMvbYIYJpI7nK3vVjZcvrE3fQojNLmE3uP0x6$mBJg-8YJP0maJ97DygBtHePjVLdJLpVL$JjqmCghFeIFZcuseibDMf07gwcTk6J10SPbYm-soNHCfEJ-TQ-72ETplg7WJSkg-yjM-oy8C9OWV-19$C1g07dky$LZukmUD96Y6g813DEL1P$a3XMimHzeGxDwJ+ZsS3nuZUI9-j-GFuj85xkanKJB8mFOVmtu$lSiFs3O0t-ImPMTTXk0YrBigxFC2mhcILfjMUG+spUZZt9-da9J4NXzOfE4+dZS338KJQy5S-ULqeAHUu1VtoSU-i-nnXgXaAbBFCGDDpUuQ1H-WEcEsU-CUvl3QdFH67vkFlSNv5Xk2AxM6jVbY2nrav-YZFVx$Qp$yY9IKcbSjM+yGKc6ys6q1F80GBYk9wTXVkxisO7v845VAhAGdLUKvvZxiO65$eSfOcCiO4VnuxPTAfzJjZL0Iy7gGOy15vVl7KINrVb1NyAeZFw+G+Z3Q101nrT1p$umin0N-xi2Aq0tu6rloOm56urCrv4axV9ghxe-bvuV09xeLuwwqF$gnOIl5e8789Nxkmveul-Ou9Qif$GnDA5vy6keN3mQdDlSd31vp2ObMmMpzXSBjPV8H0p9$ttWz2+rcjFiPglVUTo9v8sK6p4DZXcLiQdgrCP+kChjvNhQLL8ynJxvHsYI1oLr-8PEoINOeAGBIUtuip2LVUucpQ6Lw$z$Jemg$yrfTOLuSkfq+F3A7sNLYEs1+ZuDfHubMlhMclkduZO+lBUUjK5cEApHDYTu1evXg5TCDIOQQEGdXLmsZHHcGUjjbJ7nGdppSKM0bQ90gINZo2CPEVJ38cOveOdgF8JO+SQywJkGpEjoXvaz8ujp32aB2Ywg-5MHAOvOgOw1pkwHy+iL$0XXatiK$amQNhxi9-Z3X-wADM8lF1yj3GM6IEjC7tL2DxDJjY3rXn2i1in+y51gPLeU$0lApzn1Wpx6OM1$6-p1MyUeji3jSG7i+ighEZpC5urotiI8cgEFz74lopCv2CGhABntjDasd2UHILIXXQ6EwkiBdYOc5in7WFdFEq5ituasCUIgucqaeKmrbTj1Mb6T6MoN2Mk-t22dhU+HIqx7XljOiyVUj+6efpygSJwcNgXSWJ8Wm5mtEmTUrmib0lsfvLx6vNfZmNLEI5ZAYT68TV6srwyt8wmeZI4IbIemfJlFk$IhtyhwhNwZ$gLAPgPuTfD06xnYDiP09v9uabIxHSz5hAtEokEvo8NIsNEM-ZyLdUWz7YCgBlGNjxWiYJJIsaW0wjByx+OF2Vbakgr99boPoWh68J$ujMZPaPtcGjyAer+4fW7rxfGOq+EXce+YL5EiSPkeOgxz3PDQ9FyPi0mk210wJhx24bivBwYHLAZ-4$hJHfcFuCCFykxFw5uFkqEEFik1vuNzlm+CYHF0MG-TcJ+jdLYGDpjzYWydiSOBvHep63StfZ0Tq+rJmu$fnBi$Fgb249u4jFFbqB$Ve0lMnNwFQ0X+-nUKPBo2u4dxEAnsoLU6ZPgQcQT+pAmZYbM41+xG2FnVh$xLQ24jSmXni+uhkGIhsaO3UXGpPz1iq6294qsaco12-GNvUT14mu5s2HGO$0PJbcGClMS3ZnzGjql7Y9r1HvojUWCoUm$mECqCTQvzQpFBdBnKdjsVg04xvd9ABSHciq2EanrQDmrneTctKhzcViJu8sFBSg+VwM7ZmFL5ljohyeO0NGdMzpgZg7mPor$gys0VU8FErpjp6xtz$xCXMQ$FAfdIkkZHCf6EkwiH5JnUr7t0-XbAjUBE3Ph1CSn7S$EeeMaw4x2m4dxMx87lVHCYSnI7ux3iEgY+OXtYz3DzrGFaGXDfBa59NcxmqLGKxd+L-+Kfz21tUoqtxAGlK6qa-UQELhJm290zCErymZAUsQoq$pX5OBJTKZWiTaL4uAtKJP5XbuldE9ixMed509uk+EmtL4-h4M5EkYqzJjrhwBWu$SOfZmrW+PdGqAWtzHYbjUCW0OiC9eY0sgQKKIm$lwBdZuvbM3ltulOG2Vrqxc1jPNNvMGK5ZgLaijoU8ktNP6Mm4$$CWMHmNIvZtdd2UcUnu3QZFZKDDFeBgJU$QyxsfmT$I2Z2p1vkmJTFyUe7lDwJ0f0XuB7x1i9gn8wzB1zFUTNe-oC+vIMLeCPOk0B7Ou9$$55Ybe9-hrir9TmtZtPBBETjeYJQHkixoTvzP58heEaOWtQicccDlWTVVm8U7BwPYspXJoN$W4VBi3fEtph8wy7iCQad2PNrdOtm4xdDumKdYru2PmmUjVz$s5f2HhBZtvdi+7$q1rWuBv3qW703YkffiEtUxF-fYUulyJd64QowT21OnqeQU2UFKzf0AryGxcAfzHxFzqsEVAQ$U$ozuKA0iDvnkA0Qe0X-FtmXj-eHrCm7o57q8u9xHgeehvBz1doJidXPKnieDMe$5xOeYprKq2JOtI955SCbxCU124Cs5QW1qZ9vLF84qIsDnt$XMtGGvKl3PCcSWkfDyST-F-H-DubjUwoVyZvAiyXYKza3mV3vIiIQXQv4NGIoVQt0k1oCYoCVBpQ9mteTDs8oLA+M49X2iw$uafi+86Cgr0maYr9kh3iHJ4SJeE67eIA+FzIZlJkZAz+bIdPQ1qmtF3wr1G1u$JgAgzlazVPMKkszu3hOVinxqZYCNUYhm1Nul4fT-rWzMjpLQ0Ql91JuLaI$t0j6L12Mm1a1pSPlI9uvGd8vYyvgdWLFygac-TevTOy2mpB3KsfJ6XPjIfMieVDACIxeNbHjqEP7rGnIZKj28EdiF5NYwbVmwVwIiWBLwCmNWxxwueHcl$YHx2yri0n5edhYavLWxszcTzD4ancMWI+qlVWEgZ1P8$XfcrPQV2zT65296ZYKMn-K-1olcTdCrtaKOEUA2qIMW5EH$iEBsfI24IwMXfB19H5Xsct47NDqoTXw75SNlX+ZI9tBN2mc8cYj$COMYrnfxrbj0u8qWx5zepCfpffmYOl3Lu4TmueV+iXL15qU9OKjguuUc$m-8Z0-gzK+OeCEoBXSpJ3uWufXvuZXscyJFlTLcTw+cHbMdup8T2IYjfJ70C+ZxeHH51qvt4SgN7FV6z7TFndILv7+B6-Hbh+o$tjnVElWg87fBHPv0VISW$5P9xxYAOf5ObtX2DNsMfomg7oObhPW1BUoFshCxxArycptY$y86fHPaI0mt39etgmUJPDP2cybbXPgg83NfWNQYBo85J58YfxqAFG8hvGkzjhSd8O0dVC$NYhAdT$5ICvpDX0+bn3AlbH2zVSKZ85AzQlWtklUCQqX9QB--SZpu2We+8FI7JVbSyLtnYh4BxheB2bY0Mri3Cl6I9Vf6gyZiZhfJ8P1w7EoNd4VI2Evx2jXUZ4dUIK6w44dDusE$a$dB3gTgFxqzoPZS9l21AXV9d7zGzihX4xpzLF+o$MH1SYVNdvsWl7pWWA5OJBlZMrgOM6YT+z5M8-S3Z+A7AuFehmonqshW6q25HCsziirAYSGdkzw-7ILU6X+t23DVzlZ4C956YJVNXB9C7+w9wg9QFOJ0GC$1h3$-pQj4xSKoc1cX0ONVps-X-kDEIhnw7b6cBlE9r13p4qkNWm-VW3nLsu8$vrsrW0a8OWvSoX7i7wDfUy$olziKtk0g0HDT$WYJ1By98WWpyJhzemjML6d0uSE2DxepqcLrmDMsfPVF6UIsNnWmxkMxGDfWFdNcopLsK1dMPjlldtQMx9X8fEVV2sVxjs8KppDvTDyB$JGUEFxDlLEJj03jLc21U-iqKsBBGY6TOmLCZml9pK-2yh7HasVs5mLyT+5O1HOWoj5YM5Q7WKcUmGnirfYiDOTSp5Htn0hJ42Am8FF3BgpVX136yeAsJJTCEmiHp+HSboqgPO-$XAvFtzQX3eFe7lSNQGsNb8Zji$YPPQQArjkPgGZi1O1T$oT8ZFWQ-yWMJHc+DZFaU$wAVpm4l$1du3r$EfhEvp2k897CUes39UlOuMz-DY5oIFcKQXkU8d7iJDUAw6EKw0TYT-XppoFCw$Bkt05frc1xFuId1MkgOxYMTG+TNVFL45AoBFPadu1J8YDUL$6FTp1+p0bhXvs4x8C+HenWI4tNNhosLPqnhJhTBpApA17jBgWg0HwdEu9BNhvaonEoKMigkE80o3g0PHQjcch-6KoD0Wg+VNtQgU4gG7-gj8Bo3O0frWLcSGZesTOxGzGF+tufcoGBWYsLTzKiVef98zWygkHnyuHpo5aZfHxBptIrhi2LckdYZGexxkBsIULBsMUUlW9sX8v6aqLTlZV80zek8UC+8anKd4Cs4JzLUx-cuezirz6VCtt36uWCV42T0faUTf-BEYKvN4FAvc6fokz9bMg1m9eVS-4qxTo1+t61lYllIGzZmd5+hoKEEYG5f1oowVWdxXWflhptHCOkGPD-mhY44lyA0O1lpN2SmBXMZpIoi86SSPgpsHMCn5Wp$sDhOx24K8Hj6a3Z7xci43IrVC0zVZ00G4HVF$5pfPBFqqcPN87kSpKxEEZwmbgmXmLfHNXJaP9G$kVpUUs6QHdJqy02366U5Z$j+yb94Szxtf2tBDabB1qXeACor9uZGTTLbBgGE1zDFcYIrGwHNCJLviuxVwHqQ8XkYk-T3tZumVTQWU5reExAcy5Kwf8WexLuxI+HjH28a$Ihm8dBCCpYQotc7phvICmIdWp91Th6Bym+oCVEKm1Vxa8h4oAtcP+3o5yZCUx9No8GIjEb6qyC3kKS3pJr+AvC2G9rssYKAPE64uAeTLzCKjLEwHsCWoFUd9OW8E$GQtCVpth$tgXbnEMx00OnyUmWTCFtcFpMlKw2sWuiaK5XMPhejoOLcapK1DHaWV2rY6+hiPLp1rZy4jkEFPxe+6vdhrQt-Ua+5FM2ivMtcfLu1GX3YaYGIopzknMaU5WZV9cqmvc50hc5egVAABpZ42ig2zsuKzXl6puZ0UWNzdIiqa0JKJQ5mK+ko7qw3OWnLL$KqE6HqwG9NEu5Ewe9idhBiG8CXqA1ZiKggxt8C7$1VmaY4$iDFJ1p$aQbgC3e1LQUCyuU9rGZSDV9oOb1Ehy0KcUeKBFzOCPEEnBeU6QLk4Y6-hpy0xQOlk4HtqwV3OgKy$DElGvWn0YDiMojIk-VFUcJy+nmlEu9+UkFTh13haggjLxoo1Q2mL0+D8LrxFx2XEWmK5Ib6OOkZWe5ywlZivGCYKUDU2WBfBEYukN0pNmT9wXmOrowaLiztOHmcyJQl6ek0F7nn1L6qdlmcvBXEfj0vowPWPmJVvH4d$IJLSMwsmqOUklLLBQO406mNnJyI5hCSfI+VxL4Wlov28CPVg8NVSItuBANkaHEi+CsqUO0pcimbwgXxQY1hzE-PmCagI+5azznC+y2xYddVYPjVZSdDOPdIdNGfj4lN-uZ8E$uEkXHZcIHnukB5odI6WlMXKD1uWZ0Q-e4grlh5IJs0TGrXbZOZHvPMhTvwshvV718vlgoKvbgG6ugcNvnvCwNcXu0eeLmj1OOOcE$IYsYVph-w-ckN+Gnaa1f-MbqdAcm$qNvmkr35DAwclaJ9VCyKFPGDca56Z0GPZQuTnxm+9u0WMDFEfEOaM9zWX34FrKN7lJwPJAOhKX+XH5FbGpo1+nwMB6D8VOzjLVoExV1oZC5EB9qv9K6mani8-1YnmXV$qvI8fyQ4MQaOOrZqgCI7K3s8zss8qrJJLg5iF+tbMGOdh1Kvshe0N0N$XJpVtc7wPkanOgXcFUro-U2Dpd168y9McenarcmqNyjotCx1Z1Q4r--BU4P93L2G2hZH4GdYl01jK3W07hPY89BuThjyA2oMCxQ4YdUI4dyls+cMMno-KgQyTF9$zyzHQTPZr-3P+2DbOsmnPA3zA2+PHpeMNp3BCo8-tjoXm85Yb-tzJmJg+LzIHVs4eolm7xSOomb-D2+AW5zTtaY1p$HQZwYyqT9Ou-3YEbq8AZLtbLCphY0YQHs32r+OS3qAxDZtevl1L+vejZ77pSY49A06PBUolyFtoDIbF1QGsYHQ5dp0oxFUW$jWxsTVLbJKDoYTKalUQqprd3KW64NWZK6LLtsiSjETcQ8$mFuNFNzJFGH6AZYuHMsbHkBiABBSfnrG+g61Bjv5Hzst2kCjDOWYkMzUaruAU1JeVsdXF$Bg$CB$FjfOg0uxLufEz8dDW5p5u0kv7gLaTWX$KyGqXPX+7M8GDiMyFXiaDOBVv3Ggt+b-wSvLGH-bn$PWtxa4cuSOi3Dfuwf3X$dbG4eJfY17p69N-H2+G40ZTAqDVbtZNJVhGVp-NrXy+0swVNctTSJ1z1ELwxhgQQQlHec5mb$HgNSusldoQfLZlb0OsWkEcgC+yXzxF3V5KKeQUitNOE4xC$pMLmtfxuJUqWyk936lo1DVpMyT8TI0t6YnJ3TA952iAnPznbvVcJUrGTqG22JTjDfY$TsdXwG493Amg55WOyM2g9rMtrCuc1ddEdIctqHj+7cvhh9HxFx1IpcoznNq4g3rcf5rpWHKnFH$wQw$+Ajb0pVtUSXHgbnQ8FzBVlA22ILq5IAbcpCWFwFAwMDB46fJxDZaF2IcHnLtw$CjZIJenAnBCla28Vy57rT7-WkimJ3si7sUsWzItDuQ0YtiC4KYBasNWj1+BWwhl3d-28NBPAafeeOttJ0A7FXq9eaVigtacpQQ0dsN6upJzd$FTYPfZk0otdeZmDKHCMQILFMhMcyX0pp+lEtEhF8mGvLS+$G83EPnvBiJqkJZzmy2eky3ciAVK8M$iaSIYt-oXwFt46gZJvjaVhlYmwOpz+nh+njUkib"
+    },
+    {
+      "url": "https://assets-proxy.anthropic.com/claude-ai/v2/assets/rumEncoder.worker-CrfNUAhn.js",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://claude.ai/api/event_logging/v2/batch",
+      "method": "POST",
+      "postData": "{\"events\":[{\"event_type\":\"ProductAnalyticsEvent\",\"event_data\":{\"event_name\":\"page_viewed\",\"event_id\":\"a0c11546-3f67-48e1-a58f-fad4b63a11cd\",\"event_timestamp\":\"2026-11-02T16:01:39.843Z\",\"properties\":\"{\\\"surface\\\":\\\"claude-ai\\\",\\\"_dual_fire\\\":false,\\\"url\\\":\\\"https://claude.ai/login\\\",\\\"path\\\":\\\"/login\\\",\\\"page_name\\\":\\\"/login\\\",\\\"anonymous_id\\\":\\\"claudeai.v1.59417966-4f6a-46b8-bbbb-b7dd55822e1a\\\",\\\"service_name\\\":\\\"claude_ai\\\",\\\"canonical_path\\\":\\\"/login\\\",\\\"canonical_url\\\":\\\"https://claude.ai/login\\\"}\"}}]}"
+    },
+    {
+      "url": "https://fdac3da1438a.w.hcaptcha.com/logo.png",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://claude.ai/edge-api/client-health/check?platform=web&bundle=1793628842&locale=fr",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://a9cbc9fceea2.w.hcaptcha.com/logo.png",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://638bb1e3a4ea.w.hcaptcha.com/logo.png",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://browser-intake-us5-datadoghq.com/api/v2/rum?ddsource=browser&dd-api-key=pub71869dceb5b70dba6123af9ca357d1f9&dd-evp-origin-version=7.6.0&dd-evp-origin=browser&dd-request-id=c82c5777-15bf-42f9-b30b-c4c0705377df&dd-evp-encoding=deflate&batch_time=1793635303272&_dd.api=fetch",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://api.hcaptcha.com/checksiteconfig?v=10dd112850fe5c29df1e51ddc05fdfb8b5f6dbae&host=claude.ai&sitekey=a8086506-2036-46f4-ae50-00d8be805efa&sc=1&swa=1&spst=1",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://api.hcaptcha.com/checksiteconfig?v=10dd112850fe5c29df1e51ddc05fdfb8b5f6dbae&host=claude.ai&sitekey=f1b21a9c-9100-4022-a928-8d5c29de2e6a&sc=1&swa=1&spst=1",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://accounts.google.com/gsi/status?client_id=1062961139910-l2m55cb9h51u5cuc9c56eb3fevouidh9.apps.googleusercontent.com&cas=rOBt9pOKimlVXGQQB1wQrh1R8z25vuatdvgxMP1ALHY&bs=LH96E633sU%2BBb2RAcpRy5DEXtBsyHI2vakbKMUcQlqk",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://browser-intake-us5-datadoghq.com/api/v2/rum?ddsource=browser&dd-api-key=pub71869dceb5b70dba6123af9ca357d1f9&dd-evp-origin-version=7.6.0&dd-evp-origin=browser&dd-request-id=e8b48b3a-8ed1-4394-a15c-17e751d53327&dd-evp-encoding=deflate&batch_time=1793635303840&_dd.api=fetch",
+      "method": "POST",
+      "postData": null
+    }
+  ]
+}

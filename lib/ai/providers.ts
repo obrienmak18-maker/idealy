@@ -81,6 +81,17 @@ const google = googleApiKey
     })
   : null;
 
+export function getConfiguredDirectProviderNames(): string[] {
+  return [
+    deepseekApiKey ? "DeepSeek" : null,
+    openaiApiKey ? "OpenAI" : null,
+    groqApiKey ? "Groq" : null,
+    openrouterApiKey ? "OpenRouter" : null,
+    mistralApiKey ? "Mistral" : null,
+    googleApiKey ? "Gemini" : null,
+  ].filter((provider): provider is string => provider !== null);
+}
+
 function resolveGeminiModelName(modelId: string): string {
   const clean = modelId.replace(/^google\//, '').replace(/^gemini\//, '').toLowerCase();
   if (clean.includes('pro')) return 'gemini-1.5-pro';

@@ -33,3 +33,7 @@ STRIPE_TEST_SETUP.md
 
 workspace.tar
 _workspace_review/
+
+# Binaries
+*.exe
+

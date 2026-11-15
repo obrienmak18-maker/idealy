@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ConnectorDefinition } from "@/lib/idealy/connectors";
 import { Input } from "../ui/input";
+import { getFirebaseBearerHeaders } from "@/lib/firebase/client";
 import { ConnectorCard } from "./connector-card";
 
 type IntegrationStatus = {
@@ -44,36 +45,32 @@ export function ConnectorCatalog({
 
   useEffect(() => {
     let active = true;
-    fetch("/api/idealy/connectors/status", { cache: "no-store" })
-      .then((response) => {
-        if (response.status === 401) {
-          throw new Error("Connectez-vous pour relier vos propres comptes.");
-        }
-        if (!response.ok) {
-          throw new Error(
-            "Le statut des comptes est momentanément indisponible."
-          );
-        }
-        return response.json() as Promise<{
-          integrations?: IntegrationStatus[];
-        }>;
-      })
-      .then((payload) => {
-        if (active) {
-          setConnectServiceState("ready");
-          setStatuses(
-            Array.isArray(payload.integrations) ? payload.integrations : []
-          );
-        }
-      })
-      .catch((error: unknown) => {
-        if (active) {
-          setConnectServiceState("unavailable");
-          setNotice(
-            error instanceof Error ? error.message : "Statut indisponible."
-          );
-        }
+    void (async () => {
+      const headers = await getFirebaseBearerHeaders();
+      const response = await fetch("/api/idealy/connectors/status", {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers,
       });
+      if (response.status === 401) {
+        throw new Error("Connectez-vous pour relier vos propres comptes.");
+      }
+      if (!response.ok) {
+        throw new Error("Le statut des comptes est momentanément indisponible.");
+      }
+      const payload = await response.json() as {
+        integrations?: IntegrationStatus[];
+      };
+      if (active) {
+        setConnectServiceState("ready");
+        setStatuses(Array.isArray(payload.integrations) ? payload.integrations : []);
+      }
+    })().catch((error: unknown) => {
+      if (active) {
+        setConnectServiceState("unavailable");
+        setNotice(error instanceof Error ? error.message : "Statut indisponible.");
+      }
+    });
     return () => {
       active = false;
     };

@@ -127,7 +127,7 @@ function PureArtifact({
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
 }) {
-  const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+  const { artifact, setArtifact, metadata, setMetadata } = useArtifact(_chatId);
   const { currentWay } = useGamificationStore();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const builderAgent =
@@ -1142,6 +1142,7 @@ function PureArtifact({
       <AnimatePresence>
         {!isCurrentVersion && (
           <VersionFooter
+            chatId={_chatId}
             currentVersionIndex={currentVersionIndex}
             documents={documents}
             handleVersionChange={handleVersionChange}

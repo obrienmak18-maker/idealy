@@ -3,6 +3,7 @@
 import { LinkIcon, Loader2Icon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getFirebaseBearerHeaders } from "@/lib/firebase/client";
 
 type ConnectorConnectButtonProps = {
   provider: string;
@@ -23,9 +24,11 @@ export function ConnectorConnectButton({
         oauthProvider === "vercel"
           ? "/api/idealy/connectors/vercel/start"
           : "/api/idealy/connectors/start";
+      const authHeaders = await getFirebaseBearerHeaders();
       const response = await fetch(endpoint, {
         body: JSON.stringify({ provider: oauthProvider }),
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         method: "POST",
       });
       const payload = (await response.json().catch(() => null)) as {

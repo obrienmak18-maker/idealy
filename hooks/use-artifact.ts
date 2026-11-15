@@ -21,8 +21,25 @@ export const initialArtifactData: UIArtifact = {
 
 type Selector<T> = (state: UIArtifact) => T;
 
-export function useArtifactSelector<Selected>(selector: Selector<Selected>) {
-  const { data: localArtifact } = useSWR<UIArtifact>("artifact", null, {
+export function getArtifactCacheKey(chatId: string): string {
+  return `idealy:artifact:${chatId}`;
+}
+
+export function getArtifactMetadataCacheKey(
+  chatId: string,
+  documentId: string
+): string {
+  return `idealy:artifact-metadata:${chatId}:${documentId}`;
+}
+
+export function useArtifactSelector<Selected>(
+  chatId: string,
+  selector: Selector<Selected>
+) {
+  const { data: localArtifact } = useSWR<UIArtifact>(
+    getArtifactCacheKey(chatId),
+    null,
+    {
     fallbackData: initialArtifactData,
   });
 
@@ -36,9 +53,9 @@ export function useArtifactSelector<Selected>(selector: Selector<Selected>) {
   return selectedValue;
 }
 
-export function useArtifact() {
+export function useArtifact(chatId: string) {
   const { data: localArtifact, mutate: setLocalArtifact } = useSWR<UIArtifact>(
-    "artifact",
+    getArtifactCacheKey(chatId),
     null,
     {
       fallbackData: initialArtifactData,
@@ -67,15 +84,13 @@ export function useArtifact() {
     [setLocalArtifact]
   );
 
+  const metadataKey = artifact.documentId
+    ? getArtifactMetadataCacheKey(chatId, artifact.documentId)
+    : null;
   const { data: localArtifactMetadata, mutate: setLocalArtifactMetadata } =
-    useSWR<any>(
-      () =>
-        artifact.documentId ? `artifact-metadata-${artifact.documentId}` : null,
-      null,
-      {
-        fallbackData: null,
-      }
-    );
+    useSWR<any>(metadataKey, null, {
+      fallbackData: null,
+    });
 
   return useMemo(
     () => ({

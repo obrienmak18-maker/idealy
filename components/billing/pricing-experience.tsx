@@ -15,7 +15,7 @@ type Tier = {
   id: TierId;
   price: number | null;
   points: number | null;
-  notes: Readonly<Record<IdealyWay, string>>;
+  note: string;
   features: readonly string[];
 };
 
@@ -24,10 +24,9 @@ const copy = {
     all: "Everything in the previous levels",
     annualCharge: "charged once per year",
     checkoutError: "Unable to prepare payment. Try again or contact the team.",
-    core: "Idealy tools included in every Way",
-    custom: "Adjust your monthly Power",
+    core: "All four work paths are included in every plan",
     footer:
-      "Pro and Business use Stripe checkout. Custom Power remains unavailable until its billing and economics are configured.",
+      "Pro and Business payments are processed through Stripe. Enterprise is available by quote.",
     loading: "Opening Stripe…",
     max: "Included Power to be confirmed",
     month: "Monthly",
@@ -36,39 +35,14 @@ const copy = {
     points: "Power Points per month",
     powerUnavailable: "Custom Power amounts are not billable yet.",
     quote: "Custom",
-    routes: {
-      hunter: [
-        "Candidate",
-        "Licensed Hunter",
-        "Double Star Hunter",
-        "Triple Star Hunter",
-      ],
-      mage: [
-        "Apprentice",
-        "Mage",
-        "Archmage",
-        "Grand Primordial",
-      ],
-      ninja: [
-        "Genin",
-        "Chunin",
-        "Jonin",
-        "Kage / Sannin",
-      ],
-      professional: [
-        "Starter",
-        "Pro",
-        "Team",
-        "Enterprise",
-      ],
-    } as Record<IdealyWay, string[]>,
-    save: "2 months free on Pro and Business",
-    saveCompact: "Save 2 months",
-    starts: "The essentials to create and guide a mission.",
+    levels: ["Starter", "Pro", "Business", "Enterprise"],
+    save: "≈ 16% annual savings",
+    saveCompact: "≈ 16% saved",
+    starts: "Core tools to create and guide your projects.",
     subtitle:
-      "Every Way keeps the same Idealy tools. Your level changes capacity, pace and support.",
-    tag: "Grow at your own pace",
-    title: "Choose your level of power.",
+      "The same creation workspace on every plan, with more capacity and collaboration as your needs grow.",
+    tag: "Idealy plans",
+    title: "A clear plan for every stage of your work.",
     unavailable: "Coming soon",
     year: "Yearly",
   },
@@ -77,11 +51,9 @@ const copy = {
     annualCharge: "cobrados en un pago anual",
     checkoutError:
       "No se pudo preparar el pago. Inténtalo de nuevo o contacta con el equipo.",
-    core: "Herramientas Idealy incluidas en todas las Vías",
-    custom: "Ajusta tu reserva mensual",
-    first: "Desde",
+    core: "Las cuatro vías de trabajo están incluidas en todos los planes",
     footer:
-      "Pro y Business usan Stripe. El Power personalizado no está disponible hasta configurar su facturación y economía.",
+      "Los pagos de Pro y Business se procesan a través de Stripe. Enterprise está disponible bajo presupuesto.",
     loading: "Abriendo Stripe…",
     max: "Power incluido por confirmar",
     month: "Mensual",
@@ -91,39 +63,14 @@ const copy = {
     powerUnavailable:
       "Las cantidades personalizadas de Power aún no se pueden facturar.",
     quote: "A medida",
-    routes: {
-      hunter: [
-        "Candidato",
-        "Hunter Licenciado",
-        "Double Star Hunter",
-        "Triple Star Hunter",
-      ],
-      mage: [
-        "Aprendiz",
-        "Mago",
-        "Archimago",
-        "Gran Primordial",
-      ],
-      ninja: [
-        "Genin",
-        "Chunin",
-        "Jonin",
-        "Kage / Sannin",
-      ],
-      professional: [
-        "Starter",
-        "Pro",
-        "Team",
-        "Empresa",
-      ],
-    } as Record<IdealyWay, string[]>,
-    save: "2 meses gratis en Pro y Business",
-    saveCompact: "Ahorra 2 meses",
-    starts: "Lo esencial para crear y guiar una misión.",
+    levels: ["Inicial", "Pro", "Business", "Enterprise"],
+    save: "≈ 16% de ahorro anual",
+    saveCompact: "≈ 16% de ahorro",
+    starts: "Las herramientas esenciales para crear y gestionar proyectos.",
     subtitle:
-      "Todas las Vías conservan las herramientas de Idealy. El nivel cambia tu capacidad, ritmo y acompañamiento.",
-    tag: "Crece a tu ritmo",
-    title: "Elige tu nivel de potencia.",
+      "El mismo espacio de creación en todos los planes, con más capacidad y colaboración a medida que crecen tus necesidades.",
+    tag: "Planes Idealy",
+    title: "Un plan claro para cada etapa de tu trabajo.",
     unavailable: "Próximamente",
     year: "Anual",
   },
@@ -132,10 +79,9 @@ const copy = {
     annualCharge: "facturés en une fois",
     checkoutError:
       "Impossible de préparer le paiement. Réessayez ou contactez l’équipe.",
-    core: "Outils Idealy inclus dans toutes les Voies",
-    custom: "Ajustez votre réserve mensuelle",
+    core: "Les quatre voies de travail sont incluses dans chaque offre",
     footer:
-      "Les offres Pro et Business passent par Stripe. Le Power personnalisé reste indisponible tant que sa facturation et son économie ne sont pas configurées.",
+      "Les paiements Pro et Business sont traités via Stripe. L’offre Enterprise est proposée sur devis.",
     loading: "Ouverture de Stripe…",
     max: "Power inclus à confirmer",
     month: "Mensuel",
@@ -145,123 +91,67 @@ const copy = {
     powerUnavailable:
       "La quantité personnalisée de Power n’est pas encore facturable.",
     quote: "Sur devis",
-    routes: {
-      hunter: [
-        "Candidat",
-        "Hunter Licencié",
-        "Double Star Hunter",
-        "Triple Star Hunter",
-      ],
-      mage: [
-        "Apprenti",
-        "Mage",
-        "Archimage",
-        "Grand Primordial",
-      ],
-      ninja: [
-        "Genin",
-        "Chunin",
-        "Jonin",
-        "Kage / Sannin",
-      ],
-      professional: ["Starter", "Pro", "Team", "Enterprise"],
-    } as Record<IdealyWay, string[]>,
-    save: "2 mois offerts sur Pro et Business",
-    saveCompact: "Économisez 2 mois",
-    starts: "Inclut les outils essentiels pour créer et piloter une mission.",
+    levels: ["Découverte", "Pro", "Business", "Enterprise"],
+    save: "≈ 16 % d’économie annuelle",
+    saveCompact: "≈ 16 % d’économie",
+    starts: "Les outils essentiels pour créer et piloter vos projets.",
     subtitle:
-      "Chaque Voie garde les mêmes outils Idealy. Le niveau change votre capacité, votre cadence et votre accompagnement.",
-    tag: "Une progression, à votre rythme",
-    title: "Choisissez votre niveau de puissance.",
+      "Le même espace de création dans chaque offre, avec davantage de capacité et de collaboration selon vos besoins.",
+    tag: "Offres Idealy",
+    title: "Une offre claire pour chaque étape de vos projets.",
     unavailable: "Bientôt disponible",
     year: "Annuel",
   },
 } as const;
 
-const resource = {
-  hunter: { en: "Nen", es: "Nen", fr: "Nen" },
-  mage: { en: "Mana", es: "Maná", fr: "Mana" },
-  ninja: { en: "Chakra", es: "Chakra", fr: "Chakra" },
-  professional: { en: "Power", es: "Power", fr: "Power" },
-} as const;
-
 const plans = [
   {
     features: [
-      "Missions essentielles",
-      "Workspace et aperçu",
-      "Export de projet",
+      "Workspace et aperçu des projets",
+      "Export du code source",
+      "Accès aux quatre voies de travail",
     ],
     id: "free",
-    notes: {
-      hunter: "Pour découvrir Idealy",
-      mage: "Pour découvrir Idealy",
-      ninja: "Pour découvrir Idealy",
-      professional: "Pour tester votre première idée",
-    },
+    note: "Pour découvrir le workspace et lancer vos premières missions.",
     points: powerPlanPolicy.free.monthlyAllocation,
     price: PRICING_DISPLAY.free.monthlyEur,
   },
   {
     features: [
-      "Capacité étendue pour les missions",
-      "Escouade IA complète",
-      "Historique de projet",
+      "Tout le plan Découverte",
+      "Jusqu’à 5 missions actives",
+      "Jusqu’à 300 fichiers par mission",
+      "Synchronisation GitHub",
     ],
     id: "pro",
-    notes: {
-      hunter: "Pour mener vos premières missions",
-      mage: "Pour donner forme à vos idées",
-      ninja: "Pour construire régulièrement",
-      professional: "Pour un MVP en construction",
-    },
+    note: "Pour construire, tester et faire évoluer des applications.",
     points: powerPlanPolicy.pro.monthlyAllocation,
     price: PRICING_DISPLAY.pro.monthlyEur,
   },
   {
     features: [
-      "Capacité et collaboration pour les équipes",
+      "Tout le plan Pro",
       "Jusqu’à 20 missions actives",
-      "Workspace étendu",
+      "Jusqu’à 1 000 fichiers par mission",
+      "Orchestration multi-projets",
     ],
     id: "business",
-    notes: {
-      hunter: "Pour une équipe de Hunters",
-      mage: "Pour diriger une guilde créative",
-      ninja: "Pour piloter une guilde et ses projets",
-      professional: "Pour les équipes produit",
-    },
+    note: "Pour les équipes qui développent plusieurs projets en parallèle.",
     points: powerPlanPolicy.business.monthlyAllocation,
     price: PRICING_DISPLAY.business.monthlyEur,
   },
   {
     features: [
-      "Quotas et espaces sur mesure",
+      "Quotas et espaces adaptés à l’organisation",
       "Gouvernance et sécurité",
-      "Conditions et accompagnement sur mesure",
+      "Accompagnement sur mesure",
     ],
     id: "enterprise",
-    notes: {
-      hunter: "Pour les grandes organisations",
-      mage: "Pour les organisations et leurs règles propres",
-      ninja: "Pour les organisations et leurs règles propres",
-      professional: "Pour les grandes organisations",
-    },
+    note: "Pour les organisations avec des exigences de gouvernance et d’accompagnement.",
     points: null,
     price: null,
   },
 ] as const;
-
-const wayNames: Record<IdealyWay, Record<Locale, string>> = {
-  hunter: { en: "Hunter Way", es: "Vía Hunter", fr: "Voie du Hunter" },
-  mage: { en: "Mage Way", es: "Vía del Mago", fr: "Voie du Mage" },
-  ninja: { en: "Ninja Way", es: "Vía Ninja", fr: "Voie du Ninja" },
-  professional: {
-    en: "Professional Way",
-    es: "Vía profesional",
-    fr: "Voie professionnelle",
-  },
-};
 
 export function PricingExperience({
   way,
@@ -285,7 +175,7 @@ export function PricingExperience({
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [annual, setAnnual] = useState(selectedCycle === "yearly");
   const chosenPlans = plans;
-  const names = text.routes[way];
+  const names = text.levels;
 
   const startCheckout = useCallback(
     async (planId: "pro" | "business") => {
@@ -345,7 +235,7 @@ export function PricingExperience({
     >
       <header className={cn("mx-auto max-w-3xl text-center", isDialog ? "mb-5 sm:mb-6" : "mb-9 sm:mb-12")}>
         <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-xs text-white/70">
-          <Sparkles aria-hidden="true" className="size-3.5 text-violet-300" />{" "}
+          <Sparkles aria-hidden="true" className="size-3.5 text-orange-300" />{" "}
           {text.tag}
         </div>
         <h2 className={cn("mt-3 text-balance font-semibold tracking-[-0.04em] text-white", isDialog ? "text-2xl sm:text-3xl" : "mt-4 text-3xl sm:text-4xl")}>
@@ -401,13 +291,8 @@ export function PricingExperience({
         </fieldset>
       </header>
 
-      <div className={cn("flex flex-wrap items-center justify-between gap-2 text-sm text-white/55", isDialog ? "mb-4" : "mb-5")}>
-        <span className="font-medium text-white/80">
-          {wayNames[way][locale]}
-        </span>
-        <span>
-          {text.core} · {resource[way][locale]}
-        </span>
+      <div className={cn("flex flex-wrap items-center gap-2 text-sm text-white/60", isDialog ? "mb-4" : "mb-5")}>
+        <span className="font-medium">{text.core}</span>
       </div>
 
       <div className={cn("grid items-stretch gap-4", isDialog ? "grid-cols-1 sm:grid-cols-2" : "sm:grid-cols-2 xl:grid-cols-4")}>
@@ -447,15 +332,15 @@ export function PricingExperience({
               className={cn(
                 cn("relative flex min-w-0 flex-col rounded-[1.65rem] border", isDialog ? "p-4 sm:p-5" : "p-6"),
                 isSelected
-                  ? "border-cyan-200/70 bg-cyan-300/[0.08] ring-1 ring-cyan-200/30"
+                  ? "border-orange-300/70 bg-orange-400/[0.08] ring-1 ring-orange-300/30"
                   : isPopular
-                    ? "border-violet-300/45 bg-[linear-gradient(160deg,rgba(139,92,246,.16),rgba(255,255,255,.045)_48%,rgba(255,255,255,.02))] shadow-[0_24px_70px_-42px_rgba(139,92,246,.75)]"
+                    ? "border-orange-300/45 bg-[linear-gradient(160deg,rgba(251,146,60,.10),rgba(255,255,255,.04)_48%,rgba(255,255,255,.02))] shadow-[0_24px_70px_-42px_rgba(251,146,60,.28)]"
                     : "border-white/[0.09] bg-white/[0.025] hover:bg-white/[0.045]"
               )}
               key={`${way}-${label}`}
             >
               {isSelected ? (
-                <span className="mb-3 w-fit rounded-full bg-cyan-200/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[.12em] text-cyan-100">
+                <span className="mb-3 w-fit rounded-full bg-orange-300/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[.12em] text-orange-100">
                   {locale === "fr"
                     ? "Votre choix précédent"
                     : locale === "es"
@@ -464,7 +349,7 @@ export function PricingExperience({
                 </span>
               ) : null}
               {isPopular ? (
-                <span className="mb-3 w-fit rounded-full bg-violet-300/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[.12em] text-violet-100">
+                <span className="mb-3 w-fit rounded-full bg-orange-300/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[.12em] text-orange-100">
                   {locale === "fr"
                     ? "Le plus choisi"
                     : locale === "es"
@@ -472,16 +357,11 @@ export function PricingExperience({
                       : "Most chosen"}
                 </span>
               ) : null}
-              <p className="text-xs font-medium text-white/45">
-                {locale === "fr"
-                  ? `Niveau 0${index + 1}`
-                  : `Level 0${index + 1}`}
-              </p>
               <h3 className={cn("mt-1 font-semibold tracking-tight text-white", isDialog ? "text-lg sm:text-xl" : "text-xl")}>
                 {label}
               </h3>
               <p className="mt-2 min-h-10 text-xs leading-5 text-white/55">
-                {tier.notes[way]}
+                {tier.note}
               </p>
               <div className="mt-5 min-h-[4.2rem]">
                 {shownPrice === null ? (
@@ -497,7 +377,7 @@ export function PricingExperience({
                       {text.perMonth}
                     </span>
                     {annual && shownPrice > 0 ? (
-                      <span className="mt-1 block text-[11px] leading-4 text-emerald-200/80">
+                      <span className="mt-1 block text-[11px] leading-4 text-orange-200/80">
                         {annualPrice?.toFixed(2) ?? "—"} € /{" "}
                         {locale === "fr"
                           ? "an"
@@ -510,49 +390,15 @@ export function PricingExperience({
                   </>
                 )}
               </div>
-              {index === 1 ? (
-                <div className="my-4 border-y border-white/10 py-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <label
-                      className="text-xs font-medium text-white/80"
-                      htmlFor="custom-power"
-                    >
-                      {text.custom}
-                    </label>
-                    <span className="text-xs font-semibold tabular-nums text-violet-100">
-                      {powerPlanPolicy.pro.monthlyAllocation.toLocaleString(locale)} {resource[way][locale]}
-                    </span>
-                  </div>
-                  <input
-                    aria-label={text.custom}
-                    className="mt-3 h-1.5 w-full cursor-pointer accent-violet-300"
-                    id="custom-power"
-                    max={powerPlanPolicy.pro.walletCap}
-                    min={1000}
-                    step={500}
-                    type="range"
-                    value={powerPlanPolicy.pro.monthlyAllocation}
-                    disabled
-                  />
-                  <div className="mt-1 flex justify-between text-[10px] text-white/40">
-                    <span>1 000</span>
-                    <span>{powerPlanPolicy.pro.walletCap.toLocaleString(locale)}</span>
-                  </div>
-                  <p className="mt-2 text-[10px] leading-4 text-white/45">
-                    {text.powerUnavailable}
-                  </p>
-                </div>
-              ) : (
-                <div className="my-4 flex min-h-[3.75rem] items-center border-y border-white/10 py-3 text-xs text-white/70">
-                  {points ? (
-                    <span className="font-semibold text-white">
-                      {points.toLocaleString(locale)} {text.points}
-                    </span>
-                  ) : (
-                    <span>{text.max}</span>
-                  )}
-                </div>
-              )}
+              <div className="my-4 flex min-h-[3.75rem] items-center border-y border-white/10 py-3 text-xs text-white/70">
+                {points !== null ? (
+                  <span className="font-semibold text-white">
+                    {points.toLocaleString(locale)} {text.points}
+                  </span>
+                ) : (
+                  <span>{text.quote}</span>
+                )}
+              </div>
               <p className="mb-2 text-[10px] font-medium uppercase tracking-[.12em] text-white/40">
                 {index > 1 ? text.all : text.starts}
               </p>

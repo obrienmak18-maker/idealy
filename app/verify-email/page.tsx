@@ -1,6 +1,7 @@
-import Link from "next/link";
+import { Mail, MailCheck } from "lucide-react";
 import { cookies } from "next/headers";
-import { IdealyLogo } from "@/components/branding/idealy-logo";
+import Link from "next/link";
+import { AuthPageShell } from "@/components/auth/auth-page-shell";
 
 export const metadata = {
   title: "Confirmation d’e-mail | Idealy",
@@ -25,6 +26,7 @@ export default async function VerifyEmailPage({
           : "Open the confirmation link from your email to finish verifying your address.",
         action: "Continue to sign in",
         note: "Firebase completes the verification before redirecting you to this page.",
+        back: "Back to Idealy",
       }
     : locale === "es"
       ? {
@@ -34,6 +36,7 @@ export default async function VerifyEmailPage({
             : "Abre el enlace de confirmación del correo para verificar tu dirección.",
           action: "Continuar al inicio de sesión",
           note: "Firebase completa la verificación antes de redirigirte a esta página.",
+          back: "Volver a Idealy",
         }
       : {
           title: verified ? "Adresse e-mail confirmée" : "Consultez votre e-mail",
@@ -42,26 +45,25 @@ export default async function VerifyEmailPage({
             : "Ouvrez le lien de confirmation reçu par e-mail pour terminer la vérification.",
           action: "Continuer vers la connexion",
           note: "Firebase termine la vérification avant de vous rediriger vers cette page.",
+          back: "Retour à Idealy",
         };
 
+  const StateIcon = verified ? MailCheck : Mail;
+
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#09090d] px-5 py-10 text-white">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.16),transparent_58%)]" />
-      <section className="relative z-10 w-full max-w-lg rounded-3xl border border-white/10 bg-white/[0.035] p-7 shadow-[0_24px_80px_-34px_rgba(124,58,237,0.32)] sm:p-10">
-        <Link href="/" aria-label="Idealy" className="mb-8 inline-flex items-center gap-3">
-          <IdealyLogo compact size={36} />
-          <span className="text-base font-semibold tracking-tight">Idealy</span>
-        </Link>
-        <div className="mb-5 flex size-12 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-400/10 text-violet-200">
-          <span aria-hidden="true" className="text-xl">{verified ? "✓" : "✉"}</span>
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{copy.title}</h1>
-        <p className="mt-3 text-sm leading-6 text-white/65">{copy.description}</p>
-        <Link href="/login" className="mt-7 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#101014] transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60">
-          {copy.action}
-        </Link>
-        <p className="mt-5 text-xs leading-5 text-white/35">{copy.note}</p>
-      </section>
-    </main>
+    <AuthPageShell
+      backHref="/welcome"
+      backLabel={copy.back}
+      notice={copy.note}
+    >
+      <div className="idealy-auth-state-icon">
+        <StateIcon aria-hidden="true" className="size-6" />
+      </div>
+      <h1>{copy.title}</h1>
+      <p className="idealy-auth-description">{copy.description}</p>
+      <Link className="idealy-auth-primary-link" href="/login">
+        {copy.action}
+      </Link>
+    </AuthPageShell>
   );
 }

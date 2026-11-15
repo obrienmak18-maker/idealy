@@ -32,6 +32,7 @@ export const PRO_PACK_MAX_POINTS = 3_500;
 export const PRO_PACK_DEFAULT_POINTS = 2_500;
 
 export const powerActionCosts = {
+  image_generation: 3,
   mission_simple: 10,
   mission_squad: 50,
 } as const;

@@ -146,28 +146,40 @@ function getIdealyPrompt(messages: ChatMessage[]) {
     .join("\n\n");
 }
 
-function getUserWayFromRequest(request: Request): string | null {
+function getUserWayFromRequest(request: Request, fallback?: string | null): string | null {
+  const header = request.headers.get("x-idealy-user-way");
+  if (header?.trim()) return header.trim();
+  if (fallback?.trim()) return fallback.trim();
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return null;
   const match = cookieHeader.match(/(?:^|;\s*)idealy_user_way=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-function getUserToneFromRequest(request: Request): string | null {
+function getUserToneFromRequest(request: Request, fallback?: string | null): string | null {
+  const header = request.headers.get("x-idealy-user-tone");
+  if (header?.trim()) return header.trim();
+  if (fallback?.trim()) return fallback.trim();
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return null;
   const match = cookieHeader.match(/(?:^|;\s*)idealy_user_tone=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-function getUserDisplayNameFromRequest(request: Request): string | null {
+function getUserDisplayNameFromRequest(request: Request, fallback?: string | null): string | null {
+  const header = request.headers.get("x-idealy-user-name");
+  if (header?.trim()) return header.trim();
+  if (fallback?.trim()) return fallback.trim();
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return null;
   const match = cookieHeader.match(/(?:^|;\s*)idealy_user_name=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-function getUserLanguageFromRequest(request: Request): string | null {
+function getUserLanguageFromRequest(request: Request, fallback?: string | null): string | null {
+  const header = request.headers.get("x-idealy-language");
+  if (header?.trim()) return header.trim();
+  if (fallback?.trim()) return fallback.trim();
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return null;
   const match = cookieHeader.match(/(?:^|;\s*)(?:idealy_lang|NEXT_LOCALE)=([^;]*)/);
@@ -440,10 +452,10 @@ export async function POST(request: Request) {
       expires: new Date(Date.now() + 86_400_000).toISOString(),
     };
 
-    const userWay = getUserWayFromRequest(request);
-    const userTone = getUserToneFromRequest(request);
-    const userDisplayName = getUserDisplayNameFromRequest(request);
-    const userLanguage = getUserLanguageFromRequest(request);
+    const userWay = getUserWayFromRequest(request, requestBody?.selectedWay);
+    const userTone = getUserToneFromRequest(request, requestBody?.selectedTone);
+    const userDisplayName = getUserDisplayNameFromRequest(request, requestBody?.selectedUserName);
+    const userLanguage = getUserLanguageFromRequest(request, requestBody?.selectedLanguage);
 
     const lastUserPrompt =
       message?.role === "user" ? getTextFromMessageParts(message).trim() : "";
@@ -711,10 +723,10 @@ export async function POST(request: Request) {
           clearHealthCheckTimer();
         };
 
-        const userWay = getUserWayFromRequest(request);
-        const userTone = getUserToneFromRequest(request);
-        const userDisplayName = getUserDisplayNameFromRequest(request);
-        const userLanguage = getUserLanguageFromRequest(request);
+        const userWay = getUserWayFromRequest(request, requestBody?.selectedWay);
+        const userTone = getUserToneFromRequest(request, requestBody?.selectedTone);
+        const userDisplayName = getUserDisplayNameFromRequest(request, requestBody?.selectedUserName);
+        const userLanguage = getUserLanguageFromRequest(request, requestBody?.selectedLanguage);
 
         const lastUserText =
           message?.role === "user" ? getTextFromMessageParts(message).trim() : "";

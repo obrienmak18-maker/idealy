@@ -8,7 +8,7 @@ import {
 import { onboardingInputSchema } from "@/lib/idealy/onboarding-contract";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 import { getUserById } from "@/lib/db/queries";
-import { signInFirebaseUserThroughSupabase } from "@/lib/idealy/supabase-auth";
+import { refreshSupabaseSession, signInFirebaseUserThroughSupabase } from "@/lib/idealy/supabase-auth";
 
 function response(
   body: Record<string, unknown>,
@@ -41,8 +41,26 @@ async function resolveSupabaseToken(
       ? token.supabaseUserId.trim()
       : null;
 
-  if (accessToken && userId) {
+  const accessTokenExpiresAt =
+    typeof token.supabaseAccessTokenExpiresAt === "number"
+      ? token.supabaseAccessTokenExpiresAt
+      : null;
+  if (accessToken && userId && (!accessTokenExpiresAt || accessTokenExpiresAt > Date.now() + 60_000)) {
     return { accessToken, userId };
+  }
+
+  const refreshToken =
+    typeof token.supabaseRefreshToken === "string" && token.supabaseRefreshToken.trim()
+      ? token.supabaseRefreshToken.trim()
+      : null;
+  if (userId && refreshToken) {
+    const refreshed = await refreshSupabaseSession(refreshToken);
+    if (refreshed.status === "authenticated" && refreshed.accessToken && refreshed.userId === userId) {
+      token.supabaseAccessToken = refreshed.accessToken;
+      token.supabaseAccessTokenExpiresAt = refreshed.expiresAt ?? undefined;
+      token.supabaseRefreshToken = refreshed.refreshToken ?? refreshToken;
+      return { accessToken: refreshed.accessToken, userId };
+    }
   }
 
   let email =

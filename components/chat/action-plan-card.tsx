@@ -1,5 +1,6 @@
 "use client";
 
+import { useActiveChat } from "@/hooks/use-active-chat";
 import {
   CheckCircle2,
   Circle,
@@ -75,7 +76,8 @@ export function ActionPlanCard({
   steps,
   title = "Plan d'action",
 }: ActionPlanCardProps) {
-  const { setArtifact, setMetadata } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { setArtifact, setMetadata } = useArtifact(chatId);
 
   // T1.1 — A fresh plan starts with 0/N steps checked.
   // Only `step.completed === true` (explicitly set by the model) turns a step on.

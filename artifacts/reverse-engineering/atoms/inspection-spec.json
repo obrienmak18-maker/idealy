@@ -1,0 +1,286 @@
+{
+  "targetUrl": "https://atoms.dev",
+  "targetName": "atoms",
+  "extractedAt": "2026-11-02T16:03:38.484Z",
+  "specs": {
+    "title": "Atoms: Build websites & apps with AI, no code needed",
+    "body": {
+      "tagName": "BODY",
+      "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "lineHeight": "21px",
+      "color": "rgb(0, 0, 0)",
+      "backgroundColor": "rgb(246, 246, 246)",
+      "border": "0px solid rgb(229, 231, 235)",
+      "borderRadius": "0px",
+      "boxShadow": "none",
+      "padding": "0px",
+      "margin": "0px",
+      "transition": "all"
+    },
+    "buttons": [
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "color": "rgba(255, 255, 255, 0.95)",
+        "backgroundColor": "rgb(66, 103, 255)",
+        "border": "0px none rgb(229, 231, 235)",
+        "borderRadius": "9999px",
+        "boxShadow": "none",
+        "padding": "0px 8px",
+        "margin": "0px",
+        "transition": "0.15s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "rgb(66, 92, 225)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgb(229, 231, 235)",
+        "borderRadius": "8px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "0.15s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "color": "rgba(12, 12, 12, 0.95)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(12, 12, 12, 0.95)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "color 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "color": "rgba(12, 12, 12, 0.95)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(12, 12, 12, 0.95)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "BUTTON",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "color": "rgba(12, 12, 12, 0.95)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(12, 12, 12, 0.95)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      }
+    ],
+    "inputs": [
+      {
+        "tagName": "TEXTAREA",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "rgba(12, 12, 12, 0.95)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(12, 12, 12, 0.95)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "INPUT",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "rgba(12, 12, 12, 0.55)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px none rgba(12, 12, 12, 0.55)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      }
+    ],
+    "headings": [
+      {
+        "tagName": "H1",
+        "fontFamily": "\"IBM Plex Sans\"",
+        "fontSize": "48px",
+        "fontWeight": "500",
+        "lineHeight": "56px",
+        "color": "rgba(12, 12, 12, 0.95)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px 0px 8px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H2",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "24px",
+        "fontWeight": "500",
+        "lineHeight": "32px",
+        "color": "rgba(12, 12, 12, 0.95)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H2",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "56px",
+        "fontWeight": "400",
+        "lineHeight": "56px",
+        "color": "rgba(12, 12, 12, 0.95)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "\"IBM Plex Sans\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "20px",
+        "fontWeight": "400",
+        "lineHeight": "28px",
+        "color": "rgba(255, 255, 255, 0.95)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      },
+      {
+        "tagName": "H3",
+        "fontFamily": "\"IBM Plex Serif\", serif",
+        "fontSize": "24px",
+        "fontWeight": "600",
+        "lineHeight": "normal",
+        "color": "rgba(12, 12, 12, 0.95)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "border": "0px solid rgb(229, 231, 235)",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+        "padding": "0px",
+        "margin": "0px",
+        "transition": "all"
+      }
+    ]
+  },
+  "apiCallsSample": [
+    {
+      "url": "https://www.google.com/rmkt/collect/16959411921/?random=1793635411087&cv=11&fst=1793635411087&fmt=8&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45892e6as1v9209783101za20czd9209783101xecxf4&gcd=13l3l3l3l1l1&dma=0&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&u_w=1440&u_h=900&url=https%3A%2F%2Fatoms.dev%2F&rcb=19&frm=0&tiba=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&did=dYzg1YT&gdid=dYzg1YT.dNzQzZD&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1673436935.1793635411&uaa=x86&uab=64&uafvl=HeadlessChrome%3B149.0.7827.55%7CChromium%3B149.0.7827.55%7CNot)A%253BBrand%3B24.0.0.0&uamb=0&uam=&uap=Windows&uapv=10.0&uaw=0&gtb=1&data=event%3Dgtag.config&gap.gtb=1&ept=68&gcp=5",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://atoms.dev/akgw/ag/g/c?v=2&tid=G-GCT8CR137M&gtm=45892e6as1v9209783101za20czd9209783101xf4&_p=1793635410502&_gaz=1&gcd=13l3l3l3l1l1&npa=0&dma=0&gdid=dYzg1YT.dNzQzZD&ecid=706877355&_eu=AAAAAGAC&_uip=%3A%3A&are=1&cid=492030138.1793635411&fp=1&frm=0&pscdl=noapi&rcb=19&sr=1440x900&uaa=x86&uab=64&uafvl=HeadlessChrome%3B149.0.7827.55%7CChromium%3B149.0.7827.55%7CNot)A%253BBrand%3B24.0.0.0&uam=&uamb=0&uap=Windows&uapv=10.0&uaw=0&ul=fr&ur=CD-KN&_gsid=3ZcHVjGiy2Jbx0iIJ33DBldT45ggK8_Jgw&gaf=2&_s=1&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&sid=1793635411&sct=1&seg=0&dl=https%3A%2F%2Fatoms.dev%2F&dt=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&gtb=1&en=page_view&_fv=1&_nsi=1&_ss=1&_ee=1&gap.gtb=1&tfd=2248",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://www.google.com/rmkt/collect/17253897746/?random=1793635411231&cv=11&fst=1793635411231&fmt=8&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45892e6as1v9209783101za20czd9209783101xecxf4&gcd=13l3l3l3l1l1&dma=0&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&u_w=1440&u_h=900&url=https%3A%2F%2Fatoms.dev%2F&rcb=19&frm=0&tiba=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&did=dYzg1YT&gdid=dYzg1YT.dNzQzZD&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1673436935.1793635411&uaa=x86&uab=64&uafvl=HeadlessChrome%3B149.0.7827.55%7CChromium%3B149.0.7827.55%7CNot)A%253BBrand%3B24.0.0.0&uamb=0&uam=&uap=Windows&uapv=10.0&uaw=0&gtb=1&data=event%3Dgtag.config&gap.gtb=1&ept=68&gcp=5",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://www.google.com/rmkt/collect/17841534843/?random=1793635411249&cv=11&fst=1793635411249&fmt=8&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45892e6as1v9209783101za20czd9209783101xecxf4&gcd=13l3l3l3l1l1&dma=0&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&u_w=1440&u_h=900&url=https%3A%2F%2Fatoms.dev%2F&rcb=19&frm=0&tiba=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&did=dYzg1YT&gdid=dYzg1YT.dNzQzZD&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1673436935.1793635411&uaa=x86&uab=64&uafvl=HeadlessChrome%3B149.0.7827.55%7CChromium%3B149.0.7827.55%7CNot)A%253BBrand%3B24.0.0.0&uamb=0&uam=&uap=Windows&uapv=10.0&uaw=0&gtb=1&data=event%3Dgtag.config&gap.gtb=1&ept=68&gcp=5",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://atoms.dev/akgw/ga/g/c?v=2&tid=G-QQQH5TRGKD&gtm=45892e6as1v9209783101za20czd9209783101xf4&_p=1793635410502&gcd=13l3l3l3l1l1&npa=0&dma=0&gdid=dYzg1YT.dNzQzZD&_uip=%3A%3A&are=1&cid=492030138.1793635411&fp=1&frm=0&ngs=1&pscdl=noapi&rcb=19&sr=1440x900&uaa=x86&uab=64&uafvl=HeadlessChrome%3B149.0.7827.55%7CChromium%3B149.0.7827.55%7CNot)A%253BBrand%3B24.0.0.0&uam=&uamb=0&uap=Windows&uapv=10.0&uaw=0&ul=fr&ur=CD-KN&_gsid=7iDxZS24bDqwgKWJGwp7VBnaa3izX9Y9Zg&_s=1&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&sid=1793635411&sct=1&seg=0&dl=https%3A%2F%2Fatoms.dev%2F&dt=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&gtb=1&en=page_view&_fv=1&_ss=1&_ee=1&gap.gtb=1&tfd=2292",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://www.google.com/ccm/collect?rcb=19&frm=0&apvc=1&auid=1673436935.1793635411&dt=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&tid=AW-16959411921&en=page_view&dl=https%3A%2F%2Fatoms.dev%2F&scrsrc=atoms.dev&rnd=1492472825.1793635411&navt=n&npa=0&did=dYzg1YT&gdid=dYzg1YT.dNzQzZD&gtb=1&gtm=45892e6as1v9209783101za20czd9209783101xecxf4&gcd=13l3l3l3l1l1&dma=0&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&tft=1793635411274&tfd=2295&gap.gtb=1&tids=AW-16959411921~AW-17253897746~AW-17841534843&fmt=8",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://ad.doubleclick.net/ccm/s/collect?auid=1673436935.1793635411&gtm=45892e6as1v9209783101za20czd9209783101xecxf4&fmt=8",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://atoms.dev/nodeapi/i18n/en",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://console-backend.deepwisdom.ai/api/seo-changelog/latest",
+      "method": "GET",
+      "postData": null
+    },
+    {
+      "url": "https://www.google.com/rmkt/collect/17841534843/?random=1793635415821&cv=11&fst=1793635415821&fmt=8&bg=ffffff&guid=ON&async=1&en=page_view&gtm=45892e6as1v9209783101za204zd9209783101xecxf4&gcd=13l3l3l3l1l1&dma=0&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&u_w=1440&u_h=900&url=https%3A%2F%2Fatoms.dev%2F&rcb=19&frm=0&tiba=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&did=dYzg1YT&gdid=dYzg1YT.dNzQzZD&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1673436935.1793635411&uaa=x86&uab=64&uafvl=HeadlessChrome%3B149.0.7827.55%7CChromium%3B149.0.7827.55%7CNot)A%253BBrand%3B24.0.0.0&uamb=0&uam=&uap=Windows&uapv=10.0&uaw=0&gtb=2&data=event%3Dpage_view%3Bpage_path%3D%2F&gap.gtb=2&ept=68&gcp=5",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://www.google.com/rmkt/collect/17253897746/?random=1793635415866&cv=11&fst=1793635415866&fmt=8&bg=ffffff&guid=ON&async=1&en=page_view&gtm=45892e6as1v9209783101za204zd9209783101xecxf4&gcd=13l3l3l3l1l1&dma=0&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&u_w=1440&u_h=900&url=https%3A%2F%2Fatoms.dev%2F&rcb=19&frm=0&tiba=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&did=dYzg1YT&gdid=dYzg1YT.dNzQzZD&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1673436935.1793635411&uaa=x86&uab=64&uafvl=HeadlessChrome%3B149.0.7827.55%7CChromium%3B149.0.7827.55%7CNot)A%253BBrand%3B24.0.0.0&uamb=0&uam=&uap=Windows&uapv=10.0&uaw=0&gtb=2&data=event%3Dpage_view%3Bpage_path%3D%2F&gap.gtb=2&ept=68&gcp=5",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://www.google.com/rmkt/collect/16959411921/?random=1793635415890&cv=11&fst=1793635415890&fmt=8&bg=ffffff&guid=ON&async=1&en=page_view&gtm=45892e6as1v9209783101za204zd9209783101xecxf4&gcd=13l3l3l3l1l1&dma=0&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&u_w=1440&u_h=900&url=https%3A%2F%2Fatoms.dev%2F&rcb=19&frm=0&tiba=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&did=dYzg1YT&gdid=dYzg1YT.dNzQzZD&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1673436935.1793635411&uaa=x86&uab=64&uafvl=HeadlessChrome%3B149.0.7827.55%7CChromium%3B149.0.7827.55%7CNot)A%253BBrand%3B24.0.0.0&uamb=0&uam=&uap=Windows&uapv=10.0&uaw=0&gtb=2&data=event%3Dpage_view%3Bpage_path%3D%2F&gap.gtb=2&ept=68&gcp=5",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://www.google.com/ccm/collect?rcb=19&frm=0&apvc=0&auid=1673436935.1793635411&dt=Atoms%3A%20Build%20websites%20%26%20apps%20with%20AI%2C%20no%20code%20needed&tid=AW-17841534843&en=page_view&dl=https%3A%2F%2Fatoms.dev%2F&scrsrc=atoms.dev&rnd=1492472825.1793635411&navt=n&npa=0&ep.page_path=%2F&did=dYzg1YT&gdid=dYzg1YT.dNzQzZD&gtb=2&gtm=45892e6as1v9209783101za204zd9209783101xecxf4&gcd=13l3l3l3l1l1&dma=0&tag_exp=115616986~115938465~115938469~118897920~118897930~120213116~120385422~120412526~120469145~120469153~121246026~121246034~123691370~123691408~123814184&tft=1793635415943&tfd=6964&gap.gtb=2&tids=AW-17841534843~AW-17253897746~AW-16959411921&fmt=8",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://atoms.dev/nodeapi/config/web",
+      "method": "POST",
+      "postData": null
+    },
+    {
+      "url": "https://cdp.customer.io/v1/projects/ac35bf900282de368b90/settings",
+      "method": "GET",
+      "postData": null
+    }
+  ]
+}

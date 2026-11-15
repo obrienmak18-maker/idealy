@@ -7,6 +7,8 @@ import {
 } from "@/lib/idealy/power-policy";
 import { parsePowerStatus } from "@/lib/idealy/power-status";
 import { getWayPresentation } from "@/lib/idealy/product-contract";
+import { verifyFirebaseToken } from "@/lib/firebase/admin";
+import { getFreeQuotaStatus } from "@/lib/idealy/free-quota";
 
 function noStore() {
   return { "Cache-Control": "no-store" };
@@ -22,9 +24,52 @@ export async function GET(request: Request) {
     typeof token?.supabaseAccessToken === "string"
       ? token.supabaseAccessToken
       : null;
+
+  const authHeader = request.headers.get("authorization");
+  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const fbUser = bearer ? await verifyFirebaseToken(bearer) : null;
+
   const supabaseUrl = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
   const anonKey = process.env.SUPABASE_ANON_KEY?.trim();
-  if (!accessToken || !supabaseUrl || !anonKey) {
+
+  // If no Supabase access token but valid Firebase user, resolve quota-backed Power status
+  if (!accessToken) {
+    if (!fbUser) {
+      return Response.json(
+        { error: "Une session Idealy authentifiée est requise." },
+        { headers: noStore(), status: 401 }
+      );
+    }
+
+    const rawWay = request.headers.get("x-idealy-user-way") || "mage";
+    const wayInfo = getWayPresentation(rawWay);
+    let remaining = 100;
+    let limit = 100;
+    try {
+      const quota = await getFreeQuotaStatus(fbUser.uid);
+      remaining = Math.max(0, quota.remaining * 2);
+      limit = Math.max(10, quota.limit * 2);
+    } catch {
+      // standard fallback for evaluation
+    }
+
+    return Response.json(
+      {
+        balance: remaining,
+        walletCap: limit,
+        canExecute: remaining > 0,
+        costPoints: 5,
+        plan: "free",
+        policyVersion: POWER_POLICY_VERSION,
+        resourceLabel: wayInfo.resourceLabel,
+        way: wayInfo.id,
+        lastMonthlyAllocationAt: new Date().toISOString(),
+      },
+      { headers: noStore() }
+    );
+  }
+
+  if (!supabaseUrl || !anonKey) {
     return Response.json(
       { error: "Une session Idealy authentifiée est requise." },
       { headers: noStore(), status: 401 }

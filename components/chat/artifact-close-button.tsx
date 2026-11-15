@@ -1,9 +1,11 @@
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { memo, useCallback } from "react";
 import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
 import { CrossIcon } from "./icons";
 
 function PureArtifactCloseButton() {
-  const { setArtifact } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { setArtifact } = useArtifact(chatId);
   const handleClick = useCallback(() => {
     setArtifact((currentArtifact) =>
       currentArtifact.status === "streaming"

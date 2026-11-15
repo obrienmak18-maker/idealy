@@ -96,7 +96,38 @@ function getAllowedModels(): Record<Provider, readonly string[]> {
 
 const MAX_PROMPT_CHARS = 120_000;
 const MAX_SYSTEM_PROMPT_CHARS = 20_000;
-const MAX_OUTPUT_TOKENS = 30_000;
+const DEFAULT_OUTPUT_TOKENS = 30_000;
+// Absolute request ceiling (1M). Each provider is then limited by its own budget
+// (what Idealy allows) and by the hard cap the provider API actually accepts.
+const MAX_OUTPUT_TOKENS = 1_000_000;
+const PROVIDER_OUTPUT_BUDGETS: Record<Provider, number> = {
+  anthropic: 500_000,
+  deepseek: 200_000,
+  gemini: 500_000,
+  groq: 128_000,
+  moonshot: 200_000,
+  openai: 200_000,
+  openrouter: 64_000,
+  together: 128_000,
+};
+// Largest max_tokens a single provider call accepts. Sending more makes the API
+// answer 400, so longer builds are produced file by file with continuation.
+// Override with AI_MAX_OUTPUT_TOKENS_<PROVIDER> after checking the model's limit.
+const PROVIDER_API_CAPS: Record<Provider, number> = {
+  anthropic: 64_000,
+  deepseek: 64_000,
+  gemini: 65_536,
+  groq: 32_000,
+  moonshot: 64_000,
+  openai: 128_000,
+  openrouter: 64_000,
+  together: 32_000,
+};
+function outputCeilingFor(provider: Provider): number {
+  const override = Number(Deno.env.get(`AI_MAX_OUTPUT_TOKENS_${provider.toUpperCase()}`));
+  const apiCap = Number.isInteger(override) && override >= 128 ? override : PROVIDER_API_CAPS[provider];
+  return Math.min(apiCap, PROVIDER_OUTPUT_BUDGETS[provider], MAX_OUTPUT_TOKENS);
+}
 const MAX_IDEMPOTENCY_KEY_CHARS = 180;
 const WORKSPACE_SYSTEM_PROMPT = `
 Tu es le Builder d’Idealy. Pour une mission EXECUTION, réponds uniquement avec des lignes NDJSON valides, sans markdown ni texte autour. Une ligne par événement, dans cet ordre pour chaque fichier :
@@ -651,7 +682,7 @@ async function fetchProviderWithFallback(input: {
     const body = isAnthropic
       ? {
           model: resolution.model,
-          max_tokens: input.maxTokens,
+          max_tokens: Math.min(input.maxTokens, outputCeilingFor(resolution.provider)),
           stream: input.stream,
           ...(systemText ? { system: systemText } : {}),
           messages: providerMessages.map((message) => ({ role: "user", content: message.content })),
@@ -660,7 +691,7 @@ async function fetchProviderWithFallback(input: {
           model: resolution.model,
           messages: input.messages,
           stream: input.stream,
-          max_tokens: input.maxTokens,
+          max_tokens: Math.min(input.maxTokens, outputCeilingFor(resolution.provider)),
           ...(resolution.provider === "moonshot" && resolution.model === "kimi-k3"
             ? { reasoning_effort: "high" }
             : {}),
@@ -812,7 +843,7 @@ Deno.serve(async (req) => {
     const stream = input.stream ?? false;
     if (typeof stream !== 'boolean') return jsonError('stream must be boolean.', 400, headers);
 
-    const maxTokens = input.maxTokens ?? MAX_OUTPUT_TOKENS;
+    const maxTokens = input.maxTokens ?? DEFAULT_OUTPUT_TOKENS;
     if (!Number.isInteger(maxTokens) || maxTokens < 128 || maxTokens > MAX_OUTPUT_TOKENS) {
       return jsonError(`maxTokens must be an integer between 128 and ${MAX_OUTPUT_TOKENS}.`, 400, headers);
     }

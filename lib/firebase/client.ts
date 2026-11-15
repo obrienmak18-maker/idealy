@@ -87,6 +87,19 @@ export function getFirebaseAuth() {
   return getAuth(app);
 }
 
+/** Attach the Firebase identity to same-origin API calls when a Vite session is active. */
+export async function getFirebaseBearerHeaders(): Promise<Record<string, string>> {
+  if (!isFirebaseConfigured()) return {};
+
+  const auth = getFirebaseAuth();
+  await auth.authStateReady();
+  const user = auth.currentUser;
+  if (!user) return {};
+
+  const idToken = await user.getIdToken();
+  return idToken ? { Authorization: `Bearer ${idToken}` } : {};
+}
+
 export async function signInWithEmailFirebase(
   email: string,
   password: string

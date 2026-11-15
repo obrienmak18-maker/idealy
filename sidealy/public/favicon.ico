@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="idealy-spectrum" x1="8" y1="10" x2="56" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset=".35" stop-color="#14B8A6"/>
+      <stop offset=".68" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#FB923C"/>
+    </linearGradient>
+    <filter id="idealy-glow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <ellipse cx="32" cy="32" rx="25" ry="12" transform="rotate(-28 32 32)" stroke="url(#idealy-spectrum)" stroke-width="1.5" stroke-linecap="round"/>
+  <ellipse cx="32" cy="32" rx="22" ry="10" transform="rotate(38 32 32)" stroke="url(#idealy-spectrum)" stroke-width="1" stroke-linecap="round" stroke-dasharray="4 7" stroke-opacity=".55"/>
+  <path d="M32 5.5 37.3 26.7 58.5 32 37.3 37.3 32 58.5 26.7 37.3 5.5 32 26.7 26.7 32 5.5Z" fill="url(#idealy-spectrum)" filter="url(#idealy-glow)"/>
+  <circle cx="32" cy="32" r="8.5" fill="#fff"/>
+  <path d="M32 26.2v13M27.8 30.2h8.4" stroke="#0F172A" stroke-width="2.8" stroke-linecap="round"/>
+  <circle cx="32" cy="22.6" r="2.4" fill="#fff"/>
+</svg>

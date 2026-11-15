@@ -15,6 +15,7 @@ import {
   Code2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getFirebaseBearerHeaders } from "@/lib/firebase/client";
 import { getConnectorBrandLogo } from "@/components/connectors/brand-logos";
 import type { ConnectorDefinition } from "@/lib/idealy/connectors";
 
@@ -29,26 +30,27 @@ export function ConnectorDetailView({ connector }: ConnectorDetailViewProps) {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/idealy/connectors/status", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Connector status unavailable");
-        return response.json() as Promise<{
-          integrations?: Array<{ provider?: string; status?: string; serverReady?: boolean }>
-        }>;
-      })
-      .then((payload) => {
-        if (!active) return;
-        const status = payload.integrations?.find(
-          (entry) => entry.provider === connector.id || entry.provider === connector.provider,
-        );
-        setIsConnected(status?.status === "active" && status.serverReady === true);
-      })
-      .catch(() => {
-        if (active) setIsConnected(false);
-      })
-      .finally(() => {
-        if (active) setChecking(false);
+    void (async () => {
+      const headers = await getFirebaseBearerHeaders();
+      const response = await fetch("/api/idealy/connectors/status", {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers,
       });
+      if (!response.ok) throw new Error("Connector status unavailable");
+      const payload = await response.json() as {
+        integrations?: Array<{ provider?: string; status?: string; serverReady?: boolean }>
+      };
+      if (!active) return;
+      const status = payload.integrations?.find(
+        (entry) => entry.provider === connector.id || entry.provider === connector.provider,
+      );
+      setIsConnected(status?.status === "active" && status.serverReady === true);
+    })().catch(() => {
+      if (active) setIsConnected(false);
+    }).finally(() => {
+      if (active) setChecking(false);
+    });
     return () => { active = false; };
   }, [connector.id, connector.provider]);
 
@@ -60,9 +62,11 @@ export function ConnectorDetailView({ connector }: ConnectorDetailViewProps) {
       const endpoint = provider === "vercel"
         ? "/api/idealy/connectors/vercel/start"
         : "/api/idealy/connectors/start";
+      const authHeaders = await getFirebaseBearerHeaders();
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ provider }),
       });
       const payload = await response.json().catch(() => null) as { url?: string; error?: string } | null;

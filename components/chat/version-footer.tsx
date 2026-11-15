@@ -12,6 +12,7 @@ import { cn, getDocumentTimestampByIndex } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
 
 type VersionFooterProps = {
+  chatId: string;
   handleVersionChange: (type: "next" | "prev" | "toggle" | "latest") => void;
   documents: Document[] | undefined;
   currentVersionIndex: number;
@@ -20,13 +21,14 @@ type VersionFooterProps = {
 };
 
 export const VersionFooter = ({
+  chatId,
   handleVersionChange,
   documents,
   currentVersionIndex,
   mode,
   setMode,
 }: VersionFooterProps) => {
-  const { artifact } = useArtifact();
+  const { artifact } = useArtifact(chatId);
 
   const { mutate } = useSWRConfig();
   const [isMutating, setIsMutating] = useState(false);

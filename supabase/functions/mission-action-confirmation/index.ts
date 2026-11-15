@@ -29,13 +29,13 @@ Deno.serve(async (request) => {
   const allowedOperations = new Set([
     "github:export",
     "vercel:deploy",
-    "github:create-branch",
-    "github:open-pull-request",
-    "canva:create-design",
-    "canva:export-design",
-    "notion:append-page",
-    "slack:send-message",
-    "supabase:append-mission-event",
+    "github:github-create-branch",
+    "github:github-open-pull-request",
+    "canva:canva-create-design",
+    "canva:canva-export-design",
+    "notion:notion-append-page",
+    "slack:slack-send-message",
+    "supabase:supabase-append-mission-event",
   ]);
   if (!allowedOperations.has(requestedOperation)) {
     return corsResponse({ error: "Unsupported confirmation operation." }, 400, request);
@@ -44,13 +44,13 @@ Deno.serve(async (request) => {
   const providerByOperation: Record<string, string | null> = {
     "github:export": "github",
     "vercel:deploy": "vercel",
-    "github:create-branch": "github",
-    "github:open-pull-request": "github",
-    "canva:create-design": "canva",
-    "canva:export-design": "canva",
-    "notion:append-page": "notion",
-    "slack:send-message": "slack",
-    "supabase:append-mission-event": null,
+    "github:github-create-branch": "github",
+    "github:github-open-pull-request": "github",
+    "canva:canva-create-design": "canva",
+    "canva:canva-export-design": "canva",
+    "notion:notion-append-page": "notion",
+    "slack:slack-send-message": "slack",
+    "supabase:supabase-append-mission-event": null,
   };
   const provider = providerByOperation[requestedOperation];
   if (!UUID_PATTERN.test(missionId) || !TOKEN_PATTERN.test(confirmationToken)) {
@@ -85,9 +85,9 @@ Deno.serve(async (request) => {
     const { data, error } = await admin.from("mission_action_confirmations").insert({
       confirmation_token_hash: await sha256(confirmationToken),
       expires_at: expiresAt,
-      integration_id: integration.id,
+      integration_id: integrationId,
       mission_id: missionId,
-      operation: "github:export",
+      operation: requestedOperation,
       resource_snapshot: { payload_digest: payloadDigest },
       user_id: auth.user.id,
     }).select("id,expires_at,status").single();
@@ -100,7 +100,7 @@ Deno.serve(async (request) => {
     .update({ approved_at: new Date().toISOString(), status: "approved" })
     .eq("mission_id", missionId)
     .eq("user_id", auth.user.id)
-.eq("operation", requestedOperation)
+    .eq("operation", requestedOperation)
     .eq("confirmation_token_hash", await sha256(confirmationToken))
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())

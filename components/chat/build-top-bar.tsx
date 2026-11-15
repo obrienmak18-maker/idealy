@@ -169,12 +169,12 @@ function VercelLogo({ className = "size-3.5" }: { className?: string }) {
 }
 
 export function BuildTopBar() {
-  const { artifact, metadata, setMetadata } = useArtifact();
+  const { chatId } = useActiveChat();
+  const { artifact, metadata, setMetadata } = useArtifact(chatId);
   const { t } = useTranslation();
   const isVercelConfigured = Boolean(
     process.env.NEXT_PUBLIC_VERCEL_CONFIGURED !== "false"
   );
-  const { chatId } = useActiveChat();
   const { mutate } = useSWRConfig();
   const historyKey = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=50`;
   const { data: recentHistory } = useSWR<{

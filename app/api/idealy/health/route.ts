@@ -1,39 +1,43 @@
-import { getIdealyApiUrl } from "@/lib/idealy/config";
+import { getConfiguredDirectProviderNames } from "@/lib/ai/providers";
 
 export async function GET() {
   if (process.env.DEMO_MODE === "true") {
     return Response.json({
-      configuredUrl: null,
       mode: "demo",
-      service: "idealy-api",
+      service: "idealy-chat",
       status: "ready",
-      upstream: null,
     });
   }
 
-  const url = `${getIdealyApiUrl()}/api/healthz`;
+  const usesSupabaseFunction =
+    process.env.IDEALY_AI_PROVIDER === "supabase-function";
+  const supabaseFunctionConfigured = Boolean(
+    process.env.IDEALY_AI_FUNCTION_URL?.trim() ||
+      (process.env.SUPABASE_URL?.trim() &&
+        process.env.SUPABASE_ANON_KEY?.trim()),
+  );
+  const configuredProviders = usesSupabaseFunction
+    ? supabaseFunctionConfigured
+      ? ["Supabase Edge Function"]
+      : []
+    : getConfiguredDirectProviderNames();
 
-  try {
-    const response = await fetch(url, { cache: "no-store" });
-    const payload = await response.json().catch(() => null);
-
+  if (configuredProviders.length === 0) {
     return Response.json(
       {
-        configuredUrl: getIdealyApiUrl(),
-        service: "idealy-api",
-        upstream: payload,
-        upstreamStatus: response.status,
+        error: "Aucun fournisseur IA n’est configuré côté serveur.",
+        mode: "unconfigured",
+        service: "idealy-chat",
+        status: "error",
       },
-      { status: response.ok ? 200 : 502 }
-    );
-  } catch {
-    return Response.json(
-      {
-        configuredUrl: getIdealyApiUrl(),
-        error: "Backend Idealy indisponible ou non démarré.",
-        service: "idealy-api",
-      },
-      { status: 503 }
+      { status: 503 },
     );
   }
+
+  return Response.json({
+    mode: "configured",
+    providers: configuredProviders,
+    service: "idealy-chat",
+    status: "configured",
+  });
 }
