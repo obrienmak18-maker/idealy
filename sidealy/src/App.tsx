@@ -63,6 +63,7 @@ const AppContent: React.FC = () => {
     activeMessages,
     artifacts,
     setActivePage,
+    userWay,
   } = useApp();
   const hasActiveWorkspace = hasConversationWorkspace(
     activeMessages,
@@ -336,7 +337,7 @@ const AppContent: React.FC = () => {
       <LiveVoiceDialog
         isOpen={isLiveVoiceOpen}
         onClose={handleCloseLiveVoice}
-        wayName={localStorage.getItem("idealy_user_way") || "Ninja"}
+        wayName={userWay}
       />
     </div>
   );

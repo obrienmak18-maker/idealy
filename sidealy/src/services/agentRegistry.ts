@@ -306,6 +306,23 @@ export interface RunRouteDecision {
   reason: string;
 }
 
+function isGreeting(text: string): boolean {
+  const clean = text.toLowerCase().trim().replace(/[!?,;.:\s]+/g, " ").trim();
+  if (!clean) return false;
+  const words = clean.split(" ").filter(Boolean);
+  if (words.length > 5) return false;
+  const greetings = new Set([
+    "bonjour", "salut", "hey", "hello", "hi", "coucou", "yo", "bonsoir", "hola",
+    "cc", "slt", "bjr", "wesh", "re"
+  ]);
+  const conversational = [
+    "ca va", "ça va", "comment vas tu", "comment tu vas", "comment ca va", "comment ça va",
+    "how are you", "what's up", "whats up", "como estas", "cómo estás"
+  ];
+  if (conversational.some((phrase) => clean.includes(phrase))) return true;
+  return words.some((w) => greetings.has(w));
+}
+
 /**
  * La Régie : Routeur d'exécution pour chaque run de conversation.
  * 
@@ -335,7 +352,12 @@ export function routeRun(
 ): RunRouteDecision {
   const text = prompt.trim();
   const lower = text.toLowerCase();
-  const wayAgents = getAgentsForWay(options?.wayId || "ninja");
+  const effectiveWay =
+    options?.wayId ||
+    (typeof window !== "undefined"
+      ? window.localStorage?.getItem("idealy_user_way") || "ninja"
+      : "ninja");
+  const wayAgents = getAgentsForWay(effectiveWay);
   const leader = wayAgents[0]; // Minato / Erza / Netero / Daniel
   const builder = wayAgents[1]; // Naruto / Natsu / Gon / Kevin
   const architect = wayAgents[2]; // Sasuke / Lucie / Killua / Leslie
@@ -358,6 +380,15 @@ export function routeRun(
       mode: "solo",
       agents: [requested],
       reason: `Agent sélectionné : intervention directe de ${requested.name}.`,
+    };
+  }
+
+  // 2. Salutation / Accueil général -> Alvin (Dispatcher Universel)
+  if (isGreeting(text)) {
+    return {
+      mode: "solo",
+      agents: [STATIC_AGENT_REGISTRY.alvin],
+      reason: "Accueil et qualification du besoin pris en charge par Alvin (Dispatcher Universel).",
     };
   }
 

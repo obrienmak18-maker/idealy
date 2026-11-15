@@ -1,7 +1,8 @@
-import { ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, Image as ImageIcon, LayoutGrid, Mic, Paperclip, Plug, Plus, Radio, Square, X } from "lucide-react";
+import { ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, Image as ImageIcon, LayoutGrid, Mic, Paperclip, Plug, Plus, Radio, Square, User, X } from "lucide-react";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { getAgentsForWay, STATIC_AGENT_REGISTRY } from "../../services/agentRegistry";
 import type { Attachment } from "../../types";
 
 type SpeechResultLike = {
@@ -36,8 +37,40 @@ type ComposerProps = { placement?: "conversation" | "home" };
 export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }) => {
   const {
     draft, setDraft, sendMessage, stopGeneration, generationStatus,
-    setActivePage,
+    setActivePage, userWay,
   } = useApp();
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+
+  const availableAgents = useMemo(() => {
+    const list = [STATIC_AGENT_REGISTRY.alvin, ...getAgentsForWay(userWay)];
+    if (!mentionQuery) return list;
+    return list.filter(
+      (a) =>
+        a.name.toLowerCase().startsWith(mentionQuery) ||
+        a.role.toLowerCase().includes(mentionQuery),
+    );
+  }, [userWay, mentionQuery]);
+
+  const insertAgentMention = (agentName: string) => {
+    const textarea = textareaRef.current;
+    const cursorPos = textarea?.selectionStart ?? draft.length;
+    const textBefore = draft.slice(0, cursorPos);
+    const textAfter = draft.slice(cursorPos);
+    const replacedBefore = textBefore.replace(/(?:^|\s)@([a-zA-ZÀ-ÿ0-9_-]*)$/, (m) => {
+      const leadingSpace = m.startsWith(" ") ? " " : "";
+      return `${leadingSpace}@${agentName} `;
+    });
+    setDraft(`${replacedBefore}${textAfter}`);
+    setMentionQuery(null);
+    setTimeout(() => {
+      if (textareaRef.current) {
+        const nextPos = replacedBefore.length;
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(nextPos, nextPos);
+      }
+    }, 10);
+  };
   const [modelMode, setModelMode] = useState<"auto" | "discuter" | "construire">(() => {
     try {
       const v = window.localStorage.getItem("idealy.model.mode");
@@ -425,6 +458,29 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
     if (event.nativeEvent.isComposing) {
       return;
     }
+    if (mentionQuery !== null && availableAgents.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setMentionIndex((prev) => (prev + 1) % availableAgents.length);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setMentionIndex((prev) => (prev - 1 + availableAgents.length) % availableAgents.length);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        const selected = availableAgents[mentionIndex] || availableAgents[0];
+        if (selected) insertAgentMention(selected.name);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMentionQuery(null);
+        return;
+      }
+    }
     if (event.key !== "Enter" || event.shiftKey) {
       return;
     }
@@ -493,7 +549,44 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
           </div>
         )}
 
-        <div className={placement === "home" ? "px-5 pt-2 pb-0" : "px-5 pt-4 pb-1"}>
+        <div className={`relative ${placement === "home" ? "px-5 pt-2 pb-0" : "px-5 pt-4 pb-1"}`}>
+          {mentionQuery !== null && availableAgents.length > 0 && (
+            <div
+              role="listbox"
+              aria-label="Sélectionner un agent"
+              className="absolute bottom-full left-5 mb-2 z-50 w-72 max-h-60 overflow-y-auto rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.36)] backdrop-blur-md animate-scale-in"
+            >
+              <div className="px-2 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                Mentionner un spécialiste
+              </div>
+              {availableAgents.map((agent, i) => (
+                <button
+                  key={agent.id}
+                  type="button"
+                  role="option"
+                  aria-selected={i === mentionIndex}
+                  onClick={() => insertAgentMention(agent.name)}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
+                    i === mentionIndex
+                      ? "bg-[var(--dsw-alias-interactive-bg-hover)] text-text-main"
+                      : "hover:bg-[var(--dsw-alias-interactive-bg-hover)] text-text-muted hover:text-text-main"
+                  }`}
+                >
+                  <img
+                    src={agent.avatar}
+                    alt={agent.name}
+                    className="h-6 w-6 rounded-full object-cover ring-1 ring-white/10"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-text-main">@{agent.name}</span>
+                      <span className="text-[10px] text-text-muted truncate">({agent.role})</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
           <textarea
             data-composer-input
             aria-label="Message à Idealy"
@@ -522,6 +615,15 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
               setDraft(val);
               if (!dictationActive) {
                 setDictationStatus("");
+              }
+              const cursorPos = event.target.selectionStart ?? val.length;
+              const textBefore = val.slice(0, cursorPos);
+              const match = textBefore.match(/(?:^|\s)@([a-zA-ZÀ-ÿ0-9_-]*)$/);
+              if (match) {
+                setMentionQuery(match[1].toLowerCase());
+                setMentionIndex(0);
+              } else {
+                setMentionQuery(null);
               }
             }}
             onKeyDown={handleKeyDown}
@@ -596,8 +698,20 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                       </button>
                       <button
                         className="composer-add-row"
+                        onClick={() => {
+                          setAddMenuOpen(false);
+                          setDraft(draft.endsWith(" ") || !draft ? `${draft}@` : `${draft} @`);
+                          setMentionQuery("");
+                          textareaRef.current?.focus();
+                        }}
+                        type="button"
+                      >
+                        <User aria-hidden="true" className="text-amber-400" />
+                        <span>Mentionner un agent (@)</span>
+                      </button>
+                      <button
+                        className="composer-add-row"
                         onClick={() => setConnectorsSubmenuOpen(true)}
-                        onMouseEnter={() => setConnectorsSubmenuOpen(true)}
                         type="button"
                       >
                         <Plug aria-hidden="true" className="text-violet-400" />

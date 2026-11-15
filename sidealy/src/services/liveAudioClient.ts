@@ -46,6 +46,22 @@ export class LiveAudioClient {
     this.setStatus("connecting");
 
     try {
+      // Proactively acquire microphone during user click gesture for immediate browser prompt
+      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia && !this.mediaStream) {
+        try {
+          this.mediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              channelCount: 1,
+              echoCancellation: true,
+              noiseSuppression: true,
+              sampleRate: 16000,
+            },
+          });
+        } catch (permError) {
+          console.warn("[LiveAudioClient] Media stream prompt deferred or denied:", permError);
+        }
+      }
+
       const bearer = await getBearerToken();
       const headers: Record<string, string> = {};
       if (bearer) headers.Authorization = `Bearer ${bearer}`;
@@ -176,14 +192,16 @@ export class LiveAudioClient {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Ce navigateur ne permet pas l’accès au microphone. Utilisez une page HTTPS et un navigateur récent.");
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: 16000,
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-      });
+      const stream =
+        this.mediaStream ??
+        (await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: 16000,
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
+        }));
       this.mediaStream = stream;
 
       const AudioCtx = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;

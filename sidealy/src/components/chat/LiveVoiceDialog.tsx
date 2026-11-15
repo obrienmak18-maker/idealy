@@ -8,11 +8,40 @@ export type LiveVoiceDialogProps = {
   wayName?: string;
 };
 
+const wayThemes: Record<string, { label: string; badge: string; glow: string; text: string }> = {
+  ninja: {
+    label: "Voie du Ninja",
+    badge: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+    glow: "from-orange-500/40 to-red-500/30",
+    text: "text-orange-400",
+  },
+  mage: {
+    label: "Voie du Mage",
+    badge: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+    glow: "from-sky-500/40 to-violet-500/30",
+    text: "text-sky-400",
+  },
+  hunter: {
+    label: "Voie du Hunter",
+    badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    glow: "from-emerald-500/40 to-cyan-500/30",
+    text: "text-emerald-400",
+  },
+  professional: {
+    label: "Voie du Pro",
+    badge: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20",
+    glow: "from-fuchsia-500/40 to-amber-500/30",
+    text: "text-fuchsia-400",
+  },
+};
+
 export function LiveVoiceDialog({
   isOpen,
   onClose,
-  wayName = "Ninja",
+  wayName = "ninja",
 }: LiveVoiceDialogProps) {
+  const normalizedWay = (wayName || "ninja").toLowerCase();
+  const activeTheme = wayThemes[normalizedWay] || wayThemes.ninja;
   const [status, setStatus] = useState<LiveSessionStatus>("disconnected");
   const [isMuted, setIsMuted] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
@@ -68,28 +97,28 @@ export function LiveVoiceDialog({
           <div className="flex items-center gap-2">
             <Radio className="size-4 animate-pulse text-emerald-400" />
             <h3 className="text-sm font-semibold tracking-tight text-white">
-              Mode vocal Live (Gemini 3.8 Live)
+              Session vocale — {activeTheme.label}
             </h3>
           </div>
-          <span className="rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-medium text-cyan-400 border border-cyan-500/20">
-            Voie {wayName}
+          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium border ${activeTheme.badge}`}>
+            {activeTheme.label}
           </span>
         </div>
 
         {/* Animated Glowing Audio Orb */}
         <div className="relative my-8 flex flex-col items-center justify-center">
           <div
-            className="relative grid size-28 place-items-center rounded-full bg-gradient-to-tr from-cyan-500/30 to-emerald-500/20 shadow-lg transition-transform duration-100"
+            className={`relative grid size-28 place-items-center rounded-full bg-gradient-to-tr ${activeTheme.glow} shadow-lg transition-transform duration-100`}
             style={{
               transform: `scale(${1 + audioLevel * 0.35})`,
             }}
           >
-            <div className="size-20 rounded-full bg-gradient-to-tr from-cyan-400 to-emerald-400 opacity-80 blur-md transition-opacity duration-150" />
+            <div className={`size-20 rounded-full bg-gradient-to-tr ${activeTheme.glow} opacity-80 blur-md transition-opacity duration-150`} />
             <div className="relative z-10 grid size-16 place-items-center rounded-full bg-[#121624] shadow-inner">
               {status === "speaking" ? (
                 <Volume2 className="size-7 text-emerald-400 animate-pulse" />
               ) : (
-                <Mic className="size-7 text-cyan-400" />
+                <Mic className={`size-7 ${activeTheme.text}`} />
               )}
             </div>
           </div>

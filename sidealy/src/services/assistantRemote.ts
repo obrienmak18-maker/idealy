@@ -255,8 +255,10 @@ export const AssistantRemoteService = {
     }
     const userWay = localStorage.getItem("idealy_user_way") || "ninja";
     const userTone = localStorage.getItem("idealy_user_tone") || "concise";
+    const userLanguage = localStorage.getItem("idealy_language") || "fr";
     headers["x-idealy-user-way"] = userWay;
     headers["x-idealy-user-tone"] = userTone;
+    headers["x-idealy-language"] = userLanguage;
 
     let response: Response;
     try {
@@ -272,6 +274,7 @@ export const AssistantRemoteService = {
           selectedVisibilityType: "private",
           selectedWay: userWay,
           selectedTone: userTone,
+          selectedLanguage: userLanguage,
         }),
         credentials: "same-origin",
         headers,

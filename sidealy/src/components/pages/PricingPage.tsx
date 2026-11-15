@@ -11,33 +11,51 @@ const euro = (n: number) =>
       })} €`;
 
 export const PricingPage: React.FC = () => {
-  const { setActivePage } = useApp();
+  const { setActivePage, userWay } = useApp();
   const [pending, setPending] = useState("");
   const [yearly, setYearly] = useState(true);
   const [error, setError] = useState("");
 
-  // Récupération de la Voie active pour adapter le vocabulaire énergétique
-  const savedProfile = (() => {
-    try {
-      const raw = localStorage.getItem("idealy_profile") || localStorage.getItem("idealy_user_profile");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  })();
-  const userWay = savedProfile?.way || "professional";
-
   const wayDetails = {
-    ninja: { resource: "Chakra", rgb: "249,115,22", starter: "Genin", pro: "Jonin", team: "Kage" },
-    mage: { resource: "Mana", rgb: "139,92,246", starter: "Apprenti", pro: "Mage", team: "Archimage" },
-    hunter: { resource: "Nen", rgb: "20,184,166", starter: "Candidat", pro: "Hunter Licencié", team: "Double Star" },
-    professional: { resource: "Énergie", rgb: "37,99,235", starter: "Découverte", pro: "Pro", team: "Business" },
+    ninja: {
+      resource: "Chakra",
+      rgb: "249,115,22",
+      starter: "Genin",
+      chunin: "Chunin",
+      jonin: "Jonin",
+      kage: "Kage / Sannin",
+    },
+    mage: {
+      resource: "Mana",
+      rgb: "139,92,246",
+      starter: "Apprenti",
+      chunin: "Mage",
+      jonin: "Archimage",
+      kage: "Grand Primordial",
+    },
+    hunter: {
+      resource: "Nen",
+      rgb: "20,184,166",
+      starter: "Candidat",
+      chunin: "Hunter Licencié",
+      jonin: "Double Star",
+      kage: "Triple Star",
+    },
+    professional: {
+      resource: "Énergie",
+      rgb: "37,99,235",
+      starter: "Starter",
+      chunin: "Pro",
+      jonin: "Team",
+      kage: "Enterprise",
+    },
   }[userWay as "ninja" | "mage" | "hunter" | "professional"] || {
-    resource: "Mana",
-    rgb: "139,92,246",
-    starter: "Découverte",
-    pro: "Pro",
-    team: "Business",
+    resource: "Chakra",
+    rgb: "249,115,22",
+    starter: "Genin",
+    chunin: "Chunin",
+    jonin: "Jonin",
+    kage: "Kage / Sannin",
   };
 
   const plans = [
@@ -48,35 +66,35 @@ export const PricingPage: React.FC = () => {
       yearly: 0,
       yearlyTotal: 0,
       rgb: "45,212,191",
-      description: "Pour découvrir Idealy et lancer vos premiers projets.",
+      description: "Pour explorer Idealy et lancer vos premiers projets.",
       features: [
         `200 ${wayDetails.resource} (Power Points) / mois`,
-        "Accès aux 4 Voies et à l’orchestration multi-agents",
-        "Jusqu’à 3 projets et 1 mission active",
+        "Accès aux 4 Voies et à l'orchestration multi-agents",
+        "Jusqu'à 3 projets et 1 mission active",
         "Workspace, aperçu temps réel et export ZIP",
-        "Jusqu’à 50 fichiers par mission",
+        "Jusqu'à 50 fichiers par mission",
       ],
     },
     {
       id: "pro",
-      name: wayDetails.pro,
+      name: wayDetails.chunin,
       monthly: 19,
       yearly: 15.9,
       yearlyTotal: 190.8,
       rgb: wayDetails.rgb,
-      description: "Pour construire des applications réelles avec plus de capacité et de contrôle.",
+      description: "Pour construire des applications réelles avec régularité et contrôle.",
       features: [
-        `2 500 ${wayDetails.resource} (Power Points) / mois`,
+        `1 000 ${wayDetails.resource} (Power Points) / mois`,
         "Projets et dépôts illimités",
-        "Jusqu’à 5 missions actives et 300 fichiers par mission",
-        "Intégration GitHub OAuth et synchronisation des branches",
+        "Jusqu'à 5 missions actives et 300 fichiers par mission",
+        "Intégration GitHub OAuth & sync de branches",
         "Modèles avancés et support prioritaire",
       ],
       highlighted: true,
     },
     {
       id: "business",
-      name: wayDetails.team,
+      name: wayDetails.jonin,
       monthly: 49,
       yearly: 40.9,
       yearlyTotal: 490.8,
@@ -84,11 +102,26 @@ export const PricingPage: React.FC = () => {
       description: "Pour les équipes qui pilotent plusieurs applications en parallèle.",
       features: [
         `4 000 ${wayDetails.resource} (Power Points) / mois`,
-        "Jusqu’à 20 missions actives et 1 000 fichiers par mission",
+        "Jusqu'à 20 missions actives et 1 000 fichiers",
         "Orchestration multi-projets en parallèle",
         "Connecteurs MCP et intégrations cloud avancées",
         "Auto-correction Reviewer en boucle fermée (3 passes)",
-        "Support prioritaire et accompagnement ingénierie",
+      ],
+    },
+    {
+      id: "enterprise",
+      name: wayDetails.kage,
+      monthly: 199,
+      yearly: 159,
+      yearlyTotal: 1908,
+      rgb: "245,158,11",
+      description: "L'excellence absolue sans contraintes de ressource, avec support dédié 24/7.",
+      features: [
+        `${wayDetails.resource} Illimité (Power illimité)`,
+        "Missions et projets simultanés illimités",
+        "Accès prioritaire garanti à tous les modèles d'IA",
+        "Déploiements multi-cloud automatisés",
+        "Accompagnement dédié des fondateurs",
       ],
     },
   ] as const;
@@ -208,8 +241,8 @@ export const PricingPage: React.FC = () => {
           </div>
         </header>
 
-        {/* 3 Cartes d'Offres */}
-        <div className="mt-10 grid gap-5 md:grid-cols-3 items-stretch">
+        {/* Cartes d'Offres */}
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
           {plans.map((plan) => {
             const highlighted = "highlighted" in plan && plan.highlighted;
             const price = yearly ? plan.yearly : plan.monthly;

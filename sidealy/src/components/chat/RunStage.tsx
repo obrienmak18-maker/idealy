@@ -126,12 +126,9 @@ export const RunStage: React.FC<RunStageProps> = ({
                       style={{
                         borderBottom: `2px solid ${agent.tint}35`,
                       }}
+                      title={`${agent.name} — ${agent.role}`}
                     >
                       {agent.name}
-                    </span>
-                    <span className="text-[var(--dsw-alias-label-tertiary)]">·</span>
-                    <span className="text-[var(--dsw-alias-label-secondary)] text-[12px]">
-                      {agent.role}
                     </span>
                     <span className="text-[var(--dsw-alias-label-tertiary)]">·</span>
                     <time className="text-[var(--dsw-alias-label-tertiary)] text-[11px] tabular-nums">
@@ -139,19 +136,6 @@ export const RunStage: React.FC<RunStageProps> = ({
                     </time>
                   </div>
                 </div>
-
-                {/* Badge d'autorité exclusive de l'agent */}
-                <span
-                  className="hidden sm:inline-block px-2 py-0.5 rounded text-[10.5px] border"
-                  style={{
-                    backgroundColor: `${agent.tint}0f`,
-                    borderColor: `${agent.tint}25`,
-                    color: agent.tint,
-                  }}
-                  title={agent.authority}
-                >
-                  {agent.specialty.split(".")[0]}
-                </span>
               </div>
 
               {/* Réflexion typographique dans le fil (Section 5) */}

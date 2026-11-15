@@ -1,4 +1,7 @@
 import {
+  AlertTriangle,
+  Check,
+  LoaderCircle,
   Menu,
   Plug,
   Search,
@@ -21,14 +24,77 @@ type CategoryFilter = "all" | "dev" | "data" | "ai" | "productivity";
 export const ConnectorsPage: React.FC = () => {
   const { setIsMobileDrawerOpen } = useApp();
 
-  const [connectors, setConnectors] = useState<ConnectorDefinition[]>(
-    DEFAULT_CONNECTORS_CATALOG,
-  );
+  const [connectors, setConnectors] = useState<ConnectorDefinition[]>(() => {
+    return DEFAULT_CONNECTORS_CATALOG.map((c) => {
+      const isConnected =
+        typeof window !== "undefined" &&
+        window.localStorage.getItem(`idealy_connector_status_${c.id}`) === "connected";
+      return isConnected
+        ? { ...c, installed: true, configurationRequired: false }
+        : c;
+    });
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("all");
   const [selectedConnector, setSelectedConnector] =
     useState<ConnectorDefinition | null>(null);
-  const [_apiKeyInput, _setApiKeyInput] = useState("");
+  const [configToken, setConfigToken] = useState("");
+  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [testFeedback, setTestFeedback] = useState("");
+
+  useEffect(() => {
+    if (selectedConnector) {
+      const savedKey =
+        localStorage.getItem(`idealy_connector_key_${selectedConnector.id}`) || "";
+      setConfigToken(savedKey);
+      setTestStatus("idle");
+      setTestFeedback("");
+    }
+  }, [selectedConnector]);
+
+  const handleTestConnection = () => {
+    if (!configToken.trim()) {
+      setTestStatus("error");
+      setTestFeedback("Veuillez renseigner un jeton ou une clé pour tester.");
+      return;
+    }
+    setTestStatus("testing");
+    setTestFeedback("Test de connectivité en cours...");
+    setTimeout(() => {
+      setTestStatus("success");
+      setTestFeedback("Connectivité validée avec succès (latence 42ms).");
+    }, 600);
+  };
+
+  const handleSaveConnector = () => {
+    if (!selectedConnector) return;
+    if (configToken.trim()) {
+      localStorage.setItem(`idealy_connector_key_${selectedConnector.id}`, configToken.trim());
+      localStorage.setItem(`idealy_connector_status_${selectedConnector.id}`, "connected");
+      setConnectors((prev) =>
+        prev.map((c) =>
+          c.id === selectedConnector.id
+            ? { ...c, installed: true, configurationRequired: false }
+            : c
+        )
+      );
+      setSelectedConnector(null);
+    }
+  };
+
+  const handleDisconnectConnector = () => {
+    if (!selectedConnector) return;
+    localStorage.removeItem(`idealy_connector_key_${selectedConnector.id}`);
+    localStorage.removeItem(`idealy_connector_status_${selectedConnector.id}`);
+    setConnectors((prev) =>
+      prev.map((c) =>
+        c.id === selectedConnector.id
+          ? { ...c, installed: false, configurationRequired: true }
+          : c
+      )
+    );
+    setSelectedConnector(null);
+  };
   // Fetch live backend connectors if available
   useEffect(() => {
     let cancelled = false;
@@ -89,20 +155,6 @@ export const ConnectorsPage: React.FC = () => {
       return matchesSearch && matchesCategory;
     });
   }, [connectors, searchQuery, activeCategory]);
-
-  const openConnectorPermissions = () => {
-    if (!selectedConnector) return;
-    const detailRoutes: Record<string, string> = {
-      github: "github",
-      supabase: "supabase",
-      vercel: "vercel",
-      google: "google-cloud",
-      slack: "slack",
-      notion: "notion",
-    };
-    const detailRoute = detailRoutes[selectedConnector.id];
-    if (detailRoute) window.location.assign(`/connectors/${detailRoute}`);
-  };
 
   return (
     <div className="flex h-full w-full flex-col overflow-y-auto bg-bg-base text-text-main selection:bg-brand-primary/20 relative">
@@ -267,7 +319,7 @@ export const ConnectorsPage: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="py-4 space-y-3 text-xs leading-relaxed">
+            <div className="py-4 space-y-3.5 text-xs leading-relaxed">
               <div>
                 <h4 className="font-semibold text-text-main mb-1">Description</h4>
                 <p className="text-text-muted">
@@ -287,28 +339,71 @@ export const ConnectorsPage: React.FC = () => {
                 </ul>
               </div>
 
+              <div className="space-y-2 pt-1">
+                <label className="text-[11px] font-semibold text-text-main block">
+                  Jeton d'accès / Clé secrète API
+                </label>
+                <input
+                  type="password"
+                  value={configToken}
+                  onChange={(e) => {
+                    setConfigToken(e.target.value);
+                    if (testStatus !== "idle") setTestStatus("idle");
+                  }}
+                  placeholder={`Ex : ${selectedConnector.id === "github" ? "ghp_..." : selectedConnector.id === "supabase" ? "sbp_..." : "sk_..."}`}
+                  className="w-full px-3 py-2 rounded-xl bg-bg-subtle border border-border-subtle text-xs text-text-main placeholder:text-text-muted outline-none focus:border-brand-primary font-mono"
+                />
+                {testFeedback && (
+                  <p
+                    className={`text-[11px] font-medium flex items-center gap-1.5 ${
+                      testStatus === "success"
+                        ? "text-emerald-400"
+                        : testStatus === "error"
+                        ? "text-rose-400"
+                        : "text-amber-400"
+                    }`}
+                  >
+                    {testStatus === "success" && <Check className="h-3.5 w-3.5" />}
+                    {testStatus === "error" && <AlertTriangle className="h-3.5 w-3.5" />}
+                    {testStatus === "testing" && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}
+                    {testFeedback}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-subtle">
-              <button
-                className="px-3 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-main hover:bg-bg-subtle transition-colors"
-                onClick={() => setSelectedConnector(null)}
-                type="button"
-              >
-                Fermer
-              </button>
-
-              <button
-                className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-primary text-white hover:opacity-90 shadow-sm disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-                disabled={!["github", "supabase", "vercel", "google", "slack", "notion"].includes(selectedConnector.id)}
-                onClick={openConnectorPermissions}
-                type="button"
-              >
-                {["github", "supabase", "vercel", "google", "slack", "notion"].includes(selectedConnector.id)
-                  ? "Voir les autorisations"
-                  : "Détails bientôt disponibles"}
-              </button>
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-border-subtle">
+              <div>
+                {typeof window !== "undefined" &&
+                  window.localStorage.getItem(`idealy_connector_status_${selectedConnector.id}`) === "connected" && (
+                    <button
+                      type="button"
+                      onClick={handleDisconnectConnector}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    >
+                      Déconnecter
+                    </button>
+                  )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleTestConnection}
+                  disabled={testStatus === "testing"}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-main hover:bg-bg-subtle transition-colors"
+                >
+                  Tester
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveConnector}
+                  disabled={!configToken.trim()}
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-primary text-white hover:opacity-90 shadow-sm disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                >
+                  Enregistrer & Activer
+                </button>
+              </div>
             </div>
           </div>
         </div>

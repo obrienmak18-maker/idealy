@@ -23,7 +23,7 @@ import { MissionPlanCard } from "./MissionPlanCard";
 import { RunStage } from "./RunStage";
 
 export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
-  const { artifacts, sendMessage } = useApp();
+  const { artifacts, sendMessage, userWay } = useApp();
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<"liked" | "disliked" | null>(null);
   const [speaking, setSpeaking] = useState(false);
@@ -262,8 +262,9 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
     return buildRunForMessage(message.content, message.content, {
       mode: message.mode,
       reasoning: message.reasoning,
+      wayId: userWay,
     });
-  }, [message.run, message.content, message.mode, message.reasoning]);
+  }, [message.run, message.content, message.mode, message.reasoning, userWay]);
 
   return (
     <article

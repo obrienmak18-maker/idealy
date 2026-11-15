@@ -4,6 +4,7 @@ import {
   MoreHorizontal,
   PanelLeft,
   PanelLeftClose,
+  Pencil,
   Pin,
   Plug,
   Search,
@@ -29,12 +30,16 @@ export const Sidebar: React.FC = () => {
     activeConversation,
     setActiveConversationId,
     createConversation,
+    renameConversation,
     togglePinConversation,
     exportConversation,
     deleteConversation,
     openConfirmModal,
     setIsCommandPaletteOpen,
   } = useApp();
+
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -161,21 +166,43 @@ export const Sidebar: React.FC = () => {
           }`}
           data-active={isActive}
         >
-          {/* Main Select Button - Clean text title without message icon */}
-          <button
-            aria-current={isActive ? "true" : undefined}
-            className="flex flex-1 items-center min-w-0 text-left focus-ring rounded-md h-full"
-            onClick={() => {
-              setActiveConversationId(conversation.id);
-              setActivePage("chat");
-            }}
-            title={conversation.title}
-            type="button"
-          >
-            <span className="truncate text-xs tracking-tight">
-              {conversation.title}
-            </span>
-          </button>
+          {/* Main Select Button or Inline Rename Input */}
+          {renamingId === conversation.id ? (
+            <input
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={() => {
+                if (renameValue.trim()) renameConversation(conversation.id, renameValue.trim());
+                setRenamingId(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (renameValue.trim()) renameConversation(conversation.id, renameValue.trim());
+                  setRenamingId(null);
+                } else if (e.key === "Escape") {
+                  setRenamingId(null);
+                }
+              }}
+              autoFocus
+              className="w-full bg-[var(--dsw-alias-bg-layer-2)] border border-[var(--idealy-indigo)] rounded px-1.5 py-0.5 text-xs text-[var(--dsw-alias-label-primary)] outline-none"
+            />
+          ) : (
+            <button
+              aria-current={isActive ? "true" : undefined}
+              className="flex flex-1 items-center min-w-0 text-left focus-ring rounded-md h-full"
+              onClick={() => {
+                setActiveConversationId(conversation.id);
+                setActivePage("chat");
+              }}
+              title={conversation.title}
+              type="button"
+            >
+              <span className="truncate text-xs tracking-tight">
+                {conversation.title}
+              </span>
+            </button>
+          )}
 
           {/* Options button on hover (Only when expanded) */}
           <div className="relative shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
@@ -201,6 +228,19 @@ export const Sidebar: React.FC = () => {
                 ref={actionsRef}
                 role="menu"
               >
+                <button
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
+                  onClick={() => {
+                    setOpenActionsId(null);
+                    setRenamingId(conversation.id);
+                    setRenameValue(conversation.title);
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  <Pencil className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
+                  <span>Renommer</span>
+                </button>
                 <button
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
                   onClick={() => {

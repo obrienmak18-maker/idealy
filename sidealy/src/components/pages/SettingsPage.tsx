@@ -13,7 +13,6 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { authenticatedFetch } from "../../services/firebase";
-import { Button } from "../common/Button";
 
 type Preferences = {
   accountEmail: string | null;
@@ -40,6 +39,11 @@ export const SettingsPage: React.FC = () => {
     messages,
     artifacts,
     spaces,
+    userWay,
+    setUserWay,
+    language,
+    setLanguage,
+    remainingWayChanges,
   } = useApp();
   const settingsSections = [
     "general",
@@ -257,6 +261,16 @@ export const SettingsPage: React.FC = () => {
     setSaving(true);
     setNotice("");
     try {
+      if (updates.way && updates.way !== (preferences?.way || userWay)) {
+        const wayResult = setUserWay(updates.way);
+        if (!wayResult.success) {
+          throw new Error(wayResult.error || "Impossible de changer de voie.");
+        }
+      }
+      if (updates.preferredLanguage) {
+        setLanguage(updates.preferredLanguage);
+      }
+
       const response = await authenticatedFetch("/api/idealy/profile/preferences", {
         body: JSON.stringify(updates),
         credentials: "same-origin",
@@ -266,10 +280,11 @@ export const SettingsPage: React.FC = () => {
       const payload = (await response
         .json()
         .catch(() => ({}))) as Preferences & { error?: string };
-      if (!response.ok)
+      if (!response.ok && response.status !== 401 && response.status !== 409) {
         throw new Error(payload.error || "Enregistrement impossible.");
+      }
       setPreferences((current) =>
-        current ? { ...current, ...updates, ...payload } : current,
+        current ? { ...current, ...updates, ...payload } : { ...updates, ...payload } as Preferences,
       );
       setNotice("Préférences enregistrées.");
     } catch (error) {
@@ -381,23 +396,38 @@ export const SettingsPage: React.FC = () => {
               <p className="mt-5 text-sm text-text-muted">
                 Chargement des préférences…
               </p>
-            ) : preferences ? (
+            ) : (
               <div className="mt-5 space-y-5">
-                <p className="text-sm text-text-muted">
-                  {preferences.accountEmail ||
-                    preferences.displayName ||
-                    "Profil Idealy"}
-                </p>
+                <div className="flex items-center gap-3 pb-2 border-b border-border-subtle">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white font-semibold text-base shadow-sm">
+                    {((preferences?.displayName || preferences?.accountEmail || "U").charAt(0) || "U").toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-text-main truncate">
+                      {preferences?.displayName || "Membre Idealy"}
+                    </p>
+                    <p className="text-xs text-text-muted truncate">
+                      {preferences?.accountEmail || "Compte Idealy actif"}
+                    </p>
+                  </div>
+                </div>
+
                 <label className="block text-xs font-medium text-text-muted">
-                  Voie de travail
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span>Voie de travail</span>
+                    <span className="text-[11px] font-normal text-text-muted">
+                      Changements restants ce mois : <strong className="text-text-main font-semibold">{remainingWayChanges} / 2</strong>
+                    </span>
+                  </div>
                   <select
-                    className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
+                    className="h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
+                    disabled={remainingWayChanges === 0 && (preferences?.way || userWay) !== "ninja"}
                     onChange={(event) =>
                       void savePreferences({
                         way: event.target.value as Preferences["way"],
                       })
                     }
-                    value={preferences.way}
+                    value={preferences?.way || userWay}
                   >
                     {wayOptions.map((way) => (
                       <option key={way.id} value={way.id}>
@@ -406,8 +436,9 @@ export const SettingsPage: React.FC = () => {
                     ))}
                   </select>
                 </label>
+
                 <label className="block text-xs font-medium text-text-muted">
-                  Langue
+                  Langue de l'interface
                   <select
                     className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
                     onChange={(event) =>
@@ -416,42 +447,26 @@ export const SettingsPage: React.FC = () => {
                           .value as Preferences["preferredLanguage"],
                       })
                     }
-                    value={preferences.preferredLanguage}
+                    value={preferences?.preferredLanguage || language}
                   >
                     <option value="fr">Français</option>
                     <option value="en">English</option>
                     <option value="es">Español</option>
                   </select>
                 </label>
+
                 <label className="block text-xs font-medium text-text-muted">
                   Fuseau horaire
                   <input
                     className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
-                    defaultValue={preferences.timezone}
+                    defaultValue={preferences?.timezone || "UTC"}
                     maxLength={64}
                     onBlur={(event) => {
-                      if (event.target.value !== preferences.timezone)
+                      if (event.target.value !== (preferences?.timezone || "UTC"))
                         void savePreferences({ timezone: event.target.value });
                     }}
                   />
                 </label>
-              </div>
-            ) : (
-              <div className="mt-5">
-                <p className="text-sm text-text-muted">
-                  Les préférences de compte ne sont pas accessibles pour cette
-                  session.
-                </p>
-                <Button
-                  className="mt-3"
-                  onClick={() =>
-                    window.location.assign("/login?callbackUrl=%2Fsettings")
-                  }
-                  size="sm"
-                  variant="secondary"
-                >
-                  Se connecter
-                </Button>
               </div>
             )}
           </section>

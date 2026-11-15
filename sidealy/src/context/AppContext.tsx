@@ -114,6 +114,11 @@ interface AppContextValue {
   togglePinConversation: (id: string) => void;
   updateSpace: (id: string, updates: Partial<Space>) => void;
   updateArtifactContent: (conversationId: string, path: string, content: string) => void;
+  userWay: "ninja" | "mage" | "hunter" | "professional";
+  setUserWay: (way: "ninja" | "mage" | "hunter" | "professional") => { success: boolean; error?: string };
+  language: "fr" | "en" | "es";
+  setLanguage: (lang: "fr" | "en" | "es") => void;
+  remainingWayChanges: number;
   webSearch: boolean;
 }
 
@@ -255,6 +260,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     useState<GenerationStatus>("idle");
   const [deepThink, setDeepThink] = useState<boolean>(true);
   const [webSearch, setWebSearch] = useState<boolean>(false);
+
+  // Way and Language state
+  const [userWay, setUserWayState] = useState<"ninja" | "mage" | "hunter" | "professional">(() => {
+    if (typeof window === "undefined") return "ninja";
+    const stored = window.localStorage.getItem("idealy_user_way");
+    return stored === "mage" || stored === "ninja" || stored === "hunter" || stored === "professional"
+      ? stored
+      : "ninja";
+  });
+
+  const [language, setLanguageState] = useState<"fr" | "en" | "es">(() => {
+    if (typeof window === "undefined") return "fr";
+    const stored = window.localStorage.getItem("idealy_language");
+    return stored === "fr" || stored === "en" || stored === "es" ? stored : "fr";
+  });
+
+  const [remainingWayChanges, setRemainingWayChanges] = useState<number>(() => {
+    if (typeof window === "undefined") return 2;
+    try {
+      const historyRaw = window.localStorage.getItem("idealy_way_changes_history");
+      const history: number[] = historyRaw ? JSON.parse(historyRaw) : [];
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const recent = history.filter((t) => typeof t === "number" && t > thirtyDaysAgo);
+      return Math.max(0, 2 - recent.length);
+    } catch {
+      return 2;
+    }
+  });
+
+  const setUserWay = useCallback(
+    (nextWay: "ninja" | "mage" | "hunter" | "professional") => {
+      try {
+        const historyRaw = window.localStorage.getItem("idealy_way_changes_history");
+        const history: number[] = historyRaw ? JSON.parse(historyRaw) : [];
+        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        const recent = history.filter((t) => typeof t === "number" && t > thirtyDaysAgo);
+
+        if (recent.length >= 2) {
+          return {
+            success: false,
+            error: "Limite atteinte : 2 changements de voie maximum par mois.",
+          };
+        }
+
+        const now = Date.now();
+        const updatedHistory = [...recent, now];
+        window.localStorage.setItem("idealy_way_changes_history", JSON.stringify(updatedHistory));
+        window.localStorage.setItem("idealy_user_way", nextWay);
+        document.cookie = `idealy_user_way=${nextWay}; path=/; max-age=31536000; SameSite=Lax`;
+        setUserWayState(nextWay);
+        setRemainingWayChanges(Math.max(0, 2 - updatedHistory.length));
+        return { success: true };
+      } catch {
+        window.localStorage.setItem("idealy_user_way", nextWay);
+        document.cookie = `idealy_user_way=${nextWay}; path=/; max-age=31536000; SameSite=Lax`;
+        setUserWayState(nextWay);
+        return { success: true };
+      }
+    },
+    [],
+  );
+
+  const setLanguage = useCallback((nextLang: "fr" | "en" | "es") => {
+    window.localStorage.setItem("idealy_language", nextLang);
+    document.cookie = `NEXT_LOCALE=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `idealy_lang=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
+    setLanguageState(nextLang);
+  }, []);
 
   // Firestore Project Sync
   const { project: syncedProject } = useFirestoreProjectSync(activeConversationId);
@@ -814,6 +887,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const initialRun = buildRunForMessage(content, "", {
       mode: currentMode,
       deepThink: useDeepThink,
+      wayId: userWay,
     });
     const assistantMessageId = `msg-${Date.now() + 1}`;
     const initialAssistantMessage: Message = {
@@ -878,6 +952,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                 const updatedRun = buildRunForMessage(content, accumulatedContent, {
                   mode: currentMode,
                   reasoning: accumulatedReasoning,
+                  wayId: userWay,
                 });
                 return { ...m, content: accumulatedContent, run: updatedRun };
               }),
@@ -895,6 +970,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                 const finalRun = buildRunForMessage(content, accumulatedContent, {
                   mode: currentMode,
                   reasoning: accumulatedReasoning,
+                  wayId: userWay,
                 });
                 return {
                   ...m,
@@ -1002,6 +1078,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                 const updatedRun = buildRunForMessage(content, accumulatedContent, {
                   mode: currentMode,
                   reasoning: accumulatedReasoning,
+                  wayId: userWay,
                 });
                 return { ...m, reasoning: accumulatedReasoning, run: updatedRun };
               }),
@@ -1341,6 +1418,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         togglePinConversation,
         updateSpace,
         updateArtifactContent,
+        userWay,
+        setUserWay,
+        language,
+        setLanguage,
+        remainingWayChanges,
         webSearch,
       }}
     >

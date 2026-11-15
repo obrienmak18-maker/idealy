@@ -1,5 +1,4 @@
-import { getToken } from "next-auth/jwt";
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { getSafeToken } from "@/lib/auth/session-token";
 
 export const maxDuration = 30;
 
@@ -12,11 +11,7 @@ function json(body: Record<string, unknown>, status = 200) {
 
 /** Sonde : la transcription est-elle disponible pour cette session ? */
 export async function GET(request: Request) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const token = await getSafeToken(request);
   if (!token) return json({ available: false }, 401);
   return process.env.OPENAI_API_KEY?.trim() ? json({ available: true }) : json({ available: false }, 503);
 }
@@ -27,11 +22,7 @@ export async function GET(request: Request) {
  * sur la dictée du navigateur.
  */
 export async function POST(request: Request) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const token = await getSafeToken(request);
   if (!token) return json({ error: "Une session Idealy authentifiée est requise." }, 401);
 
   const apiKey = process.env.OPENAI_API_KEY?.trim();

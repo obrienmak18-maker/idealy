@@ -55,9 +55,9 @@ describe("Stage & Régie Engine — Recette et Spécifications Produit", () => {
 
     // Ne doit pas afficher de régie d'équipe
     expect(container.querySelector("[aria-label*='Régie de run']")).toBeNull();
-    // Affiche le locuteur avec son nom et son rôle
+    // Affiche le locuteur avec son nom épuré et son rôle en title
     expect(screen.getByText("Naruto")).toBeDefined();
-    expect(screen.getByText("Ingénieur Full-Stack")).toBeDefined();
+    expect(screen.getByText("Naruto").getAttribute("title")).toContain("Ingénieur Full-Stack");
   });
 
   // Test 3 : Mention explicite d'agent
