@@ -238,13 +238,21 @@ export const AccountChip: React.FC<{
 
             <button
               className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors text-left"
-              onClick={() => {
+              onClick={async () => {
                 setIsMenuOpen(false);
-                void signOutFirebase()
-                  .catch((error) => {
-                    console.error("[Idealy sign-out]", error);
-                  })
-                  .finally(() => setActivePage("login"));
+                try {
+                  await signOutFirebase();
+                } catch (error) {
+                  console.error("[Idealy sign-out]", error);
+                } finally {
+                  try {
+                    localStorage.removeItem("idealy_session");
+                    localStorage.removeItem("idealy_user_profile");
+                    localStorage.removeItem("idealy_profile");
+                    document.cookie = "idealy_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                  } catch {}
+                  window.location.href = "/welcome";
+                }
               }}
               type="button"
             >

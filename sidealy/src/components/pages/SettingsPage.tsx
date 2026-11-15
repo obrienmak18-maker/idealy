@@ -3,6 +3,7 @@ import {
   CreditCard,
   ExternalLink,
   LoaderCircle,
+  LogOut,
   Monitor,
   Moon,
   Server,
@@ -12,7 +13,7 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { authenticatedFetch } from "../../services/firebase";
+import { authenticatedFetch, signOutFirebase } from "../../services/firebase";
 
 type Preferences = {
   accountEmail: string | null;
@@ -467,6 +468,31 @@ export const SettingsPage: React.FC = () => {
                     }}
                   />
                 </label>
+
+                <div className="pt-4 border-t border-border-subtle flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-text-main">Session active</p>
+                    <p className="text-[11px] text-text-muted">Déconnectez votre compte de cet appareil</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await signOutFirebase();
+                      } catch {}
+                      try {
+                        localStorage.removeItem("idealy_session");
+                        localStorage.removeItem("idealy_user_profile");
+                        localStorage.removeItem("idealy_profile");
+                      } catch {}
+                      window.location.href = "/welcome";
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Se déconnecter
+                  </button>
+                </div>
               </div>
             )}
           </section>
@@ -556,26 +582,63 @@ export const SettingsPage: React.FC = () => {
               </p>
             ) : billing ? (
               <>
-                <dl className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl bg-bg-subtle p-3">
-                    <dt className="text-xs text-text-muted">Forfait</dt>
-                    <dd className="mt-1 text-sm font-semibold text-text-main">
-                      {billing.planId === "business"
-                        ? "Business"
-                        : billing.planId === "pro"
-                          ? "Pro"
-                          : "Découverte"}
-                    </dd>
-                  </div>
-                  <div className="rounded-xl bg-bg-subtle p-3">
-                    <dt className="text-xs text-text-muted">
-                      Crédits disponibles
-                    </dt>
-                    <dd className="mt-1 text-sm font-semibold text-text-main">
-                      {billing.creditsBalance ?? "—"}
-                    </dd>
-                  </div>
-                </dl>
+                {(() => {
+                  const activeWayKey = preferences?.way || userWay;
+                  const tiers = {
+                    ninja: { resource: "Chakra", free: "Genin", pro: "Chunin", business: "Jonin", max: "Kage / Sannin" },
+                    mage: { resource: "Mana", free: "Apprenti", pro: "Mage", business: "Archimage", max: "Grand Primordial" },
+                    hunter: { resource: "Nen", free: "Candidat", pro: "Hunter Licencié", business: "Double Star", max: "Triple Star" },
+                    professional: { resource: "Énergie", free: "Starter", pro: "Pro", business: "Team", max: "Enterprise" },
+                  }[activeWayKey] || { resource: "Chakra", free: "Genin", pro: "Chunin", business: "Jonin", max: "Kage / Sannin" };
+
+                  return (
+                    <>
+                      <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl bg-bg-subtle p-3">
+                          <dt className="text-xs text-text-muted">Forfait actif ({activeWayKey.toUpperCase()})</dt>
+                          <dd className="mt-1 text-sm font-semibold text-text-main">
+                            {billing.planId === "business"
+                              ? tiers.business
+                              : billing.planId === "pro"
+                                ? tiers.pro
+                                : tiers.free}
+                          </dd>
+                        </div>
+                        <div className="rounded-xl bg-bg-subtle p-3">
+                          <dt className="text-xs text-text-muted">
+                            Crédits de ressource ({tiers.resource})
+                          </dt>
+                          <dd className="mt-1 text-sm font-semibold text-text-main">
+                            {billing.creditsBalance ?? "Illimité (Période Bêta)"}
+                          </dd>
+                        </div>
+                      </dl>
+                      <div className="mt-4 p-3 rounded-xl bg-bg-subtle/50 border border-border-subtle">
+                        <p className="text-xs font-semibold text-text-main mb-2">
+                          Paliers disponibles pour votre Voie ({activeWayKey})
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                          <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
+                            <p className="font-semibold text-text-main truncate">{tiers.free}</p>
+                            <p className="text-[11px] text-text-muted">0 € / mois</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
+                            <p className="font-semibold text-text-main truncate">{tiers.pro}</p>
+                            <p className="text-[11px] text-text-muted">19 € / mois</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
+                            <p className="font-semibold text-text-main truncate">{tiers.business}</p>
+                            <p className="text-[11px] text-text-muted">49 € / mois</p>
+                          </div>
+                          <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
+                            <p className="font-semibold text-text-main truncate">{tiers.max}</p>
+                            <p className="text-[11px] text-text-muted">199 € / mois</p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
                 <p className="mt-3 text-xs leading-5 text-text-muted">
                   {billing.active
                     ? billing.cancelAtPeriodEnd

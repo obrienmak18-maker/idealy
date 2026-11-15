@@ -192,45 +192,58 @@ export const AssistantRemoteService = {
 
     const fileParts = await Promise.all(
       (options.attachments ?? []).map(async (attachment) => {
-        if (!attachment.file) {
-          if (attachment.url) {
-            return {
-              filename: attachment.name,
-              mediaType: attachment.type || "application/octet-stream",
-              type: "file" as const,
-              url: attachment.url,
-            };
+        let fileUrl = attachment.url;
+        let mediaType = attachment.type || "application/octet-stream";
+
+        if (attachment.file) {
+          try {
+            const formData = new FormData();
+            formData.set("file", attachment.file, attachment.name);
+            const upload = await authenticatedFetch("/api/files/upload", {
+              body: formData,
+              credentials: "same-origin",
+              method: "POST",
+              signal,
+            });
+            if (upload.ok) {
+              const result = (await upload.json()) as {
+                contentType?: string;
+                url?: string;
+              };
+              if (result.url && result.url.startsWith("https://")) {
+                fileUrl = result.url;
+                if (result.contentType) mediaType = result.contentType;
+              }
+            }
+          } catch {
+            // Upload endpoint unavailable, fallback to inline data URL
           }
-          throw new Error(
-            `Le fichier « ${attachment.name} » n’est plus disponible. Ajoutez-le de nouveau avant l’envoi.`,
-          );
+
+          // If no remote URL obtained, encode as data URL for direct multimodal AI inference
+          if (!fileUrl || !fileUrl.startsWith("http")) {
+            fileUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = () => resolve(attachment.url || "");
+              reader.readAsDataURL(attachment.file!);
+            });
+          }
         }
-        const formData = new FormData();
-        formData.set("file", attachment.file, attachment.name);
-        const upload = await authenticatedFetch("/api/files/upload", {
-          body: formData,
-          credentials: "same-origin",
-          method: "POST",
-          signal,
-        });
-        if (!upload.ok) {
-          throw await responseError(upload);
+
+        if (fileUrl) {
+          return {
+            filename: attachment.name,
+            mediaType,
+            type: "file" as const,
+            url: fileUrl,
+          };
         }
-        const result = (await upload.json()) as {
-          contentType?: string;
-          url?: string;
-        };
-        if (!result.url || !result.url.startsWith("https://")) {
-          throw new Error(
-            "Le stockage des fichiers n’est pas configuré pour fournir une URL sécurisée. Configurez Supabase Storage, puis réessayez.",
-          );
-        }
+
         return {
           filename: attachment.name,
-          mediaType:
-            result.contentType || attachment.type || "application/octet-stream",
+          mediaType: attachment.type || "application/octet-stream",
           type: "file" as const,
-          url: result.url,
+          url: attachment.url || "",
         };
       }),
     );

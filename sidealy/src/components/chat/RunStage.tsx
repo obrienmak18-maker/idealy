@@ -120,7 +120,7 @@ export const RunStage: React.FC<RunStageProps> = ({
                     state={turn.state}
                   />
 
-                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span
                       className="font-semibold text-sm tracking-tight text-[var(--dsw-alias-label-primary)]"
                       style={{
@@ -129,6 +129,9 @@ export const RunStage: React.FC<RunStageProps> = ({
                       title={`${agent.name} — ${agent.role}`}
                     >
                       {agent.name}
+                    </span>
+                    <span className="text-[11px] font-medium text-[var(--dsw-alias-label-secondary)] bg-[var(--dsw-alias-bg-layer-2)] px-2 py-0.5 rounded-md border border-[var(--dsw-alias-border-l1)]">
+                      {agent.role}
                     </span>
                     <span className="text-[var(--dsw-alias-label-tertiary)]">·</span>
                     <time className="text-[var(--dsw-alias-label-tertiary)] text-[11px] tabular-nums">

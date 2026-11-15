@@ -1,10 +1,14 @@
 import { Bell, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { useApp } from "../../context/AppContext";
 
 export const NotificationBanner: React.FC = () => {
+  const { generationStatus } = useApp();
   const [isVisible, setIsVisible] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
+
+  const isBuilding = generationStatus === "receiving" || generationStatus === "sending";
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) {
@@ -15,10 +19,11 @@ export const NotificationBanner: React.FC = () => {
     const dismissed = localStorage.getItem(
       "idealy_notification_banner_dismissed"
     );
-    if (!dismissed && Notification.permission === "default") {
+    // Show only when building is actively underway (v0 / Bolt behavior)
+    if (!dismissed && Notification.permission === "default" && isBuilding) {
       setIsVisible(true);
     }
-  }, []);
+  }, [isBuilding]);
 
   const handleRequest = async () => {
     if (!isSupported) {

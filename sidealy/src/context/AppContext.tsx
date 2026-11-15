@@ -264,6 +264,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   // Way and Language state
   const [userWay, setUserWayState] = useState<"ninja" | "mage" | "hunter" | "professional">(() => {
     if (typeof window === "undefined") return "ninja";
+    const urlWay = new URLSearchParams(window.location.search).get("way");
+    if (urlWay === "mage" || urlWay === "ninja" || urlWay === "hunter" || urlWay === "professional") {
+      try { window.localStorage.setItem("idealy_user_way", urlWay); } catch {}
+      return urlWay;
+    }
+    const cookieMatch = document.cookie.match(/(?:^|;\s*)idealy_user_way=([^;]+)/);
+    const cookieWay = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+    if (cookieWay === "mage" || cookieWay === "ninja" || cookieWay === "hunter" || cookieWay === "professional") {
+      try { window.localStorage.setItem("idealy_user_way", cookieWay); } catch {}
+      return cookieWay;
+    }
     const stored = window.localStorage.getItem("idealy_user_way");
     return stored === "mage" || stored === "ninja" || stored === "hunter" || stored === "professional"
       ? stored
@@ -272,6 +283,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const [language, setLanguageState] = useState<"fr" | "en" | "es">(() => {
     if (typeof window === "undefined") return "fr";
+    const urlLang = new URLSearchParams(window.location.search).get("lang");
+    if (urlLang === "fr" || urlLang === "en" || urlLang === "es") {
+      try { window.localStorage.setItem("idealy_language", urlLang); } catch {}
+      return urlLang;
+    }
+    const cookieMatch = document.cookie.match(/(?:^|;\s*)(?:NEXT_LOCALE|idealy_language|idealy_lang)=([^;]+)/);
+    const cookieLang = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+    if (cookieLang === "fr" || cookieLang === "en" || cookieLang === "es") {
+      try { window.localStorage.setItem("idealy_language", cookieLang); } catch {}
+      return cookieLang;
+    }
     const stored = window.localStorage.getItem("idealy_language");
     return stored === "fr" || stored === "en" || stored === "es" ? stored : "fr";
   });

@@ -1,4 +1,6 @@
+import { ArrowLeft } from "lucide-react";
 import type React from "react";
+import { useApp } from "../../context/AppContext";
 import { PageFrame } from "../layout/PageFrame";
 import { PageHeader } from "../layout/PageHeader";
 
@@ -116,10 +118,27 @@ const legalCopy: Record<
 };
 
 export const LegalPage: React.FC<{ page: LegalKind }> = ({ page }) => {
+  const { setActivePage } = useApp();
   const content = legalCopy[page];
   return (
     <PageFrame label={content.eyebrow}>
-      <article className="mx-auto max-w-3xl pb-12">
+      <article className="mx-auto max-w-3xl pb-12 pt-4 px-4 sm:px-0">
+        <div className="mb-4">
+          <button
+            onClick={() => {
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                setActivePage("login");
+              }
+            }}
+            type="button"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-muted hover:text-text-main py-1.5 px-3 rounded-lg bg-bg-surface border border-border-subtle hover:bg-bg-subtle transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Retour
+          </button>
+        </div>
         <PageHeader eyebrow={content.eyebrow} title={content.title} />
         <p className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3 text-sm leading-6 text-text-muted">
           {content.intro}

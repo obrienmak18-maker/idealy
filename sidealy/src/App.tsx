@@ -276,6 +276,14 @@ const AppContent: React.FC = () => {
       </div>
     );
   }
+  if (activePage === "privacy" || activePage === "terms" || activePage === "eula") {
+    return (
+      <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
+        <CookieNotice />
+        <LegalPage page={activePage} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-base text-text-main font-sans selection:bg-brand-primary/20">
@@ -295,10 +303,6 @@ const AppContent: React.FC = () => {
           <ConnectorsPage />
         ) : activePage === "agents" ? (
           <AgentsPage />
-        ) : activePage === "privacy" ||
-          activePage === "terms" ||
-          activePage === "eula" ? (
-          <LegalPage page={activePage} />
         ) : activePage === "library" ? (
           <LibraryPage />
         ) : activePage === "settings" ? (

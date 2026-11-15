@@ -19,6 +19,7 @@ import { hasConversationActivity } from "../../services/conversationVisibility";
 import { AccountChip } from "./AccountChip";
 import { CreditsPill } from "../credits/CreditsPill";
 import { IdealyLogo } from "../branding/IdealyLogo";
+import { useTranslation } from "../../services/i18n";
 
 export const Sidebar: React.FC = () => {
   const {
@@ -37,6 +38,7 @@ export const Sidebar: React.FC = () => {
     openConfirmModal,
     setIsCommandPaletteOpen,
   } = useApp();
+  const { t } = useTranslation();
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -128,15 +130,15 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     {
       key: "library" as const,
-      label: "Bibliothèque",
+      label: t("sidebar.library"),
       icon: LayoutGrid,
     },
     {
       key: "connectors" as const,
-      label: "Connecteurs",
+      label: t("sidebar.connectors"),
       icon: Plug,
     },
-  ] as const;
+  ];
 
   const renderConversation = (
     conversation: (typeof spaceConversations)[number],
@@ -239,7 +241,7 @@ export const Sidebar: React.FC = () => {
                   type="button"
                 >
                   <Pencil className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
-                  <span>Renommer</span>
+                  <span>{t("sidebar.rename")}</span>
                 </button>
                 <button
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
@@ -251,7 +253,7 @@ export const Sidebar: React.FC = () => {
                   type="button"
                 >
                   <Pin className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
-                  <span>{conversation.isPinned ? "Désépingler" : "Épingler"}</span>
+                  <span>{conversation.isPinned ? t("sidebar.unpin") : t("sidebar.pin")}</span>
                 </button>
                 <button
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-colors"
@@ -263,7 +265,7 @@ export const Sidebar: React.FC = () => {
                   type="button"
                 >
                   <Download className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
-                  <span>Exporter (JSON)</span>
+                  <span>{t("sidebar.export")}</span>
                 </button>
                 <div className="my-1 border-t border-[var(--dsw-alias-border-l1)]" />
                 <button
@@ -273,7 +275,7 @@ export const Sidebar: React.FC = () => {
                   type="button"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  <span>Supprimer</span>
+                  <span>{t("sidebar.delete")}</span>
                 </button>
               </div>
             )}
@@ -420,16 +422,16 @@ export const Sidebar: React.FC = () => {
       {/* ─── 4. CHRONOLOGICAL DISCUSSION HISTORY (Caché si replié) ───────── */}
       {!collapsed ? (
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1.5 pb-2 mt-1 idealy-scroll">
-          {renderSection("Épinglés", groupedConversations.pinned)}
-          {renderSection("Aujourd'hui", groupedConversations.today)}
-          {renderSection("Hier", groupedConversations.yesterday)}
-          {renderSection("7 derniers jours", groupedConversations.lastWeek)}
-          {renderSection("Plus ancien", groupedConversations.older)}
+          {renderSection(t("sidebar.pinned"), groupedConversations.pinned)}
+          {renderSection(t("sidebar.today"), groupedConversations.today)}
+          {renderSection(t("sidebar.yesterday"), groupedConversations.yesterday)}
+          {renderSection(t("sidebar.lastWeek"), groupedConversations.lastWeek)}
+          {renderSection(t("sidebar.older"), groupedConversations.older)}
 
           {/* Empty state when no chats */}
           {spaceConversations.length === 0 && (
             <div className="px-2 py-6 text-center text-xs text-[var(--dsw-alias-label-tertiary)]">
-              <p className="font-medium">Aucune discussion</p>
+              <p className="font-medium">{t("sidebar.noChats")}</p>
             </div>
           )}
         </div>

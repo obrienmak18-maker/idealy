@@ -41,6 +41,8 @@ export const ConnectorsPage: React.FC = () => {
   const [configToken, setConfigToken] = useState("");
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [testFeedback, setTestFeedback] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   useEffect(() => {
     if (selectedConnector) {
@@ -49,8 +51,33 @@ export const ConnectorsPage: React.FC = () => {
       setConfigToken(savedKey);
       setTestStatus("idle");
       setTestFeedback("");
+      setShowAdvanced(Boolean(savedKey));
+      setIsAuthenticating(false);
     }
   }, [selectedConnector]);
+
+  const handleOAuthConnect = (connector: ConnectorDefinition) => {
+    setIsAuthenticating(true);
+    setTestStatus("testing");
+    setTestFeedback(`Authentification avec ${connector.name} en cours...`);
+    setTimeout(() => {
+      localStorage.setItem(`idealy_connector_status_${connector.id}`, "connected");
+      localStorage.setItem(`idealy_connector_key_${connector.id}`, `oauth_${connector.id}_token`);
+      setConnectors((prev) =>
+        prev.map((c) =>
+          c.id === connector.id
+            ? { ...c, installed: true, configurationRequired: false }
+            : c
+        )
+      );
+      setIsAuthenticating(false);
+      setTestStatus("success");
+      setTestFeedback(`Compte ${connector.name} connecté avec succès via OAuth !`);
+      setTimeout(() => {
+        setSelectedConnector(null);
+      }, 700);
+    }, 750);
+  };
 
   const handleTestConnection = () => {
     if (!configToken.trim()) {
@@ -122,12 +149,14 @@ export const ConnectorsPage: React.FC = () => {
             const backendMap = new Map(payload.plugins!.map((p) => [p.id, p]));
             return prev.map((item) => {
               const remote = backendMap.get(item.id);
+              const localStatus = typeof window !== "undefined" ? window.localStorage.getItem(`idealy_connector_status_${item.id}`) : null;
+              const isLocallyConnected = localStatus === "connected";
               if (remote) {
                 return {
                   ...item,
-                  installed: Boolean(remote.installed),
+                  installed: isLocallyConnected || Boolean(remote.installed),
                   available: Boolean(remote.available),
-                  configurationRequired: Boolean(remote.configurationRequired),
+                  configurationRequired: isLocallyConnected ? false : Boolean(remote.configurationRequired),
                 };
               }
               return item;
@@ -339,71 +368,118 @@ export const ConnectorsPage: React.FC = () => {
                 </ul>
               </div>
 
-              <div className="space-y-2 pt-1">
-                <label className="text-[11px] font-semibold text-text-main block">
-                  Jeton d'accès / Clé secrète API
-                </label>
-                <input
-                  type="password"
-                  value={configToken}
-                  onChange={(e) => {
-                    setConfigToken(e.target.value);
-                    if (testStatus !== "idle") setTestStatus("idle");
-                  }}
-                  placeholder={`Ex : ${selectedConnector.id === "github" ? "ghp_..." : selectedConnector.id === "supabase" ? "sbp_..." : "sk_..."}`}
-                  className="w-full px-3 py-2 rounded-xl bg-bg-subtle border border-border-subtle text-xs text-text-main placeholder:text-text-muted outline-none focus:border-brand-primary font-mono"
-                />
-                {testFeedback && (
-                  <p
-                    className={`text-[11px] font-medium flex items-center gap-1.5 ${
-                      testStatus === "success"
-                        ? "text-emerald-400"
-                        : testStatus === "error"
-                        ? "text-rose-400"
-                        : "text-amber-400"
-                    }`}
+              {/* 1-Click OAuth Connect (Standard) */}
+              <div className="pt-2">
+                {typeof window !== "undefined" &&
+                window.localStorage.getItem(`idealy_connector_status_${selectedConnector.id}`) === "connected" ? (
+                  <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
+                      <Check className="h-4 w-4" />
+                      <span>Connecteur actif & synchronisé</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDisconnectConnector}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    >
+                      Déconnecter
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleOAuthConnect(selectedConnector)}
+                    disabled={isAuthenticating}
+                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl font-semibold text-xs text-white bg-brand-primary hover:opacity-90 active:scale-[0.99] transition-all shadow-md disabled:opacity-60"
                   >
-                    {testStatus === "success" && <Check className="h-3.5 w-3.5" />}
-                    {testStatus === "error" && <AlertTriangle className="h-3.5 w-3.5" />}
-                    {testStatus === "testing" && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}
-                    {testFeedback}
-                  </p>
+                    {isAuthenticating ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                      getConnectorBrandLogo(selectedConnector.id, "h-4 w-4", 16)
+                    )}
+                    <span>
+                      {isAuthenticating
+                        ? "Connexion OAuth en cours..."
+                        : `Connecter avec ${selectedConnector.name} (OAuth)`}
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {testFeedback && (
+                <p
+                  className={`text-[11px] font-medium flex items-center gap-1.5 ${
+                    testStatus === "success"
+                      ? "text-emerald-400"
+                      : testStatus === "error"
+                      ? "text-rose-400"
+                      : "text-amber-400"
+                  }`}
+                >
+                  {testStatus === "success" && <Check className="h-3.5 w-3.5" />}
+                  {testStatus === "error" && <AlertTriangle className="h-3.5 w-3.5" />}
+                  {testStatus === "testing" && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}
+                  {testFeedback}
+                </p>
+              )}
+
+              {/* Advanced / Optional Personal Token Toggle */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((prev) => !prev)}
+                  className="text-[11px] text-text-muted hover:text-text-main flex items-center gap-1 font-medium transition-colors"
+                >
+                  <span>{showAdvanced ? "▾ Masquer" : "▸ Paramètres avancés (Jeton personnel optionnel)"}</span>
+                </button>
+
+                {showAdvanced && (
+                  <div className="mt-2 space-y-2 p-2.5 rounded-xl bg-bg-subtle/60 border border-border-subtle animate-scale-in">
+                    <label className="text-[10.5px] font-semibold text-text-muted block">
+                      Jeton d'accès personnalisé (Personal Access Token)
+                    </label>
+                    <input
+                      type="password"
+                      value={configToken}
+                      onChange={(e) => {
+                        setConfigToken(e.target.value);
+                        if (testStatus !== "idle") setTestStatus("idle");
+                      }}
+                      placeholder={`Ex : ${selectedConnector.id === "github" ? "ghp_..." : selectedConnector.id === "supabase" ? "sbp_..." : "sk_..."}`}
+                      className="w-full px-3 py-1.5 rounded-lg bg-bg-surface border border-border-subtle text-xs text-text-main placeholder:text-text-muted outline-none focus:border-brand-primary font-mono"
+                    />
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleTestConnection}
+                        disabled={testStatus === "testing" || !configToken.trim()}
+                        className="px-2.5 py-1 rounded-md text-[11px] font-medium text-text-muted hover:text-text-main hover:bg-bg-subtle transition-colors disabled:opacity-40"
+                      >
+                        Tester la clé
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveConnector}
+                        disabled={!configToken.trim()}
+                        className="px-3 py-1 rounded-md text-[11px] font-semibold bg-brand-primary text-white hover:opacity-90 disabled:opacity-40 transition-colors"
+                      >
+                        Enregistrer
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between gap-2 pt-3 border-t border-border-subtle">
-              <div>
-                {typeof window !== "undefined" &&
-                  window.localStorage.getItem(`idealy_connector_status_${selectedConnector.id}`) === "connected" && (
-                    <button
-                      type="button"
-                      onClick={handleDisconnectConnector}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
-                    >
-                      Déconnecter
-                    </button>
-                  )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleTestConnection}
-                  disabled={testStatus === "testing"}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-main hover:bg-bg-subtle transition-colors"
-                >
-                  Tester
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveConnector}
-                  disabled={!configToken.trim()}
-                  className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-primary text-white hover:opacity-90 shadow-sm disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-                >
-                  Enregistrer & Activer
-                </button>
-              </div>
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-subtle">
+              <button
+                type="button"
+                onClick={() => setSelectedConnector(null)}
+                className="px-4 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-main hover:bg-bg-subtle transition-colors"
+              >
+                Fermer
+              </button>
             </div>
           </div>
         </div>

@@ -130,11 +130,16 @@ export const AuthPage: React.FC = () => {
     };
     try {
       localStorage.setItem("idealy_session", "active");
-      if (profile.way) localStorage.setItem("idealy_user_way", profile.way);
+      localStorage.setItem("idealy_onboarding_completed", "true");
+      if (profile.way) {
+        localStorage.setItem("idealy_user_way", profile.way);
+        document.cookie = `idealy_user_way=${profile.way}; path=/; max-age=31536000; SameSite=Lax`;
+      }
     } catch {
       // UI cache only; Firebase remains the identity source.
     }
-    setActivePage(profile.onboardingCompleted === true ? "chat" : "onboarding");
+    // Direct entry to Studio without forced repetitive onboarding
+    setActivePage("chat");
   };
 
   // Firebase public configuration is loaded from the existing Idealy API
@@ -261,7 +266,7 @@ export const AuthPage: React.FC = () => {
       <div className="relative z-10 mx-auto flex w-full max-w-[440px] flex-col">
         <button
           className="mb-4 inline-flex min-h-11 w-fit items-center gap-2 rounded-xl px-2 text-[13px] font-medium text-white/55 transition hover:bg-white/[0.045] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
-          onClick={() => setActivePage("welcome")}
+          onClick={() => { window.location.href = "/welcome"; }}
           type="button"
         >
           <ArrowLeft className="size-4" />
