@@ -154,7 +154,7 @@ import {
 function directivePourVoie(way: BuildWayId): string {
   try {
     const pack = chargerPrepromptsVoieSync(way);
-    return assemblerPrepromptsPourPromptSysteme(way, pack);
+    return `${WAY_DIRECTIVES[way]}\n\n${assemblerPrepromptsPourPromptSysteme(way, pack)}`;
   } catch {
     return WAY_DIRECTIVES[way];
   }
