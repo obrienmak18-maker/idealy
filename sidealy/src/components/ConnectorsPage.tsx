@@ -63,7 +63,7 @@ export const ConnectorsPage: React.FC = () => {
       const bearer = await getBearerToken();
       const headers: Record<string, string> = { "Cache-Control": "no-store" };
       if (bearer) {
-        headers["Authorization"] = `Bearer ${bearer}`;
+        headers.Authorization = `Bearer ${bearer}`;
       }
 
       const res = await authenticatedFetch("/api/idealy/connectors/status", {
@@ -130,7 +130,7 @@ export const ConnectorsPage: React.FC = () => {
         "Content-Type": "application/json",
       };
       if (bearer) {
-        headers["Authorization"] = `Bearer ${bearer}`;
+        headers.Authorization = `Bearer ${bearer}`;
       }
 
       let endpoint = "/api/idealy/connectors/start";
@@ -275,7 +275,7 @@ export const ConnectorsPage: React.FC = () => {
       .then((bearer) => {
         const headers: Record<string, string> = {};
         if (bearer) {
-          headers["Authorization"] = `Bearer ${bearer}`;
+          headers.Authorization = `Bearer ${bearer}`;
         }
         return authenticatedFetch("/api/idealy/plugins", {
           cache: "no-store",
@@ -301,7 +301,7 @@ export const ConnectorsPage: React.FC = () => {
           !cancelled
         ) {
           setConnectors((prev) => {
-            const backendMap = new Map(payload.plugins!.map((p) => [p.id, p]));
+            const backendMap = new Map(payload.plugins?.map((p) => [p.id, p]));
             return prev.map((item) => {
               const remote = backendMap.get(item.id);
               if (remote) {
@@ -627,11 +627,15 @@ export const ConnectorsPage: React.FC = () => {
 
                 {showAdvanced && (
                   <div className="mt-2 space-y-2 p-2.5 rounded-xl bg-bg-subtle/60 border border-border-subtle animate-scale-in">
-                    <label className="text-[10.5px] font-semibold text-text-muted block">
+                    <label
+                      className="text-[10.5px] font-semibold text-text-muted block"
+                      htmlFor="personal-access-token"
+                    >
                       Jeton d'accès personnalisé (Personal Access Token)
                     </label>
                     <input
                       className="w-full px-3 py-1.5 rounded-lg bg-bg-surface border border-border-subtle text-xs text-text-main placeholder:text-text-muted outline-none focus:border-brand-primary font-mono"
+                      id="personal-access-token"
                       onChange={(e) => {
                         setConfigToken(e.target.value);
                         if (testStatus !== "idle") {

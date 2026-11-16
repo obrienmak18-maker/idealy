@@ -14,7 +14,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@/lib/*": ["../../../lib/*"]
+      "@/lib/*": ["../../../lib/*"],
+      "@webcontainer/api": ["../../../sidealy/node_modules/@webcontainer/api"]
     }
   },
   "include": [

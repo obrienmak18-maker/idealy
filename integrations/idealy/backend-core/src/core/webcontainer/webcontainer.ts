@@ -19,7 +19,7 @@ export async function getWebContainerInstance(): Promise<WebContainer> {
     return bootPromise;
   }
 
-  bootPromise = WebContainer.boot().then((instance) => {
+  bootPromise = WebContainer.boot().then((instance: any) => {
     webcontainerInstance = instance;
     WebContainerState.isBooted = true;
     return instance;

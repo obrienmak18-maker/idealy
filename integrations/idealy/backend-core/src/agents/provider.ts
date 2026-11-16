@@ -86,8 +86,8 @@ async function createProxyRequest(options: ProxyCallOptions): Promise<Response> 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new Error('Connectez-vous avant de lancer une mission IA.');
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+  const supabaseUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_URL ?? '';
+  const anonKey = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_ANON_KEY ?? '';
   if (!supabaseUrl || !anonKey) throw new Error('Configuration publique Supabase incomplète.');
 
   const config = getModelConfig(complexity);
@@ -197,8 +197,8 @@ export async function refundMissionCredits(options: { missionId: string; debitId
   if (!supabase) throw new Error('Supabase non configuré.');
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new Error('Connectez-vous avant de rembourser une mission.');
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+  const supabaseUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_URL ?? '';
+  const anonKey = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_ANON_KEY ?? '';
   if (!supabaseUrl || !anonKey) throw new Error('Configuration publique Supabase incomplète.');
 
   const response = await fetch(`${supabaseUrl}/functions/v1/refund-ai-credit`, {
