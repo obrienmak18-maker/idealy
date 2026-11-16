@@ -23,18 +23,27 @@ import { MissionPlanCard } from "./MissionPlanCard";
 import { RunStage } from "./RunStage";
 
 export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
-  const { artifacts, sendMessage, userWay } = useApp();
+  const { artifacts, sendMessage, userWay, language } = useApp();
+  const localeTag =
+    language === "en" ? "en-US" : language === "es" ? "es-ES" : "fr-FR";
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<"liked" | "disliked" | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
-  const [variants, setVariants] = useState<{ content: string; createdAt: number }[]>(() => {
-    return (message as unknown as { variants?: { content: string; createdAt: number }[] }).variants || [
-      { content: message.content, createdAt: message.createdAt },
-    ];
-  });
-  const [variantIndex, setVariantIndex] = useState(() => Math.max(0, variants.length - 1));
+  const [variants, setVariants] = useState<
+    { content: string; createdAt: number }[]
+  >(
+    () =>
+      (
+        message as unknown as {
+          variants?: { content: string; createdAt: number }[];
+        }
+      ).variants || [{ content: message.content, createdAt: message.createdAt }]
+  );
+  const [variantIndex, setVariantIndex] = useState(() =>
+    Math.max(0, variants.length - 1)
+  );
 
   const handleStartEdit = () => {
     setEditContent(message.content);
@@ -42,7 +51,9 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
   };
 
   const handleSaveAndSend = () => {
-    if (!editContent.trim()) return;
+    if (!editContent.trim()) {
+      return;
+    }
     const newVariants = [
       ...variants,
       { content: editContent.trim(), createdAt: Date.now() },
@@ -55,21 +66,28 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
   };
 
   const handleNavigateVariant = (nextIndex: number) => {
-    if (nextIndex < 0 || nextIndex >= variants.length) return;
+    if (nextIndex < 0 || nextIndex >= variants.length) {
+      return;
+    }
     setVariantIndex(nextIndex);
     message.content = variants[nextIndex].content;
   };
 
   const toggleSpeech = () => {
-    const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
-    if (!synth) return;
+    const synth =
+      typeof window === "undefined" ? undefined : window.speechSynthesis;
+    if (!synth) {
+      return;
+    }
     if (speaking) {
       synth.cancel();
       setSpeaking(false);
       return;
     }
-    const utterance = new SpeechSynthesisUtterance(message.content.replace(/```[\s\S]*?```/g, " "));
-    utterance.lang = navigator.language || "fr-FR";
+    const utterance = new SpeechSynthesisUtterance(
+      message.content.replace(/```[\s\S]*?```/g, " ")
+    );
+    utterance.lang = localeTag;
     utterance.onend = () => setSpeaking(false);
     utterance.onerror = () => setSpeaking(false);
     setSpeaking(true);
@@ -77,10 +95,13 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
   };
 
   const isUser = message.role === "user";
-  const timeFormatted = new Date(message.createdAt).toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const timeFormatted = new Date(message.createdAt).toLocaleTimeString(
+    localeTag,
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  );
 
   const handleCopyMessage = async () => {
     try {
@@ -258,7 +279,9 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
   // Structured Run resolution
   const resolvedRun: Run = useMemo(() => {
-    if (message.run) return message.run;
+    if (message.run) {
+      return message.run;
+    }
     return buildRunForMessage(message.content, message.content, {
       mode: message.mode,
       reasoning: message.reasoning,
@@ -483,13 +506,19 @@ export const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
 
               {typeof window !== "undefined" && "speechSynthesis" in window && (
                 <button
-                  aria-label={speaking ? "Arrêter la lecture" : "Lire à voix haute"}
+                  aria-label={
+                    speaking ? "Arrêter la lecture" : "Lire à voix haute"
+                  }
                   className="grid min-h-[34px] min-w-[34px] place-items-center rounded-lg hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all duration-150 active:scale-95"
                   onClick={toggleSpeech}
                   title={speaking ? "Arrêter la lecture" : "Lire à voix haute"}
                   type="button"
                 >
-                  {speaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  {speaking ? (
+                    <VolumeX className="w-3.5 h-3.5" />
+                  ) : (
+                    <Volume2 className="w-3.5 h-3.5" />
+                  )}
                 </button>
               )}
 

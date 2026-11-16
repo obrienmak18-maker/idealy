@@ -1,35 +1,71 @@
 import {
   Check,
-  Layout,
-  Globe,
-  ShoppingBag,
-  Database,
-  Rocket,
   Compass,
+  Database,
+  Globe,
+  Layout,
+  Rocket,
+  ShoppingBag,
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { getBearerToken } from "../../services/firebase";
 import { voiesCatalog } from "../../services/voies-catalog";
-import { AuthShell, authField, authLink, authPrimary, Message } from "./AuthShell";
+import {
+  AuthShell,
+  authField,
+  authLink,
+  authPrimary,
+  Message,
+} from "./AuthShell";
 
 const WAYS = ["ninja", "mage", "hunter", "professional"] as const;
 
 const WAY_RGB: Record<(typeof WAYS)[number], string> = {
-  ninja: "249,115,22",
-  mage: "139,92,246",
   hunter: "20,184,166",
+  mage: "139,92,246",
+  ninja: "249,115,22",
   professional: "37,99,235",
 };
 
 const PROJECTS = [
-  { id: "saas", label: "SaaS & Abonnements", desc: "Dashboard, Stripe, gestion utilisateurs", icon: Layout },
-  { id: "web", label: "Application Web", desc: "Expérience interactive, API & temps réel", icon: Globe },
-  { id: "site", label: "Site e-commerce", desc: "Catalogue, panier, checkout & inventaire", icon: ShoppingBag },
-  { id: "internal_tool", label: "Outil Interne / CRM", desc: "Backoffice d'équipe, gestion de tickets", icon: Database },
-  { id: "prototype", label: "Prototype Rapide", desc: "Valider une idée ou tester une fonctionnalité", icon: Rocket },
-  { id: "other", label: "Autre Création", desc: "Projet sur-mesure ou concept novateur", icon: Compass },
+  {
+    desc: "Dashboard, Stripe, gestion utilisateurs",
+    icon: Layout,
+    id: "saas",
+    label: "SaaS & Abonnements",
+  },
+  {
+    desc: "Expérience interactive, API & temps réel",
+    icon: Globe,
+    id: "web",
+    label: "Application Web",
+  },
+  {
+    desc: "Catalogue, panier, checkout & inventaire",
+    icon: ShoppingBag,
+    id: "site",
+    label: "Site e-commerce",
+  },
+  {
+    desc: "Backoffice d'équipe, gestion de tickets",
+    icon: Database,
+    id: "internal_tool",
+    label: "Outil Interne / CRM",
+  },
+  {
+    desc: "Valider une idée ou tester une fonctionnalité",
+    icon: Rocket,
+    id: "prototype",
+    label: "Prototype Rapide",
+  },
+  {
+    desc: "Projet sur-mesure ou concept novateur",
+    icon: Compass,
+    id: "other",
+    label: "Autre Création",
+  },
 ] as const;
 
 const LEVELS = [
@@ -50,7 +86,7 @@ const SOURCES = [
 ] as const;
 
 export const OnboardingPage: React.FC = () => {
-  const { setActivePage } = useApp();
+  const { setActivePage, language } = useApp();
   const [step, setStep] = useState(0);
   const [projectType, setProjectType] = useState<string>("saas");
   const [goal, setGoal] = useState("");
@@ -80,14 +116,14 @@ export const OnboardingPage: React.FC = () => {
     setBusy(true);
     setError(null);
     const profileData = {
-      way,
-      projectType,
-      primaryGoal: goal.trim(),
-      experienceLevel: level,
       discoverySource: source ?? undefined,
+      experienceLevel: level,
       firstName: firstName.trim(),
-      preferredLanguage: (navigator.language || "fr").slice(0, 2),
+      preferredLanguage: language || "fr",
+      primaryGoal: goal.trim(),
+      projectType,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+      way,
     };
 
     try {
@@ -98,13 +134,13 @@ export const OnboardingPage: React.FC = () => {
       }
 
       const res = await fetch("/api/idealy/profile/onboarding", {
-        method: "POST",
+        body: JSON.stringify(profileData),
         credentials: "same-origin",
         headers: {
           Authorization: `Bearer ${bearer}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(profileData),
+        method: "POST",
       });
       const result = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -115,7 +151,7 @@ export const OnboardingPage: React.FC = () => {
         throw new Error(
           typeof result.error === "string"
             ? result.error
-            : "Idealy n’a pas pu confirmer l’enregistrement de votre profil. Réessayez.",
+            : "Idealy n’a pas pu confirmer l’enregistrement de votre profil. Réessayez."
         );
       }
 
@@ -128,7 +164,7 @@ export const OnboardingPage: React.FC = () => {
       setError(
         err instanceof Error
           ? err.message
-          : "Impossible d’enregistrer votre profil auprès d’Idealy. Réessayez.",
+          : "Impossible d’enregistrer votre profil auprès d’Idealy. Réessayez."
       );
     } finally {
       setBusy(false);
@@ -138,9 +174,18 @@ export const OnboardingPage: React.FC = () => {
   const next = () => (step < 2 ? setStep(step + 1) : void submit());
 
   const titles = [
-    ["Que souhaitez-vous créer ?", "Sélectionnez le type de projet que vous voulez prototyper ou construire."],
-    ["Choisissez votre Voie d'énergie", "Elle façonne votre univers, le vocabulaire d'énergie et vos spécialistes."],
-    ["Votre profil de créateur", "Quelques précisions pour adapter le niveau d'explication d'Idealy."],
+    [
+      "Que souhaitez-vous créer ?",
+      "Sélectionnez le type de projet que vous voulez prototyper ou construire.",
+    ],
+    [
+      "Choisissez votre Voie d'énergie",
+      "Elle façonne votre univers, le vocabulaire d'énergie et vos spécialistes.",
+    ],
+    [
+      "Votre profil de créateur",
+      "Quelques précisions pour adapter le niveau d'explication d'Idealy.",
+    ],
   ][step];
 
   return (
@@ -151,13 +196,15 @@ export const OnboardingPage: React.FC = () => {
       width={step === 1 ? 620 : 520}
     >
       {/* Step Progress Bar */}
-      <div className="mb-6 flex gap-2" aria-label={`Étape ${step + 1} sur 3`}>
+      <div aria-label={`Étape ${step + 1} sur 3`} className="mb-6 flex gap-2">
         {[0, 1, 2].map((i) => (
           <span
-            key={i}
             className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-              i <= step ? "bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]" : "bg-white/[0.12]"
+              i <= step
+                ? "bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]"
+                : "bg-white/[0.12]"
             }`}
+            key={i}
           />
         ))}
       </div>
@@ -171,24 +218,28 @@ export const OnboardingPage: React.FC = () => {
               const active = projectType === proj.id;
               return (
                 <button
-                  key={proj.id}
-                  type="button"
-                  onClick={() => setProjectType(proj.id)}
                   className={`p-3.5 rounded-xl border text-left transition-all duration-200 hover:-translate-y-0.5 flex items-start gap-3 ${
                     active
                       ? "border-teal-400 bg-teal-500/15 shadow-[0_0_20px_rgba(45,212,191,0.2)] text-white"
                       : "border-white/[0.08] bg-[#0c0d12] text-zinc-300 hover:border-white/[0.16] hover:bg-[#12141c]"
                   }`}
+                  key={proj.id}
+                  onClick={() => setProjectType(proj.id)}
+                  type="button"
                 >
                   <div
                     className={`w-8 h-8 rounded-lg grid place-items-center shrink-0 ${
-                      active ? "bg-teal-400 text-black font-bold" : "bg-white/[0.06] text-zinc-400"
+                      active
+                        ? "bg-teal-400 text-black font-bold"
+                        : "bg-white/[0.06] text-zinc-400"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-sm font-semibold block">{proj.label}</span>
+                    <span className="text-sm font-semibold block">
+                      {proj.label}
+                    </span>
                     <span className="text-[11px] text-zinc-400 block mt-0.5 leading-snug">
                       {proj.desc}
                     </span>
@@ -199,19 +250,24 @@ export const OnboardingPage: React.FC = () => {
           </div>
 
           <div className="pt-2">
-            <label className="mb-2 block text-xs font-semibold text-zinc-300" htmlFor="onboarding-goal">
+            <label
+              className="mb-2 block text-xs font-semibold text-zinc-300"
+              htmlFor="onboarding-goal"
+            >
               Décrivez votre idée en quelques mots
             </label>
             <textarea
-              id="onboarding-goal"
               className={`${authField} min-h-[104px] resize-y py-4`}
+              id="onboarding-goal"
               maxLength={400}
-              placeholder="Ex. : une plateforme de gestion des clients et des ventes pour petites entreprises."
-              value={goal}
               onChange={(event) => setGoal(event.target.value)}
+              placeholder="Ex. : une plateforme de gestion des clients et des ventes pour petites entreprises."
               required
+              value={goal}
             />
-            <p className="mt-1.5 text-right text-[11px] text-white/40">{goal.length}/400</p>
+            <p className="mt-1.5 text-right text-[11px] text-white/40">
+              {goal.length}/400
+            </p>
           </div>
         </div>
       )}
@@ -254,7 +310,8 @@ export const OnboardingPage: React.FC = () => {
                         alt=""
                         className="h-full w-full object-cover"
                         onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = "none";
+                          (e.currentTarget as HTMLElement).style.display =
+                            "none";
                         }}
                         src={avatar}
                       />
@@ -323,14 +380,14 @@ export const OnboardingPage: React.FC = () => {
             <div className="space-y-1.5">
               {LEVELS.map(([id, label]) => (
                 <button
-                  key={id}
-                  type="button"
-                  onClick={() => setLevel(id)}
                   className={`w-full p-2.5 rounded-xl border text-left text-xs font-medium transition-all ${
                     level === id
                       ? "border-teal-400 bg-teal-500/15 text-white"
                       : "border-white/[0.08] bg-[#0c0d12] text-zinc-400 hover:text-zinc-200 hover:bg-[#12141c]"
                   }`}
+                  key={id}
+                  onClick={() => setLevel(id)}
+                  type="button"
                 >
                   {label}
                 </button>
@@ -345,14 +402,14 @@ export const OnboardingPage: React.FC = () => {
             <div className="flex flex-wrap gap-2">
               {SOURCES.map(([id, label]) => (
                 <button
-                  key={id}
-                  type="button"
-                  onClick={() => setSource(source === id ? null : id)}
                   className={`px-3 py-1.5 rounded-lg border text-xs transition-all ${
                     source === id
                       ? "border-white bg-white text-black font-semibold"
                       : "border-white/[0.08] text-zinc-400 hover:bg-white/[0.05]"
                   }`}
+                  key={id}
+                  onClick={() => setSource(source === id ? null : id)}
+                  type="button"
                 >
                   {label}
                 </button>
@@ -371,7 +428,11 @@ export const OnboardingPage: React.FC = () => {
           onClick={next}
           type="button"
         >
-          {busy ? "Préparation de votre univers…" : step < 2 ? "Continuer" : "Entrer dans Idealy ✦"}
+          {busy
+            ? "Préparation de votre univers…"
+            : step < 2
+              ? "Continuer"
+              : "Entrer dans Idealy ✦"}
         </button>
         {step > 0 && (
           <button

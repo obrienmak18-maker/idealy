@@ -1,8 +1,27 @@
-import { ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, Image as ImageIcon, LayoutGrid, Mic, Paperclip, Plug, Plus, Radio, Square, User, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Image as ImageIcon,
+  LayoutGrid,
+  Mic,
+  Paperclip,
+  Plug,
+  Plus,
+  Radio,
+  Square,
+  User,
+  X,
+} from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { getAgentsForWay, STATIC_AGENT_REGISTRY } from "../../services/agentRegistry";
+import {
+  getAgentsForWay,
+  STATIC_AGENT_REGISTRY,
+} from "../../services/agentRegistry";
 import type { Attachment } from "../../types";
 import { getConnectorBrandLogo } from "../connectors/brand-logos";
 import { DEFAULT_CONNECTORS_CATALOG } from "../connectors/default-connectors";
@@ -36,10 +55,20 @@ type SpeechRecognitionWindow = Window & {
 
 type ComposerProps = { placement?: "conversation" | "home" };
 
-export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }) => {
+export const Composer: React.FC<ComposerProps> = ({
+  placement = "conversation",
+}) => {
   const {
-    draft, setDraft, sendMessage, stopGeneration, generationStatus,
-    setActivePage, userWay, language,
+    draft,
+    setDraft,
+    sendMessage,
+    stopGeneration,
+    generationStatus,
+    setActivePage,
+    userWay,
+    language,
+    deepThink,
+    webSearch,
   } = useApp();
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
@@ -48,8 +77,16 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
   const [attachedConnectors, setAttachedConnectors] = useState<string[]>(() => {
     const list: string[] = [];
     if (typeof window !== "undefined") {
-      if (localStorage.getItem("idealy_connector_status_github") === "connected") list.push("github");
-      if (localStorage.getItem("idealy_connector_status_supabase") === "connected") list.push("supabase");
+      if (
+        localStorage.getItem("idealy_connector_status_github") === "connected"
+      ) {
+        list.push("github");
+      }
+      if (
+        localStorage.getItem("idealy_connector_status_supabase") === "connected"
+      ) {
+        list.push("supabase");
+      }
     }
     return list;
   });
@@ -95,7 +132,9 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
   const [promptIndex, setPromptIndex] = useState(0);
 
   useEffect(() => {
-    if (draft.trim().length > 0) return;
+    if (draft.trim().length > 0) {
+      return;
+    }
     const interval = setInterval(() => {
       setPromptIndex((prev) => (prev + 1) % ROTATING_PROMPTS.length);
     }, 3600);
@@ -104,44 +143,53 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
 
   const availableAgents = useMemo(() => {
     const list = [STATIC_AGENT_REGISTRY.alvin, ...getAgentsForWay(userWay)];
-    if (!mentionQuery) return list;
+    if (!mentionQuery) {
+      return list;
+    }
     return list.filter(
       (a) =>
         a.name.toLowerCase().startsWith(mentionQuery) ||
-        a.role.toLowerCase().includes(mentionQuery),
+        a.role.toLowerCase().includes(mentionQuery)
     );
   }, [userWay, mentionQuery]);
 
   const availableConnectors = useMemo(() => {
     const catalog = DEFAULT_CONNECTORS_CATALOG;
-    if (!slashQuery) return catalog;
+    if (!slashQuery) {
+      return catalog;
+    }
     return catalog.filter(
       (c) =>
         c.name.toLowerCase().includes(slashQuery) ||
         c.id.toLowerCase().includes(slashQuery) ||
-        c.categoryLabel.toLowerCase().includes(slashQuery),
+        c.categoryLabel.toLowerCase().includes(slashQuery)
     );
   }, [slashQuery]);
 
   const insertAgentMention = (agentName: string) => {
-    const agent = availableAgents.find((a) => a.name.toLowerCase() === agentName.toLowerCase());
+    const agent = availableAgents.find(
+      (a) => a.name.toLowerCase() === agentName.toLowerCase()
+    );
     if (agent) {
       setActiveAgentTag({
+        avatar: agent.avatar,
         id: agent.id,
         name: agent.name,
-        avatar: agent.avatar,
-        tint: agent.tint || "#f97316",
         role: agent.role,
+        tint: agent.tint || "#f97316",
       });
     }
     const textarea = textareaRef.current;
     const cursorPos = textarea?.selectionStart ?? draft.length;
     const textBefore = draft.slice(0, cursorPos);
     const textAfter = draft.slice(cursorPos);
-    const replacedBefore = textBefore.replace(/(?:^|\s)@([a-zA-ZÀ-ÿ0-9_-]*)$/, (m) => {
-      const leadingSpace = m.startsWith(" ") ? " " : "";
-      return `${leadingSpace}@${agentName} `;
-    });
+    const replacedBefore = textBefore.replace(
+      /(?:^|\s)@([a-zA-ZÀ-ÿ0-9_-]*)$/,
+      (m) => {
+        const leadingSpace = m.startsWith(" ") ? " " : "";
+        return leadingSpace;
+      }
+    );
     setDraft(`${replacedBefore}${textAfter}`);
     setMentionQuery(null);
     setTimeout(() => {
@@ -157,13 +205,15 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
     setAttachedConnectors((prev) =>
       prev.includes(connectorId)
         ? prev.filter((id) => id !== connectorId)
-        : [...prev, connectorId],
+        : [...prev, connectorId]
     );
     // Also remove the slash query from draft if present
     setDraft(draft.replace(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/, "").trim());
     setSlashQuery(null);
   };
-  const [modelMode, setModelMode] = useState<"auto" | "discuter" | "construire">(() => {
+  const [modelMode, setModelMode] = useState<
+    "auto" | "discuter" | "construire"
+  >(() => {
     try {
       const v = window.localStorage.getItem("idealy.model.mode");
       return v === "discuter" || v === "construire" ? v : "auto";
@@ -234,7 +284,9 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
       };
       setAttachments((prev) => [...prev, newAttachment]);
       if (!draft.trim()) {
-        setDraft("Consulte le document markdown ci-joint pour les instructions.");
+        setDraft(
+          "Consulte le document markdown ci-joint pour les instructions."
+        );
       }
     }
   };
@@ -290,7 +342,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
         track.stop();
       });
     },
-    [],
+    []
   );
 
   const handleSend = () => {
@@ -300,11 +352,20 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
     let promptToSend = draft.trim();
     if (attachedConnectors.length > 0) {
       const names = attachedConnectors
-        .map((id) => DEFAULT_CONNECTORS_CATALOG.find((c) => c.id === id)?.name || id)
+        .map(
+          (id) =>
+            DEFAULT_CONNECTORS_CATALOG.find((c) => c.id === id)?.name || id
+        )
         .join(", ");
       promptToSend = `[Connecteurs activés : ${names}]\n${promptToSend}`;
     }
-    sendMessage(promptToSend, attachments);
+    const agentsList = activeAgentTag ? [activeAgentTag.id] : [];
+    sendMessage(promptToSend, attachments, {
+      agents: agentsList,
+      connectors: attachedConnectors,
+      deepThink,
+      webSearch,
+    });
     setAttachments([]);
     setActiveAgentTag(null);
     if (textareaRef.current) {
@@ -351,10 +412,16 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
   };
 
   const whisperAvailable = async (): Promise<boolean> => {
-    if (typeof MediaRecorder === "undefined") return false;
-    if (whisperProbe.current !== null) return whisperProbe.current;
+    if (typeof MediaRecorder === "undefined") {
+      return false;
+    }
+    if (whisperProbe.current !== null) {
+      return whisperProbe.current;
+    }
     try {
-      const res = await fetch("/api/idealy/transcribe", { credentials: "include" });
+      const res = await fetch("/api/idealy/transcribe", {
+        credentials: "include",
+      });
       whisperProbe.current = res.ok;
     } catch {
       whisperProbe.current = false;
@@ -369,7 +436,9 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      setDictationStatus("Accès au microphone refusé. Vérifiez l’autorisation du navigateur.");
+      setDictationStatus(
+        "Accès au microphone refusé. Vérifiez l’autorisation du navigateur."
+      );
       return;
     }
     mediaStreamRef.current = stream;
@@ -378,24 +447,40 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
     const recorder = new MediaRecorder(stream);
     recorderRef.current = recorder;
     recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
     };
     recorder.onstop = async () => {
       recorderRef.current = null;
       releaseAudioCapture();
       setDictationActive(false);
-      const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+      const blob = new Blob(chunks, {
+        type: recorder.mimeType || "audio/webm",
+      });
       if (blob.size < 800) {
-        setDictationStatus("Aucune voix détectée. Touchez le micro pour réessayer.");
+        setDictationStatus(
+          "Aucune voix détectée. Touchez le micro pour réessayer."
+        );
         return;
       }
       setDictationStatus("Transcription…");
       try {
         const body = new FormData();
-        body.append("audio", blob, `dictation.${blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm"}`);
-        body.append("language", (navigator.language || "fr").slice(0, 2));
-        const res = await fetch("/api/idealy/transcribe", { body, credentials: "include", method: "POST" });
-        if (!res.ok) throw new Error("transcribe_failed");
+        body.append(
+          "audio",
+          blob,
+          `dictation.${blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm"}`
+        );
+        body.append("language", language || "fr");
+        const res = await fetch("/api/idealy/transcribe", {
+          body,
+          credentials: "include",
+          method: "POST",
+        });
+        if (!res.ok) {
+          throw new Error("transcribe_failed");
+        }
         const { text } = (await res.json()) as { text?: string };
         if (text) {
           const current = dictationDraftRef.current;
@@ -404,7 +489,9 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
           setDraft(dictationDraftRef.current);
           setDictationStatus("");
         } else {
-          setDictationStatus("Aucune voix détectée. Touchez le micro pour réessayer.");
+          setDictationStatus(
+            "Aucune voix détectée. Touchez le micro pour réessayer."
+          );
         }
       } catch {
         whisperProbe.current = null;
@@ -422,7 +509,11 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
       recorderRef.current.stop();
       return;
     }
-    if (!dictationActive && navigator.mediaDevices && (await whisperAvailable())) {
+    if (
+      !dictationActive &&
+      navigator.mediaDevices &&
+      (await whisperAvailable())
+    ) {
       await startWhisperDictation();
       return;
     }
@@ -436,13 +527,13 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
 
     if (!SpeechRecognition) {
       setDictationStatus(
-        "La dictée vocale n’est pas prise en charge par ce navigateur.",
+        "La dictée vocale n’est pas prise en charge par ce navigateur."
       );
       return;
     }
     if (!navigator.mediaDevices?.getUserMedia) {
       setDictationStatus(
-        "Le navigateur ne donne pas accès au microphone sur cette page.",
+        "Le navigateur ne donne pas accès au microphone sur cette page."
       );
       return;
     }
@@ -471,7 +562,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
         track.stop();
       });
       setDictationStatus(
-        "La dictée vocale n’est pas prise en charge par ce navigateur.",
+        "La dictée vocale n’est pas prise en charge par ce navigateur."
       );
       return;
     }
@@ -512,7 +603,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
       setDictationStatus(
         interimText.trim()
           ? `Dictée : ${interimText.trim()}`
-          : "Écoute en cours…",
+          : "Écoute en cours…"
       );
     };
 
@@ -526,7 +617,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
         "service-not-allowed": "Le navigateur a refusé le service de dictée.",
       };
       setDictationStatus(
-        messages[event.error] ?? "La dictée a été interrompue.",
+        messages[event.error] ?? "La dictée a été interrompue."
       );
       setDictationActive(false);
       recognitionRef.current = null;
@@ -538,7 +629,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
       recognitionRef.current = null;
       releaseAudioCapture();
       setDictationStatus((current) =>
-        current === "Écoute en cours…" ? "Dictée terminée." : current,
+        current === "Écoute en cours…" ? "Dictée terminée." : current
       );
     };
 
@@ -566,13 +657,17 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
       }
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setMentionIndex((prev) => (prev - 1 + availableAgents.length) % availableAgents.length);
+        setMentionIndex(
+          (prev) => (prev - 1 + availableAgents.length) % availableAgents.length
+        );
         return;
       }
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
         const selected = availableAgents[mentionIndex] || availableAgents[0];
-        if (selected) insertAgentMention(selected.name);
+        if (selected) {
+          insertAgentMention(selected.name);
+        }
         return;
       }
       if (event.key === "Escape") {
@@ -589,13 +684,19 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
       }
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setSlashIndex((prev) => (prev - 1 + availableConnectors.length) % availableConnectors.length);
+        setSlashIndex(
+          (prev) =>
+            (prev - 1 + availableConnectors.length) % availableConnectors.length
+        );
         return;
       }
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
-        const selected = availableConnectors[slashIndex] || availableConnectors[0];
-        if (selected) toggleConnector(selected.id);
+        const selected =
+          availableConnectors[slashIndex] || availableConnectors[0];
+        if (selected) {
+          toggleConnector(selected.id);
+        }
         return;
       }
       if (event.key === "Escape") {
@@ -620,14 +721,15 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
       return;
     }
     const additions: Attachment[] = Array.from(files).map((file) => ({
-      id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       file,
+      id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: file.name,
       size: file.size,
       type: file.type,
-      url: file.type.startsWith("image/") || file.type.startsWith("video/")
-        ? URL.createObjectURL(file)
-        : undefined,
+      url:
+        file.type.startsWith("image/") || file.type.startsWith("video/")
+          ? URL.createObjectURL(file)
+          : undefined,
     }));
     setAttachments((current) => [...current, ...additions]);
     event.target.value = "";
@@ -635,18 +737,22 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
 
   const removeAttachment = (id: string) => {
     setAttachments((current) =>
-      current.filter((attachment) => attachment.id !== id),
+      current.filter((attachment) => attachment.id !== id)
     );
   };
 
   return (
-    <div className={`composer-dock relative z-10 w-full shrink-0 ${placement === "home" ? "mt-6 px-0 pb-0 pt-0" : "px-3 pb-3 pt-1 sm:px-4"}`}>
+    <div
+      className={`composer-dock relative z-10 w-full shrink-0 ${placement === "home" ? "mt-6 px-0 pb-0 pt-0" : "px-3 pb-3 pt-1 sm:px-4"}`}
+    >
       <div
         className="composer-card relative mx-auto flex w-full max-w-3xl flex-col rounded-[26px] transition-[border-color,box-shadow,background-color] duration-200"
         data-composer-card
       >
         {/* Attachments, Active Connectors & Active Agent Badges (ChatGPT / Gemini style) */}
-        {(attachments.length > 0 || attachedConnectors.length > 0 || activeAgentTag) && (
+        {(attachments.length > 0 ||
+          attachedConnectors.length > 0 ||
+          activeAgentTag) && (
           <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
             {/* Active Targeted Agent Badge */}
             {activeAgentTag && (
@@ -659,17 +765,19 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                 }}
               >
                 <img
-                  src={activeAgentTag.avatar}
                   alt={activeAgentTag.name}
                   className="h-4 w-4 rounded-full object-cover ring-1 ring-white/20"
+                  src={activeAgentTag.avatar}
                 />
                 <span className="font-bold">@{activeAgentTag.name}</span>
-                <span className="text-[10px] opacity-80 font-normal">({activeAgentTag.role})</span>
+                <span className="text-[10px] opacity-80 font-normal">
+                  ({activeAgentTag.role})
+                </span>
                 <button
-                  type="button"
-                  onClick={() => setActiveAgentTag(null)}
-                  className="ml-1 rounded-full p-0.5 hover:bg-black/20 text-current transition-colors"
                   aria-label="Retirer l'agent"
+                  className="ml-1 rounded-full p-0.5 hover:bg-black/20 text-current transition-colors"
+                  onClick={() => setActiveAgentTag(null)}
+                  type="button"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -678,22 +786,30 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
 
             {/* Attached Connectors Badges (colored brand icon + color name) */}
             {attachedConnectors.map((cId) => {
-              const connector = DEFAULT_CONNECTORS_CATALOG.find((c) => c.id === cId) || { id: cId, name: cId };
+              const connector = DEFAULT_CONNECTORS_CATALOG.find(
+                (c) => c.id === cId
+              ) || { id: cId, name: cId };
               return (
                 <div
-                  key={cId}
                   className="flex items-center gap-1.5 rounded-xl bg-bg-surface border border-border-subtle px-2.5 py-1 text-xs font-semibold shadow-xs animate-scale-in text-text-main"
+                  key={cId}
                 >
                   <div className="grid h-4 w-4 place-items-center">
                     {getConnectorBrandLogo(cId, "h-3.5 w-3.5", 14)}
                   </div>
                   <span>{connector.name}</span>
-                  <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1 py-0.2 rounded">ACTIF</span>
+                  <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1 py-0.2 rounded">
+                    ACTIF
+                  </span>
                   <button
-                    type="button"
-                    onClick={() => setAttachedConnectors((prev) => prev.filter((id) => id !== cId))}
-                    className="ml-0.5 rounded-full p-0.5 hover:bg-bg-subtle text-text-muted hover:text-text-main transition-colors"
                     aria-label={`Retirer le connecteur ${connector.name}`}
+                    className="ml-0.5 rounded-full p-0.5 hover:bg-bg-subtle text-text-muted hover:text-text-main transition-colors"
+                    onClick={() =>
+                      setAttachedConnectors((prev) =>
+                        prev.filter((id) => id !== cId)
+                      )
+                    }
+                    type="button"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -703,18 +819,22 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
 
             {/* Rich Square Attachments Previews */}
             {attachments.map((attachment) => {
-              const isImage = attachment.type?.startsWith("image/") || /\.(png|jpe?g|webp|gif|svg)$/i.test(attachment.name);
-              const isVideo = attachment.type?.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(attachment.name);
+              const isImage =
+                attachment.type?.startsWith("image/") ||
+                /\.(png|jpe?g|webp|gif|svg)$/i.test(attachment.name);
+              const isVideo =
+                attachment.type?.startsWith("video/") ||
+                /\.(mp4|webm|mov)$/i.test(attachment.name);
               return (
                 <div
-                  key={attachment.id}
                   className="group relative flex flex-col justify-end h-16 w-16 rounded-xl border border-border-subtle bg-bg-surface overflow-hidden shadow-xs hover:border-brand-primary/50 transition-all shrink-0"
+                  key={attachment.id}
                 >
                   {isImage && attachment.url ? (
                     <img
-                      src={attachment.url}
                       alt={attachment.name}
                       className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+                      src={attachment.url}
                     />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-1 bg-bg-subtle/70">
@@ -745,42 +865,49 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
           </div>
         )}
 
-        <div className={`relative ${placement === "home" ? "px-5 pt-2 pb-0" : "px-5 pt-4 pb-1"}`}>
+        <div
+          className={`relative ${placement === "home" ? "px-5 pt-2 pb-0" : "px-5 pt-4 pb-1"}`}
+        >
           {/* @ Agent Mention Autocomplete */}
           {mentionQuery !== null && availableAgents.length > 0 && (
             <div
-              role="listbox"
               aria-label="Sélectionner un agent"
               className="absolute bottom-full left-5 mb-2 z-50 w-72 max-h-60 overflow-y-auto rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.36)] backdrop-blur-md animate-scale-in"
+              role="listbox"
             >
               <div className="px-2 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
                 Mentionner un spécialiste
               </div>
               {availableAgents.map((agent, i) => (
                 <button
-                  key={agent.id}
-                  type="button"
-                  role="option"
                   aria-selected={i === mentionIndex}
-                  onClick={() => insertAgentMention(agent.name)}
                   className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
                     i === mentionIndex
                       ? "bg-[var(--dsw-alias-interactive-bg-hover)] text-text-main"
                       : "hover:bg-[var(--dsw-alias-interactive-bg-hover)] text-text-muted hover:text-text-main"
                   }`}
+                  key={agent.id}
+                  onClick={() => insertAgentMention(agent.name)}
+                  role="option"
+                  type="button"
                 >
                   <img
-                    src={agent.avatar}
                     alt={agent.name}
                     className="h-6 w-6 rounded-full object-cover ring-1 ring-white/10"
+                    src={agent.avatar}
                     style={{ borderColor: agent.tint }}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-text-main" style={{ color: agent.tint }}>
+                      <span
+                        className="font-semibold text-text-main"
+                        style={{ color: agent.tint }}
+                      >
                         @{agent.name}
                       </span>
-                      <span className="text-[10px] text-text-muted truncate">({agent.role})</span>
+                      <span className="text-[10px] text-text-muted truncate">
+                        ({agent.role})
+                      </span>
                     </div>
                   </div>
                 </button>
@@ -791,36 +918,42 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
           {/* / Slash Command Connectors Autocomplete */}
           {slashQuery !== null && availableConnectors.length > 0 && (
             <div
-              role="listbox"
               aria-label="Attacher un connecteur ou skill"
               className="absolute bottom-full left-5 mb-2 z-50 w-80 max-h-64 overflow-y-auto rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.36)] backdrop-blur-md animate-scale-in"
+              role="listbox"
             >
               <div className="px-2 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider flex items-center justify-between">
                 <span>Connecteurs & Outils (/)</span>
-                <span className="text-[9px] lowercase font-normal opacity-70">Entrée pour attacher</span>
+                <span className="text-[9px] lowercase font-normal opacity-70">
+                  Entrée pour attacher
+                </span>
               </div>
               {availableConnectors.map((connector, i) => {
                 const isAttached = attachedConnectors.includes(connector.id);
                 return (
                   <button
-                    key={connector.id}
-                    type="button"
-                    role="option"
                     aria-selected={i === slashIndex}
-                    onClick={() => toggleConnector(connector.id)}
                     className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
                       i === slashIndex
                         ? "bg-[var(--dsw-alias-interactive-bg-hover)] text-text-main"
                         : "hover:bg-[var(--dsw-alias-interactive-bg-hover)] text-text-muted hover:text-text-main"
                     }`}
+                    key={connector.id}
+                    onClick={() => toggleConnector(connector.id)}
+                    role="option"
+                    type="button"
                   >
                     <div className="grid h-6 w-6 place-items-center rounded-lg bg-bg-surface border border-border-subtle p-1 shrink-0">
                       {getConnectorBrandLogo(connector.id, "h-4 w-4", 16)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-text-main">/{connector.id}</span>
-                        <span className="text-[10px] text-text-muted">· {connector.name}</span>
+                        <span className="font-semibold text-text-main">
+                          /{connector.id}
+                        </span>
+                        <span className="text-[10px] text-text-muted">
+                          · {connector.name}
+                        </span>
                       </div>
                       <p className="text-[10.5px] text-text-muted truncate mt-0.5">
                         {connector.description}
@@ -838,11 +971,10 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
           )}
 
           <textarea
-            data-composer-input
             aria-label="Message à Idealy"
             className={`w-full ${placement === "home" ? "min-h-[36px]" : "min-h-[44px]"} max-h-[360px] resize-none overflow-y-auto bg-transparent p-0 text-[15px] leading-6 text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] focus:outline-none focus:ring-0`}
+            data-composer-input
             enterKeyHint="enter"
-            onPaste={handlePaste}
             onChange={(event) => {
               const val = event.target.value;
               if (val.length > 5000) {
@@ -856,7 +988,9 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                   url: URL.createObjectURL(blob),
                 };
                 setAttachments((prev) => [...prev, newAttachment]);
-                setDraft("Consulte le document markdown ci-joint pour les instructions.");
+                setDraft(
+                  "Consulte le document markdown ci-joint pour les instructions."
+                );
                 return;
               }
               if (dictationActive) {
@@ -868,14 +1002,18 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
               }
               const cursorPos = event.target.selectionStart ?? val.length;
               const textBefore = val.slice(0, cursorPos);
-              const mentionMatch = textBefore.match(/(?:^|\s)@([a-zA-ZÀ-ÿ0-9_-]*)$/);
+              const mentionMatch = textBefore.match(
+                /(?:^|\s)@([a-zA-ZÀ-ÿ0-9_-]*)$/
+              );
               if (mentionMatch) {
                 setMentionQuery(mentionMatch[1].toLowerCase());
                 setMentionIndex(0);
                 setSlashQuery(null);
               } else {
                 setMentionQuery(null);
-                const slashMatch = textBefore.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
+                const slashMatch = textBefore.match(
+                  /(?:^|\s)\/([a-zA-Z0-9_-]*)$/
+                );
                 if (slashMatch) {
                   setSlashQuery(slashMatch[1].toLowerCase());
                   setSlashIndex(0);
@@ -885,6 +1023,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
               }
             }}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={ROTATING_PROMPTS[promptIndex]}
             ref={textareaRef}
             rows={1}
@@ -893,7 +1032,9 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
           />
         </div>
 
-        <div className={`flex ${placement === "home" ? "min-h-[44px]" : "min-h-[52px]"} items-center justify-between gap-3 px-3 pb-2 pt-1`}>
+        <div
+          className={`flex ${placement === "home" ? "min-h-[44px]" : "min-h-[52px]"} items-center justify-between gap-3 px-3 pb-2 pt-1`}
+        >
           <div className="flex min-w-0 items-center gap-2">
             <input
               aria-label="Choisir des fichiers"
@@ -920,7 +1061,9 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                 className="grid h-9 w-9 sm:h-10 sm:w-10 shrink-0 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
                 onClick={() => {
                   setAddMenuOpen((open) => {
-                    if (open) setConnectorsSubmenuOpen(false);
+                    if (open) {
+                      setConnectorsSubmenuOpen(false);
+                    }
                     return !open;
                   });
                 }}
@@ -943,45 +1086,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                   className="composer-add-menu absolute bottom-[calc(100%+8px)] left-0 z-50 w-[min(280px,calc(100vw-24px))] rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-2 shadow-[0_12px_32px_rgba(0,0,0,0.32)] animate-scale-in"
                   role="dialog"
                 >
-                  {!connectorsSubmenuOpen ? (
-                    <>
-                      <p className="composer-add-heading">Ajouter</p>
-                      <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); fileInputRef.current?.click(); }} type="button">
-                        <Paperclip aria-hidden="true" />
-                        <span>Fichier</span>
-                      </button>
-                      <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); photoInputRef.current?.click(); }} type="button">
-                        <ImageIcon aria-hidden="true" />
-                        <span>Photo</span>
-                      </button>
-                      <button
-                        className="composer-add-row"
-                        onClick={() => {
-                          setAddMenuOpen(false);
-                          setDraft(draft.endsWith(" ") || !draft ? `${draft}@` : `${draft} @`);
-                          setMentionQuery("");
-                          textareaRef.current?.focus();
-                        }}
-                        type="button"
-                      >
-                        <User aria-hidden="true" className="text-amber-400" />
-                        <span>Mentionner un agent (@)</span>
-                      </button>
-                      <button
-                        className="composer-add-row"
-                        onClick={() => setConnectorsSubmenuOpen(true)}
-                        type="button"
-                      >
-                        <Plug aria-hidden="true" className="text-violet-400" />
-                        <span className="flex-1 text-left">Connecteurs</span>
-                        <ChevronRight className="h-3.5 w-3.5 text-text-muted" />
-                      </button>
-                      <button className="composer-add-row" onClick={() => { setAddMenuOpen(false); setActivePage("library"); }} type="button">
-                        <LayoutGrid aria-hidden="true" />
-                        <span>Bibliothèque</span>
-                      </button>
-                    </>
-                  ) : (
+                  {connectorsSubmenuOpen ? (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between pb-1.5 border-b border-[var(--dsw-alias-border-l1)] px-1">
                         <button
@@ -992,39 +1097,53 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                           <ArrowLeft className="h-3.5 w-3.5" />
                           <span>Retour</span>
                         </button>
-                        <span className="text-[11px] font-semibold text-text-main">Connecteurs actifs</span>
+                        <span className="text-[11px] font-semibold text-text-main">
+                          Connecteurs actifs
+                        </span>
                       </div>
 
                       <div className="space-y-1 px-0.5">
-                        {DEFAULT_CONNECTORS_CATALOG.slice(0, 5).map((connector) => {
-                          const isAttached = attachedConnectors.includes(connector.id);
-                          return (
-                            <button
-                              key={connector.id}
-                              type="button"
-                              onClick={() => toggleConnector(connector.id)}
-                              className={`flex w-full items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors ${
-                                isAttached
-                                  ? "bg-brand-primary/10 border border-brand-primary/30 text-text-main"
-                                  : "bg-[var(--dsw-alias-bg-layer-1)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] text-text-main"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div className="grid h-4 w-4 place-items-center">
-                                  {getConnectorBrandLogo(connector.id, "h-3.5 w-3.5", 14)}
-                                </div>
-                                <span className="font-medium">{connector.name}</span>
-                              </div>
-                              <span
-                                className={`text-[10px] font-semibold flex items-center gap-1 ${
-                                  isAttached ? "text-emerald-400" : "text-text-muted"
+                        {DEFAULT_CONNECTORS_CATALOG.slice(0, 5).map(
+                          (connector) => {
+                            const isAttached = attachedConnectors.includes(
+                              connector.id
+                            );
+                            return (
+                              <button
+                                className={`flex w-full items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors ${
+                                  isAttached
+                                    ? "bg-brand-primary/10 border border-brand-primary/30 text-text-main"
+                                    : "bg-[var(--dsw-alias-bg-layer-1)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] text-text-main"
                                 }`}
+                                key={connector.id}
+                                onClick={() => toggleConnector(connector.id)}
+                                type="button"
                               >
-                                {isAttached ? "Attaché ✓" : "+ Attacher"}
-                              </span>
-                            </button>
-                          );
-                        })}
+                                <div className="flex items-center gap-2">
+                                  <div className="grid h-4 w-4 place-items-center">
+                                    {getConnectorBrandLogo(
+                                      connector.id,
+                                      "h-3.5 w-3.5",
+                                      14
+                                    )}
+                                  </div>
+                                  <span className="font-medium">
+                                    {connector.name}
+                                  </span>
+                                </div>
+                                <span
+                                  className={`text-[10px] font-semibold flex items-center gap-1 ${
+                                    isAttached
+                                      ? "text-emerald-400"
+                                      : "text-text-muted"
+                                  }`}
+                                >
+                                  {isAttached ? "Attaché ✓" : "+ Attacher"}
+                                </span>
+                              </button>
+                            );
+                          }
+                        )}
                       </div>
 
                       <div className="pt-1.5 border-t border-[var(--dsw-alias-border-l1)]">
@@ -1042,6 +1161,69 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                         </button>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      <p className="composer-add-heading">Ajouter</p>
+                      <button
+                        className="composer-add-row"
+                        onClick={() => {
+                          setAddMenuOpen(false);
+                          fileInputRef.current?.click();
+                        }}
+                        type="button"
+                      >
+                        <Paperclip aria-hidden="true" />
+                        <span>Fichier</span>
+                      </button>
+                      <button
+                        className="composer-add-row"
+                        onClick={() => {
+                          setAddMenuOpen(false);
+                          photoInputRef.current?.click();
+                        }}
+                        type="button"
+                      >
+                        <ImageIcon aria-hidden="true" />
+                        <span>Photo</span>
+                      </button>
+                      <button
+                        className="composer-add-row"
+                        onClick={() => {
+                          setAddMenuOpen(false);
+                          setDraft(
+                            draft.endsWith(" ") || !draft
+                              ? `${draft}@`
+                              : `${draft} @`
+                          );
+                          setMentionQuery("");
+                          textareaRef.current?.focus();
+                        }}
+                        type="button"
+                      >
+                        <User aria-hidden="true" className="text-amber-400" />
+                        <span>Mentionner un agent (@)</span>
+                      </button>
+                      <button
+                        className="composer-add-row"
+                        onClick={() => setConnectorsSubmenuOpen(true)}
+                        type="button"
+                      >
+                        <Plug aria-hidden="true" className="text-violet-400" />
+                        <span className="flex-1 text-left">Connecteurs</span>
+                        <ChevronRight className="h-3.5 w-3.5 text-text-muted" />
+                      </button>
+                      <button
+                        className="composer-add-row"
+                        onClick={() => {
+                          setAddMenuOpen(false);
+                          setActivePage("library");
+                        }}
+                        type="button"
+                      >
+                        <LayoutGrid aria-hidden="true" />
+                        <span>Bibliothèque</span>
+                      </button>
+                    </>
                   )}
                 </section>
               )}
@@ -1058,7 +1240,11 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                 onClick={() => setModelMenuOpen((o) => !o)}
                 type="button"
               >
-                {modelMode === "discuter" ? "Discuter" : modelMode === "construire" ? "Construire" : "Auto"}
+                {modelMode === "discuter"
+                  ? "Discuter"
+                  : modelMode === "construire"
+                    ? "Construire"
+                    : "Auto"}
                 <ChevronDown aria-hidden="true" className="h-3 w-3" />
               </button>
               {modelMenuOpen && (
@@ -1066,17 +1252,45 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                   className="absolute bottom-[calc(100%+8px)] right-0 z-50 w-[240px] rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.32)]"
                   role="menu"
                 >
-                  {([
-                    ["auto", "Auto", "Détection intelligente (discute ou construit)"],
-                    ["discuter", "Discuter", "Échange & analyse sans lancer de build"],
-                    ["construire", "Construire", "Génère du code et crée l'application"],
-                  ] as const).map(([key, label, hint]) => (
-                    <button className="composer-add-row" key={key} onClick={() => chooseModel(key)} role="menuitemradio" aria-checked={modelMode === key} type="button">
+                  {(
+                    [
+                      [
+                        "auto",
+                        "Auto",
+                        "Détection intelligente (discute ou construit)",
+                      ],
+                      [
+                        "discuter",
+                        "Discuter",
+                        "Échange & analyse sans lancer de build",
+                      ],
+                      [
+                        "construire",
+                        "Construire",
+                        "Génère du code et crée l'application",
+                      ],
+                    ] as const
+                  ).map(([key, label, hint]) => (
+                    <button
+                      aria-checked={modelMode === key}
+                      className="composer-add-row"
+                      key={key}
+                      onClick={() => chooseModel(key)}
+                      role="menuitemradio"
+                      type="button"
+                    >
                       <span className="flex flex-1 flex-col text-left">
                         <span className="text-xs font-semibold">{label}</span>
-                        <span className="text-[11px] text-[var(--dsw-alias-label-tertiary)]">{hint}</span>
+                        <span className="text-[11px] text-[var(--dsw-alias-label-tertiary)]">
+                          {hint}
+                        </span>
                       </span>
-                      {modelMode === key && <Check aria-hidden="true" className="h-4 w-4 text-[var(--idealy-teal-petrol)]" />}
+                      {modelMode === key && (
+                        <Check
+                          aria-hidden="true"
+                          className="h-4 w-4 text-[var(--idealy-teal-petrol)]"
+                        />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -1085,11 +1299,15 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
             {!isGenerating && (
               <>
                 <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new CustomEvent("idealy:open-live-voice"))}
                   aria-label="Mode vocal temps réel (Gemini Live)"
-                  title="Mode vocal temps réel (Gemini Live)"
                   className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-emerald-500/10 hover:text-emerald-400 transition-all duration-200 active:scale-95 focus-ring"
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent("idealy:open-live-voice")
+                    )
+                  }
+                  title="Mode vocal temps réel (Gemini Live)"
+                  type="button"
                 >
                   <Radio aria-hidden="true" className="h-4 w-4" />
                 </button>
@@ -1099,55 +1317,55 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                       ? "Arrêter la dictée vocale"
                       : "Dicter avec le microphone"
                   }
-                aria-pressed={dictationActive}
-                className={
-                  dictationActive
-                    ? "dictation-button dictation-button-active grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full bg-[var(--idealy-indigo)] text-white shadow-md transition-all duration-200 active:scale-95 focus-ring"
-                    : "dictation-button grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
-                }
-                data-recording={dictationActive || undefined}
-                onClick={toggleDictation}
-                title={
-                  SpeechRecognition
-                    ? dictationActive
-                      ? "Arrêter la dictée"
-                      : "Dicter"
-                    : "Dictée indisponible dans ce navigateur"
-                }
-                type="button"
-              >
-                {dictationActive ? (
-                  <span aria-hidden="true" className="dictation-bars">
-                    <i
-                      style={{
-                        height: `${Math.round(5 + dictationLevel * 13)}px`,
-                      }}
-                    />
-                    <i
-                      style={{
-                        height: `${Math.round(7 + dictationLevel * 19)}px`,
-                      }}
-                    />
-                    <i
-                      style={{
-                        height: `${Math.round(4 + dictationLevel * 11)}px`,
-                      }}
-                    />
-                    <i
-                      style={{
-                        height: `${Math.round(6 + dictationLevel * 16)}px`,
-                      }}
-                    />
-                    <i
-                      style={{
-                        height: `${Math.round(3 + dictationLevel * 9)}px`,
-                      }}
-                    />
-                  </span>
-                ) : (
-                  <Mic aria-hidden="true" className="h-4 w-4" />
-                )}
-              </button>
+                  aria-pressed={dictationActive}
+                  className={
+                    dictationActive
+                      ? "dictation-button dictation-button-active grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full bg-[var(--idealy-indigo)] text-white shadow-md transition-all duration-200 active:scale-95 focus-ring"
+                      : "dictation-button grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-all duration-200 active:scale-95 focus-ring"
+                  }
+                  data-recording={dictationActive || undefined}
+                  onClick={toggleDictation}
+                  title={
+                    SpeechRecognition
+                      ? dictationActive
+                        ? "Arrêter la dictée"
+                        : "Dicter"
+                      : "Dictée indisponible dans ce navigateur"
+                  }
+                  type="button"
+                >
+                  {dictationActive ? (
+                    <span aria-hidden="true" className="dictation-bars">
+                      <i
+                        style={{
+                          height: `${Math.round(5 + dictationLevel * 13)}px`,
+                        }}
+                      />
+                      <i
+                        style={{
+                          height: `${Math.round(7 + dictationLevel * 19)}px`,
+                        }}
+                      />
+                      <i
+                        style={{
+                          height: `${Math.round(4 + dictationLevel * 11)}px`,
+                        }}
+                      />
+                      <i
+                        style={{
+                          height: `${Math.round(6 + dictationLevel * 16)}px`,
+                        }}
+                      />
+                      <i
+                        style={{
+                          height: `${Math.round(3 + dictationLevel * 9)}px`,
+                        }}
+                      />
+                    </span>
+                  ) : (
+                    <Mic aria-hidden="true" className="h-4 w-4" />
+                  )}
+                </button>
               </>
             )}
             {isGenerating ? (
@@ -1158,12 +1376,9 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
                 title="Arrêter la réponse"
                 type="button"
               >
-                <Square
-                  aria-hidden="true"
-                  className="h-4 w-4 fill-current"
-                />
+                <Square aria-hidden="true" className="h-4 w-4 fill-current" />
               </button>
-            ) : !isEmpty ? (
+            ) : isEmpty ? null : (
               <button
                 aria-label="Envoyer le message"
                 className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white hover:opacity-95 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg focus-ring animate-scale-in"
@@ -1173,7 +1388,7 @@ export const Composer: React.FC<ComposerProps> = ({ placement = "conversation" }
               >
                 <ArrowUp aria-hidden="true" className="h-4 w-4 stroke-[2.2]" />
               </button>
-            ) : null}
+            )}
           </div>
         </div>
       </div>

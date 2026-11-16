@@ -1,4 +1,3 @@
-import { authenticatedFetch, getBearerToken } from "./firebase";
 import type {
   Artifact,
   AssistantToolActivity,
@@ -9,30 +8,34 @@ import type {
   MissionRoute,
   SubAgentProgress,
 } from "../types";
+import { authenticatedFetch, getBearerToken } from "./firebase";
 
 export interface AssistantStreamCallbacks {
   onArtifact?: (artifact: Omit<Artifact, "id" | "createdAt">) => void;
   onChunk: (chunk: string) => void;
   onComplete?: (reasoningDuration?: number) => void;
   onError?: (error: Error) => void;
+  onMissionFileEvent?: (event: MissionFileActivity) => void;
   onMissionPlan?: (missionId: string, plan: MissionPlan) => void;
   onMissionRoute?: (route: MissionRoute) => void;
-  onMissionFileEvent?: (event: MissionFileActivity) => void;
   onReasoningChunk?: (chunk: string) => void;
   onSubAgentProgress?: (progress: SubAgentProgress) => void;
   onToolActivity?: (activity: AssistantToolActivity) => void;
 }
 
 export interface SendMessageOptions {
-  callbacks: AssistantStreamCallbacks;
-  content: string;
+  agents?: string[];
   attachments?: Attachment[];
+  callbacks: AssistantStreamCallbacks;
+  connectors?: string[];
+  content: string;
   conversationId: string;
   conversationTitle?: string;
   deepThink?: boolean;
   mode: IntentionMode;
   signal?: AbortSignal;
   spaceInstructions?: string;
+  way?: string;
   webSearch?: boolean;
 }
 
@@ -63,7 +66,7 @@ function createUuid(): string {
 export function getBackendChatId(conversationId: string): string {
   try {
     const saved = JSON.parse(
-      localStorage.getItem(CHAT_ID_MAP_KEY) || "{}",
+      localStorage.getItem(CHAT_ID_MAP_KEY) || "{}"
     ) as Record<string, string>;
     const existing = saved[conversationId];
     if (existing) {
@@ -72,7 +75,7 @@ export function getBackendChatId(conversationId: string): string {
     const id = createUuid();
     localStorage.setItem(
       CHAT_ID_MAP_KEY,
-      JSON.stringify({ ...saved, [conversationId]: id }),
+      JSON.stringify({ ...saved, [conversationId]: id })
     );
     return id;
   } catch {
@@ -82,15 +85,15 @@ export function getBackendChatId(conversationId: string): string {
 
 export function linkBackendChatId(
   conversationId: string,
-  backendChatId: string,
+  backendChatId: string
 ): void {
   try {
     const saved = JSON.parse(
-      localStorage.getItem(CHAT_ID_MAP_KEY) || "{}",
+      localStorage.getItem(CHAT_ID_MAP_KEY) || "{}"
     ) as Record<string, string>;
     localStorage.setItem(
       CHAT_ID_MAP_KEY,
-      JSON.stringify({ ...saved, [conversationId]: backendChatId }),
+      JSON.stringify({ ...saved, [conversationId]: backendChatId })
     );
   } catch {
     // The remote history can still be read for this session if storage is disabled.
@@ -132,7 +135,7 @@ async function getSelectedModel(): Promise<string> {
               payload.capabilities &&
               typeof payload.capabilities === "object"
               ? payload.capabilities
-              : payload,
+              : payload
           );
       return (
         modelIds.find((id) => id.toLowerCase().includes("deepseek")) ??
@@ -161,13 +164,13 @@ async function responseError(response: Response): Promise<Error> {
 
   if (response.status === 401 || response.status === 403) {
     return new Error(
-      `${serverMessage || "Une session Idealy est nécessaire pour utiliser le moteur IA."} Connectez-vous, puis revenez au chat : /login?callbackUrl=%2F`,
+      `${serverMessage || "Une session Idealy est nécessaire pour utiliser le moteur IA."} Connectez-vous, puis revenez au chat : /login?callbackUrl=%2F`
     );
   }
 
   return new Error(
     serverMessage ||
-      `Le backend Idealy a répondu avec le statut ${response.status}.`,
+      `Le backend Idealy a répondu avec le statut ${response.status}.`
   );
 }
 
@@ -212,7 +215,9 @@ export const AssistantRemoteService = {
               };
               if (result.url && result.url.startsWith("https://")) {
                 fileUrl = result.url;
-                if (result.contentType) mediaType = result.contentType;
+                if (result.contentType) {
+                  mediaType = result.contentType;
+                }
               }
             }
           } catch {
@@ -245,7 +250,7 @@ export const AssistantRemoteService = {
           type: "file" as const,
           url: attachment.url || "",
         };
-      }),
+      })
     );
     const parts = [
       ...(content.trim()
@@ -262,21 +267,32 @@ export const AssistantRemoteService = {
     ];
 
     const bearerToken = await getBearerToken();
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
     if (bearerToken) {
       headers["Authorization"] = `Bearer ${bearerToken}`;
     }
-    const userWay = localStorage.getItem("idealy_user_way") || "ninja";
+    const userWay =
+      options.way || localStorage.getItem("idealy_user_way") || "ninja";
     const userTone = localStorage.getItem("idealy_user_tone") || "concise";
     const userLanguage = localStorage.getItem("idealy_language") || "fr";
     headers["x-idealy-user-way"] = userWay;
     headers["x-idealy-user-tone"] = userTone;
     headers["x-idealy-language"] = userLanguage;
+    if (options.agents && options.agents.length > 0) {
+      headers["x-idealy-agents"] = options.agents.join(",");
+    }
+    if (options.connectors && options.connectors.length > 0) {
+      headers["x-idealy-connectors"] = options.connectors.join(",");
+    }
 
     let response: Response;
     try {
       response = await fetch("/api/chat", {
         body: JSON.stringify({
+          agents: options.agents || [],
+          connectors: options.connectors || [],
           id: remoteChatId,
           message: {
             id: createUuid(),
@@ -284,10 +300,10 @@ export const AssistantRemoteService = {
             role: "user",
           },
           selectedChatModel,
+          selectedLanguage: userLanguage,
+          selectedTone: userTone,
           selectedVisibilityType: "private",
           selectedWay: userWay,
-          selectedTone: userTone,
-          selectedLanguage: userLanguage,
         }),
         credentials: "same-origin",
         headers,
@@ -314,7 +330,7 @@ export const AssistantRemoteService = {
     }
     if (!response.body) {
       const error = new Error(
-        "Le backend Idealy a répondu sans flux de génération.",
+        "Le backend Idealy a répondu sans flux de génération."
       );
       callbacks.onError?.(error);
       throw error;
@@ -400,7 +416,7 @@ export const AssistantRemoteService = {
             "renderWidget",
           ].includes(activity.kind) &&
           ["input-available", "output-available", "output-error"].includes(
-            activity.state,
+            activity.state
           )
         ) {
           callbacks.onToolActivity?.({
@@ -481,7 +497,7 @@ export const AssistantRemoteService = {
                       : {}),
                   },
                 ]
-              : [],
+              : []
           );
           if (agents.length && agents.length <= 3) {
             callbacks.onSubAgentProgress?.({
@@ -496,7 +512,7 @@ export const AssistantRemoteService = {
         frameError = new Error(
           typeof event.errorText === "string"
             ? event.errorText
-            : "La génération a échoué côté backend.",
+            : "La génération a échoué côté backend."
         );
       }
     };
@@ -533,7 +549,7 @@ export const AssistantRemoteService = {
         });
       }
       callbacks.onComplete?.(
-        Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
+        Math.max(1, Math.round((Date.now() - startedAt) / 1000))
       );
     } catch (error) {
       if (signal?.aborted) {

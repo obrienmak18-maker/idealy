@@ -60,12 +60,12 @@ export type GenerationStatus =
   | "error";
 
 export interface Attachment {
+  /** Kept in memory until the message is uploaded; never serialized to localStorage. */
+  file?: File;
   id: string;
   name: string;
   size: number;
   type: string;
-  /** Kept in memory until the message is uploaded; never serialized to localStorage. */
-  file?: File;
   url?: string;
 }
 
@@ -162,13 +162,13 @@ export interface MissionRoute {
 }
 
 export interface MissionRun {
-  route?: MissionRoute;
   buildVerification?: MissionBuildVerification;
   error?: string;
   files?: MissionWorkspaceFile[];
   id: string;
   idempotencyKey?: string;
   plan: MissionPlan;
+  route?: MissionRoute;
   status: "planned" | "building" | "ready" | "needs-fix";
 }
 
@@ -179,17 +179,17 @@ export interface Message {
   content: string;
   conversationId: string;
   createdAt: number;
+  fileEvents?: MissionFileActivity[];
   id: string;
   isPartial?: boolean;
-  fileEvents?: MissionFileActivity[];
   mission?: MissionRun;
   mode: IntentionMode;
-  run?: Run;
-  subagents?: SubAgentProgress[];
   reasoning?: string;
   reasoningDuration?: number;
   role: "user" | "assistant";
+  run?: Run;
   status?: "delivered" | "interrupted" | "error";
+  subagents?: SubAgentProgress[];
 }
 
 export interface Conversation {
@@ -202,6 +202,7 @@ export interface Conversation {
   spaceId: string;
   title: string;
   updatedAt: number;
+  way?: "ninja" | "mage" | "hunter" | "professional";
 }
 
 export interface Space {

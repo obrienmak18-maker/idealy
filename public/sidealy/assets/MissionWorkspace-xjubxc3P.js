@@ -1,0 +1,2157 @@
+const __vite__mapDeps = (
+  i,
+  m = __vite__mapDeps,
+  d = m.f ||
+    (m.f = [
+      "assets/projectRuntime-CbC600uq.js",
+      "assets/index-BdyQVuIx.js",
+      "assets/index-Giji3XjS.css",
+    ])
+) => i.map((i) => d[i]);
+
+import {
+  D as bt,
+  b as ct,
+  S as dt,
+  j as e,
+  F as Fe,
+  _ as gt,
+  a as h,
+  R as ht,
+  c as ke,
+  E as lt,
+  P as mt,
+  f as Ne,
+  X as ot,
+  e as pt,
+  r,
+  L as U,
+  C as ut,
+  d as xt,
+} from "./index-BdyQVuIx.js"; /**
+ * @license lucide-react v0.553.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const ft = [
+    ["path", { d: "M12 6v6h4", key: "135r8i" }],
+    ["circle", { cx: "12", cy: "12", key: "1mglay", r: "10" }],
+  ],
+  jt = ke("clock-3", ft); /**
+ * @license lucide-react v0.553.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const yt = [
+    [
+      "path",
+      {
+        d: "M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4",
+        key: "tonef",
+      },
+    ],
+    ["path", { d: "M9 18c-4.51 2-5-2-7-2", key: "9comsn" }],
+  ],
+  le = ke("github", yt); /**
+ * @license lucide-react v0.553.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const vt = [
+    ["path", { d: "M12 19h8", key: "baeox8" }],
+    ["path", { d: "m4 17 6-6-6-6", key: "1yngyt" }],
+  ],
+  we = ke("terminal", vt);
+async function b(n) {
+  const N = await n.json().catch(() => ({}));
+  if (!n.ok) {
+    throw new Error(N.error || `Le backend a répondu ${n.status}.`);
+  }
+  return N;
+}
+async function Nt(n, N, E) {
+  const i = await Promise.all(
+      E.map((v) => ({ content: v.content, path: v.path }))
+        .sort((v, p) => v.path.localeCompare(p.path))
+        .map(async ({ path: v, content: p }) => {
+          const j = await crypto.subtle.digest(
+              "SHA-256",
+              new TextEncoder().encode(p)
+            ),
+            L = Array.from(new Uint8Array(j))
+              .map((D) => D.toString(16).padStart(2, "0"))
+              .join("");
+          return { checksum: L, path: v };
+        })
+    ),
+    k = JSON.stringify({ branch: N, files: i, project: n }),
+    u = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(k));
+  return Array.from(new Uint8Array(u))
+    .map((v) => v.toString(16).padStart(2, "0"))
+    .join("");
+}
+async function wt(n, N, E, i) {
+  const k = new Set(),
+    u = i
+      .filter((j) =>
+        j.status !== "saved" || k.has(j.path) ? !1 : (k.add(j.path), !0)
+      )
+      .map((j) => ({
+        checksum: j.checksum ?? null,
+        path: j.path,
+        version: j.version,
+      })),
+    v = JSON.stringify({ files: u, missionId: n, projectName: N, target: E }),
+    p = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v));
+  return Array.from(new Uint8Array(p))
+    .map((j) => j.toString(16).padStart(2, "0"))
+    .join("");
+}
+function Be() {
+  const n = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(n)
+    .map((N) => N.toString(16).padStart(2, "0"))
+    .join("");
+}
+const Ct = ({
+  missionId: n,
+  projectName: N,
+  initialFiles: E,
+  buildVerification: i,
+  onClose: k,
+}) => {
+  var Ge, He;
+  const [u, v] = r.useState("files"),
+    [p, j] = r.useState(E),
+    [L, D] = r.useState(((Ge = E[0]) == null ? void 0 : Ge.path) ?? ""),
+    [_, ce] = r.useState(((He = E[0]) == null ? void 0 : He.content) ?? ""),
+    [Ce, Se] = r.useState([]),
+    [de, Re] = r.useState([]),
+    [g, Me] = r.useState(null),
+    [Je, me] = r.useState(!1),
+    [Ee, xe] = r.useState(""),
+    W = r.useRef(!1),
+    ue = r.useRef(0),
+    pe = r.useRef(!1),
+    [Pe, Le] = r.useState(""),
+    [C, X] = r.useState(null),
+    [$e, Ae] = r.useState(!1),
+    [q, Q] = r.useState(!1),
+    [he, d] = r.useState(""),
+    [Te, S] = r.useState(""),
+    [Y, Ie] = r.useState(""),
+    [Z, Ke] = r.useState(""),
+    [be, We] = r.useState(`idealy/mission-${n.slice(0, 8)}`),
+    [z, V] = r.useState(!1),
+    [G, Oe] = r.useState(!1),
+    [$, Xe] = r.useState(null),
+    [ee, Qe] = r.useState(() =>
+      N.toLowerCase()
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9-]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 100)
+    ),
+    [R, Ye] = r.useState("preview"),
+    [H, te] = r.useState(!1),
+    [F, Ue] = r.useState(!1),
+    [A, Ze] = r.useState(null),
+    [B, M] = r.useState("stopped"),
+    [se, re] = r.useState(""),
+    [De, ge] = r.useState(""),
+    [_e, ae] = r.useState(""),
+    T = r.useRef(null),
+    J = r.useRef(0),
+    fe = r.useRef(null),
+    ne = r.useRef(null),
+    ie = r.useRef(null),
+    qe = r.useRef(null),
+    c = r.useMemo(() => p.find((t) => t.path === L), [p, L]),
+    oe = p.some(
+      (t) => t.path.replaceAll("\\", "/").replace(/^\/+/, "") === "package.json"
+    ),
+    O = ["booting", "installing", "starting"].includes(B);
+  r.useEffect(() => {
+    var t;
+    return (
+      (J.current += 1),
+      (t = T.current) == null || t.stopProjectPreview(),
+      M("stopped"),
+      re(""),
+      ge(""),
+      ae(""),
+      () => {
+        var s;
+        (J.current += 1), (s = T.current) == null || s.stopProjectPreview();
+      }
+    );
+  }, [n]);
+  const Ve = async () => {
+      if (!oe || O) {
+        return;
+      }
+      ge(""), ae(""), re(""), M("booting");
+      const t = ++J.current;
+      try {
+        const s = await gt(
+          () => import("./projectRuntime-CbC600uq.js"),
+          __vite__mapDeps([0, 1, 2])
+        );
+        if (((T.current = s), t !== J.current)) {
+          s.stopProjectPreview();
+          return;
+        }
+        const o = await s.startProjectPreview(p, {
+          onOutput: (a) => ae((l) => (l + a).slice(-18e3)),
+          onState: M,
+        });
+        re(o);
+      } catch (s) {
+        M("error"),
+          ge(
+            s instanceof Error
+              ? s.message
+              : "L’aperçu interactif n’a pas pu démarrer."
+          );
+      }
+    },
+    ze = () => {
+      var t;
+      (J.current += 1),
+        (t = T.current) == null || t.stopProjectPreview(),
+        re(""),
+        M("stopped"),
+        ae((s) =>
+          `${s}
+Projet arrêté.
+`.slice(-18e3)
+        );
+    };
+  r.useEffect(() => {
+    ce((c == null ? void 0 : c.content) ?? "");
+  }, [c == null ? void 0 : c.content, c == null ? void 0 : c.path]),
+    r.useEffect(() => {
+      var o;
+      const t =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      (o = qe.current) == null || o.focus();
+      const s = (a) => {
+        if (a.key === "Escape") {
+          if (C) {
+            X(null), a.preventDefault();
+            return;
+          }
+          if (z) {
+            V(!1), a.preventDefault();
+            return;
+          }
+          if (H) {
+            te(!1), a.preventDefault();
+            return;
+          }
+          k();
+          return;
+        }
+        if (a.key !== "Tab" || !fe.current) {
+          return;
+        }
+        const l = Array.from(
+          (ne.current ?? fe.current).querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((w) => w.offsetParent !== null);
+        if (l.length === 0) {
+          return;
+        }
+        const m = l[0],
+          x = l[l.length - 1];
+        a.shiftKey && document.activeElement === m
+          ? (a.preventDefault(), x == null || x.focus())
+          : !a.shiftKey &&
+            document.activeElement === x &&
+            (a.preventDefault(), m == null || m.focus());
+      };
+      return (
+        window.addEventListener("keydown", s),
+        () => {
+          window.removeEventListener("keydown", s), t == null || t.focus();
+        }
+      );
+    }, [z, k, C, H]),
+    r.useEffect(() => {
+      var t;
+      (z || C || H) && ((t = ie.current) == null || t.focus());
+    }, [z, C, H]);
+  const et = async () => {
+    const t = await h(
+        `/api/idealy/missions/${encodeURIComponent(n)}/checkpoints`,
+        { cache: "no-store", credentials: "same-origin" }
+      ),
+      s = await b(t);
+    Re(Array.isArray(s.checkpoints) ? s.checkpoints : []);
+  };
+  r.useEffect(() => {
+    const t = new AbortController();
+    return (
+      Promise.all([
+        h(`/api/idealy/missions/${encodeURIComponent(n)}/tasks`, {
+          cache: "no-store",
+          credentials: "same-origin",
+          signal: t.signal,
+        }),
+        h(`/api/idealy/missions/${encodeURIComponent(n)}/checkpoints`, {
+          cache: "no-store",
+          credentials: "same-origin",
+          signal: t.signal,
+        }),
+        h(`/api/idealy/missions/${encodeURIComponent(n)}/events`, {
+          cache: "no-store",
+          credentials: "same-origin",
+          signal: t.signal,
+        }),
+      ])
+        .then(async ([s, o, a]) => {
+          const l = await b(s),
+            m = await b(o),
+            x = await b(a);
+          (ue.current = x.lastSequence ?? 0),
+            Se([...(l.tasks ?? []), ...(x.events ?? [])]),
+            Re(m.checkpoints ?? []),
+            Array.isArray(x.files) &&
+              x.files.length &&
+              (j(x.files),
+              D((w) => {
+                var y, f;
+                return (
+                  w ||
+                  ((f = (y = x.files) == null ? void 0 : y[0]) == null
+                    ? void 0
+                    : f.path) ||
+                  ""
+                );
+              }));
+        })
+        .catch((s) => {
+          t.signal.aborted ||
+            d(
+              s instanceof Error
+                ? s.message
+                : "L’espace de mission n’a pas pu être chargé."
+            );
+        }),
+      () => t.abort()
+    );
+  }, [n]),
+    r.useEffect(() => {
+      if (u !== "activity") {
+        return;
+      }
+      const t = new AbortController(),
+        s = async () => {
+          if (!(pe.current || t.signal.aborted)) {
+            pe.current = !0;
+            try {
+              const [a, l] = await Promise.all([
+                  h(`/api/idealy/missions/${encodeURIComponent(n)}/tasks`, {
+                    cache: "no-store",
+                    credentials: "same-origin",
+                    signal: t.signal,
+                  }),
+                  h(
+                    `/api/idealy/missions/${encodeURIComponent(n)}/events?afterSequence=${ue.current}`,
+                    {
+                      cache: "no-store",
+                      credentials: "same-origin",
+                      signal: t.signal,
+                    }
+                  ),
+                ]),
+                [m, x] = await Promise.all([b(a), b(l)]);
+              if (t.signal.aborted) {
+                return;
+              }
+              typeof x.lastSequence == "number" &&
+                (ue.current = x.lastSequence),
+                Se((w) => {
+                  const y = new Map();
+                  for (const f of w) {
+                    y.set(f.id ?? `sequence-${f.sequence ?? y.size}`, f);
+                  }
+                  for (const f of m.tasks ?? []) {
+                    y.set(f.id ?? `task-${f.title ?? y.size}`, f);
+                  }
+                  for (const f of x.events ?? []) {
+                    y.set(f.id ?? `event-${f.sequence ?? y.size}`, f);
+                  }
+                  return [...y.values()];
+                });
+            } catch (a) {
+              t.signal.aborted ||
+                d(
+                  a instanceof Error
+                    ? a.message
+                    : "La mise à jour de l’activité a échoué."
+                );
+            } finally {
+              pe.current = !1;
+            }
+          }
+        };
+      s();
+      const o = window.setInterval(() => void s(), 5e3);
+      return () => {
+        t.abort(), window.clearInterval(o);
+      };
+    }, [n, u]),
+    r.useEffect(() => {
+      if (u !== "data" || g || W.current) {
+        return;
+      }
+      const t = new AbortController();
+      return (
+        (W.current = !0),
+        me(!0),
+        xe(""),
+        h(`/api/idealy/missions/${encodeURIComponent(n)}/database`, {
+          cache: "no-store",
+          credentials: "same-origin",
+          signal: t.signal,
+        })
+          .then((s) => b(s))
+          .then((s) => {
+            const o = s.errors ?? {};
+            Me({
+              agentRuns: s.agentRuns ?? [],
+              errors: o,
+              events: s.events ?? [],
+              mission: s.mission ?? null,
+            });
+            const a = Object.entries(o)
+              .filter(([, l]) => l)
+              .map(([l]) => l);
+            a.length &&
+              xe(
+                `Certaines données ne sont pas disponibles : ${a.join(", ")}.`
+              );
+          })
+          .catch((s) => {
+            t.signal.aborted ||
+              xe(
+                s instanceof Error
+                  ? s.message
+                  : "L’inspecteur de données n’a pas pu être chargé."
+              );
+          })
+          .finally(() => {
+            t.signal.aborted || ((W.current = !1), me(!1));
+          }),
+        () => {
+          t.abort(), (W.current = !1), me(!1);
+        }
+      );
+    }, [g, n, u]);
+  const tt = async () => {
+      if (c) {
+        Ae(!0), d(""), S("");
+        try {
+          const t = await h(
+              `/api/idealy/missions/${encodeURIComponent(n)}/files/edit`,
+              {
+                body: JSON.stringify({
+                  content: _,
+                  expectedVersion: c.version,
+                  path: c.path,
+                }),
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                method: "PATCH",
+              }
+            ),
+            o = (await b(t)).file;
+          if (!o) {
+            throw new Error(
+              "Le backend n’a pas confirmé la nouvelle version du fichier."
+            );
+          }
+          j((l) => l.map((m) => (m.path === o.path ? o : m))), ce(o.content);
+          let a = "Fichier enregistré dans l’espace de mission.";
+          if (B === "ready" && T.current) {
+            try {
+              (await T.current.updateProjectPreviewFile(o.path, o.content)) &&
+                (o.path.replaceAll("\\", "/").replace(/^\/+/, "") ===
+                "package.json"
+                  ? (ze(),
+                    (a =
+                      "Fichier enregistré. Relancez l’aperçu pour appliquer les dépendances."))
+                  : (a = "Fichier enregistré et aperçu actualisé."));
+            } catch {
+              a =
+                "Fichier enregistré. Relancez l’aperçu pour charger la dernière version.";
+            }
+          }
+          S(a);
+        } catch (t) {
+          d(t instanceof Error ? t.message : "L’enregistrement a échoué.");
+        } finally {
+          Ae(!1);
+        }
+      }
+    },
+    st = async () => {
+      Q(!0), d("");
+      try {
+        const t = await h(
+          `/api/idealy/missions/${encodeURIComponent(n)}/checkpoints`,
+          {
+            body: JSON.stringify({ name: Pe.trim() || void 0 }),
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          }
+        );
+        await b(t), Le(""), await et(), S("Point de restauration créé.");
+      } catch (t) {
+        d(
+          t instanceof Error ? t.message : "Le checkpoint n’a pas pu être créé."
+        );
+      } finally {
+        Q(!1);
+      }
+    },
+    rt = async () => {
+      var t;
+      if (C) {
+        Q(!0), d("");
+        try {
+          const s = await h(
+            `/api/idealy/missions/${encodeURIComponent(n)}/rollback`,
+            {
+              body: JSON.stringify({ checkpointId: C.id }),
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              method: "POST",
+            }
+          );
+          await b(s);
+          const o = await h(
+              `/api/idealy/missions/${encodeURIComponent(n)}/files`,
+              { cache: "no-store", credentials: "same-origin" }
+            ),
+            l = (await b(o)).files ?? [];
+          j(l),
+            D(((t = l[0]) == null ? void 0 : t.path) ?? ""),
+            X(null),
+            S(`Version restaurée : ${l.length} fichier(s) rechargé(s).`);
+        } catch (s) {
+          d(s instanceof Error ? s.message : "La restauration a échoué.");
+        } finally {
+          Q(!1);
+        }
+      }
+    },
+    at = async () => {
+      const t = Y.trim(),
+        s = Z.trim(),
+        o = be.trim();
+      if (!t || !s || !o || p.length === 0) {
+        d(
+          "Renseignez le propriétaire, le dépôt et une branche ; la mission doit contenir des fichiers."
+        );
+        return;
+      }
+      if (o === "main" || o === "master") {
+        d(
+          "Choisissez une branche dédiée : l’export direct vers main ou master est bloqué."
+        );
+        return;
+      }
+      if (c && _ !== c.content) {
+        d("Enregistrez d’abord le fichier modifié avant l’export GitHub.");
+        return;
+      }
+      Oe(!0), d(""), S("");
+      try {
+        const a = Be(),
+          l = await Nt(s, o, p),
+          m = `/api/idealy/missions/${encodeURIComponent(n)}/confirmation`,
+          x = await h(m, {
+            body: JSON.stringify({
+              confirmationToken: a,
+              operation: "github:export",
+              payloadDigest: l,
+            }),
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          });
+        if ((await b(x)).status !== "pending") {
+          throw new Error("La confirmation GitHub n’a pas été préparée.");
+        }
+        const y = await h(m, {
+          body: JSON.stringify({
+            confirmationToken: a,
+            operation: "github:export",
+          }),
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        });
+        if ((await b(y)).status !== "approved") {
+          throw new Error("La confirmation GitHub n’a pas été validée.");
+        }
+        const je = await h(
+            `/api/idealy/missions/${encodeURIComponent(n)}/github`,
+            {
+              body: JSON.stringify({
+                branch: o,
+                confirmationToken: a,
+                owner: t,
+                repo: s,
+              }),
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              method: "POST",
+            }
+          ),
+          P = await b(je);
+        if (!P.success || !P.branchUrl) {
+          throw new Error(P.error || "GitHub n’a pas confirmé l’export.");
+        }
+        const I = {
+          branch: P.branch ?? o,
+          owner: t,
+          repo: P.repository ?? `${t}/${s}`,
+          url: P.branchUrl,
+        };
+        Xe(I), V(!1), S(`Export confirmé sur ${I.repo} · ${I.branch}.`);
+      } catch (a) {
+        d(a instanceof Error ? a.message : "L’export GitHub a échoué.");
+      } finally {
+        Oe(!1);
+      }
+    },
+    nt = async () => {
+      const t = ee.trim();
+      if (!/^[a-z0-9-]{1,100}$/i.test(t)) {
+        d(
+          "Le nom du projet Vercel doit contenir uniquement des lettres, chiffres et tirets."
+        );
+        return;
+      }
+      if (c && _ !== c.content) {
+        d("Enregistrez d’abord le fichier modifié avant le déploiement.");
+        return;
+      }
+      if (R === "production" && (i == null ? void 0 : i.status) !== "passed") {
+        d("La production est disponible après la réussite du build.");
+        return;
+      }
+      Ue(!0), d(""), S("");
+      try {
+        const s = await h(
+            `/api/idealy/missions/${encodeURIComponent(n)}/files`,
+            { cache: "no-store", credentials: "same-origin" }
+          ),
+          o = await b(s),
+          a = new Set(),
+          l = (o.files ?? []).filter((ve) =>
+            ve.status !== "saved" || a.has(ve.path) ? !1 : (a.add(ve.path), !0)
+          );
+        if (!l.length) {
+          throw new Error(
+            "Aucun fichier enregistré n’est prêt au déploiement."
+          );
+        }
+        const m = Be(),
+          x = await wt(n, t, R, l),
+          w = `/api/idealy/missions/${encodeURIComponent(n)}/confirmation`,
+          y = await h(w, {
+            body: JSON.stringify({
+              confirmationToken: m,
+              operation: "vercel:deploy",
+              payloadDigest: x,
+            }),
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          });
+        if ((await b(y)).status !== "pending") {
+          throw new Error(
+            "La confirmation du déploiement n’a pas été préparée."
+          );
+        }
+        const je = await h(w, {
+          body: JSON.stringify({
+            confirmationToken: m,
+            operation: "vercel:deploy",
+          }),
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        });
+        if ((await b(je)).status !== "approved") {
+          throw new Error(
+            "La confirmation du déploiement n’a pas été validée."
+          );
+        }
+        const I = await h(
+            `/api/idealy/missions/${encodeURIComponent(n)}/vercel`,
+            {
+              body: JSON.stringify({
+                confirmationToken: m,
+                projectName: t,
+                target: R,
+              }),
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              method: "POST",
+            }
+          ),
+          K = await b(I);
+        if (!K.status) {
+          throw new Error(
+            "Vercel n’a pas confirmé la création du déploiement."
+          );
+        }
+        const ye = {
+          deploymentUrl: K.deploymentUrl ?? null,
+          projectName: K.projectName ?? t,
+          status: K.status,
+          target: K.target ?? R,
+        };
+        Ze(ye),
+          te(!1),
+          S(
+            `Déploiement ${ye.target === "production" ? "de production" : "preview"} transmis à Vercel · ${ye.status}.`
+          );
+      } catch (s) {
+        d(s instanceof Error ? s.message : "Le déploiement Vercel a échoué.");
+      } finally {
+        Ue(!1);
+      }
+    },
+    it = [
+      { id: "files", label: `Fichiers (${p.length})` },
+      { id: "preview", label: "Aperçu" },
+      { id: "activity", label: "Activité" },
+      { id: "checkpoints", label: `Versions (${de.length})` },
+      { id: "data", label: "Données" },
+      { id: "build", label: "Build" },
+      { id: "github", label: "GitHub" },
+      { id: "deploy", label: "Déployer" },
+    ];
+  return e.jsx("div", {
+    children: e.jsxs("section", {
+      "aria-labelledby": "mission-workspace-title",
+      "aria-modal": "true",
+      children: [
+        e.jsxs("header", {
+          children: [
+            e.jsxs("div", {
+              children: [
+                e.jsx("span", {
+                  children: e.jsx(Fe, {
+                    "aria-hidden": "true",
+                    className: "h-4 w-4",
+                  }),
+                  className:
+                    "grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-bg-subtle text-brand-primary",
+                }),
+                e.jsxs("div", {
+                  children: [
+                    e.jsx("h2", {
+                      children: N,
+                      className:
+                        "truncate text-sm font-semibold text-text-main",
+                      id: "mission-workspace-title",
+                    }),
+                    e.jsxs("p", {
+                      children: ["Espace de mission · ", n.slice(0, 8)],
+                      className: "text-[10px] text-text-muted",
+                    }),
+                  ],
+                  className: "min-w-0",
+                }),
+              ],
+              className: "flex min-w-0 items-center gap-2.5",
+            }),
+            e.jsx("button", {
+              "aria-label": "Fermer l’espace de mission",
+              children: e.jsx(ot, {
+                "aria-hidden": "true",
+                className: "h-4 w-4",
+              }),
+              className:
+                "grid h-9 w-9 shrink-0 place-items-center rounded-lg text-text-muted hover:bg-bg-subtle hover:text-text-main focus-ring",
+              onClick: k,
+              ref: qe,
+              type: "button",
+            }),
+          ],
+          className:
+            "flex min-h-14 items-center justify-between gap-3 border-b border-border-subtle px-4 sm:px-5",
+        }),
+        e.jsx("nav", {
+          "aria-label": "Sections de l’espace de mission",
+          children: it.map((t) =>
+            e.jsx(
+              "button",
+              {
+                "aria-current": u === t.id ? "page" : void 0,
+                children: t.label,
+                className: `shrink-0 rounded-lg px-3 py-2 text-xs font-medium focus-ring ${u === t.id ? "bg-bg-subtle text-text-main" : "text-text-muted hover:bg-bg-surface hover:text-text-main"}`,
+                onClick: () => v(t.id),
+                type: "button",
+              },
+              t.id
+            )
+          ),
+          className:
+            "flex gap-1 overflow-x-auto border-b border-border-subtle px-3 py-2 sm:px-4",
+        }),
+        u === "preview" &&
+          e.jsxs("div", {
+            children: [
+              e.jsxs("div", {
+                children: [
+                  e.jsxs("div", {
+                    children: [
+                      e.jsx(lt, {
+                        "aria-hidden": "true",
+                        className: "h-3.5 w-3.5",
+                      }),
+                      B === "ready"
+                        ? e.jsx("span", {
+                            children: "Application en cours",
+                            className: "text-emerald-500",
+                          })
+                        : e.jsx("span", {
+                            children: "Exécution interactive du projet",
+                          }),
+                    ],
+                    className:
+                      "flex items-center gap-2 text-xs text-text-muted",
+                  }),
+                  e.jsxs("div", {
+                    children: [
+                      se &&
+                        e.jsx("a", {
+                          "aria-label": "Ouvrir l’aperçu dans un nouvel onglet",
+                          children: e.jsx(ct, {
+                            "aria-hidden": "true",
+                            className: "h-3.5 w-3.5",
+                          }),
+                          className:
+                            "grid h-8 w-8 place-items-center rounded-lg text-text-muted hover:bg-bg-subtle hover:text-text-main focus-ring",
+                          href: se,
+                          rel: "noreferrer",
+                          target: "_blank",
+                          title: "Ouvrir dans un nouvel onglet",
+                        }),
+                      O
+                        ? e.jsxs("button", {
+                            children: [
+                              e.jsx(dt, {
+                                "aria-hidden": "true",
+                                className: "h-3 w-3 fill-current",
+                              }),
+                              "Arrêter",
+                            ],
+                            className:
+                              "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 text-[11px] font-medium text-text-main hover:bg-bg-subtle focus-ring",
+                            onClick: ze,
+                            type: "button",
+                          })
+                        : e.jsxs("button", {
+                            children: [
+                              e.jsx(mt, {
+                                "aria-hidden": "true",
+                                className: "h-3 w-3 fill-current",
+                              }),
+                              B === "ready" ? "Relancer" : "Lancer",
+                            ],
+                            className:
+                              "inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand-primary px-2.5 text-[11px] font-medium text-brand-onPrimary hover:opacity-90 focus-ring disabled:cursor-not-allowed disabled:opacity-50",
+                            disabled: !oe,
+                            onClick: () => void Ve(),
+                            type: "button",
+                          }),
+                    ],
+                    className: "flex items-center gap-1.5",
+                  }),
+                ],
+                className:
+                  "flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4",
+              }),
+              se
+                ? e.jsx("iframe", {
+                    allow: "cross-origin-isolated",
+                    className: "min-h-0 flex-1 border-0 bg-white",
+                    referrerPolicy: "no-referrer",
+                    src: se,
+                    title: "Aperçu interactif de l’application générée",
+                  })
+                : e.jsxs("div", {
+                    children: [
+                      e.jsx("span", {
+                        children: O
+                          ? e.jsx(U, {
+                              "aria-hidden": "true",
+                              className: "h-5 w-5 animate-spin",
+                            })
+                          : e.jsx(we, {
+                              "aria-hidden": "true",
+                              className: "h-5 w-5",
+                            }),
+                        className:
+                          "grid h-11 w-11 place-items-center rounded-2xl border border-border-subtle bg-bg-surface text-brand-primary shadow-subtle",
+                      }),
+                      e.jsx("h3", {
+                        children: O
+                          ? "Préparation du projet"
+                          : "Aperçu interactif",
+                        className:
+                          "mt-4 text-[15px] font-semibold text-text-main",
+                      }),
+                      e.jsx("p", {
+                        children: oe
+                          ? "Idealy installe les dépendances et lance le projet dans un runtime isolé de ce navigateur."
+                          : "Le projet doit contenir un package.json à sa racine pour démarrer son application.",
+                        className:
+                          "mt-1.5 max-w-sm text-[12px] leading-5 text-text-muted",
+                      }),
+                      !oe &&
+                        e.jsx("button", {
+                          children: "Voir les fichiers du projet",
+                          className:
+                            "mt-3 text-xs font-medium text-brand-primary hover:underline focus-ring",
+                          onClick: () => v("files"),
+                          type: "button",
+                        }),
+                      De &&
+                        e.jsx("div", {
+                          children: De,
+                          className:
+                            "mt-4 max-w-xl rounded-xl border border-amber-500/20 bg-amber-500/5 px-3.5 py-2.5 text-left text-[11px] leading-5 text-amber-500",
+                          role: "alert",
+                        }),
+                    ],
+                    className:
+                      "flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto px-5 py-8 text-center",
+                  }),
+              (_e || O) &&
+                e.jsxs("div", {
+                  children: [
+                    e.jsxs("div", {
+                      children: [
+                        e.jsx(we, {
+                          "aria-hidden": "true",
+                          className: "h-3 w-3",
+                        }),
+                        "Terminal du projet",
+                        e.jsx("span", {
+                          children: O
+                            ? "En cours"
+                            : B === "error"
+                              ? "Erreur"
+                              : "Sortie",
+                          className: "ml-auto text-white/40",
+                        }),
+                      ],
+                      className:
+                        "flex h-8 items-center gap-2 border-b border-white/[0.06] px-3 text-[10px] font-medium text-white/65",
+                    }),
+                    e.jsx("pre", {
+                      "aria-live": "polite",
+                      children: _e || "Préparation du terminal…",
+                      className:
+                        "max-h-40 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-[10px] leading-4 text-white/75",
+                    }),
+                  ],
+                  className:
+                    "max-h-48 shrink-0 border-t border-border-subtle bg-[#111318]",
+                }),
+              e.jsx("p", {
+                children:
+                  "Le lancement commence après votre clic. Les dépendances du projet sont téléchargées depuis npm.",
+                className:
+                  "border-t border-border-subtle px-4 py-2 text-[10px] leading-4 text-text-muted",
+              }),
+            ],
+            className: "flex min-h-0 flex-1 flex-col",
+          }),
+        u === "files" &&
+          e.jsxs("div", {
+            children: [
+              e.jsx("nav", {
+                "aria-label": "Fichiers de la mission",
+                children: p.map((t) =>
+                  e.jsxs(
+                    "button",
+                    {
+                      "aria-current": L === t.path ? "page" : void 0,
+                      children: [
+                        e.jsx(Fe, {
+                          "aria-hidden": "true",
+                          className: "h-3.5 w-3.5 shrink-0",
+                        }),
+                        e.jsx("span", {
+                          children: t.path,
+                          className: "max-w-48 truncate",
+                        }),
+                      ],
+                      className: `flex min-h-9 shrink-0 items-center gap-2 rounded-lg px-2.5 text-left text-xs focus-ring md:w-full ${L === t.path ? "bg-bg-subtle text-text-main" : "text-text-muted hover:bg-bg-surface hover:text-text-main"}`,
+                      onClick: () => D(t.path),
+                      type: "button",
+                    },
+                    t.path
+                  )
+                ),
+                className:
+                  "flex max-h-32 gap-1 overflow-x-auto border-b border-border-subtle p-2 md:max-h-none md:flex-col md:overflow-y-auto md:border-b-0 md:border-r md:p-3",
+              }),
+              c
+                ? e.jsxs("div", {
+                    children: [
+                      e.jsxs("div", {
+                        children: [
+                          e.jsxs("span", {
+                            children: [
+                              c.path,
+                              c.version ? ` · v${c.version}` : "",
+                            ],
+                            className:
+                              "truncate font-mono text-xs text-text-muted",
+                          }),
+                          e.jsxs("button", {
+                            children: [
+                              $e
+                                ? e.jsx(U, {
+                                    "aria-hidden": "true",
+                                    className: "h-3.5 w-3.5 animate-spin",
+                                  })
+                                : e.jsx(xt, {
+                                    "aria-hidden": "true",
+                                    className: "h-3.5 w-3.5",
+                                  }),
+                              "Enregistrer",
+                            ],
+                            className:
+                              "inline-flex h-8 shrink-0 items-center gap-2 rounded-lg bg-brand-primary px-3 text-xs font-medium text-brand-onPrimary hover:opacity-90 focus-ring disabled:opacity-60",
+                            disabled: $e || _ === c.content || !c.version,
+                            onClick: () => void tt(),
+                            type: "button",
+                          }),
+                        ],
+                        className:
+                          "flex min-h-10 items-center justify-between gap-3",
+                      }),
+                      e.jsx("textarea", {
+                        "aria-label": `Contenu du fichier ${c.path}`,
+                        className:
+                          "mt-3 min-h-0 flex-1 resize-none rounded-xl border border-border-subtle bg-bg-base p-4 font-mono text-xs leading-6 text-text-main outline-none focus:border-brand-primary/40",
+                        onChange: (t) => ce(t.target.value),
+                        spellCheck: !1,
+                        value: _,
+                      }),
+                    ],
+                    className: "flex min-h-0 flex-col p-3 sm:p-4",
+                  })
+                : e.jsx("div", {
+                    children: "Aucun fichier dans cette mission.",
+                    className:
+                      "grid min-h-0 place-items-center p-6 text-sm text-text-muted",
+                  }),
+            ],
+            className:
+              "grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]",
+          }),
+        u === "activity" &&
+          e.jsx("div", {
+            children: Ce.length
+              ? e.jsx("ol", {
+                  children: Ce.map((t, s) =>
+                    e.jsxs(
+                      "li",
+                      {
+                        children: [
+                          e.jsx("span", {
+                            children: e.jsx(jt, {
+                              "aria-hidden": "true",
+                              className: "h-3.5 w-3.5",
+                            }),
+                            className:
+                              "grid h-7 w-7 shrink-0 place-items-center rounded-full bg-bg-subtle text-text-muted",
+                          }),
+                          e.jsxs("div", {
+                            children: [
+                              e.jsxs("p", {
+                                children: [
+                                  t.event_type ||
+                                    t.title ||
+                                    t.name ||
+                                    t.agent ||
+                                    "Événement de mission",
+                                  t.sequence ? ` · #${t.sequence}` : "",
+                                ],
+                                className: "text-xs font-medium text-text-main",
+                              }),
+                              e.jsxs("p", {
+                                children: [
+                                  t.path || t.status || "Événement enregistré",
+                                  t.created_at || t.updatedAt
+                                    ? ` · ${new Date(t.created_at || t.updatedAt || "").toLocaleString("fr-FR")}`
+                                    : "",
+                                ],
+                                className: "mt-1 text-[10px] text-text-muted",
+                              }),
+                            ],
+                            className: "min-w-0 flex-1",
+                          }),
+                          e.jsx(ut, {
+                            "aria-hidden": "true",
+                            className:
+                              "mt-1 h-3.5 w-3.5 shrink-0 text-text-muted",
+                          }),
+                        ],
+                        className:
+                          "flex gap-3 rounded-xl border border-border-subtle bg-bg-surface p-3",
+                      },
+                      t.id ?? `${t.title}-${s}`
+                    )
+                  ),
+                  className: "mx-auto max-w-3xl space-y-2",
+                })
+              : e.jsx("p", {
+                  children: "Aucune tâche ou activité enregistrée.",
+                  className: "py-12 text-center text-sm text-text-muted",
+                }),
+            className: "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6",
+          }),
+        u === "checkpoints" &&
+          e.jsx("div", {
+            children: e.jsxs("div", {
+              children: [
+                e.jsxs("div", {
+                  children: [
+                    e.jsx("h3", {
+                      children: "Créer un point de restauration",
+                      className: "text-sm font-semibold text-text-main",
+                    }),
+                    e.jsx("p", {
+                      children:
+                        "Enregistre les fichiers actuels avant d’appliquer d’autres changements.",
+                      className: "mt-1 text-xs leading-5 text-text-muted",
+                    }),
+                    e.jsxs("div", {
+                      children: [
+                        e.jsx("input", {
+                          "aria-label": "Nom du point de restauration",
+                          className:
+                            "h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-bg-base px-3 text-xs text-text-main focus-ring",
+                          maxLength: 80,
+                          onChange: (t) => Le(t.target.value),
+                          placeholder: "Nom facultatif",
+                          value: Pe,
+                        }),
+                        e.jsxs("button", {
+                          children: [
+                            q
+                              ? e.jsx(U, {
+                                  "aria-hidden": "true",
+                                  className: "h-3.5 w-3.5 animate-spin",
+                                })
+                              : e.jsx(pt, {
+                                  "aria-hidden": "true",
+                                  className: "h-3.5 w-3.5",
+                                }),
+                            "Créer un checkpoint",
+                          ],
+                          className:
+                            "inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border-subtle px-3 text-xs font-medium text-text-main hover:bg-bg-subtle focus-ring disabled:opacity-60",
+                          disabled: q || p.length === 0,
+                          onClick: () => void st(),
+                          type: "button",
+                        }),
+                      ],
+                      className: "mt-3 flex flex-col gap-2 sm:flex-row",
+                    }),
+                  ],
+                  className:
+                    "rounded-xl border border-border-subtle bg-bg-surface p-4",
+                }),
+                e.jsxs("div", {
+                  children: [
+                    de.map((t) =>
+                      e.jsxs(
+                        "article",
+                        {
+                          children: [
+                            e.jsxs("div", {
+                              children: [
+                                e.jsx("h3", {
+                                  children: t.name,
+                                  className:
+                                    "truncate text-xs font-medium text-text-main",
+                                }),
+                                e.jsxs("p", {
+                                  children: [
+                                    t.fileCount,
+                                    " fichier(s) ·",
+                                    " ",
+                                    new Date(t.createdAt).toLocaleString(
+                                      "fr-FR"
+                                    ),
+                                    t.description ? ` · ${t.description}` : "",
+                                  ],
+                                  className: "mt-1 text-[10px] text-text-muted",
+                                }),
+                              ],
+                              className: "min-w-0",
+                            }),
+                            e.jsxs("button", {
+                              children: [
+                                e.jsx(ht, {
+                                  "aria-hidden": "true",
+                                  className: "h-3.5 w-3.5",
+                                }),
+                                "Restaurer",
+                              ],
+                              className:
+                                "inline-flex h-8 items-center gap-2 rounded-lg border border-border-subtle px-3 text-[11px] font-medium text-text-main hover:bg-bg-subtle focus-ring",
+                              onClick: () => X(t),
+                              type: "button",
+                            }),
+                          ],
+                          className:
+                            "flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4",
+                        },
+                        t.id
+                      )
+                    ),
+                    de.length === 0 &&
+                      e.jsx("p", {
+                        children: "Aucun checkpoint pour le moment.",
+                        className: "py-8 text-center text-xs text-text-muted",
+                      }),
+                  ],
+                  className: "mt-4 space-y-2",
+                }),
+              ],
+              className: "mx-auto max-w-3xl",
+            }),
+            className: "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6",
+          }),
+        u === "data" &&
+          e.jsx("div", {
+            children: e.jsxs("div", {
+              children: [
+                e.jsxs("div", {
+                  children: [
+                    e.jsx("span", {
+                      children: e.jsx(bt, {
+                        "aria-hidden": "true",
+                        className: "h-4 w-4",
+                      }),
+                      className:
+                        "grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle text-brand-primary",
+                    }),
+                    e.jsxs("div", {
+                      children: [
+                        e.jsx("h3", {
+                          children: "Données de la mission",
+                          className: "text-sm font-semibold text-text-main",
+                        }),
+                        e.jsx("p", {
+                          children:
+                            "Vue en lecture seule des métadonnées, des exécutions d’agents et du journal conservés par le backend.",
+                          className: "mt-1 text-xs leading-5 text-text-muted",
+                        }),
+                      ],
+                    }),
+                  ],
+                  className:
+                    "flex items-start gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4",
+                }),
+                Je &&
+                  e.jsx("p", {
+                    "aria-live": "polite",
+                    children: "Chargement des données…",
+                    className: "py-8 text-center text-xs text-text-muted",
+                  }),
+                Ee &&
+                  e.jsx("p", {
+                    "aria-live": "polite",
+                    children: Ee,
+                    className:
+                      "rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-500",
+                  }),
+                g &&
+                  e.jsxs(e.Fragment, {
+                    children: [
+                      e.jsxs("section", {
+                        children: [
+                          e.jsx("h3", {
+                            children: "Enregistrement",
+                            className: "text-xs font-semibold text-text-main",
+                          }),
+                          g.mission
+                            ? e.jsx("dl", {
+                                children: [
+                                  ["Titre", g.mission.title || N],
+                                  ["État", g.mission.status || "—"],
+                                  ["Mode", g.mission.way || "—"],
+                                  [
+                                    "Créée",
+                                    g.mission.created_at
+                                      ? new Date(
+                                          g.mission.created_at
+                                        ).toLocaleString("fr-FR")
+                                      : "—",
+                                  ],
+                                  ["Identifiant", g.mission.id],
+                                ].map(([t, s]) =>
+                                  e.jsxs(
+                                    "div",
+                                    {
+                                      children: [
+                                        e.jsx("dt", {
+                                          children: t,
+                                          className:
+                                            "text-[10px] text-text-muted",
+                                        }),
+                                        e.jsx("dd", {
+                                          children: s,
+                                          className:
+                                            "mt-1 break-all text-xs text-text-main",
+                                        }),
+                                      ],
+                                      className: "min-w-0",
+                                    },
+                                    t
+                                  )
+                                ),
+                                className:
+                                  "mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-2",
+                              })
+                            : e.jsx("p", {
+                                children:
+                                  "L’enregistrement de cette mission n’est pas disponible.",
+                                className: "mt-2 text-xs text-text-muted",
+                              }),
+                        ],
+                        className:
+                          "rounded-xl border border-border-subtle bg-bg-surface p-4",
+                      }),
+                      e.jsxs("section", {
+                        children: [
+                          e.jsxs("div", {
+                            children: [
+                              e.jsx("h3", {
+                                children: "Exécutions des agents",
+                                className:
+                                  "text-xs font-semibold text-text-main",
+                              }),
+                              e.jsx("span", {
+                                children: g.agentRuns.length,
+                                className: "text-[10px] text-text-muted",
+                              }),
+                            ],
+                            className:
+                              "flex items-center justify-between gap-3",
+                          }),
+                          g.agentRuns.length
+                            ? e.jsx("ul", {
+                                children: g.agentRuns.map((t) =>
+                                  e.jsxs(
+                                    "li",
+                                    {
+                                      children: [
+                                        e.jsxs("span", {
+                                          children: [
+                                            t.agent_key,
+                                            " · étape ",
+                                            t.step_index + 1,
+                                          ],
+                                          className:
+                                            "text-xs font-medium text-text-main",
+                                        }),
+                                        e.jsxs("span", {
+                                          children: [
+                                            t.status,
+                                            t.started_at
+                                              ? ` · ${new Date(t.started_at).toLocaleString("fr-FR")}`
+                                              : "",
+                                          ],
+                                          className:
+                                            "text-[10px] text-text-muted",
+                                        }),
+                                      ],
+                                      className:
+                                        "flex flex-wrap items-center justify-between gap-2 rounded-lg bg-bg-base px-3 py-2",
+                                    },
+                                    t.id
+                                  )
+                                ),
+                                className: "mt-3 space-y-2",
+                              })
+                            : e.jsx("p", {
+                                children: "Aucune exécution enregistrée.",
+                                className: "mt-2 text-xs text-text-muted",
+                              }),
+                        ],
+                        className:
+                          "rounded-xl border border-border-subtle bg-bg-surface p-4",
+                      }),
+                      e.jsxs("section", {
+                        children: [
+                          e.jsxs("div", {
+                            children: [
+                              e.jsx("h3", {
+                                children: "Journal des fichiers",
+                                className:
+                                  "text-xs font-semibold text-text-main",
+                              }),
+                              e.jsx("span", {
+                                children: g.events.length,
+                                className: "text-[10px] text-text-muted",
+                              }),
+                            ],
+                            className:
+                              "flex items-center justify-between gap-3",
+                          }),
+                          g.events.length
+                            ? e.jsx("ul", {
+                                children: g.events
+                                  .slice(-20)
+                                  .reverse()
+                                  .map((t) =>
+                                    e.jsxs(
+                                      "li",
+                                      {
+                                        children: [
+                                          e.jsxs("span", {
+                                            children: [
+                                              t.event_type,
+                                              t.path ? ` · ${t.path}` : "",
+                                            ],
+                                            className:
+                                              "text-xs font-medium text-text-main",
+                                          }),
+                                          e.jsxs("span", {
+                                            children: [
+                                              "#",
+                                              t.sequence,
+                                              " ·",
+                                              " ",
+                                              new Date(
+                                                t.created_at
+                                              ).toLocaleString("fr-FR"),
+                                            ],
+                                            className:
+                                              "text-[10px] text-text-muted",
+                                          }),
+                                        ],
+                                        className:
+                                          "flex flex-wrap items-center justify-between gap-2 rounded-lg bg-bg-base px-3 py-2",
+                                      },
+                                      t.id
+                                    )
+                                  ),
+                                className: "mt-3 space-y-2",
+                              })
+                            : e.jsx("p", {
+                                children:
+                                  "Aucun événement de fichier enregistré.",
+                                className: "mt-2 text-xs text-text-muted",
+                              }),
+                        ],
+                        className:
+                          "rounded-xl border border-border-subtle bg-bg-surface p-4",
+                      }),
+                    ],
+                  }),
+              ],
+              className: "mx-auto max-w-3xl space-y-4",
+            }),
+            className: "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6",
+          }),
+        u === "github" &&
+          e.jsx("div", {
+            children: e.jsxs("div", {
+              children: [
+                e.jsxs("div", {
+                  children: [
+                    e.jsx("span", {
+                      children: e.jsx(le, {
+                        "aria-hidden": "true",
+                        className: "h-4 w-4",
+                      }),
+                      className:
+                        "grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle text-text-main",
+                    }),
+                    e.jsxs("div", {
+                      children: [
+                        e.jsx("h3", {
+                          children: "Exporter cette mission vers GitHub",
+                          className: "text-sm font-semibold text-text-main",
+                        }),
+                        e.jsx("p", {
+                          children:
+                            "Les fichiers enregistrés seront publiés dans une branche dédiée du dépôt connecté. L’export ne modifie pas main ou master.",
+                          className: "mt-1 text-xs leading-5 text-text-muted",
+                        }),
+                      ],
+                    }),
+                  ],
+                  className:
+                    "flex items-start gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4",
+                }),
+                e.jsxs("section", {
+                  children: [
+                    e.jsxs("div", {
+                      children: [
+                        e.jsxs("label", {
+                          children: [
+                            "Propriétaire GitHub",
+                            e.jsx("input", {
+                              autoComplete: "off",
+                              className:
+                                "mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring",
+                              maxLength: 100,
+                              onChange: (t) => Ie(t.target.value),
+                              placeholder: "organisation ou compte",
+                              value: Y,
+                            }),
+                          ],
+                          className:
+                            "block text-xs font-medium text-text-muted",
+                        }),
+                        e.jsxs("label", {
+                          children: [
+                            "Nom du dépôt",
+                            e.jsx("input", {
+                              autoComplete: "off",
+                              className:
+                                "mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring",
+                              maxLength: 100,
+                              onChange: (t) => Ke(t.target.value),
+                              placeholder: "mon-projet",
+                              value: Z,
+                            }),
+                          ],
+                          className:
+                            "block text-xs font-medium text-text-muted",
+                        }),
+                      ],
+                      className: "grid gap-4 sm:grid-cols-2",
+                    }),
+                    e.jsxs("label", {
+                      children: [
+                        "Branche cible",
+                        e.jsx("input", {
+                          autoComplete: "off",
+                          className:
+                            "mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 font-mono text-xs text-text-main focus-ring",
+                          maxLength: 120,
+                          onChange: (t) => We(t.target.value),
+                          value: be,
+                        }),
+                      ],
+                      className:
+                        "mt-4 block text-xs font-medium text-text-muted",
+                    }),
+                    e.jsxs("p", {
+                      children: [
+                        p.length,
+                        " fichier(s) · Les brouillons doivent être enregistrés. Une confirmation à usage unique lie l’accord au contenu exact exporté.",
+                      ],
+                      className: "mt-3 text-[11px] leading-5 text-text-muted",
+                    }),
+                    ($ == null ? void 0 : $.url) &&
+                      e.jsxs("a", {
+                        children: [
+                          e.jsx(le, {
+                            "aria-hidden": "true",
+                            className: "h-3.5 w-3.5",
+                          }),
+                          "Ouvrir ",
+                          $.repo,
+                          " · ",
+                          $.branch,
+                        ],
+                        className:
+                          "mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-bg-subtle px-3 text-xs font-medium text-brand-primary hover:underline focus-ring",
+                        href: $.url,
+                        rel: "noreferrer",
+                        target: "_blank",
+                      }),
+                    e.jsxs("div", {
+                      children: [
+                        e.jsxs("button", {
+                          children: [
+                            e.jsx(le, {
+                              "aria-hidden": "true",
+                              className: "h-4 w-4",
+                            }),
+                            "Examiner l’export",
+                          ],
+                          className:
+                            "inline-flex h-10 items-center gap-2 rounded-xl bg-text-main px-4 text-sm font-medium text-bg-base hover:opacity-90 focus-ring disabled:opacity-50",
+                          disabled:
+                            p.length === 0 || !Y.trim() || !Z.trim() || G,
+                          onClick: () => {
+                            d(""), V(!0);
+                          },
+                          type: "button",
+                        }),
+                        e.jsx("a", {
+                          children: "Gérer les connecteurs",
+                          className:
+                            "text-xs text-text-muted underline-offset-4 hover:text-text-main hover:underline focus-ring",
+                          href: "/connectors",
+                        }),
+                      ],
+                      className: "mt-5 flex flex-wrap items-center gap-3",
+                    }),
+                  ],
+                  className:
+                    "rounded-xl border border-border-subtle bg-bg-surface p-4 sm:p-5",
+                }),
+              ],
+              className: "mx-auto max-w-2xl space-y-4",
+            }),
+            className: "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6",
+          }),
+        u === "deploy" &&
+          e.jsx("div", {
+            children: e.jsxs("div", {
+              children: [
+                e.jsxs("div", {
+                  children: [
+                    e.jsx("span", {
+                      children: e.jsx(Ne, {
+                        "aria-hidden": "true",
+                        className: "h-4 w-4",
+                      }),
+                      className:
+                        "grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle text-text-main",
+                    }),
+                    e.jsxs("div", {
+                      children: [
+                        e.jsx("h3", {
+                          children: "Déployer sur Vercel",
+                          className: "text-sm font-semibold text-text-main",
+                        }),
+                        e.jsx("p", {
+                          children:
+                            "Envoie les fichiers enregistrés à votre compte Vercel. Chaque déploiement nécessite une confirmation liée à son contenu exact.",
+                          className: "mt-1 text-xs leading-5 text-text-muted",
+                        }),
+                      ],
+                    }),
+                  ],
+                  className:
+                    "flex items-start gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4",
+                }),
+                e.jsxs("section", {
+                  children: [
+                    e.jsxs("label", {
+                      children: [
+                        "Nom du projet Vercel",
+                        e.jsx("input", {
+                          autoComplete: "off",
+                          className:
+                            "mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 font-mono text-sm text-text-main focus-ring",
+                          maxLength: 100,
+                          onChange: (t) => Qe(t.target.value),
+                          placeholder: "mon-projet",
+                          value: ee,
+                        }),
+                      ],
+                      className: "block text-xs font-medium text-text-muted",
+                    }),
+                    e.jsxs("label", {
+                      children: [
+                        "Cible",
+                        e.jsxs("select", {
+                          children: [
+                            e.jsx("option", {
+                              children: "Preview",
+                              value: "preview",
+                            }),
+                            e.jsx("option", {
+                              children: "Production — build vérifié requis",
+                              disabled:
+                                (i == null ? void 0 : i.status) !== "passed",
+                              value: "production",
+                            }),
+                          ],
+                          className:
+                            "mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring",
+                          onChange: (t) => Ye(t.target.value),
+                          value: R,
+                        }),
+                      ],
+                      className:
+                        "mt-4 block text-xs font-medium text-text-muted",
+                    }),
+                    e.jsxs("p", {
+                      children: [
+                        "Le build E2B",
+                        " ",
+                        (i == null ? void 0 : i.status) === "passed"
+                          ? "a réussi"
+                          : "n’est pas encore confirmé comme réussi",
+                        ". La production reste désactivée jusqu’à la réussite du build. Le compte Vercel doit être connecté.",
+                      ],
+                      className: "mt-3 text-[11px] leading-5 text-text-muted",
+                    }),
+                    A &&
+                      e.jsxs("div", {
+                        children: [
+                          e.jsxs("span", {
+                            children: [
+                              A.target === "production"
+                                ? "Production"
+                                : "Preview",
+                              " ",
+                              "· ",
+                              A.projectName,
+                              " · ",
+                              A.status,
+                            ],
+                            className: "text-xs text-text-main",
+                          }),
+                          A.deploymentUrl &&
+                            e.jsx("a", {
+                              children: "Ouvrir le déploiement",
+                              className:
+                                "min-h-8 text-xs font-medium text-brand-primary underline-offset-4 hover:underline focus-ring",
+                              href: A.deploymentUrl,
+                              rel: "noreferrer",
+                              target: "_blank",
+                            }),
+                        ],
+                        className:
+                          "mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-bg-subtle px-3 py-2.5",
+                      }),
+                    e.jsxs("div", {
+                      children: [
+                        e.jsxs("button", {
+                          children: [
+                            e.jsx(Ne, {
+                              "aria-hidden": "true",
+                              className: "h-4 w-4",
+                            }),
+                            "Examiner le déploiement",
+                          ],
+                          className:
+                            "inline-flex h-10 items-center gap-2 rounded-xl bg-text-main px-4 text-sm font-medium text-bg-base hover:opacity-90 focus-ring disabled:opacity-50",
+                          disabled:
+                            F ||
+                            !ee.trim() ||
+                            (R === "production" &&
+                              (i == null ? void 0 : i.status) !== "passed"),
+                          onClick: () => {
+                            d(""), te(!0);
+                          },
+                          type: "button",
+                        }),
+                        e.jsx("a", {
+                          children: "Gérer les connecteurs",
+                          className:
+                            "text-xs text-text-muted underline-offset-4 hover:text-text-main hover:underline focus-ring",
+                          href: "/connectors",
+                        }),
+                      ],
+                      className: "mt-5 flex flex-wrap items-center gap-3",
+                    }),
+                  ],
+                  className:
+                    "rounded-xl border border-border-subtle bg-bg-surface p-4 sm:p-5",
+                }),
+              ],
+              className: "mx-auto max-w-2xl space-y-4",
+            }),
+            className: "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6",
+          }),
+        u === "build" &&
+          e.jsx("div", {
+            children: e.jsxs("div", {
+              children: [
+                e.jsxs("div", {
+                  children: [
+                    e.jsx("span", {
+                      children: e.jsx(we, {
+                        "aria-hidden": "true",
+                        className: "h-4 w-4",
+                      }),
+                      className:
+                        "grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle text-brand-primary",
+                    }),
+                    e.jsxs("div", {
+                      children: [
+                        e.jsx("h3", {
+                          children: "Vérification du build",
+                          className: "text-sm font-semibold text-text-main",
+                        }),
+                        e.jsx("p", {
+                          children:
+                            "Résultat du build isolé exécuté par le backend après la génération. Ce rapport ne représente pas un terminal interactif.",
+                          className: "mt-1 text-xs leading-5 text-text-muted",
+                        }),
+                      ],
+                      className: "min-w-0",
+                    }),
+                    i &&
+                      e.jsx("span", {
+                        children:
+                          i.status === "passed"
+                            ? "Réussi"
+                            : i.status === "failed"
+                              ? "À corriger"
+                              : "Non configuré",
+                        className: `ml-auto shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium ${i.status === "passed" ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`,
+                      }),
+                  ],
+                  className:
+                    "flex items-start gap-3 rounded-xl border border-border-subtle bg-bg-surface p-4",
+                }),
+                i
+                  ? e.jsxs(e.Fragment, {
+                      children: [
+                        e.jsxs("section", {
+                          children: [
+                            e.jsxs("dl", {
+                              children: [
+                                e.jsxs("div", {
+                                  children: [
+                                    e.jsx("dt", {
+                                      children: "Commande",
+                                      className: "text-[10px] text-text-muted",
+                                    }),
+                                    e.jsx("dd", {
+                                      children:
+                                        i.command ||
+                                        "npm install · npm run build",
+                                      className:
+                                        "mt-1 font-mono text-xs text-text-main",
+                                    }),
+                                  ],
+                                }),
+                                typeof i.durationMs == "number" &&
+                                  e.jsxs("div", {
+                                    children: [
+                                      e.jsx("dt", {
+                                        children: "Durée",
+                                        className:
+                                          "text-[10px] text-text-muted",
+                                      }),
+                                      e.jsxs("dd", {
+                                        children: [
+                                          (i.durationMs / 1e3).toFixed(1),
+                                          " s",
+                                        ],
+                                        className:
+                                          "mt-1 text-xs text-text-main",
+                                      }),
+                                    ],
+                                  }),
+                              ],
+                              className: "grid gap-3 sm:grid-cols-2",
+                            }),
+                            i.error &&
+                              e.jsx("p", {
+                                children: i.error,
+                                className:
+                                  "mt-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-500",
+                              }),
+                          ],
+                          className:
+                            "rounded-xl border border-border-subtle bg-bg-surface p-4",
+                        }),
+                        i.stdout &&
+                          e.jsxs("section", {
+                            children: [
+                              e.jsx("h4", {
+                                children: "Sortie standard",
+                                className:
+                                  "border-b border-border-subtle px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-text-muted",
+                              }),
+                              e.jsx("pre", {
+                                children: i.stdout,
+                                className:
+                                  "max-h-72 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-5 text-text-main",
+                              }),
+                            ],
+                            className:
+                              "overflow-hidden rounded-xl border border-border-subtle bg-bg-base",
+                          }),
+                        i.stderr &&
+                          e.jsxs("section", {
+                            children: [
+                              e.jsx("h4", {
+                                children: "Erreurs et avertissements",
+                                className:
+                                  "border-b border-amber-500/20 px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-amber-500",
+                              }),
+                              e.jsx("pre", {
+                                children: i.stderr,
+                                className:
+                                  "max-h-72 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-5 text-text-main",
+                              }),
+                            ],
+                            className:
+                              "overflow-hidden rounded-xl border border-amber-500/20 bg-bg-base",
+                          }),
+                      ],
+                    })
+                  : e.jsx("p", {
+                      children:
+                        "Aucun rapport de build n’est enregistré pour cette mission. Lancez la mission pour demander sa génération et sa vérification.",
+                      className:
+                        "rounded-xl border border-border-subtle bg-bg-surface px-4 py-8 text-center text-xs leading-5 text-text-muted",
+                    }),
+              ],
+              className: "mx-auto max-w-3xl space-y-4",
+            }),
+            className: "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6",
+          }),
+        (he || Te) &&
+          e.jsx("p", {
+            "aria-live": "polite",
+            children: he || Te,
+            className: `border-t border-border-subtle px-4 py-2 text-xs ${he ? "text-amber-500" : "text-text-muted"}`,
+          }),
+        C &&
+          e.jsx("div", {
+            children: e.jsxs("section", {
+              "aria-labelledby": "restore-checkpoint-title",
+              "aria-modal": "true",
+              children: [
+                e.jsxs("h2", {
+                  children: ["Restaurer « ", C.name, " » ?"],
+                  className: "text-sm font-semibold text-text-main",
+                  id: "restore-checkpoint-title",
+                }),
+                e.jsx("p", {
+                  children:
+                    "Les fichiers actuels de cette mission seront remplacés par cette version enregistrée.",
+                  className: "mt-2 text-xs leading-5 text-text-muted",
+                }),
+                e.jsxs("div", {
+                  children: [
+                    e.jsx("button", {
+                      children: "Annuler",
+                      className:
+                        "h-9 rounded-lg px-3 text-xs text-text-muted hover:bg-bg-subtle focus-ring",
+                      disabled: q,
+                      onClick: () => X(null),
+                      type: "button",
+                    }),
+                    e.jsxs("button", {
+                      children: [
+                        q &&
+                          e.jsx(U, {
+                            "aria-hidden": "true",
+                            className: "h-3.5 w-3.5 animate-spin",
+                          }),
+                        "Restaurer la version",
+                      ],
+                      className:
+                        "inline-flex h-9 items-center gap-2 rounded-lg bg-amber-600 px-3 text-xs font-medium text-white hover:opacity-90 focus-ring disabled:opacity-60",
+                      disabled: q,
+                      onClick: () => void rt(),
+                      ref: ie,
+                      type: "button",
+                    }),
+                  ],
+                  className: "mt-5 flex justify-end gap-2",
+                }),
+              ],
+              className:
+                "w-full max-w-md rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-elevated",
+              ref: ne,
+              role: "alertdialog",
+            }),
+            className:
+              "fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4",
+          }),
+        z &&
+          e.jsx("div", {
+            children: e.jsxs("section", {
+              "aria-labelledby": "github-export-title",
+              "aria-modal": "true",
+              children: [
+                e.jsx("h2", {
+                  children: "Confirmer l’export GitHub",
+                  className: "text-sm font-semibold text-text-main",
+                  id: "github-export-title",
+                }),
+                e.jsxs("p", {
+                  children: [
+                    "Idealy va écrire ",
+                    p.length,
+                    " fichier(s) dans",
+                    " ",
+                    e.jsxs("strong", {
+                      children: [Y.trim(), "/", Z.trim()],
+                      className: "font-medium text-text-main",
+                    }),
+                    ", branche",
+                    " ",
+                    e.jsx("strong", {
+                      children: be.trim(),
+                      className: "font-medium text-text-main",
+                    }),
+                    ". La branche distante sera créée ou mise à jour avec ces fichiers.",
+                  ],
+                  className: "mt-2 text-xs leading-5 text-text-muted",
+                }),
+                e.jsx("p", {
+                  children:
+                    "Cette action publie le contenu de la mission sur GitHub. Vérifiez qu’il ne contient aucun secret ni donnée privée.",
+                  className:
+                    "mt-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] leading-5 text-amber-500",
+                }),
+                e.jsxs("div", {
+                  children: [
+                    e.jsx("button", {
+                      children: "Annuler",
+                      className:
+                        "h-9 rounded-lg px-3 text-xs text-text-muted hover:bg-bg-subtle focus-ring",
+                      disabled: G,
+                      onClick: () => V(!1),
+                      type: "button",
+                    }),
+                    e.jsxs("button", {
+                      children: [
+                        G
+                          ? e.jsx(U, {
+                              "aria-hidden": "true",
+                              className: "h-3.5 w-3.5 animate-spin",
+                            })
+                          : e.jsx(le, {
+                              "aria-hidden": "true",
+                              className: "h-3.5 w-3.5",
+                            }),
+                        G ? "Export en cours…" : "Confirmer et exporter",
+                      ],
+                      className:
+                        "inline-flex h-9 items-center gap-2 rounded-lg bg-text-main px-3 text-xs font-medium text-bg-base hover:opacity-90 focus-ring disabled:opacity-60",
+                      disabled: G,
+                      onClick: () => void at(),
+                      ref: ie,
+                      type: "button",
+                    }),
+                  ],
+                  className: "mt-5 flex justify-end gap-2",
+                }),
+              ],
+              className:
+                "w-full max-w-md rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-elevated",
+              ref: ne,
+              role: "alertdialog",
+            }),
+            className:
+              "fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4",
+          }),
+        H &&
+          e.jsx("div", {
+            children: e.jsxs("section", {
+              "aria-labelledby": "vercel-deploy-title",
+              "aria-modal": "true",
+              children: [
+                e.jsx("h2", {
+                  children: "Confirmer le déploiement Vercel",
+                  className: "text-sm font-semibold text-text-main",
+                  id: "vercel-deploy-title",
+                }),
+                e.jsxs("p", {
+                  children: [
+                    "Idealy va envoyer les fichiers enregistrés de cette mission vers le projet",
+                    " ",
+                    e.jsx("strong", {
+                      children: ee.trim(),
+                      className: "font-medium text-text-main",
+                    }),
+                    " ",
+                    "en cible",
+                    " ",
+                    e.jsx("strong", {
+                      children: R === "production" ? "production" : "preview",
+                      className: "font-medium text-text-main",
+                    }),
+                    ".",
+                  ],
+                  className: "mt-2 text-xs leading-5 text-text-muted",
+                }),
+                e.jsx("p", {
+                  children:
+                    R === "production"
+                      ? "Ce déploiement sera publié en production et peut remplacer le site actuellement en ligne."
+                      : "Vercel créera un déploiement de preview distinct de la production.",
+                  className:
+                    "mt-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] leading-5 text-amber-500",
+                }),
+                e.jsxs("div", {
+                  children: [
+                    e.jsx("button", {
+                      children: "Annuler",
+                      className:
+                        "h-9 rounded-lg px-3 text-xs text-text-muted hover:bg-bg-subtle focus-ring",
+                      disabled: F,
+                      onClick: () => te(!1),
+                      type: "button",
+                    }),
+                    e.jsxs("button", {
+                      children: [
+                        F
+                          ? e.jsx(U, {
+                              "aria-hidden": "true",
+                              className: "h-3.5 w-3.5 animate-spin",
+                            })
+                          : e.jsx(Ne, {
+                              "aria-hidden": "true",
+                              className: "h-3.5 w-3.5",
+                            }),
+                        F ? "Déploiement en cours…" : "Confirmer et déployer",
+                      ],
+                      className:
+                        "inline-flex h-9 items-center gap-2 rounded-lg bg-text-main px-3 text-xs font-medium text-bg-base hover:opacity-90 focus-ring disabled:opacity-60",
+                      disabled: F,
+                      onClick: () => void nt(),
+                      ref: ie,
+                      type: "button",
+                    }),
+                  ],
+                  className: "mt-5 flex justify-end gap-2",
+                }),
+              ],
+              className:
+                "w-full max-w-md rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-elevated",
+              ref: ne,
+              role: "alertdialog",
+            }),
+            className:
+              "fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4",
+          }),
+      ],
+      className:
+        "flex h-[min(780px,94dvh)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border-subtle bg-bg-base shadow-elevated",
+      ref: fe,
+      role: "dialog",
+      tabIndex: -1,
+    }),
+    className:
+      "fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-2 backdrop-blur-sm sm:p-5",
+  });
+};
+export { Ct as MissionWorkspace };

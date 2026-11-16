@@ -1,35 +1,46 @@
-import { callAIProxy, streamAIProxy, type IntentCategory } from './provider';
-import type { Way } from '@/lore/ways';
-import { planMission, type ConnectorProvider, type SkillSlug } from './skillRouter';
-import { buildMissionContracts } from '@/core/mission/missionContract';
-import type { MissionContracts } from '@/core/mission/contracts';
-import type { IdealyUniversalProjectSchema, IUPSFileEntry, IUPSFileType } from '@/core/iups/types';
-import { buildArchitectureContext, type RelevantVFSFile } from '@/core/webcontainer/architectureMemory';
+import type {
+  IdealyUniversalProjectSchema,
+  IUPSFileEntry,
+  IUPSFileType,
+} from "@/core/iups/types";
+import type { MissionContracts } from "@/core/mission/contracts";
+import { buildMissionContracts } from "@/core/mission/missionContract";
+import {
+  buildArchitectureContext,
+  type RelevantVFSFile,
+} from "@/core/webcontainer/architectureMemory";
+import type { Way } from "@/lore/ways";
+import { callAIProxy, type IntentCategory, streamAIProxy } from "./provider";
+import {
+  type ConnectorProvider,
+  planMission,
+  type SkillSlug,
+} from "./skillRouter";
 
 export interface MissionContext {
-  prompt: string;
-  way: Way;
-  rank: string;
-  energyCost: number;
-  skills: SkillSlug[];
-  preferredConnectors: ConnectorProvider[];
-  contracts: MissionContracts;
-  /** Called during buildIUPS streaming with (tokensGenerated, partialText) */
-  onProgress?: (tokens: number, partial: string) => void;
   /** Persistent project memory injected into every builder call. */
   architecture?: string;
-  /** At most three existing files selected from the VFS for this mission. */
-  relevantFiles?: RelevantVFSFile[];
+  contracts: MissionContracts;
+  energyCost: number;
   /** Stable mission identity used for idempotent managed-credit debits. */
   missionId?: string;
+  /** Called during buildIUPS streaming with (tokensGenerated, partialText) */
+  onProgress?: (tokens: number, partial: string) => void;
+  preferredConnectors: ConnectorProvider[];
+  prompt: string;
+  rank: string;
+  /** At most three existing files selected from the VFS for this mission. */
+  relevantFiles?: RelevantVFSFile[];
   /** Optional cancellation signal to abort code generation */
   signal?: AbortSignal;
+  skills: SkillSlug[];
+  way: Way;
 }
 
 export interface TerminalCorrectionIssue {
+  column: number | null;
   file: string | null;
   line: number | null;
-  column: number | null;
   message: string;
 }
 
@@ -41,9 +52,12 @@ export interface TerminalCorrectionFeedback {
 
 // ─── Intent Analysis ─────────────────────────────────────────────────────────
 
-export async function analyzeIntent(prompt: string, way: Way): Promise<MissionContext> {
+export async function analyzeIntent(
+  prompt: string,
+  way: Way
+): Promise<MissionContext> {
   const plan = planMission(prompt);
-  const ranksList = way.ranks.join(', ');
+  const ranksList = way.ranks.join(", ");
 
   const systemPrompt = `Tu es l'Orchestrateur en chef de la voie "${way.name}".
 Ta tâche est d'analyser la demande de l'utilisateur pour estimer sa complexité.
@@ -57,29 +71,32 @@ Un projet complexe (ex: un SaaS, un réseau social) coûte plus d'énergie (30-5
 
   try {
     const text = await callAIProxy({
+      complexity: "fast",
+      intentCategory: "EXECUTION",
+      maxTokens: 350,
       prompt,
       systemPrompt,
-      complexity: 'fast',
-      maxTokens: 350,
-      intentCategory: 'EXECUTION',
     });
-    const clean = text.trim().replace(/^```json?\s*/i, '').replace(/\s*```\s*$/, '');
+    const clean = text
+      .trim()
+      .replace(/^```json?\s*/i, "")
+      .replace(/\s*```\s*$/, "");
     const data = JSON.parse(clean);
     return {
-      prompt,
-      way,
-      rank: data.rank || way.ranks[0],
       energyCost: data.energyCost || 10,
+      prompt,
+      rank: data.rank || way.ranks[0],
+      way,
       ...plan,
       contracts: buildMissionContracts(prompt, way, plan),
     };
   } catch (error) {
-    console.error('Intent analysis failed, defaulting:', error);
+    console.error("Intent analysis failed, defaulting:", error);
     return {
-      prompt,
-      way,
-      rank: way.ranks[0],
       energyCost: 5,
+      prompt,
+      rank: way.ranks[0],
+      way,
       ...plan,
       contracts: buildMissionContracts(prompt, way, plan),
     };
@@ -92,23 +109,40 @@ function extractJSON(raw: string): Record<string, unknown> | null {
   const cleaned = raw.trim();
 
   // 1. Direct parse
-  try { return JSON.parse(cleaned); } catch { /* continue */ }
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    /* continue */
+  }
 
   // 2. Strip markdown fences
-  const stripped = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
-  try { return JSON.parse(stripped); } catch { /* continue */ }
+  const stripped = cleaned
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
+  try {
+    return JSON.parse(stripped);
+  } catch {
+    /* continue */
+  }
 
   // 3. Brace-depth extraction — finds first complete JSON object
   let depth = 0;
   let start = -1;
   for (let i = 0; i < cleaned.length; i++) {
-    if (cleaned[i] === '{') {
-      if (start === -1) start = i;
+    if (cleaned[i] === "{") {
+      if (start === -1) {
+        start = i;
+      }
       depth++;
-    } else if (cleaned[i] === '}') {
+    } else if (cleaned[i] === "}") {
       depth--;
       if (depth === 0 && start !== -1) {
-        try { return JSON.parse(cleaned.slice(start, i + 1)); } catch { /* try next */ }
+        try {
+          return JSON.parse(cleaned.slice(start, i + 1));
+        } catch {
+          /* try next */
+        }
         start = -1;
       }
     }
@@ -119,49 +153,120 @@ function extractJSON(raw: string): Record<string, unknown> | null {
 // ─── IUPS Builder (code generation) ──────────────────────────────────────────
 
 function fileTypeFromPath(path: string): IUPSFileType {
-  const extension = path.split('.').pop()?.toLowerCase();
-  if (extension && ['tsx', 'ts', 'jsx', 'js', 'css', 'scss', 'html', 'json', 'md', 'py'].includes(extension)) return extension as IUPSFileType;
-  if (extension && ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico'].includes(extension)) return 'asset';
-  return 'other';
+  const extension = path.split(".").pop()?.toLowerCase();
+  if (
+    extension &&
+    [
+      "tsx",
+      "ts",
+      "jsx",
+      "js",
+      "css",
+      "scss",
+      "html",
+      "json",
+      "md",
+      "py",
+    ].includes(extension)
+  ) {
+    return extension as IUPSFileType;
+  }
+  if (
+    extension &&
+    ["png", "jpg", "jpeg", "webp", "gif", "svg", "ico"].includes(extension)
+  ) {
+    return "asset";
+  }
+  return "other";
 }
 
-function normalizeGeneratedProject(raw: unknown): IdealyUniversalProjectSchema['project'] | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const project = raw as { name?: unknown; description?: unknown; stack?: unknown; files?: unknown; fileTree?: unknown };
+function normalizeGeneratedProject(
+  raw: unknown
+): IdealyUniversalProjectSchema["project"] | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const project = raw as {
+    name?: unknown;
+    description?: unknown;
+    stack?: unknown;
+    files?: unknown;
+    fileTree?: unknown;
+  };
   const entries: IUPSFileEntry[] = [];
   if (Array.isArray(project.fileTree)) {
     for (const candidate of project.fileTree) {
-      if (!candidate || typeof candidate !== 'object') continue;
-      const entry = candidate as { path?: unknown; content?: unknown; type?: unknown };
-      if (typeof entry.path !== 'string' || !entry.path.trim() || typeof entry.content !== 'string') continue;
-      entries.push({ path: entry.path.trim(), content: entry.content, type: typeof entry.type === 'string' ? entry.type as IUPSFileType : fileTypeFromPath(entry.path) });
+      if (!candidate || typeof candidate !== "object") {
+        continue;
+      }
+      const entry = candidate as {
+        path?: unknown;
+        content?: unknown;
+        type?: unknown;
+      };
+      if (
+        typeof entry.path !== "string" ||
+        !entry.path.trim() ||
+        typeof entry.content !== "string"
+      ) {
+        continue;
+      }
+      entries.push({
+        content: entry.content,
+        path: entry.path.trim(),
+        type:
+          typeof entry.type === "string"
+            ? (entry.type as IUPSFileType)
+            : fileTypeFromPath(entry.path),
+      });
     }
   }
-  if (entries.length === 0 && project.files && typeof project.files === 'object' && !Array.isArray(project.files)) {
-    for (const [path, content] of Object.entries(project.files as Record<string, unknown>)) {
-      if (typeof content !== 'string' || !path.trim()) continue;
-      entries.push({ path: path.trim(), content, type: fileTypeFromPath(path) });
+  if (
+    entries.length === 0 &&
+    project.files &&
+    typeof project.files === "object" &&
+    !Array.isArray(project.files)
+  ) {
+    for (const [path, content] of Object.entries(
+      project.files as Record<string, unknown>
+    )) {
+      if (typeof content !== "string" || !path.trim()) {
+        continue;
+      }
+      entries.push({
+        content,
+        path: path.trim(),
+        type: fileTypeFromPath(path),
+      });
     }
   }
-  if (entries.length === 0) return null;
-  const files = Object.fromEntries(entries.map(({ path, content }) => [path, content]));
+  if (entries.length === 0) {
+    return null;
+  }
+  const files = Object.fromEntries(
+    entries.map(({ path, content }) => [path, content])
+  );
   return {
-    name: typeof project.name === 'string' && project.name.trim() ? project.name.trim() : 'idealy-project',
-    description: typeof project.description === 'string' ? project.description : undefined,
-    stack: typeof project.stack === 'string' ? project.stack : undefined,
+    description:
+      typeof project.description === "string" ? project.description : undefined,
     files,
     fileTree: entries,
+    name:
+      typeof project.name === "string" && project.name.trim()
+        ? project.name.trim()
+        : "idealy-project",
+    stack: typeof project.stack === "string" ? project.stack : undefined,
   };
 }
-
 
 export async function buildIUPS(
   context: MissionContext,
   correction?: TerminalCorrectionFeedback,
-  onProgress: MissionContext['onProgress'] = context.onProgress,
-  signal: AbortSignal | undefined = context.signal,
+  onProgress: MissionContext["onProgress"] = context.onProgress,
+  signal: AbortSignal | undefined = context.signal
 ): Promise<IdealyUniversalProjectSchema | null> {
-  const mobileKeywords = /mobile|android|ios|expo|react.native|app.store|téléphone|smartphone|apk/i;
+  const mobileKeywords =
+    /mobile|android|ios|expo|react.native|app.store|téléphone|smartphone|apk/i;
   const isMobile = mobileKeywords.test(context.prompt);
 
   const webSystemPrompt = `Tu es une IA experte en développement web full-stack (React, TypeScript, Tailwind, Vite).
@@ -180,7 +285,7 @@ RÈGLES IMPÉRATIVES :
 - Génère AU MINIMUM : package.json, vite.config.js, index.html, src/main.tsx, src/App.tsx, src/App.css.
 - Pour un projet complexe, génère aussi : src/components/, src/pages/, src/hooks/, src/utils/.
 - Chaque fichier doit être complet et syntaxiquement correct.
-- Chaque fichier est une entrée de `fileTree` avec `path`, `content` et `type`; `files` peut être fourni en miroir pour compatibilité.
+- Chaque fichier est une entrée de \`fileTree\` avec \`path\`, \`content\` et \`type\`; \`files\` peut être fourni en miroir pour compatibilité.
 - N'utilise PAS de placeholder comme "// TODO" ou "..." dans le code.
 - Génère une première tranche verticale utilisable : données de démonstration cohérentes, action principale, états loading/empty/error/success et responsive.
 - Ne place jamais de clé secrète, token privé ou mot de passe dans les fichiers générés.
@@ -218,7 +323,7 @@ RÈGLES IMPÉRATIVES :
 - Utilise expo-router pour la navigation.
 - Génère AU MINIMUM : package.json, app.json, app/(tabs)/index.tsx, app/(tabs)/_layout.tsx.
 - N'utilise PAS de placeholder.
-- Chaque fichier est une entrée de `fileTree` avec `path`, `content` et `type`; `files` peut être fourni en miroir pour compatibilité.
+- Chaque fichier est une entrée de \`fileTree\` avec \`path\`, \`content\` et \`type\`; \`files\` peut être fourni en miroir pour compatibilité.
 - Génère des états de chargement, vide, succès et erreur pour l’action principale.
 - Ne place jamais de secret dans les fichiers générés.
   - Respecte le DesignContract, le DataContract et le TestContract.
@@ -239,41 +344,46 @@ STRUCTURE JSON OBLIGATOIRE (ne renvoie QUE ce JSON) :
   }
 }`;
 
-  const architectureContext = buildArchitectureContext(context.architecture ?? '', context.relevantFiles ?? []);
+  const architectureContext = buildArchitectureContext(
+    context.architecture ?? "",
+    context.relevantFiles ?? []
+  );
   const correctionSystemPrompt = correction
     ? `
 
 SELF-CORRECTION TERMINALISÉE — TOUR SUIVANT
 Le projet précédent a été exécuté dans WebContainer. Corrige uniquement les erreurs réelles ci-dessous.
 N'invente pas d'autres erreurs, ne change pas l'intention du produit et retourne le projet complet au même format JSON.
-${correction.issues.map((issue) => {
-  const location = issue.file
-    ? `Fichier concerné : ${issue.file}.`
-    : 'Fichier concerné : emplacement non déterminé.';
-  return `- ${location} Message d'erreur : ${issue.message}`;
-}).join('\n')}
+${correction.issues
+  .map((issue) => {
+    const location = issue.file
+      ? `Fichier concerné : ${issue.file}.`
+      : "Fichier concerné : emplacement non déterminé.";
+    return `- ${location} Message d'erreur : ${issue.message}`;
+  })
+  .join("\n")}
 `
-    : '';
+    : "";
   const systemPrompt = `${isMobile ? mobileSystemPrompt : webSystemPrompt}${architectureContext}${correctionSystemPrompt}`;
 
   try {
-    let accumulated = '';
+    let accumulated = "";
     let tokenCount = 0;
 
     // Un seul appel LLM par tour : la boucle de correction est pilotée par le terminal.
     const textStream = await streamAIProxy({
-      systemPrompt,
+      complexity: "high",
+      idempotencyKey: context.missionId
+        ? `${context.missionId}:build:${correction ? `fix-${correction.iteration ?? 1}` : "initial"}`
+        : undefined,
+      intentCategory: "EXECUTION",
+      maxTokens: 8000,
+      missionId: context.missionId,
       prompt: correction
         ? "Corrige les fichiers signalés par le terminal. Réponds UNIQUEMENT avec le JSON complet, sans markdown ni explication."
         : "Génère l'IUPS complet pour ma mission. Réponds UNIQUEMENT avec le JSON, sans markdown, sans explication.",
-      complexity: 'high',
-      maxTokens: 8000,
-      missionId: context.missionId,
-      idempotencyKey: context.missionId
-        ? `${context.missionId}:build:${correction ? `fix-${correction.iteration ?? 1}` : 'initial'}`
-        : undefined,
-      intentCategory: 'EXECUTION',
       signal: signal ?? context.signal,
+      systemPrompt,
     });
 
     for await (const delta of textStream) {
@@ -286,19 +396,23 @@ ${correction.issues.map((issue) => {
     }
 
     const parsed = extractJSON(accumulated);
-    if (parsed && typeof parsed === 'object' && 'project' in parsed) {
+    if (parsed && typeof parsed === "object" && "project" in parsed) {
       const parsedEnvelope = parsed as { project?: unknown };
       const project = normalizeGeneratedProject(parsedEnvelope.project);
-      if (!project) return null;
+      if (!project) {
+        return null;
+      }
       return {
-        ...(parsed as Omit<IdealyUniversalProjectSchema, 'project'>),
-        project,
+        ...(parsed as Omit<IdealyUniversalProjectSchema, "project">),
         contracts: context.contracts,
+        project,
       };
     }
-    console.warn(`[buildIUPS] JSON extraction failed, raw length=${accumulated.length}`);
+    console.warn(
+      `[buildIUPS] JSON extraction failed, raw length=${accumulated.length}`
+    );
   } catch (error) {
-    console.error('[buildIUPS] Generation threw:', error);
+    console.error("[buildIUPS] Generation threw:", error);
   }
 
   return null;
@@ -309,7 +423,7 @@ ${correction.issues.map((issue) => {
 export async function streamLiaMessage(
   way: Way,
   missionPrompt: string,
-  idempotencyKey?: string,
+  idempotencyKey?: string
 ) {
   const strategist = way.agents[0];
   const systemPrompt = `Tu es Lia, la Messagère d’Idealy pour la voie "${way.name}".
@@ -318,29 +432,32 @@ Ne génère jamais de code, ne propose aucune action, ne demande aucune validati
 Réponds uniquement avec la phrase visible par l’utilisateur, sans balise <think>, sans markdown et sans liste.`;
   return {
     textStream: await streamAIProxy({
-      systemPrompt,
-      prompt: missionPrompt,
-      complexity: 'fast',
-      maxTokens: 180,
+      complexity: "fast",
       idempotencyKey,
-      intentCategory: 'CONVERSATION',
+      intentCategory: "CONVERSATION",
+      maxTokens: 180,
+      prompt: missionPrompt,
+      systemPrompt,
     }),
   };
 }
 
 export async function streamAgentMessage(
-  agent: Way['agents'][number],
+  agent: Way["agents"][number],
   way: Way,
   contextText: string,
   missionPrompt: string,
   instruction: string,
-  architecture = '',
+  architecture = "",
   relevantFiles: RelevantVFSFile[] = [],
   idempotencyKey?: string,
-  intentCategory: IntentCategory = 'EXECUTION',
-  signal?: AbortSignal,
+  intentCategory: IntentCategory = "EXECUTION",
+  signal?: AbortSignal
 ) {
-  const architectureBlock = architecture || relevantFiles.length > 0 ? buildArchitectureContext(architecture, relevantFiles) : '';
+  const architectureBlock =
+    architecture || relevantFiles.length > 0
+      ? buildArchitectureContext(architecture, relevantFiles)
+      : "";
   const systemPrompt = `Tu es ${agent.name} (${agent.role}) au sein de l'escouade Idealy pour la voie "${way.name}".
 Rôle : expert technique ${agent.role}.
 Spécialité : ${agent.specialty}.
@@ -358,13 +475,13 @@ RÈGLE : Rédige une réponse technique claire et directement exploitable. Ne g�
 
   return {
     textStream: await streamAIProxy({
-      systemPrompt,
-      prompt: 'À toi de jouer.',
-      complexity: 'fast',
-      maxTokens: 4000,
+      complexity: "fast",
       idempotencyKey,
       intentCategory,
+      maxTokens: 4000,
+      prompt: "À toi de jouer.",
       signal,
+      systemPrompt,
     }),
   };
 }

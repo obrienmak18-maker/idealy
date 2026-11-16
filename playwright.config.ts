@@ -34,42 +34,29 @@ export default defineConfig({
   /* Configure projects */
   projects: [
     {
-      name: "e2e",
+      name: "Desktop Chrome",
       testMatch: /e2e\/.*.test.ts/,
       use: {
         ...devices["Desktop Chrome"],
       },
     },
 
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
-
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
-
     /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
+    {
+      name: "Mobile Chrome",
+      testMatch: /e2e\/.*.test.ts/,
+      use: { ...devices["Pixel 5"] },
+    },
+    {
+      name: "Mobile Safari",
+      testMatch: /e2e\/.*.test.ts/,
+      use: { ...devices["iPhone 12"] },
+    },
+    {
+      name: "Tablet",
+      testMatch: /e2e\/.*.test.ts/,
+      use: { ...devices["iPad Pro 11"] },
+    },
   ],
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
@@ -81,12 +68,11 @@ export default defineConfig({
   timeout: 90 * 1000,
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL,
-
     // Fail a broken locator quickly instead of spending the entire 60-second
     // test budget on every missing control.
     actionTimeout: 10 * 1000,
+    /* Base URL to use in actions like `await page.goto('/')`. */
+    baseURL,
     navigationTimeout: 45 * 1000,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */

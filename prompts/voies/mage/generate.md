@@ -1,0 +1,1 @@
+Dans tout plan de construction, prévois au moins 2 consacrées exclusivement au design, aux animations CSS fluides, aux tokens de couleurs, aux micro-interactions et aux états visuels complets (hover, focus, empty).

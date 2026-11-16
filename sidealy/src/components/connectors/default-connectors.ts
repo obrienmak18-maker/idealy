@@ -1,169 +1,230 @@
+export type ConnectorStatus =
+  | "available"
+  | "not_connected"
+  | "connecting"
+  | "connected"
+  | "expired"
+  | "configuration_required"
+  | "error"
+  | "unavailable";
+
 export interface ConnectorDefinition {
-  id: string;
-  name: string;
+  available: boolean;
   category: "dev" | "data" | "ai" | "productivity";
   categoryLabel: string;
-  description: string;
-  version: string;
-  installed: boolean;
-  available: boolean;
   configurationRequired: boolean;
+  description: string;
   docUrl?: string;
+  id: string;
+  installed: boolean;
+  name: string;
+  status?: ConnectorStatus;
   tools: Array<{
     id: string;
     label: string;
     risk: "low" | "medium" | "high";
     description?: string;
   }>;
+  version: string;
 }
 
 export const DEFAULT_CONNECTORS_CATALOG: ConnectorDefinition[] = [
   {
-    id: "github",
-    name: "GitHub",
+    available: true,
     category: "dev",
     categoryLabel: "Développement",
-    description: "Exportez vos missions, créez des dépôts, synchronisez les commits et gérez vos pull requests directement depuis Idealy.",
-    version: "2.4.0",
-    installed: false,
-    available: true,
     configurationRequired: true,
+    description:
+      "Exportez vos missions, créez des dépôts, synchronisez les commits et gérez vos pull requests directement depuis Idealy.",
+    id: "github",
+    installed: false,
+    name: "GitHub",
     tools: [
       { id: "github.create_repo", label: "Créer un dépôt", risk: "medium" },
-      { id: "github.push_branch", label: "Pousser une branche", risk: "medium" },
+      {
+        id: "github.push_branch",
+        label: "Pousser une branche",
+        risk: "medium",
+      },
       { id: "github.create_pr", label: "Ouvrir une Pull Request", risk: "low" },
     ],
+    version: "2.4.0",
   },
   {
-    id: "supabase",
-    name: "Supabase",
+    available: true,
     category: "data",
     categoryLabel: "Base de données",
-    description: "Accédez à vos bases PostgreSQL, exécutez des migrations, visualisez les tables et générez des types TypeScript stricts.",
-    version: "1.8.2",
-    installed: false,
-    available: true,
     configurationRequired: true,
+    description:
+      "Accédez à vos bases PostgreSQL, exécutez des migrations, visualisez les tables et générez des types TypeScript stricts.",
+    id: "supabase",
+    installed: false,
+    name: "Supabase",
     tools: [
       { id: "supabase.list_tables", label: "Explorer les tables", risk: "low" },
-      { id: "supabase.execute_sql", label: "Exécuter des requêtes SQL", risk: "high" },
-      { id: "supabase.apply_migration", label: "Appliquer une migration", risk: "high" },
+      {
+        id: "supabase.execute_sql",
+        label: "Exécuter des requêtes SQL",
+        risk: "high",
+      },
+      {
+        id: "supabase.apply_migration",
+        label: "Appliquer une migration",
+        risk: "high",
+      },
     ],
+    version: "1.8.2",
   },
   {
-    id: "vercel",
-    name: "Vercel",
-    category: "dev",
-    categoryLabel: "Déploiement",
-    description: "Déployez vos projets Next.js et React en un clic, surveillez les builds et inspectez les domaines de production.",
-    version: "2.1.0",
-    installed: false,
     available: true,
-    configurationRequired: true,
-    tools: [
-      { id: "vercel.deploy_project", label: "Déployer un projet", risk: "medium" },
-      { id: "vercel.get_deployment", label: "Statut du déploiement", risk: "low" },
-    ],
-  },
-  {
-    id: "netlify",
-    name: "Netlify",
     category: "dev",
     categoryLabel: "Déploiement",
-    description: "Hébergement Jamstack, déploiements prévisualisés instantanés et fonctions Serverless.",
-    version: "1.5.0",
-    installed: false,
-    available: false,
     configurationRequired: true,
+    description:
+      "Déployez vos projets Next.js et React en un clic, surveillez les builds et inspectez les domaines de production.",
+    id: "vercel",
+    installed: false,
+    name: "Vercel",
+    tools: [
+      {
+        id: "vercel.deploy_project",
+        label: "Déployer un projet",
+        risk: "medium",
+      },
+      {
+        id: "vercel.get_deployment",
+        label: "Statut du déploiement",
+        risk: "low",
+      },
+    ],
+    version: "2.1.0",
+  },
+  {
+    available: false,
+    category: "dev",
+    categoryLabel: "Déploiement",
+    configurationRequired: true,
+    description:
+      "Hébergement Jamstack, déploiements prévisualisés instantanés et fonctions Serverless.",
+    id: "netlify",
+    installed: false,
+    name: "Netlify",
     tools: [
       { id: "netlify.deploy_site", label: "Déployer un site", risk: "medium" },
       { id: "netlify.list_sites", label: "Lister les sites", risk: "low" },
     ],
+    version: "1.5.0",
   },
   {
-    id: "stripe",
-    name: "Stripe",
+    available: true,
     category: "data",
     categoryLabel: "Paiements & Billing",
-    description: "Connectez votre facturation, gérez les abonnements et simulez des flux de paiement sécurisés.",
-    version: "3.0.1",
-    installed: true,
-    available: true,
     configurationRequired: false,
+    description:
+      "Connectez votre facturation, gérez les abonnements et simulez des flux de paiement sécurisés.",
+    id: "stripe",
+    installed: true,
+    name: "Stripe",
     tools: [
       { id: "stripe.get_customer", label: "Consulter un client", risk: "low" },
-      { id: "stripe.create_checkout", label: "Créer une session checkout", risk: "medium" },
+      {
+        id: "stripe.create_checkout",
+        label: "Créer une session checkout",
+        risk: "medium",
+      },
     ],
+    version: "3.0.1",
   },
   {
-    id: "google",
-    name: "Google Cloud & BigQuery",
+    available: false,
     category: "data",
     categoryLabel: "Cloud & Analytics",
-    description: "Requêtes analytiques BigQuery, stockage Cloud Storage et intégration avec les APIs Google.",
-    version: "2.0.0",
-    installed: false,
-    available: false,
     configurationRequired: true,
+    description:
+      "Requêtes analytiques BigQuery, stockage Cloud Storage et intégration avec les APIs Google.",
+    id: "google",
+    installed: false,
+    name: "Google Cloud & BigQuery",
     tools: [
-      { id: "bigquery.query", label: "Exécuter des requêtes BigQuery", risk: "medium" },
+      {
+        id: "bigquery.query",
+        label: "Exécuter des requêtes BigQuery",
+        risk: "medium",
+      },
       { id: "gcs.upload_file", label: "Uploader sur GCS", risk: "low" },
     ],
+    version: "2.0.0",
   },
   {
+    available: true,
+    category: "ai",
+    categoryLabel: "Intelligence Artificielle",
+    configurationRequired: false,
+    description:
+      "Apportez vos propres clés API (BYOK) pour GPT-4o, GPT-o1, o3-mini et les derniers modèles OpenAI.",
     id: "openai",
+    installed: true,
     name: "OpenAI Models",
-    category: "ai",
-    categoryLabel: "Intelligence Artificielle",
-    description: "Apportez vos propres clés API (BYOK) pour GPT-4o, GPT-o1, o3-mini et les derniers modèles OpenAI.",
+    tools: [
+      {
+        id: "openai.chat_completions",
+        label: "Génération de texte avancée",
+        risk: "low",
+      },
+    ],
     version: "1.9.0",
-    installed: true,
-    available: true,
-    configurationRequired: false,
-    tools: [
-      { id: "openai.chat_completions", label: "Génération de texte avancée", risk: "low" },
-    ],
   },
   {
-    id: "anthropic",
-    name: "Anthropic Claude",
+    available: true,
     category: "ai",
     categoryLabel: "Intelligence Artificielle",
-    description: "Intégrez Claude 3.7 Sonnet, Claude 3.5 et les modèles de pointe Anthropic pour le code architectural de haute précision.",
-    version: "1.4.0",
-    installed: true,
-    available: true,
     configurationRequired: false,
+    description:
+      "Intégrez Claude 3.7 Sonnet, Claude 3.5 et les modèles de pointe Anthropic pour le code architectural de haute précision.",
+    id: "anthropic",
+    installed: true,
+    name: "Anthropic Claude",
     tools: [
-      { id: "anthropic.messages", label: "Inférence Claude Sonnet", risk: "low" },
+      {
+        id: "anthropic.messages",
+        label: "Inférence Claude Sonnet",
+        risk: "low",
+      },
     ],
+    version: "1.4.0",
   },
   {
-    id: "slack",
-    name: "Slack Notifications",
+    available: false,
     category: "productivity",
     categoryLabel: "Productivité",
-    description: "Diffusez les résumés de mission et alertes de build directement dans vos canaux d'équipe.",
-    version: "1.2.0",
-    installed: false,
-    available: false,
     configurationRequired: true,
+    description:
+      "Diffusez les résumés de mission et alertes de build directement dans vos canaux d'équipe.",
+    id: "slack",
+    installed: false,
+    name: "Slack Notifications",
     tools: [
       { id: "slack.post_message", label: "Poster un message", risk: "low" },
     ],
+    version: "1.2.0",
   },
   {
-    id: "notion",
-    name: "Notion Workspace",
+    available: false,
     category: "productivity",
     categoryLabel: "Productivité",
-    description: "Synchronisez vos spécifications, plans de mission et documentation directement dans Notion.",
-    version: "1.1.0",
-    installed: false,
-    available: false,
     configurationRequired: true,
+    description:
+      "Synchronisez vos spécifications, plans de mission et documentation directement dans Notion.",
+    id: "notion",
+    installed: false,
+    name: "Notion Workspace",
     tools: [
-      { id: "notion.create_page", label: "Créer une page de spec", risk: "low" },
+      {
+        id: "notion.create_page",
+        label: "Créer une page de spec",
+        risk: "low",
+      },
     ],
+    version: "1.1.0",
   },
 ];

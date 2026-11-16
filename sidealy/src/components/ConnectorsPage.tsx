@@ -11,12 +11,11 @@ import {
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../context/AppContext";
-import { authenticatedFetch } from "../services/firebase";
-import { getBearerToken } from "../services/firebase";
+import { authenticatedFetch, getBearerToken } from "../services/firebase";
 import { getConnectorBrandLogo } from "./connectors/brand-logos";
 import {
-  DEFAULT_CONNECTORS_CATALOG,
   type ConnectorDefinition,
+  DEFAULT_CONNECTORS_CATALOG,
 } from "./connectors/default-connectors";
 
 type CategoryFilter = "all" | "dev" | "data" | "ai" | "productivity";
@@ -24,22 +23,24 @@ type CategoryFilter = "all" | "dev" | "data" | "ai" | "productivity";
 export const ConnectorsPage: React.FC = () => {
   const { setIsMobileDrawerOpen } = useApp();
 
-  const [connectors, setConnectors] = useState<ConnectorDefinition[]>(() => {
-    return DEFAULT_CONNECTORS_CATALOG.map((c) => {
-      const isConnected =
-        typeof window !== "undefined" &&
-        window.localStorage.getItem(`idealy_connector_status_${c.id}`) === "connected";
-      return isConnected
-        ? { ...c, installed: true, configurationRequired: false }
-        : c;
-    });
-  });
+  const [connectors, setConnectors] = useState<ConnectorDefinition[]>(() =>
+    DEFAULT_CONNECTORS_CATALOG.map((c) => ({
+      ...c,
+      status: c.installed
+        ? "connected"
+        : c.available
+          ? "not_connected"
+          : "unavailable",
+    }))
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("all");
   const [selectedConnector, setSelectedConnector] =
     useState<ConnectorDefinition | null>(null);
   const [configToken, setConfigToken] = useState("");
-  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [testStatus, setTestStatus] = useState<
+    "idle" | "testing" | "success" | "error"
+  >("idle");
   const [testFeedback, setTestFeedback] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -47,7 +48,8 @@ export const ConnectorsPage: React.FC = () => {
   useEffect(() => {
     if (selectedConnector) {
       const savedKey =
-        localStorage.getItem(`idealy_connector_key_${selectedConnector.id}`) || "";
+        localStorage.getItem(`idealy_connector_key_${selectedConnector.id}`) ||
+        "";
       setConfigToken(savedKey);
       setTestStatus("idle");
       setTestFeedback("");
@@ -56,52 +58,186 @@ export const ConnectorsPage: React.FC = () => {
     }
   }, [selectedConnector]);
 
-  const handleOAuthConnect = (connector: ConnectorDefinition) => {
+  const syncConnectorStatus = async () => {
+    try {
+      const bearer = await getBearerToken();
+      const headers: Record<string, string> = { "Cache-Control": "no-store" };
+      if (bearer) {
+        headers["Authorization"] = `Bearer ${bearer}`;
+      }
+
+      const res = await authenticatedFetch("/api/idealy/connectors/status", {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers,
+      });
+
+      if (res.ok) {
+        const payload = (await res.json().catch(() => null)) as {
+          integrations?: Array<{
+            provider: string;
+            status: string;
+            serverReady: boolean;
+            expiresAt: string | null;
+          }>;
+        };
+
+        if (Array.isArray(payload?.integrations)) {
+          const map = new Map(payload.integrations.map((i) => [i.provider, i]));
+          setConnectors((prev) =>
+            prev.map((c) => {
+              const canonical = c.id === "google" ? "google-drive" : c.id;
+              const remote = map.get(canonical) || map.get(c.id);
+              if (remote) {
+                const isConnected = remote.status === "connected";
+                const isExpired = remote.status === "expired";
+                const status = isConnected
+                  ? "connected"
+                  : isExpired
+                    ? "expired"
+                    : remote.serverReady
+                      ? "not_connected"
+                      : "configuration_required";
+
+                return {
+                  ...c,
+                  available: remote.serverReady ?? c.available,
+                  configurationRequired: !remote.serverReady,
+                  installed: isConnected,
+                  status,
+                };
+              }
+              return c;
+            })
+          );
+        }
+      }
+    } catch {
+      // Keep existing catalog fallback on offline / unauthenticated states
+    }
+  };
+
+  const handleOAuthConnect = async (connector: ConnectorDefinition) => {
     setIsAuthenticating(true);
     setTestStatus("testing");
-    setTestFeedback(`Authentification avec ${connector.name} en cours...`);
-    setTimeout(() => {
-      localStorage.setItem(`idealy_connector_status_${connector.id}`, "connected");
-      localStorage.setItem(`idealy_connector_key_${connector.id}`, `oauth_${connector.id}_token`);
-      setConnectors((prev) =>
-        prev.map((c) =>
-          c.id === connector.id
-            ? { ...c, installed: true, configurationRequired: false }
-            : c
-        )
-      );
-      setIsAuthenticating(false);
+    setTestFeedback(
+      `Initialisation de l'authentification avec ${connector.name}...`
+    );
+
+    try {
+      const bearer = await getBearerToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (bearer) {
+        headers["Authorization"] = `Bearer ${bearer}`;
+      }
+
+      let endpoint = "/api/idealy/connectors/start";
+      let body: Record<string, unknown> = { provider: connector.id };
+      if (connector.id === "github") {
+        endpoint = "/api/idealy/connectors/github/start";
+        body = {};
+      } else if (connector.id === "vercel") {
+        endpoint = "/api/idealy/connectors/vercel/start";
+        body = {};
+      }
+
+      const res = await authenticatedFetch(endpoint, {
+        body: JSON.stringify(body),
+        headers,
+        method: "POST",
+      });
+
+      const data = (await res.json().catch(() => null)) as {
+        authorizationUrl?: string;
+        url?: string;
+        error?: string;
+      } | null;
+
+      if (!res.ok) {
+        setIsAuthenticating(false);
+        setTestStatus("error");
+        setTestFeedback(
+          data?.error ||
+            `Impossible d'initier la connexion avec ${connector.name}.`
+        );
+        return;
+      }
+
+      const redirectUrl = data?.authorizationUrl || data?.url;
+      if (redirectUrl) {
+        setTestFeedback(`Redirection sécurisée vers ${connector.name}...`);
+        window.location.assign(redirectUrl);
+        return;
+      }
+
       setTestStatus("success");
-      setTestFeedback(`Compte ${connector.name} connecté avec succès via OAuth !`);
+      setTestFeedback(`Connecteur ${connector.name} synchronisé avec succès.`);
+      setIsAuthenticating(false);
+      await syncConnectorStatus();
       setTimeout(() => {
         setSelectedConnector(null);
       }, 700);
-    }, 750);
+    } catch (err: unknown) {
+      setIsAuthenticating(false);
+      setTestStatus("error");
+      const message = err instanceof Error ? err.message : "Erreur inattendue";
+      setTestFeedback(`Erreur lors de la tentative de connexion : ${message}`);
+    }
   };
 
-  const handleTestConnection = () => {
+  const handleTestConnection = async () => {
     if (!configToken.trim()) {
       setTestStatus("error");
       setTestFeedback("Veuillez renseigner un jeton ou une clé pour tester.");
       return;
     }
     setTestStatus("testing");
-    setTestFeedback("Test de connectivité en cours...");
-    setTimeout(() => {
-      setTestStatus("success");
-      setTestFeedback("Connectivité validée avec succès (latence 42ms).");
-    }, 600);
+    setTestFeedback("Vérification réelle de la connectivité en cours...");
+
+    try {
+      const startTime = performance.now();
+      const res = await fetch("/api/connectors/ping", { cache: "no-store" });
+      const latency = Math.round(performance.now() - startTime);
+
+      if (res.ok) {
+        setTestStatus("success");
+        setTestFeedback(
+          `Connectivité API validée avec succès (latence réelle : ${latency}ms).`
+        );
+      } else {
+        setTestStatus("error");
+        setTestFeedback(
+          "Le serveur a répondu avec une erreur lors du test de connectivité."
+        );
+      }
+    } catch {
+      setTestStatus("error");
+      setTestFeedback(
+        "Impossible de joindre le serveur pour tester la connectivité."
+      );
+    }
   };
 
   const handleSaveConnector = () => {
-    if (!selectedConnector) return;
+    if (!selectedConnector) {
+      return;
+    }
     if (configToken.trim()) {
-      localStorage.setItem(`idealy_connector_key_${selectedConnector.id}`, configToken.trim());
-      localStorage.setItem(`idealy_connector_status_${selectedConnector.id}`, "connected");
+      localStorage.setItem(
+        `idealy_connector_key_${selectedConnector.id}`,
+        configToken.trim()
+      );
       setConnectors((prev) =>
         prev.map((c) =>
           c.id === selectedConnector.id
-            ? { ...c, installed: true, configurationRequired: false }
+            ? {
+                ...c,
+                configurationRequired: false,
+                installed: true,
+                status: "connected",
+              }
             : c
         )
       );
@@ -110,32 +246,47 @@ export const ConnectorsPage: React.FC = () => {
   };
 
   const handleDisconnectConnector = () => {
-    if (!selectedConnector) return;
+    if (!selectedConnector) {
+      return;
+    }
     localStorage.removeItem(`idealy_connector_key_${selectedConnector.id}`);
-    localStorage.removeItem(`idealy_connector_status_${selectedConnector.id}`);
     setConnectors((prev) =>
       prev.map((c) =>
         c.id === selectedConnector.id
-          ? { ...c, installed: false, configurationRequired: true }
+          ? {
+              ...c,
+              configurationRequired: false,
+              installed: false,
+              status: "not_connected",
+            }
           : c
       )
     );
     setSelectedConnector(null);
   };
-  // Fetch live backend connectors if available
+
+  // Fetch live backend connectors & status on mount
   useEffect(() => {
     let cancelled = false;
-    getBearerToken().then((bearer) => {
-      const headers: Record<string, string> = {};
-      if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-      return authenticatedFetch("/api/idealy/plugins", {
-        cache: "no-store",
-        credentials: "same-origin",
-        headers,
-      });
-    })
+
+    syncConnectorStatus().catch(() => undefined);
+
+    getBearerToken()
+      .then((bearer) => {
+        const headers: Record<string, string> = {};
+        if (bearer) {
+          headers["Authorization"] = `Bearer ${bearer}`;
+        }
+        return authenticatedFetch("/api/idealy/plugins", {
+          cache: "no-store",
+          credentials: "same-origin",
+          headers,
+        });
+      })
       .then(async (response) => {
-        if (!response.ok) return;
+        if (!response.ok) {
+          return;
+        }
         const payload = (await response.json().catch(() => ({}))) as {
           plugins?: Array<{
             id: string;
@@ -144,19 +295,21 @@ export const ConnectorsPage: React.FC = () => {
             configurationRequired?: boolean;
           }>;
         };
-        if (Array.isArray(payload.plugins) && payload.plugins.length > 0 && !cancelled) {
+        if (
+          Array.isArray(payload.plugins) &&
+          payload.plugins.length > 0 &&
+          !cancelled
+        ) {
           setConnectors((prev) => {
             const backendMap = new Map(payload.plugins!.map((p) => [p.id, p]));
             return prev.map((item) => {
               const remote = backendMap.get(item.id);
-              const localStatus = typeof window !== "undefined" ? window.localStorage.getItem(`idealy_connector_status_${item.id}`) : null;
-              const isLocallyConnected = localStatus === "connected";
               if (remote) {
                 return {
                   ...item,
-                  installed: isLocallyConnected || Boolean(remote.installed),
                   available: Boolean(remote.available),
-                  configurationRequired: isLocallyConnected ? false : Boolean(remote.configurationRequired),
+                  configurationRequired: Boolean(remote.configurationRequired),
+                  installed: Boolean(remote.installed) || item.installed,
                 };
               }
               return item;
@@ -205,10 +358,11 @@ export const ConnectorsPage: React.FC = () => {
             Connecteurs & Outils
           </h1>
           <p className="text-xs text-text-muted mt-1">
-            Connectez vos plateformes favorites pour amplifier la portée de votre escouade d'agents.
+            Connectez vos plateformes favorites pour amplifier la portée de
+            votre escouade d'agents.
           </p>
         </div>
-        
+
         {/* Controls: Search + Category Pills */}
         <div className="flex flex-col gap-3 mb-6">
           <div className="flex h-10 items-center rounded-xl bg-bg-surface border border-border-subtle px-3.5 focus-within:border-brand-primary/60 transition-colors">
@@ -231,20 +385,22 @@ export const ConnectorsPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-            {([
-              ["all", "Tous"],
-              ["dev", "Développement"],
-              ["data", "Bases de données"],
-              ["ai", "Modèles & IA"],
-              ["productivity", "Productivité"],
-            ] as const).map(([key, label]) => (
+            {(
+              [
+                ["all", "Tous"],
+                ["dev", "Développement"],
+                ["data", "Bases de données"],
+                ["ai", "Modèles & IA"],
+                ["productivity", "Productivité"],
+              ] as const
+            ).map(([key, label]) => (
               <button
-                key={key}
                 className={`rounded-full px-3 py-1 font-medium transition-all shrink-0 ${
                   activeCategory === key
                     ? "bg-brand-primary text-white"
                     : "bg-bg-surface text-text-muted border border-border-subtle hover:text-text-main"
                 }`}
+                key={key}
                 onClick={() => setActiveCategory(key)}
                 type="button"
               >
@@ -258,17 +414,23 @@ export const ConnectorsPage: React.FC = () => {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filteredConnectors.map((connector) => {
             const logo = getConnectorBrandLogo(connector.id, "h-5 w-5", 20);
-            const isConnected = connector.available;
+            const isConnected =
+              connector.status === "connected" || connector.installed;
+            const isExpired = connector.status === "expired";
+            const isConfigRequired =
+              connector.status === "configuration_required" ||
+              connector.configurationRequired;
+            const isAvailable = connector.available;
 
             return (
               <button
-                key={connector.id}
-                onClick={() => setSelectedConnector(connector)}
                 className={`flex flex-col text-left p-3.5 rounded-xl border bg-bg-surface transition-all duration-150 hover:border-brand-primary/40 hover:bg-bg-subtle/50 group cursor-pointer focus-ring ${
                   isConnected
                     ? "border-emerald-500/30 bg-emerald-500/[0.02]"
                     : "border-border-subtle"
                 }`}
+                key={connector.id}
+                onClick={() => setSelectedConnector(connector)}
                 type="button"
               >
                 <div className="flex items-center justify-between w-full mb-2">
@@ -285,10 +447,24 @@ export const ConnectorsPage: React.FC = () => {
                     className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
                       isConnected
                         ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                        : "text-text-muted bg-bg-subtle border border-border-subtle"
+                        : isExpired
+                          ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                          : isConfigRequired
+                            ? "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                            : isAvailable
+                              ? "text-text-muted bg-bg-subtle border border-border-subtle"
+                              : "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
                     }`}
                   >
-                    {isConnected ? "Connecté" : "Détails"}
+                    {isConnected
+                      ? "Connecté"
+                      : isExpired
+                        ? "Expiré"
+                        : isConfigRequired
+                          ? "Configuration requise"
+                          : isAvailable
+                            ? "Disponible"
+                            : "Indisponible"}
                   </span>
                 </div>
 
@@ -304,15 +480,19 @@ export const ConnectorsPage: React.FC = () => {
       {/* ─── MODAL DÉTAILS CONNECTEUR (ChatGPT / Lovable Style) ─────────────── */}
       {selectedConnector && (
         <div
+          aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
           onClick={() => setSelectedConnector(null)}
           role="dialog"
-          aria-modal="true"
         >
           <div
             className="w-full max-w-md rounded-2xl border border-border-subtle bg-bg-surface p-5 shadow-2xl animate-scale-in"
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => { if (e.key === "Escape") setSelectedConnector(null); }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setSelectedConnector(null);
+              }
+            }}
             role="document"
           >
             {/* Modal Header */}
@@ -350,7 +530,9 @@ export const ConnectorsPage: React.FC = () => {
             {/* Modal Body */}
             <div className="py-4 space-y-3.5 text-xs leading-relaxed">
               <div>
-                <h4 className="font-semibold text-text-main mb-1">Description</h4>
+                <h4 className="font-semibold text-text-main mb-1">
+                  Description
+                </h4>
                 <p className="text-text-muted">
                   {selectedConnector.description}
                 </p>
@@ -370,27 +552,27 @@ export const ConnectorsPage: React.FC = () => {
 
               {/* 1-Click OAuth Connect (Standard) */}
               <div className="pt-2">
-                {typeof window !== "undefined" &&
-                window.localStorage.getItem(`idealy_connector_status_${selectedConnector.id}`) === "connected" ? (
+                {selectedConnector.status === "connected" ||
+                selectedConnector.installed ? (
                   <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
                       <Check className="h-4 w-4" />
                       <span>Connecteur actif & synchronisé</span>
                     </div>
                     <button
-                      type="button"
-                      onClick={handleDisconnectConnector}
                       className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      onClick={handleDisconnectConnector}
+                      type="button"
                     >
                       Déconnecter
                     </button>
                   </div>
                 ) : (
                   <button
-                    type="button"
-                    onClick={() => handleOAuthConnect(selectedConnector)}
-                    disabled={isAuthenticating}
                     className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl font-semibold text-xs text-white bg-brand-primary hover:opacity-90 active:scale-[0.99] transition-all shadow-md disabled:opacity-60"
+                    disabled={isAuthenticating}
+                    onClick={() => handleOAuthConnect(selectedConnector)}
+                    type="button"
                   >
                     {isAuthenticating ? (
                       <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -412,13 +594,19 @@ export const ConnectorsPage: React.FC = () => {
                     testStatus === "success"
                       ? "text-emerald-400"
                       : testStatus === "error"
-                      ? "text-rose-400"
-                      : "text-amber-400"
+                        ? "text-rose-400"
+                        : "text-amber-400"
                   }`}
                 >
-                  {testStatus === "success" && <Check className="h-3.5 w-3.5" />}
-                  {testStatus === "error" && <AlertTriangle className="h-3.5 w-3.5" />}
-                  {testStatus === "testing" && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}
+                  {testStatus === "success" && (
+                    <Check className="h-3.5 w-3.5" />
+                  )}
+                  {testStatus === "error" && (
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  )}
+                  {testStatus === "testing" && (
+                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  )}
                   {testFeedback}
                 </p>
               )}
@@ -426,11 +614,15 @@ export const ConnectorsPage: React.FC = () => {
               {/* Advanced / Optional Personal Token Toggle */}
               <div className="pt-1">
                 <button
-                  type="button"
-                  onClick={() => setShowAdvanced((prev) => !prev)}
                   className="text-[11px] text-text-muted hover:text-text-main flex items-center gap-1 font-medium transition-colors"
+                  onClick={() => setShowAdvanced((prev) => !prev)}
+                  type="button"
                 >
-                  <span>{showAdvanced ? "▾ Masquer" : "▸ Paramètres avancés (Jeton personnel optionnel)"}</span>
+                  <span>
+                    {showAdvanced
+                      ? "▾ Masquer"
+                      : "▸ Paramètres avancés (Jeton personnel optionnel)"}
+                  </span>
                 </button>
 
                 {showAdvanced && (
@@ -439,29 +631,33 @@ export const ConnectorsPage: React.FC = () => {
                       Jeton d'accès personnalisé (Personal Access Token)
                     </label>
                     <input
-                      type="password"
-                      value={configToken}
+                      className="w-full px-3 py-1.5 rounded-lg bg-bg-surface border border-border-subtle text-xs text-text-main placeholder:text-text-muted outline-none focus:border-brand-primary font-mono"
                       onChange={(e) => {
                         setConfigToken(e.target.value);
-                        if (testStatus !== "idle") setTestStatus("idle");
+                        if (testStatus !== "idle") {
+                          setTestStatus("idle");
+                        }
                       }}
                       placeholder={`Ex : ${selectedConnector.id === "github" ? "ghp_..." : selectedConnector.id === "supabase" ? "sbp_..." : "sk_..."}`}
-                      className="w-full px-3 py-1.5 rounded-lg bg-bg-surface border border-border-subtle text-xs text-text-main placeholder:text-text-muted outline-none focus:border-brand-primary font-mono"
+                      type="password"
+                      value={configToken}
                     />
                     <div className="flex items-center justify-end gap-2 pt-1">
                       <button
-                        type="button"
-                        onClick={handleTestConnection}
-                        disabled={testStatus === "testing" || !configToken.trim()}
                         className="px-2.5 py-1 rounded-md text-[11px] font-medium text-text-muted hover:text-text-main hover:bg-bg-subtle transition-colors disabled:opacity-40"
+                        disabled={
+                          testStatus === "testing" || !configToken.trim()
+                        }
+                        onClick={handleTestConnection}
+                        type="button"
                       >
                         Tester la clé
                       </button>
                       <button
-                        type="button"
-                        onClick={handleSaveConnector}
-                        disabled={!configToken.trim()}
                         className="px-3 py-1 rounded-md text-[11px] font-semibold bg-brand-primary text-white hover:opacity-90 disabled:opacity-40 transition-colors"
+                        disabled={!configToken.trim()}
+                        onClick={handleSaveConnector}
+                        type="button"
                       >
                         Enregistrer
                       </button>
@@ -474,9 +670,9 @@ export const ConnectorsPage: React.FC = () => {
             {/* Modal Actions */}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-border-subtle">
               <button
-                type="button"
-                onClick={() => setSelectedConnector(null)}
                 className="px-4 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-main hover:bg-bg-subtle transition-colors"
+                onClick={() => setSelectedConnector(null)}
+                type="button"
               >
                 Fermer
               </button>

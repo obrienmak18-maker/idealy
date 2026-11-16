@@ -64,7 +64,7 @@ export const SettingsPage: React.FC = () => {
       : "general";
   };
   const [section, setSection] = useState<SettingsSection>(() =>
-    typeof window === "undefined" ? "general" : currentSection(),
+    typeof window === "undefined" ? "general" : currentSection()
   );
   const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [service, setService] = useState<ServiceState>("checking");
@@ -94,7 +94,9 @@ export const SettingsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (section !== "billing") return;
+    if (section !== "billing") {
+      return;
+    }
     const controller = new AbortController();
     setBillingLoading(true);
     setBillingError("");
@@ -113,22 +115,28 @@ export const SettingsPage: React.FC = () => {
           planId?: string;
           status?: string;
         };
-        if (!response.ok)
+        if (!response.ok) {
           throw new Error(
-            payload.error || "Le statut de facturation est indisponible.",
+            payload.error || "Le statut de facturation est indisponible."
           );
-        if (!controller.signal.aborted) setBilling(payload);
+        }
+        if (!controller.signal.aborted) {
+          setBilling(payload);
+        }
       })
       .catch((cause) => {
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
           setBillingError(
             cause instanceof Error
               ? cause.message
-              : "Le statut de facturation est indisponible.",
+              : "Le statut de facturation est indisponible."
           );
+        }
       })
       .finally(() => {
-        if (!controller.signal.aborted) setBillingLoading(false);
+        if (!controller.signal.aborted) {
+          setBillingLoading(false);
+        }
       });
     return () => controller.abort();
   }, [section]);
@@ -136,8 +144,9 @@ export const SettingsPage: React.FC = () => {
   const openSection = (next: SettingsSection) => {
     setSection(next);
     const path = next === "general" ? "/settings" : `/settings/${next}`;
-    if (window.location.pathname !== path)
+    if (window.location.pathname !== path) {
       window.history.pushState(null, "", path);
+    }
   };
 
   const openBillingPortal = async () => {
@@ -159,16 +168,17 @@ export const SettingsPage: React.FC = () => {
         !portalUrl ||
         portalUrl.protocol !== "https:" ||
         portalUrl.hostname !== "billing.stripe.com"
-      )
+      ) {
         throw new Error(
-          payload.error || "Le portail de facturation n’a pas pu être ouvert.",
+          payload.error || "Le portail de facturation n’a pas pu être ouvert."
         );
+      }
       window.location.assign(portalUrl.toString());
     } catch (cause) {
       setBillingError(
         cause instanceof Error
           ? cause.message
-          : "Le portail de facturation n’a pas pu être ouvert.",
+          : "Le portail de facturation n’a pas pu être ouvert."
       );
     } finally {
       setPortalLoading(false);
@@ -187,10 +197,10 @@ export const SettingsPage: React.FC = () => {
             spaces,
           },
           null,
-          2,
+          2
         ),
       ],
-      { type: "application/json" },
+      { type: "application/json" }
     );
     const url = URL.createObjectURL(exportFile);
     const link = document.createElement("a");
@@ -227,31 +237,40 @@ export const SettingsPage: React.FC = () => {
           limit?: number;
           remaining?: number;
         } | null;
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setService(
-          healthResponse.ok && health.status !== "error" ? "ready" : "offline",
+          healthResponse.ok && health.status !== "error" ? "ready" : "offline"
         );
         if (
           preferencesResponse.ok &&
           profile &&
           typeof profile.way === "string"
-        )
+        ) {
           setPreferences(profile);
-        else if (preferencesResponse.status === 401)
+        } else if (preferencesResponse.status === 401) {
           setNotice(
-            "Connectez-vous pour charger et modifier vos préférences de compte.",
+            "Connectez-vous pour charger et modifier vos préférences de compte."
           );
-        else if (preferencesResponse.status === 409)
+        } else if (preferencesResponse.status === 409) {
           setNotice(
-            "Terminez la configuration de votre profil pour accéder aux préférences du compte.",
+            "Terminez la configuration de votre profil pour accéder aux préférences du compte."
           );
-        if (quotaResponse.ok && quotaPayload) setQuota(quotaPayload);
+        }
+        if (quotaResponse.ok && quotaPayload) {
+          setQuota(quotaPayload);
+        }
       })
       .catch(() => {
-        if (!cancelled) setService("offline");
+        if (!cancelled) {
+          setService("offline");
+        }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -272,25 +291,39 @@ export const SettingsPage: React.FC = () => {
         setLanguage(updates.preferredLanguage);
       }
 
-      const response = await authenticatedFetch("/api/idealy/profile/preferences", {
-        body: JSON.stringify(updates),
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        method: "PATCH",
-      });
+      const response = await authenticatedFetch(
+        "/api/idealy/profile/preferences",
+        {
+          body: JSON.stringify(updates),
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        }
+      );
       const payload = (await response
         .json()
         .catch(() => ({}))) as Preferences & { error?: string };
-      if (!response.ok && response.status !== 401 && response.status !== 409) {
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Session expirée. Veuillez vous reconnecter.");
+        }
+        if (response.status === 409) {
+          throw new Error("Configuration du profil incomplète.");
+        }
+        if (response.status === 503) {
+          throw new Error("Service temporairement indisponible.");
+        }
         throw new Error(payload.error || "Enregistrement impossible.");
       }
       setPreferences((current) =>
-        current ? { ...current, ...updates, ...payload } : { ...updates, ...payload } as Preferences,
+        current
+          ? { ...current, ...updates, ...payload }
+          : ({ ...updates, ...payload } as Preferences)
       );
       setNotice("Préférences enregistrées.");
     } catch (error) {
       setNotice(
-        error instanceof Error ? error.message : "Enregistrement impossible.",
+        error instanceof Error ? error.message : "Enregistrement impossible."
       );
     } finally {
       setSaving(false);
@@ -298,9 +331,9 @@ export const SettingsPage: React.FC = () => {
   };
 
   const themes = [
-    { id: "system" as const, label: "Système", icon: Monitor },
-    { id: "light" as const, label: "Clair", icon: Sun },
-    { id: "dark" as const, label: "Sombre", icon: Moon },
+    { icon: Monitor, id: "system" as const, label: "Système" },
+    { icon: Sun, id: "light" as const, label: "Clair" },
+    { icon: Moon, id: "dark" as const, label: "Sombre" },
   ];
 
   return (
@@ -401,7 +434,13 @@ export const SettingsPage: React.FC = () => {
               <div className="mt-5 space-y-5">
                 <div className="flex items-center gap-3 pb-2 border-b border-border-subtle">
                   <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white font-semibold text-base shadow-sm">
-                    {((preferences?.displayName || preferences?.accountEmail || "U").charAt(0) || "U").toUpperCase()}
+                    {(
+                      (
+                        preferences?.displayName ||
+                        preferences?.accountEmail ||
+                        "U"
+                      ).charAt(0) || "U"
+                    ).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-text-main truncate">
@@ -417,12 +456,18 @@ export const SettingsPage: React.FC = () => {
                   <div className="flex items-center justify-between mb-1.5">
                     <span>Voie de travail</span>
                     <span className="text-[11px] font-normal text-text-muted">
-                      Changements restants ce mois : <strong className="text-text-main font-semibold">{remainingWayChanges} / 2</strong>
+                      Changements restants ce mois :{" "}
+                      <strong className="text-text-main font-semibold">
+                        {remainingWayChanges} / 2
+                      </strong>
                     </span>
                   </div>
                   <select
                     className="h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
-                    disabled={remainingWayChanges === 0 && (preferences?.way || userWay) !== "ninja"}
+                    disabled={
+                      remainingWayChanges === 0 &&
+                      (preferences?.way || userWay) !== "ninja"
+                    }
                     onChange={(event) =>
                       void savePreferences({
                         way: event.target.value as Preferences["way"],
@@ -463,19 +508,26 @@ export const SettingsPage: React.FC = () => {
                     defaultValue={preferences?.timezone || "UTC"}
                     maxLength={64}
                     onBlur={(event) => {
-                      if (event.target.value !== (preferences?.timezone || "UTC"))
+                      if (
+                        event.target.value !== (preferences?.timezone || "UTC")
+                      ) {
                         void savePreferences({ timezone: event.target.value });
+                      }
                     }}
                   />
                 </label>
 
                 <div className="pt-4 border-t border-border-subtle flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-text-main">Session active</p>
-                    <p className="text-[11px] text-text-muted">Déconnectez votre compte de cet appareil</p>
+                    <p className="text-xs font-semibold text-text-main">
+                      Session active
+                    </p>
+                    <p className="text-[11px] text-text-muted">
+                      Déconnectez votre compte de cet appareil
+                    </p>
                   </div>
                   <button
-                    type="button"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
                     onClick={async () => {
                       try {
                         await signOutFirebase();
@@ -487,7 +539,7 @@ export const SettingsPage: React.FC = () => {
                       } catch {}
                       window.location.href = "/welcome";
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    type="button"
                   >
                     <LogOut className="h-3.5 w-3.5" />
                     Se déconnecter
@@ -585,17 +637,49 @@ export const SettingsPage: React.FC = () => {
                 {(() => {
                   const activeWayKey = preferences?.way || userWay;
                   const tiers = {
-                    ninja: { resource: "Chakra", free: "Genin", pro: "Chunin", business: "Jonin", max: "Kage / Sannin" },
-                    mage: { resource: "Mana", free: "Apprenti", pro: "Mage", business: "Archimage", max: "Grand Primordial" },
-                    hunter: { resource: "Nen", free: "Candidat", pro: "Hunter Licencié", business: "Double Star", max: "Triple Star" },
-                    professional: { resource: "Énergie", free: "Starter", pro: "Pro", business: "Team", max: "Enterprise" },
-                  }[activeWayKey] || { resource: "Chakra", free: "Genin", pro: "Chunin", business: "Jonin", max: "Kage / Sannin" };
+                    hunter: {
+                      business: "Double Star",
+                      free: "Candidat",
+                      max: "Triple Star",
+                      pro: "Hunter Licencié",
+                      resource: "Nen",
+                    },
+                    mage: {
+                      business: "Archimage",
+                      free: "Apprenti",
+                      max: "Grand Primordial",
+                      pro: "Mage",
+                      resource: "Mana",
+                    },
+                    ninja: {
+                      business: "Jonin",
+                      free: "Genin",
+                      max: "Kage / Sannin",
+                      pro: "Chunin",
+                      resource: "Chakra",
+                    },
+                    professional: {
+                      business: "Team",
+                      free: "Starter",
+                      max: "Enterprise",
+                      pro: "Pro",
+                      resource: "Énergie",
+                    },
+                  }[activeWayKey] || {
+                    business: "Jonin",
+                    free: "Genin",
+                    max: "Kage / Sannin",
+                    pro: "Chunin",
+                    resource: "Chakra",
+                  };
 
                   return (
                     <>
                       <dl className="mt-5 grid gap-3 sm:grid-cols-2">
                         <div className="rounded-xl bg-bg-subtle p-3">
-                          <dt className="text-xs text-text-muted">Forfait actif ({activeWayKey.toUpperCase()})</dt>
+                          <dt className="text-xs text-text-muted">
+                            Forfait actif ({activeWayKey.toUpperCase()})
+                          </dt>
                           <dd className="mt-1 text-sm font-semibold text-text-main">
                             {billing.planId === "business"
                               ? tiers.business
@@ -609,7 +693,8 @@ export const SettingsPage: React.FC = () => {
                             Crédits de ressource ({tiers.resource})
                           </dt>
                           <dd className="mt-1 text-sm font-semibold text-text-main">
-                            {billing.creditsBalance ?? "Illimité (Période Bêta)"}
+                            {billing.creditsBalance ??
+                              "Illimité (Période Bêta)"}
                           </dd>
                         </div>
                       </dl>
@@ -619,20 +704,36 @@ export const SettingsPage: React.FC = () => {
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                           <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
-                            <p className="font-semibold text-text-main truncate">{tiers.free}</p>
-                            <p className="text-[11px] text-text-muted">0 € / mois</p>
+                            <p className="font-semibold text-text-main truncate">
+                              {tiers.free}
+                            </p>
+                            <p className="text-[11px] text-text-muted">
+                              0 € / mois
+                            </p>
                           </div>
                           <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
-                            <p className="font-semibold text-text-main truncate">{tiers.pro}</p>
-                            <p className="text-[11px] text-text-muted">19 € / mois</p>
+                            <p className="font-semibold text-text-main truncate">
+                              {tiers.pro}
+                            </p>
+                            <p className="text-[11px] text-text-muted">
+                              19 € / mois
+                            </p>
                           </div>
                           <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
-                            <p className="font-semibold text-text-main truncate">{tiers.business}</p>
-                            <p className="text-[11px] text-text-muted">49 € / mois</p>
+                            <p className="font-semibold text-text-main truncate">
+                              {tiers.business}
+                            </p>
+                            <p className="text-[11px] text-text-muted">
+                              49 € / mois
+                            </p>
                           </div>
                           <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
-                            <p className="font-semibold text-text-main truncate">{tiers.max}</p>
-                            <p className="text-[11px] text-text-muted">199 € / mois</p>
+                            <p className="font-semibold text-text-main truncate">
+                              {tiers.max}
+                            </p>
+                            <p className="text-[11px] text-text-muted">
+                              199 € / mois
+                            </p>
                           </div>
                         </div>
                       </div>

@@ -7,13 +7,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { useFirestoreProjectSync } from "../hooks/useFirestoreSync";
+import { buildRunForMessage } from "../services/agentRegistry";
 import { AssistantRemoteService } from "../services/assistantRemote";
 import { BackendHistoryService } from "../services/backendHistory";
-import { StorageService } from "../services/storage";
-import { authenticatedFetch } from "../services/firebase";
-import { buildRunForMessage } from "../services/agentRegistry";
-import { useFirestoreProjectSync } from "../hooks/useFirestoreSync";
 import { getConversationArtifactId } from "../services/conversationArtifacts";
+import { authenticatedFetch } from "../services/firebase";
+import { StorageService } from "../services/storage";
 import type {
   Artifact,
   AssistantToolActivity,
@@ -22,12 +22,12 @@ import type {
   GenerationStatus,
   IntentionMode,
   Message,
-  MissionFileActivity,
   MissionBuildVerification,
+  MissionFileActivity,
   MissionRun,
   MissionWorkspaceFile,
-  SubAgentProgress,
   Space,
+  SubAgentProgress,
   Theme,
 } from "../types";
 
@@ -55,13 +55,11 @@ interface AppContextValue {
 
   conversations: Conversation[];
   conversationsHasMore: boolean;
-  isLoadingConversations: boolean;
-  loadMoreConversations: () => Promise<void>;
   createConversation: (spaceId?: string, title?: string) => string;
   createSpace: (
     name: string,
     description: string,
-    instructions: string,
+    instructions: string
   ) => void;
 
   deepThink: boolean;
@@ -75,20 +73,29 @@ interface AppContextValue {
 
   // Modals & Navigation
   isCommandPaletteOpen: boolean;
+  isLoadingConversations: boolean;
   isMobileDrawerOpen: boolean;
   isSettingsOpen: boolean;
   isSpaceModalOpen: boolean;
+  language: "fr" | "en" | "es";
+  loadMoreConversations: () => Promise<void>;
 
   messages: Message[];
 
   mode: IntentionMode;
   openArtifact: (id: string) => void;
   openConfirmModal: (data: Omit<ConfirmModalData, "isOpen">) => void;
+  remainingWayChanges: number;
   renameConversation: (id: string, newTitle: string) => void;
   sendMessage: (
     content: string,
     attachments?: Attachment[],
-    options?: { deepThink?: boolean; webSearch?: boolean },
+    options?: {
+      deepThink?: boolean;
+      webSearch?: boolean;
+      agents?: string[];
+      connectors?: string[];
+    }
   ) => Promise<void>;
   setActiveConversationId: (id: string) => void;
   setActivePage: (page: AppPage) => void;
@@ -99,26 +106,31 @@ interface AppContextValue {
   setIsMobileDrawerOpen: (open: boolean) => void;
   setIsSettingsOpen: (open: boolean) => void;
   setIsSpaceModalOpen: (open: boolean) => void;
+  setLanguage: (lang: "fr" | "en" | "es") => void;
   setMode: (mode: IntentionMode) => void;
   setTheme: (theme: Theme) => void;
+  setUserWay: (way: "ninja" | "mage" | "hunter" | "professional") => {
+    success: boolean;
+    error?: string;
+  };
   setWebSearch: (webSearch: boolean) => void;
 
   spaces: Space[];
   startMission: (
     missionId: string,
-    assistantMessageId: string,
+    assistantMessageId: string
   ) => Promise<void>;
   stopGeneration: () => void;
   theme: Theme;
   toggleArchiveConversation: (id: string) => void;
   togglePinConversation: (id: string) => void;
+  updateArtifactContent: (
+    conversationId: string,
+    path: string,
+    content: string
+  ) => void;
   updateSpace: (id: string, updates: Partial<Space>) => void;
-  updateArtifactContent: (conversationId: string, path: string, content: string) => void;
   userWay: "ninja" | "mage" | "hunter" | "professional";
-  setUserWay: (way: "ninja" | "mage" | "hunter" | "professional") => { success: boolean; error?: string };
-  language: "fr" | "en" | "es";
-  setLanguage: (lang: "fr" | "en" | "es") => void;
-  remainingWayChanges: number;
   webSearch: boolean;
 }
 
@@ -146,43 +158,53 @@ export type AppPage =
 const pagePaths: Record<AppPage, string> = {
   about: "/about",
   agents: "/studio/agents",
+  authAction: "/auth/action",
   chat: "/studio",
   connectors: "/connectors",
   docs: "/docs",
-  library: "/studio/library",
-  pricing: "/pricing",
-  plugins: "/connectors",
-  privacy: "/privacy",
-  terms: "/terms",
   eula: "/eula",
+  library: "/studio/library",
   login: "/login",
   onboarding: "/onboarding",
-  authAction: "/auth/action",
+  plugins: "/connectors",
+  pricing: "/pricing",
+  privacy: "/privacy",
   settings: "/studio/settings",
   support: "/support",
+  terms: "/terms",
   welcome: "/welcome",
 };
 
 function pageFromPath(pathname: string): AppPage {
   const path = pathname.replace(/\/$/, "") || "/";
   const match = (Object.entries(pagePaths) as [AppPage, string][]).find(
-    ([, route]) => route === path,
+    ([, route]) => route === path
   );
-  if (path === "/register") return "login";
-  if (path === "/studio/settings" || path.startsWith("/studio/settings/")) return "settings";
-  if (path === "/studio/agents" || path.startsWith("/studio/agents/")) return "agents";
-  if (path === "/studio/library" || path.startsWith("/studio/library/")) return "library";
-  if (path === "/studio/plugins" || path === "/studio/connectors") return "connectors";
-  if (path.startsWith("/docs/")) return "docs";
-  if (path === "/") {
-    if (typeof window !== "undefined") {
-      const hasSession =
-        window.localStorage.getItem("idealy_session") ||
-        window.localStorage.getItem("idealy_user_profile") ||
-        window.localStorage.getItem("idealy_profile");
-      if (!hasSession) {
-        return "welcome";
-      }
+  if (path === "/register") {
+    return "login";
+  }
+  if (path === "/studio/settings" || path.startsWith("/studio/settings/")) {
+    return "settings";
+  }
+  if (path === "/studio/agents" || path.startsWith("/studio/agents/")) {
+    return "agents";
+  }
+  if (path === "/studio/library" || path.startsWith("/studio/library/")) {
+    return "library";
+  }
+  if (path === "/studio/plugins" || path === "/studio/connectors") {
+    return "connectors";
+  }
+  if (path.startsWith("/docs/")) {
+    return "docs";
+  }
+  if (path === "/" && typeof window !== "undefined") {
+    const hasSession =
+      window.localStorage.getItem("idealy_session") ||
+      window.localStorage.getItem("idealy_user_profile") ||
+      window.localStorage.getItem("idealy_profile");
+    if (!hasSession) {
+      return "welcome";
     }
   }
   return match?.[0] ?? "chat";
@@ -190,7 +212,7 @@ function pageFromPath(pathname: string): AppPage {
 
 function conversationTitleFromPrompt(
   content: string,
-  attachments: Attachment[] = [],
+  attachments: Attachment[] = []
 ): string {
   const normalized = content.replace(/\s+/g, " ").trim();
   if (!normalized && attachments.length) {
@@ -207,11 +229,16 @@ function conversationTitleFromPrompt(
   const title = concise || normalized;
   const points = Array.from(title);
   if (points.length <= 44) {
-    return points.join("").charAt(0).toLocaleUpperCase("fr-FR") + points.join("").slice(1);
+    return (
+      points.join("").charAt(0).toLocaleUpperCase("fr-FR") +
+      points.join("").slice(1)
+    );
   }
   const preview = points.slice(0, 44).join("");
   const wordBoundary = preview.lastIndexOf(" ");
-  const shortened = preview.slice(0, wordBoundary > 26 ? wordBoundary : 44).trim();
+  const shortened = preview
+    .slice(0, wordBoundary > 26 ? wordBoundary : 44)
+    .trim();
   return `${shortened.charAt(0).toLocaleUpperCase("fr-FR")}${shortened.slice(1)}…`;
 }
 
@@ -221,40 +248,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [activePage, setActivePageState] = useState<AppPage>(() =>
     typeof window === "undefined"
       ? "chat"
-      : pageFromPath(window.location.pathname),
+      : pageFromPath(window.location.pathname)
   );
   // Theme state
   const [theme, setThemeState] = useState<Theme>(() =>
-    StorageService.loadTheme(),
+    StorageService.loadTheme()
   );
 
   // Data states
   const [spaces, setSpaces] = useState<Space[]>(() =>
-    StorageService.loadSpaces(),
+    StorageService.loadSpaces()
   );
   const [activeSpaceId, setActiveSpaceIdState] = useState<string>(() =>
-    StorageService.loadActiveSpaceId(),
+    StorageService.loadActiveSpaceId()
   );
 
   const [conversations, setConversations] = useState<Conversation[]>(() =>
-    StorageService.loadConversations(),
+    StorageService.loadConversations()
   );
   const [activeConversationId, setActiveConversationIdState] = useState<string>(
-    () => StorageService.loadActiveConversationId(),
+    () => StorageService.loadActiveConversationId()
   );
 
   const [messages, setMessages] = useState<Message[]>(() =>
-    StorageService.loadMessages(),
+    StorageService.loadMessages()
   );
   const [artifacts, setArtifacts] = useState<Artifact[]>(() =>
-    StorageService.loadArtifacts(),
+    StorageService.loadArtifacts()
   );
 
   const [activeArtifactId, setActiveArtifactId] = useState<string | null>(() =>
     getConversationArtifactId(
       StorageService.loadArtifacts(),
-      StorageService.loadActiveConversationId(),
-    ),
+      StorageService.loadActiveConversationId()
+    )
   );
   const [generationStatus, setGenerationStatus] =
     useState<GenerationStatus>("idle");
@@ -262,49 +289,88 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [webSearch, setWebSearch] = useState<boolean>(false);
 
   // Way and Language state
-  const [userWay, setUserWayState] = useState<"ninja" | "mage" | "hunter" | "professional">(() => {
-    if (typeof window === "undefined") return "ninja";
+  const [userWay, setUserWayState] = useState<
+    "ninja" | "mage" | "hunter" | "professional"
+  >(() => {
+    if (typeof window === "undefined") {
+      return "ninja";
+    }
     const urlWay = new URLSearchParams(window.location.search).get("way");
-    if (urlWay === "mage" || urlWay === "ninja" || urlWay === "hunter" || urlWay === "professional") {
-      try { window.localStorage.setItem("idealy_user_way", urlWay); } catch {}
+    if (
+      urlWay === "mage" ||
+      urlWay === "ninja" ||
+      urlWay === "hunter" ||
+      urlWay === "professional"
+    ) {
+      try {
+        window.localStorage.setItem("idealy_user_way", urlWay);
+      } catch {}
       return urlWay;
     }
-    const cookieMatch = document.cookie.match(/(?:^|;\s*)idealy_user_way=([^;]+)/);
+    const cookieMatch = document.cookie.match(
+      /(?:^|;\s*)idealy_user_way=([^;]+)/
+    );
     const cookieWay = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
-    if (cookieWay === "mage" || cookieWay === "ninja" || cookieWay === "hunter" || cookieWay === "professional") {
-      try { window.localStorage.setItem("idealy_user_way", cookieWay); } catch {}
+    if (
+      cookieWay === "mage" ||
+      cookieWay === "ninja" ||
+      cookieWay === "hunter" ||
+      cookieWay === "professional"
+    ) {
+      try {
+        window.localStorage.setItem("idealy_user_way", cookieWay);
+      } catch {}
       return cookieWay;
     }
     const stored = window.localStorage.getItem("idealy_user_way");
-    return stored === "mage" || stored === "ninja" || stored === "hunter" || stored === "professional"
+    return stored === "mage" ||
+      stored === "ninja" ||
+      stored === "hunter" ||
+      stored === "professional"
       ? stored
       : "ninja";
   });
 
   const [language, setLanguageState] = useState<"fr" | "en" | "es">(() => {
-    if (typeof window === "undefined") return "fr";
+    if (typeof window === "undefined") {
+      return "fr";
+    }
     const urlLang = new URLSearchParams(window.location.search).get("lang");
     if (urlLang === "fr" || urlLang === "en" || urlLang === "es") {
-      try { window.localStorage.setItem("idealy_language", urlLang); } catch {}
+      try {
+        window.localStorage.setItem("idealy_language", urlLang);
+      } catch {}
       return urlLang;
     }
-    const cookieMatch = document.cookie.match(/(?:^|;\s*)(?:NEXT_LOCALE|idealy_language|idealy_lang)=([^;]+)/);
+    const cookieMatch = document.cookie.match(
+      /(?:^|;\s*)(?:NEXT_LOCALE|idealy_language|idealy_lang)=([^;]+)/
+    );
     const cookieLang = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
     if (cookieLang === "fr" || cookieLang === "en" || cookieLang === "es") {
-      try { window.localStorage.setItem("idealy_language", cookieLang); } catch {}
+      try {
+        window.localStorage.setItem("idealy_language", cookieLang);
+      } catch {}
       return cookieLang;
     }
     const stored = window.localStorage.getItem("idealy_language");
-    return stored === "fr" || stored === "en" || stored === "es" ? stored : "fr";
+    return stored === "fr" || stored === "en" || stored === "es"
+      ? stored
+      : "fr";
   });
 
   const [remainingWayChanges, setRemainingWayChanges] = useState<number>(() => {
-    if (typeof window === "undefined") return 2;
+    if (typeof window === "undefined") {
+      return 2;
+    }
     try {
-      const historyRaw = window.localStorage.getItem("idealy_way_changes_history");
+      const historyRaw = window.localStorage.getItem(
+        "idealy_way_changes_history"
+      );
       const history: number[] = historyRaw ? JSON.parse(historyRaw) : [];
       const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      const recent = history.filter((t) => typeof t === "number" && t > thirtyDaysAgo);
+      const recent = history.filter(
+        (t) => typeof t === "number" && t > thirtyDaysAgo
+      );
       return Math.max(0, 2 - recent.length);
     } catch {
       return 2;
@@ -314,21 +380,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const setUserWay = useCallback(
     (nextWay: "ninja" | "mage" | "hunter" | "professional") => {
       try {
-        const historyRaw = window.localStorage.getItem("idealy_way_changes_history");
+        const historyRaw = window.localStorage.getItem(
+          "idealy_way_changes_history"
+        );
         const history: number[] = historyRaw ? JSON.parse(historyRaw) : [];
         const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-        const recent = history.filter((t) => typeof t === "number" && t > thirtyDaysAgo);
+        const recent = history.filter(
+          (t) => typeof t === "number" && t > thirtyDaysAgo
+        );
 
         if (recent.length >= 2) {
           return {
-            success: false,
             error: "Limite atteinte : 2 changements de voie maximum par mois.",
+            success: false,
           };
         }
 
         const now = Date.now();
         const updatedHistory = [...recent, now];
-        window.localStorage.setItem("idealy_way_changes_history", JSON.stringify(updatedHistory));
+        window.localStorage.setItem(
+          "idealy_way_changes_history",
+          JSON.stringify(updatedHistory)
+        );
         window.localStorage.setItem("idealy_user_way", nextWay);
         document.cookie = `idealy_user_way=${nextWay}; path=/; max-age=31536000; SameSite=Lax`;
         setUserWayState(nextWay);
@@ -341,7 +414,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         return { success: true };
       }
     },
-    [],
+    []
   );
 
   const setLanguage = useCallback((nextLang: "fr" | "en" | "es") => {
@@ -352,20 +425,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   // Firestore Project Sync
-  const { project: syncedProject } = useFirestoreProjectSync(activeConversationId);
+  const { project: syncedProject } =
+    useFirestoreProjectSync(activeConversationId);
   useEffect(() => {
-    if (!syncedProject?.files?.length || !activeConversationId) return;
+    if (!syncedProject?.files?.length || !activeConversationId) {
+      return;
+    }
     const firstCodeFile = syncedProject.files.find((f) => f.content);
-    if (!firstCodeFile?.content) return;
-    const hasExisting = artifacts.some((a) => a.conversationId === activeConversationId);
+    if (!firstCodeFile?.content) {
+      return;
+    }
+    const hasExisting = artifacts.some(
+      (a) => a.conversationId === activeConversationId
+    );
     if (!hasExisting) {
       const syncedArtifact: Artifact = {
-        id: crypto.randomUUID(),
+        content: firstCodeFile.content,
         conversationId: activeConversationId,
+        createdAt: Date.now(),
+        id: crypto.randomUUID(),
         title: syncedProject.title || "Projet Idealy",
         type: "code",
-        content: firstCodeFile.content,
-        createdAt: Date.now(),
       };
       setArtifacts((prev) => [syncedArtifact, ...prev]);
     }
@@ -377,7 +457,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isSpaceModalOpen, setIsSpaceModalOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<ConfirmModalData | null>(
-    null,
+    null
   );
 
   // Controller for stream interruption
@@ -395,14 +475,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     conversations.find((c) => c.id === activeConversationId) ||
     conversations[0];
   const activeMessages = messages.filter(
-    (m) => m.conversationId === activeConversation?.id,
+    (m) => m.conversationId === activeConversation?.id
   );
   // An artifact belongs to exactly one conversation. Never render a stale
   // sidecar from a different conversation while navigation is updating.
   const activeArtifact = artifacts.find(
     (artifact) =>
       artifact.id === activeArtifactId &&
-      artifact.conversationId === activeConversation?.id,
+      artifact.conversationId === activeConversation?.id
   );
 
   // Draft and mode are bound to activeConversation
@@ -439,11 +519,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Authentication and welcome boundaries must load without the Studio's
     // cross-origin isolation headers, so Google OAuth popups can communicate.
-    if (
-      page === "welcome" ||
-      page === "login" ||
-      page === "authAction"
-    ) {
+    if (page === "welcome" || page === "login" || page === "authAction") {
       setActivePageState(page);
       const destination = pagePaths[page];
       if (window.location.pathname !== destination) {
@@ -471,17 +547,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     let cancelled = false;
     BackendHistoryService.listAndImport()
       .then((page) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setHistoryCursor(page.cursor);
         setConversationsHasMore(page.hasMore);
         if (page.conversations.length) {
           setConversations((current) => {
             const currentIds = new Set(
-              current.map((conversation) => conversation.id),
+              current.map((conversation) => conversation.id)
             );
             const next = [
               ...page.conversations.filter(
-                (conversation) => !currentIds.has(conversation.id),
+                (conversation) => !currentIds.has(conversation.id)
               ),
               ...current,
             ];
@@ -494,7 +572,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         console.warn("Backend history sync failed", error);
       })
       .finally(() => {
-        if (!cancelled) setHistoryReady(true);
+        if (!cancelled) {
+          setHistoryReady(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -502,8 +582,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const loadMoreConversations = async () => {
-    if (!historyCursor || !conversationsHasMore || isLoadingConversations)
+    if (!historyCursor || !conversationsHasMore || isLoadingConversations) {
       return;
+    }
     setIsLoadingConversations(true);
     try {
       const page = await BackendHistoryService.listAndImport(historyCursor);
@@ -512,12 +593,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       if (page.conversations.length) {
         setConversations((current) => {
           const currentIds = new Set(
-            current.map((conversation) => conversation.id),
+            current.map((conversation) => conversation.id)
           );
           const next = [
             ...current,
             ...page.conversations.filter(
-              (conversation) => !currentIds.has(conversation.id),
+              (conversation) => !currentIds.has(conversation.id)
             ),
           ];
           StorageService.saveConversations(next);
@@ -536,8 +617,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       !historyReady ||
       !activeConversation?.id ||
       historyLoadsRef.current.has(activeConversation.id)
-    )
+    ) {
       return;
+    }
     historyLoadsRef.current.add(activeConversation.id);
     let cancelled = false;
     BackendHistoryService.loadMessages(activeConversation.id)
@@ -546,10 +628,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           historyLoadsRef.current.delete(activeConversation.id);
           return;
         }
-        if (!remoteMessages?.length) return;
+        if (!remoteMessages?.length) {
+          return;
+        }
         setMessages((current) => {
           const local = current.filter(
-            (message) => message.conversationId === activeConversation.id,
+            (message) => message.conversationId === activeConversation.id
           );
           const matchedLocalIds = new Set<string>();
           const mergedRemote = remoteMessages.map((remote) => {
@@ -558,9 +642,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                 !matchedLocalIds.has(candidate.id) &&
                 candidate.role === remote.role &&
                 candidate.content === remote.content &&
-                Math.abs(candidate.createdAt - remote.createdAt) < 5 * 60_000,
+                Math.abs(candidate.createdAt - remote.createdAt) < 5 * 60_000
             );
-            if (!match) return remote;
+            if (!match) {
+              return remote;
+            }
             matchedLocalIds.add(match.id);
             return {
               ...remote,
@@ -569,8 +655,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                 ? remote.attachments
                 : match.attachments,
               content: remote.content,
-              createdAt: remote.createdAt,
               conversationId: remote.conversationId,
+              createdAt: remote.createdAt,
             };
           });
           const merged = [
@@ -579,7 +665,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           ].sort((left, right) => left.createdAt - right.createdAt);
           const next = [
             ...current.filter(
-              (message) => message.conversationId !== activeConversation.id,
+              (message) => message.conversationId !== activeConversation.id
             ),
             ...merged,
           ];
@@ -624,13 +710,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       setConversations((prev) => {
         const updated = prev.map((c) =>
-          c.id === activeConversation.id ? { ...c, draft: text } : c,
+          c.id === activeConversation.id ? { ...c, draft: text } : c
         );
         StorageService.saveConversations(updated);
         return updated;
       });
     },
-    [activeConversation],
+    [activeConversation]
   );
 
   // Mode handling
@@ -641,20 +727,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       setConversations((prev) => {
         const updated = prev.map((c) =>
-          c.id === activeConversation.id ? { ...c, selectedMode: newMode } : c,
+          c.id === activeConversation.id ? { ...c, selectedMode: newMode } : c
         );
         StorageService.saveConversations(updated);
         return updated;
       });
     },
-    [activeConversation],
+    [activeConversation]
   );
 
   // Space management
   const createSpace = (
     name: string,
     description: string,
-    instructions: string,
+    instructions: string
   ) => {
     const newSpace: Space = {
       createdAt: Date.now(),
@@ -692,12 +778,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const targetSpace = spaceId || activeSpaceId || "space-general";
     const activeConversationHasMessages = activeConversation
       ? messages.some(
-          (message) => message.conversationId === activeConversation.id,
+          (message) => message.conversationId === activeConversation.id
         )
       : false;
     const activeConversationHasArtifacts = activeConversation
       ? artifacts.some(
-          (artifact) => artifact.conversationId === activeConversation.id,
+          (artifact) => artifact.conversationId === activeConversation.id
         )
       : false;
     if (
@@ -737,7 +823,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       const next = current.map((conversation) =>
         conversation.id === id
           ? { ...conversation, title: newTitle.trim() || conversation.title }
-          : conversation,
+          : conversation
       );
       StorageService.saveConversations(next);
       return next;
@@ -746,7 +832,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const togglePinConversation = (id: string) => {
     const next = conversations.map((c) =>
-      c.id === id ? { ...c, isPinned: !c.isPinned } : c,
+      c.id === id ? { ...c, isPinned: !c.isPinned } : c
     );
     setConversations(next);
     StorageService.saveConversations(next);
@@ -754,7 +840,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const toggleArchiveConversation = (id: string) => {
     const next = conversations.map((c) =>
-      c.id === id ? { ...c, isArchived: !c.isArchived } : c,
+      c.id === id ? { ...c, isArchived: !c.isArchived } : c
     );
     setConversations(next);
     StorageService.saveConversations(next);
@@ -770,7 +856,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
     if (activeConversationId === id) {
       const remaining = next.filter(
-        (c) => c.spaceId === activeSpaceId && !c.isArchived,
+        (c) => c.spaceId === activeSpaceId && !c.isArchived
       );
       if (remaining.length > 0) {
         setActiveConversationId(remaining[0].id);
@@ -788,11 +874,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
     const convMessages = messages.filter((m) => m.conversationId === id);
+    const localeTag =
+      language === "en" ? "en-US" : language === "es" ? "es-ES" : "fr-FR";
+    const exportNotice =
+      language === "en"
+        ? "Exported from Idealy on"
+        : language === "es"
+          ? "Exportado desde Idealy el"
+          : "Exporté depuis Idealy le";
+    const userRole =
+      language === "en"
+        ? "User"
+        : language === "es"
+          ? "Usuario"
+          : "Utilisateur";
+    const assistantRole =
+      language === "en"
+        ? "Idealy Assistant"
+        : language === "es"
+          ? "Asistente Idealy"
+          : "Assistant Idealy";
 
-    let text = `# ${conv.title}\n*Exporté depuis Idealy le ${new Date().toLocaleString("fr-FR")}*\n\n---\n\n`;
+    let text = `# ${conv.title}\n*${exportNotice} ${new Date().toLocaleString(localeTag)}*\n\n---\n\n`;
     for (const msg of convMessages) {
-      const roleName = msg.role === "user" ? "Utilisateur" : "Assistant Idealy";
-      const time = new Date(msg.createdAt).toLocaleTimeString("fr-FR", {
+      const roleName = msg.role === "user" ? userRole : assistantRole;
+      const time = new Date(msg.createdAt).toLocaleTimeString(localeTag, {
         hour: "2-digit",
         minute: "2-digit",
       });
@@ -814,10 +920,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const openArtifact = (id: string) => {
     const belongsToActiveConversation = artifacts.some(
       (artifact) =>
-        artifact.id === id &&
-        artifact.conversationId === activeConversation?.id,
+        artifact.id === id && artifact.conversationId === activeConversation?.id
     );
-    if (belongsToActiveConversation) setActiveArtifactId(id);
+    if (belongsToActiveConversation) {
+      setActiveArtifactId(id);
+    }
   };
 
   const updateArtifactContent = useCallback(
@@ -827,7 +934,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         const existing = current.find(
           (artifact) =>
             artifact.conversationId === conversationId &&
-            artifact.title.replaceAll("\\", "/").replace(/^\/+/, "") === normalizedPath,
+            artifact.title.replaceAll("\\", "/").replace(/^\/+/, "") ===
+              normalizedPath
         );
         const now = Date.now();
         const nextArtifact: Artifact = existing
@@ -843,14 +951,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             };
         const next = existing
           ? current.map((artifact) =>
-              artifact.id === existing.id ? nextArtifact : artifact,
+              artifact.id === existing.id ? nextArtifact : artifact
             )
           : [nextArtifact, ...current];
         StorageService.saveArtifacts(next);
         return next;
       });
     },
-    [],
+    []
   );
 
   const closeArtifact = () => {
@@ -861,7 +969,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const sendMessage = async (
     content: string,
     attachments?: Attachment[],
-    sendOpts?: { deepThink?: boolean; webSearch?: boolean },
+    sendOpts?: {
+      deepThink?: boolean;
+      webSearch?: boolean;
+      agents?: string[];
+      connectors?: string[];
+    }
   ) => {
     if (
       (!content.trim() && !attachments?.length) ||
@@ -895,7 +1008,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Update conversation title if first message
     const convMsgCount = messages.filter(
-      (m) => m.conversationId === currentConvId,
+      (m) => m.conversationId === currentConvId
     ).length;
     if (
       convMsgCount === 0 ||
@@ -907,8 +1020,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // 2. Create placeholder assistant message with routed Run
     const initialRun = buildRunForMessage(content, "", {
-      mode: currentMode,
       deepThink: useDeepThink,
+      mode: currentMode,
       wayId: userWay,
     });
     const assistantMessageId = `msg-${Date.now() + 1}`;
@@ -939,6 +1052,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       setGenerationStatus("receiving");
       await AssistantRemoteService.streamResponse({
+        agents: sendOpts?.agents,
+        attachments,
         callbacks: {
           onArtifact: (newArt) => {
             const artifact: Artifact = {
@@ -960,8 +1075,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                       ...m,
                       artifactIds: [...(m.artifactIds || []), artifact.id],
                     }
-                  : m,
-              ),
+                  : m
+              )
             );
             // Open artifact sidecar automatically in Produce mode
             setActiveArtifactId(artifact.id);
@@ -970,14 +1085,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             accumulatedContent += chunk;
             setMessages((prev) =>
               prev.map((m) => {
-                if (m.id !== assistantMessageId) return m;
-                const updatedRun = buildRunForMessage(content, accumulatedContent, {
-                  mode: currentMode,
-                  reasoning: accumulatedReasoning,
-                  wayId: userWay,
-                });
+                if (m.id !== assistantMessageId) {
+                  return m;
+                }
+                const updatedRun = buildRunForMessage(
+                  content,
+                  accumulatedContent,
+                  {
+                    mode: currentMode,
+                    reasoning: accumulatedReasoning,
+                    wayId: userWay,
+                  }
+                );
                 return { ...m, content: accumulatedContent, run: updatedRun };
-              }),
+              })
             );
           },
           onComplete: (duration?: number) => {
@@ -988,18 +1109,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             setGenerationStatus(isAborted ? "aborted" : "completed");
             setMessages((prev) => {
               const updated: Message[] = prev.map((m) => {
-                if (m.id !== assistantMessageId) return m;
-                const finalRun = buildRunForMessage(content, accumulatedContent, {
-                  mode: currentMode,
-                  reasoning: accumulatedReasoning,
-                  wayId: userWay,
-                });
+                if (m.id !== assistantMessageId) {
+                  return m;
+                }
+                const finalRun = buildRunForMessage(
+                  content,
+                  accumulatedContent,
+                  {
+                    mode: currentMode,
+                    reasoning: accumulatedReasoning,
+                    wayId: userWay,
+                  }
+                );
                 return {
                   ...m,
                   isPartial: false,
                   reasoningDuration: duration ?? m.reasoningDuration,
                   run: finalRun,
                   status: finalStatus,
+                };
+              });
+              StorageService.saveMessages(updated);
+              return updated;
+            });
+          },
+          onMissionFileEvent: (event: MissionFileActivity) => {
+            setMessages((prev) => {
+              const updated = prev.map((message) => {
+                if (message.id !== assistantMessageId) {
+                  return message;
+                }
+                const fileEvents = message.fileEvents ?? [];
+                if (
+                  fileEvents.some(
+                    (item) =>
+                      item.missionId === event.missionId &&
+                      item.sequence === event.sequence
+                  )
+                ) {
+                  return message;
+                }
+                return {
+                  ...message,
+                  fileEvents: [...fileEvents, event].slice(-24),
                 };
               });
               StorageService.saveMessages(updated);
@@ -1018,7 +1170,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                         status: "planned" as const,
                       },
                     }
-                  : m,
+                  : m
               );
               StorageService.saveMessages(updated);
               return updated;
@@ -1029,65 +1181,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
               const updated = prev.map((m) =>
                 m.id === assistantMessageId && m.mission
                   ? { ...m, mission: { ...m.mission, route } }
-                  : m,
+                  : m
               );
-              StorageService.saveMessages(updated);
-              return updated;
-            });
-          },
-          onToolActivity: (activity: AssistantToolActivity) => {
-            setMessages((prev) => {
-              const updated = prev.map((message) => {
-                if (message.id !== assistantMessageId) return message;
-                const activities = message.activities ?? [];
-                const existing = activities.findIndex(
-                  (item) => item.toolCallId === activity.toolCallId,
-                );
-                const nextActivities = [...activities];
-                if (existing >= 0) nextActivities[existing] = activity;
-                else nextActivities.push(activity);
-                return { ...message, activities: nextActivities };
-              });
-              StorageService.saveMessages(updated);
-              return updated;
-            });
-          },
-          onMissionFileEvent: (event: MissionFileActivity) => {
-            setMessages((prev) => {
-              const updated = prev.map((message) => {
-                if (message.id !== assistantMessageId) return message;
-                const fileEvents = message.fileEvents ?? [];
-                if (
-                  fileEvents.some(
-                    (item) =>
-                      item.missionId === event.missionId &&
-                      item.sequence === event.sequence,
-                  )
-                ) {
-                  return message;
-                }
-                return {
-                  ...message,
-                  fileEvents: [...fileEvents, event].slice(-24),
-                };
-              });
-              StorageService.saveMessages(updated);
-              return updated;
-            });
-          },
-          onSubAgentProgress: (progress: SubAgentProgress) => {
-            setMessages((prev) => {
-              const updated = prev.map((message) => {
-                if (message.id !== assistantMessageId) return message;
-                const subagents = message.subagents ?? [];
-                const existingIndex = subagents.findIndex(
-                  (item) => item.timestamp === progress.timestamp,
-                );
-                const nextSubagents = [...subagents];
-                if (existingIndex >= 0) nextSubagents[existingIndex] = progress;
-                else nextSubagents.push(progress);
-                return { ...message, subagents: nextSubagents.slice(-3) };
-              });
               StorageService.saveMessages(updated);
               return updated;
             });
@@ -1096,25 +1191,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             accumulatedReasoning += chunk;
             setMessages((prev) =>
               prev.map((m) => {
-                if (m.id !== assistantMessageId) return m;
-                const updatedRun = buildRunForMessage(content, accumulatedContent, {
-                  mode: currentMode,
+                if (m.id !== assistantMessageId) {
+                  return m;
+                }
+                const updatedRun = buildRunForMessage(
+                  content,
+                  accumulatedContent,
+                  {
+                    mode: currentMode,
+                    reasoning: accumulatedReasoning,
+                    wayId: userWay,
+                  }
+                );
+                return {
+                  ...m,
                   reasoning: accumulatedReasoning,
-                  wayId: userWay,
-                });
-                return { ...m, reasoning: accumulatedReasoning, run: updatedRun };
-              }),
+                  run: updatedRun,
+                };
+              })
             );
           },
+          onSubAgentProgress: (progress: SubAgentProgress) => {
+            setMessages((prev) => {
+              const updated = prev.map((message) => {
+                if (message.id !== assistantMessageId) {
+                  return message;
+                }
+                const subagents = message.subagents ?? [];
+                const existingIndex = subagents.findIndex(
+                  (item) => item.timestamp === progress.timestamp
+                );
+                const nextSubagents = [...subagents];
+                if (existingIndex >= 0) {
+                  nextSubagents[existingIndex] = progress;
+                } else {
+                  nextSubagents.push(progress);
+                }
+                return { ...message, subagents: nextSubagents.slice(-3) };
+              });
+              StorageService.saveMessages(updated);
+              return updated;
+            });
+          },
+          onToolActivity: (activity: AssistantToolActivity) => {
+            setMessages((prev) => {
+              const updated = prev.map((message) => {
+                if (message.id !== assistantMessageId) {
+                  return message;
+                }
+                const activities = message.activities ?? [];
+                const existing = activities.findIndex(
+                  (item) => item.toolCallId === activity.toolCallId
+                );
+                const nextActivities = [...activities];
+                if (existing >= 0) {
+                  nextActivities[existing] = activity;
+                } else {
+                  nextActivities.push(activity);
+                }
+                return { ...message, activities: nextActivities };
+              });
+              StorageService.saveMessages(updated);
+              return updated;
+            });
+          },
         },
+        connectors: sendOpts?.connectors,
         content: content.trim(),
-        attachments,
         conversationId: currentConvId,
         conversationTitle: activeConversation.title,
         deepThink: useDeepThink,
         mode: currentMode,
         signal: abortController.signal,
         spaceInstructions: currentSpace?.instructions,
+        way: activeConversation.way || userWay,
         webSearch: useWebSearch,
       });
     } catch (err) {
@@ -1133,7 +1283,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                 isPartial: false,
                 status: errStatus,
               }
-            : m,
+            : m
         );
         StorageService.saveMessages(updated);
         return updated;
@@ -1142,7 +1292,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       abortControllerRef.current = null;
       setTimeout(() => {
         setGenerationStatus((s) =>
-          s === "completed" || s === "aborted" || s === "error" ? "idle" : s,
+          s === "completed" || s === "aborted" || s === "error" ? "idle" : s
         );
       }, 1500);
     }
@@ -1157,13 +1307,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const startMission = async (
     missionId: string,
-    assistantMessageId: string,
+    assistantMessageId: string
   ) => {
     if (missionStartsRef.current.has(missionId)) {
       return;
     }
     const sourceMessage = messages.find(
-      (message) => message.id === assistantMessageId,
+      (message) => message.id === assistantMessageId
     );
     const mission = sourceMessage?.mission;
     if (
@@ -1182,7 +1332,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         const updated = prev.map((message) =>
           message.id === assistantMessageId && message.mission
             ? { ...message, mission: { ...message.mission, ...updates } }
-            : message,
+            : message
         );
         StorageService.saveMessages(updated);
         return updated;
@@ -1199,7 +1349,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           method: "POST",
-        },
+        }
       );
       const result = (await response.json().catch(() => null)) as {
         status?: unknown;
@@ -1228,7 +1378,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           `/api/idealy/missions/${encodeURIComponent(missionId)}/files`,
           {
             credentials: "same-origin",
-          },
+          }
         );
         const filePayload = (await filesResponse.json().catch(() => null)) as {
           files?: unknown;
@@ -1248,8 +1398,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                   "path" in file &&
                   typeof file.path === "string" &&
                   "content" in file &&
-                  typeof file.content === "string",
-              ),
+                  typeof file.content === "string"
+              )
           );
         }
       } catch {
@@ -1316,7 +1466,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
                     ]),
                   ],
                 }
-              : message,
+              : message
           );
           StorageService.saveMessages(updated);
           return updated;
@@ -1400,8 +1550,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         confirmModal,
         conversations,
         conversationsHasMore,
-        isLoadingConversations,
-        loadMoreConversations,
         createConversation,
         createSpace,
         deepThink,
@@ -1411,13 +1559,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         exportConversation,
         generationStatus,
         isCommandPaletteOpen,
+        isLoadingConversations,
         isMobileDrawerOpen,
         isSettingsOpen,
         isSpaceModalOpen,
+        language,
+        loadMoreConversations,
         messages,
         mode,
         openArtifact,
         openConfirmModal,
+        remainingWayChanges,
         renameConversation,
         sendMessage,
         setActiveConversationId,
@@ -1429,8 +1581,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsMobileDrawerOpen,
         setIsSettingsOpen,
         setIsSpaceModalOpen,
+        setLanguage,
         setMode,
         setTheme,
+        setUserWay,
         setWebSearch,
         spaces,
         startMission,
@@ -1438,13 +1592,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         theme,
         toggleArchiveConversation,
         togglePinConversation,
-        updateSpace,
         updateArtifactContent,
+        updateSpace,
         userWay,
-        setUserWay,
-        language,
-        setLanguage,
-        remainingWayChanges,
         webSearch,
       }}
     >

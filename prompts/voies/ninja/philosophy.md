@@ -1,0 +1,1 @@
+Chaque problème complexe se résout par une séquence d'actions simples et vérifiables. Aucune improvisation : chaque fichier créé a une responsabilité unique. Zéro surplus, rapidité d'exécution et tests continus.

@@ -4,13 +4,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
   ChevronRight,
-  Database as DatabaseIcon,
   FileCode2,
   FileJson,
   Folder,
   TerminalSquare,
   X,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import {
   type Dispatch,
   memo,
@@ -21,25 +21,26 @@ import {
   useRef,
   useState,
 } from "react";
-import useSWR, { useSWRConfig } from "swr";
 import { toast } from "sonner";
+import useSWR, { useSWRConfig } from "swr";
 import { useWindowSize } from "usehooks-ts";
 import { codeArtifact } from "@/artifacts/code/client";
 import { imageArtifact } from "@/artifacts/image/client";
 import { sheetArtifact } from "@/artifacts/sheet/client";
 import { textArtifact } from "@/artifacts/text/client";
 import { useArtifact } from "@/hooks/use-artifact";
-import { useGamificationStore } from "@/lib/stores/use-gamification-store";
-import { voiesCatalog } from "@/lib/idealy/voies-catalog";
-import { IdealyMark } from "@/components/branding/idealy-logo";
 import type { Document, Vote } from "@/lib/db/schema";
 import type { MissionFile } from "@/lib/idealy/mission-files";
-import { compileProjectPreview, extractAvailableRoutes } from "@/lib/idealy/preview-compiler";
+import {
+  compileProjectPreview,
+  extractAvailableRoutes,
+} from "@/lib/idealy/preview-compiler";
+import { voiesCatalog } from "@/lib/idealy/voies-catalog";
+import { useGamificationStore } from "@/lib/stores/use-gamification-store";
 import type { Attachment, ChatMessage } from "@/lib/types";
-import { cn, fetcher } from "@/lib/utils";
+import { fetcher } from "@/lib/utils";
 import { VersionFooter } from "./version-footer";
 import type { VisibilityType } from "./visibility-selector";
-import dynamic from "next/dynamic";
 
 const DatabaseInspector = dynamic(
   () => import("./database-inspector").then((m) => m.DatabaseInspector),
@@ -52,6 +53,7 @@ const DatabaseInspector = dynamic(
     ssr: false,
   }
 );
+
 import {
   type InspectedElement,
   VISUAL_INSPECTOR_IFRAME_SCRIPT,
@@ -84,11 +86,16 @@ export type UIArtifact = {
 
 function missionFileStatusLabel(status: MissionFile["status"]) {
   switch (status) {
-    case "pending": return "En attente";
-    case "writing": return "Écriture";
-    case "saved": return "Enregistré";
-    case "validated": return "Validé";
-    case "error": return "Erreur";
+    case "pending":
+      return "En attente";
+    case "writing":
+      return "Écriture";
+    case "saved":
+      return "Enregistré";
+    case "validated":
+      return "Validé";
+    case "error":
+      return "Erreur";
   }
 }
 
@@ -131,11 +138,13 @@ function PureArtifact({
   const { currentWay } = useGamificationStore();
   const activeWayData = voiesCatalog[currentWay] ?? voiesCatalog.ninja;
   const builderAgent =
-    activeWayData.agents.find((agent) => agent.role.toLowerCase().includes("builder")) ??
-    activeWayData.agents[1];
+    activeWayData.agents.find((agent) =>
+      agent.role.toLowerCase().includes("builder")
+    ) ?? activeWayData.agents[1];
   const reviewerAgent =
-    activeWayData.agents.find((agent) => /review|qa|audit|vérification/i.test(agent.role)) ??
-    activeWayData.agents[activeWayData.agents.length - 1];
+    activeWayData.agents.find((agent) =>
+      /review|qa|audit|vérification/i.test(agent.role)
+    ) ?? activeWayData.agents[activeWayData.agents.length - 1];
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
   const {
@@ -143,12 +152,15 @@ function PureArtifact({
     isLoading: isDocumentsFetching,
     mutate: mutateDocuments,
   } = useSWR<Document[]>(
-    artifact.documentId !== "init" && artifact.status !== "streaming" && !isDemoMode
+    artifact.documentId !== "init" &&
+      artifact.status !== "streaming" &&
+      !isDemoMode
       ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}`
       : null,
     fetcher
   );
-  const missionId = typeof metadata?.missionId === "string" ? metadata.missionId : null;
+  const missionId =
+    typeof metadata?.missionId === "string" ? metadata.missionId : null;
   const missionSquadStatus =
     typeof metadata?.missionSquadStatus === "string"
       ? metadata.missionSquadStatus
@@ -162,9 +174,10 @@ function PureArtifact({
       ? metadata.missionActiveAgentRole
       : null;
   const missionFileSequence = Number(metadata?.missionFileLastSequence ?? 0);
-  const missionWorkspaceKey = missionId && !isDemoMode
-    ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/idealy/missions/${missionId}/files?afterSequence=${missionFileSequence}`
-    : null;
+  const missionWorkspaceKey =
+    missionId && !isDemoMode
+      ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/idealy/missions/${missionId}/files?afterSequence=${missionFileSequence}`
+      : null;
   const { data: missionWorkspace } = useSWR<{
     files: MissionFile[];
     lastSequence: number;
@@ -185,7 +198,9 @@ function PureArtifact({
   const [previewKey, setPreviewKey] = useState(0);
   const [document, setDocument] = useState<Document | null>(null);
   const [currentVersionIndex, setCurrentVersionIndex] = useState(-1);
-  const [selectedMissionFilePath, setSelectedMissionFilePath] = useState<string | null>(null);
+  const [selectedMissionFilePath, setSelectedMissionFilePath] = useState<
+    string | null
+  >(null);
   const missionFiles = Array.isArray(metadata?.missionFiles)
     ? (metadata.missionFiles as MissionFile[])
     : [];
@@ -204,12 +219,22 @@ function PureArtifact({
     return Array.from(byPath.values()).sort((left, right) =>
       left.path.localeCompare(right.path)
     );
-  }, [missionFiles, artifact.kind, artifact.content, artifact.status, missionId, artifact.documentId]);
+  }, [
+    missionFiles,
+    artifact.kind,
+    artifact.content,
+    artifact.status,
+    missionId,
+    artifact.documentId,
+  ]);
 
   // Auto-select first file if none is explicitly selected
   useEffect(() => {
     if (!selectedMissionFilePath && latestMissionFiles.length > 0) {
-      const primary = latestMissionFiles.find((f) => f.path === "src/App.tsx" || f.path === "index.html") ?? latestMissionFiles[0];
+      const primary =
+        latestMissionFiles.find(
+          (f) => f.path === "src/App.tsx" || f.path === "index.html"
+        ) ?? latestMissionFiles[0];
       setSelectedMissionFilePath(primary.path);
     }
   }, [selectedMissionFilePath, latestMissionFiles]);
@@ -219,7 +244,7 @@ function PureArtifact({
   );
   const selectedMissionFileContent = useMemo(() => {
     if (!selectedMissionFilePath) {
-      return undefined;
+      return;
     }
     const matching = missionFiles
       .filter(
@@ -231,17 +256,25 @@ function PureArtifact({
     if (matching !== undefined) {
       return matching;
     }
-    return latestMissionFiles.find((file) => file.path === selectedMissionFilePath)?.content;
+    return latestMissionFiles.find(
+      (file) => file.path === selectedMissionFilePath
+    )?.content;
   }, [selectedMissionFilePath, missionFiles, latestMissionFiles]);
 
   const [isInspectorActive, setIsInspectorActive] = useState(false);
-  const [inspectedElement, setInspectedElement] = useState<InspectedElement | null>(null);
+  const [inspectedElement, setInspectedElement] =
+    useState<InspectedElement | null>(null);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    window.document.documentElement.toggleAttribute("data-idealy-canvas-expanded", isExpanded);
+    window.document.documentElement.toggleAttribute(
+      "data-idealy-canvas-expanded",
+      isExpanded
+    );
     return () => {
-      window.document.documentElement.removeAttribute("data-idealy-canvas-expanded");
+      window.document.documentElement.removeAttribute(
+        "data-idealy-canvas-expanded"
+      );
     };
   }, [isExpanded]);
 
@@ -254,7 +287,9 @@ function PureArtifact({
     // does not silently discard a valid user action.
     let html = previewHtmlForFrameRef.current || artifact.preview || "";
     if (!html.trim()) {
-      toast.error("L’aperçu n’est pas encore prêt. Attends la génération du premier fichier.");
+      toast.error(
+        "L’aperçu n’est pas encore prêt. Attends la génération du premier fichier."
+      );
       return;
     }
 
@@ -262,7 +297,10 @@ function PureArtifact({
     const appFavicon = `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><rect width='24' height='24' rx='6' fill='%230f172a'/><path d='M12 4L20 20H4L12 4Z' fill='%2338bdf8'/></svg>">`;
 
     if (html.includes("<title>")) {
-      html = html.replace(/<title>.*?<\/title>/gi, `<title>${appTitle}</title>`);
+      html = html.replace(
+        /<title>.*?<\/title>/gi,
+        `<title>${appTitle}</title>`
+      );
     } else if (html.includes("<head>")) {
       html = html.replace("<head>", `<head><title>${appTitle}</title>`);
     }
@@ -272,7 +310,9 @@ function PureArtifact({
 
     const previewWindow = window.open("about:blank", "_blank");
     if (!previewWindow) {
-      toast.error("Le navigateur a bloqué l’ouverture du nouvel onglet. Autorise les fenêtres surgissantes pour Idealy, puis réessaie.");
+      toast.error(
+        "Le navigateur a bloqué l’ouverture du nouvel onglet. Autorise les fenêtres surgissantes pour Idealy, puis réessaie."
+      );
       return;
     }
 
@@ -313,11 +353,18 @@ function PureArtifact({
 
     const handleToggleInspector = (event: Event) => {
       const detail = (event as CustomEvent<string>).detail;
-      const nextActive = detail === "true" ? true : detail === "false" ? false : !isInspectorActive;
+      const nextActive =
+        detail === "true"
+          ? true
+          : detail === "false"
+            ? false
+            : !isInspectorActive;
       setIsInspectorActive(nextActive);
-      if (!nextActive) setInspectedElement(null);
+      if (!nextActive) {
+        setInspectedElement(null);
+      }
       previewIframeRef.current?.contentWindow?.postMessage(
-        { type: "idealy:set-inspector-mode", enabled: nextActive },
+        { enabled: nextActive, type: "idealy:set-inspector-mode" },
         "*"
       );
     };
@@ -370,9 +417,15 @@ function PureArtifact({
       window.removeEventListener("idealy:refresh-preview", handleRefresh);
       window.removeEventListener("idealy:set-preview-page", handlePreviewPage);
       window.removeEventListener("idealy:show-console", handleShowConsole);
-      window.removeEventListener("idealy:toggle-fullscreen", handleToggleFullscreen);
+      window.removeEventListener(
+        "idealy:toggle-fullscreen",
+        handleToggleFullscreen
+      );
       window.removeEventListener("idealy:open-preview", handleOpenPreview);
-      window.removeEventListener("idealy:toggle-inspector", handleToggleInspector);
+      window.removeEventListener(
+        "idealy:toggle-inspector",
+        handleToggleInspector
+      );
       window.removeEventListener("idealy:set-chat-input", handleSetChatInput);
       window.removeEventListener("message", handleIframeMessage);
     };
@@ -426,7 +479,8 @@ function PureArtifact({
       return;
     }
     const selectedFile = latestMissionFiles.find(
-      (file) => file.path === selectedMissionFilePath && file.content !== undefined
+      (file) =>
+        file.path === selectedMissionFilePath && file.content !== undefined
     );
     const firstAvailableFile = latestMissionFiles.find(
       (file) => file.content !== undefined && file.status !== "error"
@@ -545,9 +599,13 @@ function PureArtifact({
       target: { missionId: string | null; path: string; version: number }
     ) => {
       if (isDemoMode) {
-        const previous = latestMissionFiles.find((file) => file.path === target.path);
-        const missionIdForFile = target.missionId ?? previous?.missionId ?? "local-demo";
-        const nextVersion = Math.max(previous?.version ?? 0, target.version) + 1;
+        const previous = latestMissionFiles.find(
+          (file) => file.path === target.path
+        );
+        const missionIdForFile =
+          target.missionId ?? previous?.missionId ?? "local-demo";
+        const nextVersion =
+          Math.max(previous?.version ?? 0, target.version) + 1;
         const file: MissionFile = {
           ...(previous ?? {
             missionId: missionIdForFile,
@@ -587,7 +645,9 @@ function PureArtifact({
           nextVersion
         );
         setIsContentDirty(false);
-        toast.info("Modification conservée dans cette session de démonstration uniquement.");
+        toast.info(
+          "Modification conservée dans cette session de démonstration uniquement."
+        );
         return;
       }
 
@@ -613,7 +673,7 @@ function PureArtifact({
           method: "PATCH",
         }
       );
-      const payload = await response.json().catch(() => null) as {
+      const payload = (await response.json().catch(() => null)) as {
         error?: string;
         file?: MissionFile;
         lastSequence?: number | null;
@@ -635,6 +695,11 @@ function PureArtifact({
           : [];
         return {
           ...(current ?? {}),
+          missionFileLastSequence: Math.max(
+            Number(current?.missionFileLastSequence ?? 0),
+            Number(payload.lastSequence ?? 0)
+          ),
+          missionFileStatus: "file_saved",
           missionFiles: [
             ...files.filter(
               (entry) =>
@@ -646,11 +711,6 @@ function PureArtifact({
             ),
             savedFile,
           ],
-          missionFileLastSequence: Math.max(
-            Number(current?.missionFileLastSequence ?? 0),
-            Number(payload.lastSequence ?? 0)
-          ),
-          missionFileStatus: "file_saved",
           missionReplayNonce: Number(current?.missionReplayNonce ?? 0) + 1,
         };
       });
@@ -687,7 +747,9 @@ function PureArtifact({
     }
     const pending = pendingEditorSaveRef.current;
     pendingEditorSaveRef.current = null;
-    if (!pending) return;
+    if (!pending) {
+      return;
+    }
     if (pending.target) {
       queueMissionFileSave(pending.content, pending.target);
     } else {
@@ -731,7 +793,9 @@ function PureArtifact({
           saveTimerRef.current = null;
           const pending = pendingEditorSaveRef.current;
           pendingEditorSaveRef.current = null;
-          if (!pending) return;
+          if (!pending) {
+            return;
+          }
           if (pending.target) {
             queueMissionFileSave(pending.content, pending.target);
           } else {
@@ -838,7 +902,8 @@ function PureArtifact({
 
   const compiledPreview = useMemo(() => {
     const hasMissionSource = missionFiles.some(
-      (file) => typeof file.content === "string" && file.content.trim().length > 0
+      (file) =>
+        typeof file.content === "string" && file.content.trim().length > 0
     );
 
     // For a generated project, always compile the selected route from the
@@ -846,11 +911,11 @@ function PureArtifact({
     // iframe to an older page after the user changes the route or edits a file.
     if (artifact.kind === "code" && hasMissionSource) {
       return compileProjectPreview({
-        files: missionFiles,
-        singleCodeContent: artifact.content,
         activePath: previewPath,
+        files: missionFiles,
         isStreaming: artifact.status === "streaming",
         projectTitle: artifact.title || "Application",
+        singleCodeContent: artifact.content,
       });
     }
 
@@ -863,17 +928,24 @@ function PureArtifact({
     }
 
     return compileProjectPreview({
-      files: missionFiles,
-      singleCodeContent: artifact.content,
       activePath: previewPath,
+      files: missionFiles,
       isStreaming: artifact.status === "streaming",
       projectTitle: artifact.title || "Application",
+      singleCodeContent: artifact.content,
     });
-  }, [artifact.kind, artifact.preview, artifact.content, artifact.status, missionFiles, previewPath]);
+  }, [
+    artifact.kind,
+    artifact.preview,
+    artifact.content,
+    artifact.status,
+    missionFiles,
+    previewPath,
+  ]);
 
   const previewHtml = compiledPreview.html;
   const previewScrollbarStyle =
-    '<style>html{scrollbar-width:none;-ms-overflow-style:none}html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}body{overflow-x:hidden}</style>';
+    "<style>html{scrollbar-width:none;-ms-overflow-style:none}html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}body{overflow-x:hidden}</style>";
   const previewHtmlForFrame = previewHtml.includes("</head>")
     ? previewHtml.replace("</head>", `${previewScrollbarStyle}</head>`)
     : `${previewScrollbarStyle}${previewHtml}`;
@@ -881,9 +953,12 @@ function PureArtifact({
   // <a href="/pricing"> would load the host app (Next.js 404) inside the
   // preview. Keep navigation inside the preview and report it to the parent.
   const previewNavigationGuardScript = `<script id="idealy-preview-navigation-guard">(function(){function toPath(h){try{var u=new URL(h,"http://idealy.preview");return u.origin==="http://idealy.preview"?u.pathname+u.search:null}catch(e){return null}}document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(!a)return;var h=a.getAttribute("href")||"";if(h.charAt(0)==="#"||/^(mailto:|tel:|javascript:)/i.test(h))return;e.preventDefault();var p=toPath(h);if(p!==null){window.parent.postMessage({type:"idealy:preview-navigate",path:p},"*")}else if(/^https?:/i.test(h)){window.open(h,"_blank","noopener,noreferrer")}},true);document.addEventListener("submit",function(e){e.preventDefault()},true)})();</script>`;
-  const previewPathScript = `<script>try{history.replaceState({},'',${JSON.stringify(previewPath)});document.documentElement.dataset.idealyPath=${JSON.stringify(previewPath)};document.title=${JSON.stringify(previewPath === "/" ? (artifact.title || "Application") : `${previewPath.slice(1)} · ${artifact.title || "Application"}`)};}catch{}</script>`;
+  const previewPathScript = `<script>try{history.replaceState({},'',${JSON.stringify(previewPath)});document.documentElement.dataset.idealyPath=${JSON.stringify(previewPath)};document.title=${JSON.stringify(previewPath === "/" ? artifact.title || "Application" : `${previewPath.slice(1)} · ${artifact.title || "Application"}`)};}catch{}</script>`;
   const previewHtmlForFrameWithPath = previewHtmlForFrame.includes("</body>")
-    ? previewHtmlForFrame.replace("</body>", `${previewNavigationGuardScript}${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}</body>`)
+    ? previewHtmlForFrame.replace(
+        "</body>",
+        `${previewNavigationGuardScript}${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}</body>`
+      )
     : `${previewHtmlForFrame}${previewNavigationGuardScript}${previewPathScript}${VISUAL_INSPECTOR_IFRAME_SCRIPT}`;
   previewHtmlForFrameRef.current = previewHtmlForFrameWithPath;
 
@@ -901,8 +976,11 @@ function PureArtifact({
   }
 
   const consoleEntries = metadata?.outputs ?? [];
-  const editorContent = selectedMissionFileContent ??
-    (isCurrentVersion ? artifact.content : getDocumentContentById(currentVersionIndex));
+  const editorContent =
+    selectedMissionFileContent ??
+    (isCurrentVersion
+      ? artifact.content
+      : getDocumentContentById(currentVersionIndex));
   const consoleError =
     consoleEntries
       .filter((o: { status: string }) => o.status === "failed")
@@ -946,7 +1024,9 @@ function PureArtifact({
                     { enabled: false, type: "idealy:set-inspector-mode" },
                     "*"
                   );
-                  window.dispatchEvent(new CustomEvent("idealy:inspector-closed"));
+                  window.dispatchEvent(
+                    new CustomEvent("idealy:inspector-closed")
+                  );
                 }}
               />
             </div>
@@ -955,24 +1035,54 @@ function PureArtifact({
           <div className="flex h-full min-h-0 flex-col bg-sidebar font-mono text-xs text-sidebar-foreground">
             <div className="flex shrink-0 items-center justify-between border-b border-sidebar-border/60 px-4 py-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-sidebar-foreground">
-                <TerminalSquare className="size-4 text-sky-300" /> Developer tools
+                <TerminalSquare className="size-4 text-sky-300" /> Developer
+                tools
               </div>
               {(() => {
-                const squadStatus = typeof metadata?.missionSquadStatus === "string"
-                  ? metadata.missionSquadStatus as string : undefined;
-                const fileStatus = typeof metadata?.missionFileStatus === "string"
-                  ? metadata.missionFileStatus as string : undefined;
+                const squadStatus =
+                  typeof metadata?.missionSquadStatus === "string"
+                    ? (metadata.missionSquadStatus as string)
+                    : undefined;
+                const fileStatus =
+                  typeof metadata?.missionFileStatus === "string"
+                    ? (metadata.missionFileStatus as string)
+                    : undefined;
                 const hasError = !!consoleError || squadStatus === "needs-fix";
-                const isBuilding = squadStatus === "building" || fileStatus === "file_started" || fileStatus === "file_content";
-                const isReviewing = fileStatus === "file_saved" || fileStatus === "file_validated";
+                const isBuilding =
+                  squadStatus === "building" ||
+                  fileStatus === "file_started" ||
+                  fileStatus === "file_content";
+                const isReviewing =
+                  fileStatus === "file_saved" ||
+                  fileStatus === "file_validated";
                 const isCorrecting = squadStatus === "auto_correction_started";
                 let badgeText = "Ready";
-                let badgeClass = "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
-                if (hasError) { badgeText = "Error"; badgeClass = "border-rose-400/20 bg-rose-400/10 text-rose-300"; }
-                else if (isCorrecting) { badgeText = "Correcting"; badgeClass = "border-amber-400/20 bg-amber-400/10 text-amber-300"; }
-                else if (isReviewing) { badgeText = "Reviewing"; badgeClass = "border-violet-400/20 bg-violet-400/10 text-violet-300"; }
-                else if (isBuilding) { badgeText = "Building"; badgeClass = "border-sky-400/20 bg-sky-400/10 text-sky-300"; }
-                return <span aria-live="polite" className={`rounded-full border px-2 py-1 text-[10px] ${badgeClass}`}>{badgeText}</span>;
+                let badgeClass =
+                  "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
+                if (hasError) {
+                  badgeText = "Error";
+                  badgeClass =
+                    "border-rose-400/20 bg-rose-400/10 text-rose-300";
+                } else if (isCorrecting) {
+                  badgeText = "Correcting";
+                  badgeClass =
+                    "border-amber-400/20 bg-amber-400/10 text-amber-300";
+                } else if (isReviewing) {
+                  badgeText = "Reviewing";
+                  badgeClass =
+                    "border-violet-400/20 bg-violet-400/10 text-violet-300";
+                } else if (isBuilding) {
+                  badgeText = "Building";
+                  badgeClass = "border-sky-400/20 bg-sky-400/10 text-sky-300";
+                }
+                return (
+                  <span
+                    aria-live="polite"
+                    className={`rounded-full border px-2 py-1 text-[10px] ${badgeClass}`}
+                  >
+                    {badgeText}
+                  </span>
+                );
               })()}
             </div>
             <div className="flex shrink-0 items-center gap-1 border-b border-sidebar-border/50 px-3 py-2">
@@ -998,53 +1108,162 @@ function PureArtifact({
               {consoleTab === "network" ? (
                 <div className="space-y-2 text-muted-foreground">
                   <p className="rounded-md border border-sidebar-border/40 bg-background/20 px-3 py-2 text-[11px] leading-5">
-                    Le preview est isolé dans un document local. Les requêtes réseau du runtime apparaîtront ici lorsqu&apos;elles seront disponibles.
+                    Le preview est isolé dans un document local. Les requêtes
+                    réseau du runtime apparaîtront ici lorsqu&apos;elles seront
+                    disponibles.
                   </p>
                 </div>
-               ) : consoleTab === "build" ? (() => {
-                  const squadStatus = typeof metadata?.missionSquadStatus === "string"
-                    ? metadata.missionSquadStatus as string : undefined;
-                  const fileStatus = typeof metadata?.missionFileStatus === "string"
-                    ? metadata.missionFileStatus as string : undefined;
+              ) : consoleTab === "build" ? (
+                (() => {
+                  const squadStatus =
+                    typeof metadata?.missionSquadStatus === "string"
+                      ? (metadata.missionSquadStatus as string)
+                      : undefined;
+                  const fileStatus =
+                    typeof metadata?.missionFileStatus === "string"
+                      ? (metadata.missionFileStatus as string)
+                      : undefined;
                   const fileCount = latestMissionFiles.length;
-                  const hasPlan = !!metadata?.missionPlan || ["planned", "building", "reviewing", "ready", "needs-fix", "auto_correction_started"].includes(squadStatus ?? "");
-                  const hasBuilderStarted = fileCount > 0 || ["file_started", "file_content", "file_saved", "file_validated"].includes(fileStatus ?? "");
-                  const buildReport = metadata?.missionBuildVerification && typeof metadata.missionBuildVerification === "object"
-                    ? metadata.missionBuildVerification as { status?: string; stdout?: string; stderr?: string; error?: string; durationMs?: number }
-                    : null;
+                  const hasPlan =
+                    !!metadata?.missionPlan ||
+                    [
+                      "planned",
+                      "building",
+                      "reviewing",
+                      "ready",
+                      "needs-fix",
+                      "auto_correction_started",
+                    ].includes(squadStatus ?? "");
+                  const hasBuilderStarted =
+                    fileCount > 0 ||
+                    [
+                      "file_started",
+                      "file_content",
+                      "file_saved",
+                      "file_validated",
+                    ].includes(fileStatus ?? "");
+                  const buildReport =
+                    metadata?.missionBuildVerification &&
+                    typeof metadata.missionBuildVerification === "object"
+                      ? (metadata.missionBuildVerification as {
+                          status?: string;
+                          stdout?: string;
+                          stderr?: string;
+                          error?: string;
+                          durationMs?: number;
+                        })
+                      : null;
                   const isComplete = squadStatus === "ready";
                   const isFailed = squadStatus === "needs-fix";
-                  type Phase = { iconType: "check" | "chevron" | "cross"; text: string };
+                  type Phase = {
+                    iconType: "check" | "chevron" | "cross";
+                    text: string;
+                  };
                   const phases: Phase[] = [
-                    ...(hasPlan ? [{ iconType: "check" as const, text: "Plan de mission enregistré" }] : []),
-                    ...(hasBuilderStarted ? [{
-                      iconType: (fileStatus === "file_saved" || fileStatus === "file_validated" || fileCount > 0) ? "check" as const : "chevron" as const,
-                      text: `${fileCount} fichier${fileCount === 1 ? "" : "s"} réellement reçu${fileCount === 1 ? "" : "s"}`,
-                    }] : []),
-                    ...(squadStatus === "reviewing" ? [{ iconType: "chevron" as const, text: "Vérification en cours" }] : []),
-                    ...(squadStatus === "auto_correction_started" ? [{ iconType: "chevron" as const, text: "Correction automatique en cours" }] : []),
-                    ...(buildReport ? [{
-                      iconType: buildReport.status === "passed" ? "check" as const : "cross" as const,
-                      text: buildReport.status === "passed"
-                        ? `Compilation réelle réussie${typeof buildReport.durationMs === "number" ? ` · ${(buildReport.durationMs / 1000).toFixed(1)} s` : ""}`
-                        : "Compilation réelle échouée",
-                    }] : []),
-                    ...(isComplete && !buildReport ? [{ iconType: "check" as const, text: "Mission marquée comme terminée par le backend" }] : []),
-                    ...(isFailed && !buildReport ? [{ iconType: "cross" as const, text: "Le backend demande une correction" }] : []),
-                    ...(!hasPlan && !hasBuilderStarted && !buildReport ? [{ iconType: "chevron" as const, text: "En attente des premiers événements de mission…" }] : []),
+                    ...(hasPlan
+                      ? [
+                          {
+                            iconType: "check" as const,
+                            text: "Plan de mission enregistré",
+                          },
+                        ]
+                      : []),
+                    ...(hasBuilderStarted
+                      ? [
+                          {
+                            iconType:
+                              fileStatus === "file_saved" ||
+                              fileStatus === "file_validated" ||
+                              fileCount > 0
+                                ? ("check" as const)
+                                : ("chevron" as const),
+                            text: `${fileCount} fichier${fileCount === 1 ? "" : "s"} réellement reçu${fileCount === 1 ? "" : "s"}`,
+                          },
+                        ]
+                      : []),
+                    ...(squadStatus === "reviewing"
+                      ? [
+                          {
+                            iconType: "chevron" as const,
+                            text: "Reviewer — validation structurelle",
+                          },
+                        ]
+                      : []),
+                    ...(squadStatus === "auto_correction_started"
+                      ? [
+                          {
+                            iconType: "chevron" as const,
+                            text: "Correction automatique en cours",
+                          },
+                        ]
+                      : []),
+                    ...(buildReport
+                      ? [
+                          {
+                            iconType:
+                              buildReport.status === "passed"
+                                ? ("check" as const)
+                                : ("cross" as const),
+                            text:
+                              buildReport.status === "passed"
+                                ? `Compilation réelle réussie${typeof buildReport.durationMs === "number" ? ` · ${(buildReport.durationMs / 1000).toFixed(1)} s` : ""}`
+                                : "Compilation réelle échouée",
+                          },
+                        ]
+                      : []),
+                    ...(isComplete && !buildReport
+                      ? [
+                          {
+                            iconType: "check" as const,
+                            text: "Mission marquée comme terminée par le backend",
+                          },
+                        ]
+                      : []),
+                    ...(isFailed && !buildReport
+                      ? [
+                          {
+                            iconType: "cross" as const,
+                            text: "Le backend demande une correction",
+                          },
+                        ]
+                      : []),
+                    ...(!hasPlan && !hasBuilderStarted && !buildReport
+                      ? [
+                          {
+                            iconType: "chevron" as const,
+                            text: "En attente des premiers événements de mission…",
+                          },
+                        ]
+                      : []),
                   ];
-                  const logs = [buildReport?.stdout, buildReport?.stderr, buildReport?.error].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+                  const logs = [
+                    buildReport?.stdout,
+                    buildReport?.stderr,
+                    buildReport?.error,
+                  ].filter(
+                    (value): value is string =>
+                      typeof value === "string" && value.trim().length > 0
+                  );
                   return (
                     <div className="space-y-3 text-[11px] text-muted-foreground">
                       <div className="space-y-2">
                         {phases.map((phase, i) => (
-                          <p key={i} className="flex items-center gap-1.5">
+                          <p className="flex items-center gap-1.5" key={i}>
                             {phase.iconType === "check" ? (
-                              <Check className="size-3.5 shrink-0 text-emerald-400" strokeWidth={1.5} />
+                              <Check
+                                className="size-3.5 shrink-0 text-emerald-400"
+                                strokeWidth={1.5}
+                              />
                             ) : phase.iconType === "cross" ? (
-                              <X className="size-3.5 shrink-0 text-rose-400" strokeWidth={1.5} />
+                              <X
+                                className="size-3.5 shrink-0 text-rose-400"
+                                strokeWidth={1.5}
+                              />
                             ) : (
-                              <ChevronRight className="size-3.5 shrink-0 text-sky-400" strokeWidth={1.5} />
+                              <ChevronRight
+                                className="size-3.5 shrink-0 text-sky-400"
+                                strokeWidth={1.5}
+                              />
                             )}
                             <span>{phase.text}</span>
                           </p>
@@ -1052,26 +1271,69 @@ function PureArtifact({
                       </div>
                       {logs.length > 0 ? (
                         <div className="border-t border-sidebar-border/50 pt-3">
-                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Sortie réelle du build</p>
-                          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md bg-background/50 p-3 font-mono text-[10px] leading-5 text-sidebar-foreground/80">{logs.join("\n\n")}</pre>
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                            Sortie réelle du build
+                          </p>
+                          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md bg-background/50 p-3 font-mono text-[10px] leading-5 text-sidebar-foreground/80">
+                            {logs.join("\n\n")}
+                          </pre>
                         </div>
                       ) : null}
                     </div>
                   );
-                })() : consoleEntries.length > 0 ? (
+                })()
+              ) : consoleEntries.length > 0 ? (
                 <div className="space-y-2">
-                  {consoleEntries.map((entry: { id: string; status: string; contents: { type: string; value: string }[] }) => (
-                    <div className="rounded-md border border-sidebar-border/50 bg-background/20 px-3 py-2" key={entry.id}>
-                      <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground"><span className={entry.status === "failed" ? "text-red-300" : "text-emerald-300"}>{entry.status}</span><span>runtime</span></div>
-                      {entry.contents.length > 0 ? entry.contents.map((content, index) => <p className="whitespace-pre-wrap text-sidebar-foreground/80" key={`${entry.id}-${index}`}>{content.value}</p>) : <p className="text-muted-foreground">No output yet.</p>}
-                    </div>
-                  ))}
+                  {consoleEntries.map(
+                    (entry: {
+                      id: string;
+                      status: string;
+                      contents: { type: string; value: string }[];
+                    }) => (
+                      <div
+                        className="rounded-md border border-sidebar-border/50 bg-background/20 px-3 py-2"
+                        key={entry.id}
+                      >
+                        <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                          <span
+                            className={
+                              entry.status === "failed"
+                                ? "text-red-300"
+                                : "text-emerald-300"
+                            }
+                          >
+                            {entry.status}
+                          </span>
+                          <span>runtime</span>
+                        </div>
+                        {entry.contents.length > 0 ? (
+                          entry.contents.map((content, index) => (
+                            <p
+                              className="whitespace-pre-wrap text-sidebar-foreground/80"
+                              key={`${entry.id}-${index}`}
+                            >
+                              {content.value}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground">
+                            No output yet.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               ) : (
                 <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center text-muted-foreground">
                   <TerminalSquare className="mb-3 size-6 text-sky-300/70" />
-                  <p className="text-sm font-medium text-sidebar-foreground">No console output yet</p>
-                  <p className="mt-1 max-w-xs text-[11px] leading-5">Runtime logs, network events and build messages will appear here as the preview runs.</p>
+                  <p className="text-sm font-medium text-sidebar-foreground">
+                    No console output yet
+                  </p>
+                  <p className="mt-1 max-w-xs text-[11px] leading-5">
+                    Runtime logs, network events and build messages will appear
+                    here as the preview runs.
+                  </p>
                 </div>
               )}
             </div>
@@ -1086,33 +1348,51 @@ function PureArtifact({
         ) : (
           <div className="flex h-full min-h-0 overflow-hidden">
             <aside className="hidden w-44 shrink-0 overflow-y-auto border-r border-sidebar-border/60 bg-sidebar/70 p-2 sm:block overscroll-contain">
-              <div className="mb-2.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"><span>Fichiers</span><Folder className="size-3.5" /></div>
+              <div className="mb-2.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <span>Fichiers</span>
+                <Folder className="size-3.5" />
+              </div>
               <div className="space-y-0.5 text-xs">
-                {latestMissionFiles.length > 0 ? latestMissionFiles.map((file) => {
-                  const isActive = file.path === selectedMissionFilePath;
-                  const isJson = file.path.endsWith(".json");
-                  const fileColor = file.status === "error"
-                    ? "text-red-300"
-                    : file.status === "writing"
-                      ? "text-amber-300"
-                      : "text-sky-300";
-                  return (
-                    <button
-                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors text-xs ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"}`}
-                      key={`${file.path}:${file.version}`}
-                      onClick={() => setSelectedMissionFilePath(file.path)}
-                      type="button"
-                    >
-                      {isJson ? <FileJson className={`size-3.5 shrink-0 ${fileColor}`} /> : <FileCode2 className={`size-3.5 shrink-0 ${fileColor}`} />}
-                      <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{file.path}</span>
-                      <span
-                        aria-label={`Statut : ${missionFileStatusLabel(file.status)}`}
-                        className="shrink-0 text-[8px] uppercase tracking-[0.08em] opacity-75 font-semibold"
-                        title={missionFileStatusLabel(file.status)}
-                      >{missionFileStatusLabel(file.status)}</span>
-                    </button>
-                  );
-                }) : (
+                {latestMissionFiles.length > 0 ? (
+                  latestMissionFiles.map((file) => {
+                    const isActive = file.path === selectedMissionFilePath;
+                    const isJson = file.path.endsWith(".json");
+                    const fileColor =
+                      file.status === "error"
+                        ? "text-red-300"
+                        : file.status === "writing"
+                          ? "text-amber-300"
+                          : "text-sky-300";
+                    return (
+                      <button
+                        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors text-xs ${isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"}`}
+                        key={`${file.path}:${file.version}`}
+                        onClick={() => setSelectedMissionFilePath(file.path)}
+                        type="button"
+                      >
+                        {isJson ? (
+                          <FileJson
+                            className={`size-3.5 shrink-0 ${fileColor}`}
+                          />
+                        ) : (
+                          <FileCode2
+                            className={`size-3.5 shrink-0 ${fileColor}`}
+                          />
+                        )}
+                        <span className="min-w-0 flex-1 truncate font-mono text-[11px]">
+                          {file.path}
+                        </span>
+                        <span
+                          aria-label={`Statut : ${missionFileStatusLabel(file.status)}`}
+                          className="shrink-0 text-[8px] uppercase tracking-[0.08em] opacity-75 font-semibold"
+                          title={missionFileStatusLabel(file.status)}
+                        >
+                          {missionFileStatusLabel(file.status)}
+                        </span>
+                      </button>
+                    );
+                  })
+                ) : (
                   <div className="rounded-md border border-dashed border-sidebar-border/70 px-2.5 py-3 text-[11px] leading-5 text-muted-foreground">
                     Les fichiers créés s'afficheront ici en direct.
                   </div>
@@ -1121,7 +1401,7 @@ function PureArtifact({
             </aside>
             <div className="min-w-0 flex-1 overflow-auto h-full overscroll-contain">
               <artifactDefinition.content
-                  content={editorContent}
+                content={editorContent}
                 currentVersionIndex={currentVersionIndex}
                 getDocumentContentById={getDocumentContentById}
                 isCurrentVersion={isCurrentVersion}

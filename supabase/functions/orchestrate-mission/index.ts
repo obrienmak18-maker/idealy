@@ -24,7 +24,7 @@ type AgentDefinition = {
   role: string;
 };
 
-const MAX_REVIEW_ITERATIONS = 1;
+const MAX_REVIEW_ITERATIONS = 3;
 const SQUAD_POWER_POINTS = 50;
 
 const WAY_AGENTS: Record<string, AgentDefinition[]> = {

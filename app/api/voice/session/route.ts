@@ -19,8 +19,8 @@ export async function GET(request: Request) {
       const firebaseUser = await verifyFirebaseToken(bearer).catch(() => null);
       if (firebaseUser?.uid && firebaseUser.email_verified === true) {
         user = {
-          id: firebaseUser.uid,
           email: firebaseUser.email ?? undefined,
+          id: firebaseUser.uid,
           name: firebaseUser.name ?? undefined,
           type: "regular",
         };
@@ -30,8 +30,11 @@ export async function GET(request: Request) {
 
   if (!user) {
     return NextResponse.json(
-      { configured: false, error: "Reconnectez-vous à Idealy pour ouvrir une session Live." },
-      { status: 401, headers: { "Cache-Control": "no-store" } },
+      {
+        configured: false,
+        error: "Reconnectez-vous à Idealy pour ouvrir une session Live.",
+      },
+      { headers: { "Cache-Control": "no-store" }, status: 401 }
     );
   }
 
@@ -41,8 +44,11 @@ export async function GET(request: Request) {
 
   if (!apiKey) {
     return NextResponse.json(
-      { configured: false, error: "Le service vocal Live n’est pas configuré sur le serveur." },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
+      {
+        configured: false,
+        error: "Le service vocal Live n’est pas configuré sur le serveur.",
+      },
+      { headers: { "Cache-Control": "no-store" }, status: 503 }
     );
   }
 
@@ -53,51 +59,87 @@ export async function GET(request: Request) {
   const tokenResponse = await fetch(
     "https://generativelanguage.googleapis.com/v1beta/auth_tokens",
     {
-      method: "POST",
+      body: JSON.stringify({
+        expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
+        liveConnectConstraints: {
+          model: `models/${LIVE_MODEL}`,
+        },
+        newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
+        uses: 1,
+      }),
+      cache: "no-store",
       headers: {
         "Content-Type": "application/json",
         "x-goog-api-key": apiKey,
       },
-      body: JSON.stringify({
-        uses: 1,
-        expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
-        newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
-        liveConnectConstraints: {
-          model: `models/${LIVE_MODEL}`,
-        },
-      }),
-      cache: "no-store",
+      method: "POST",
       signal: AbortSignal.timeout(10_000),
-    },
+    }
   ).catch(() => null);
 
   if (!tokenResponse?.ok) {
-    const detail = await tokenResponse?.json().catch(() => null) as
-      | { error?: { message?: string } }
-      | null;
-    console.error("[Live Voice] Could not provision an ephemeral Gemini token.", {
-      status: tokenResponse?.status ?? 503,
-      message: detail?.error?.message ?? "token provisioning failed",
-    });
+    const detail = (await tokenResponse?.json().catch(() => null)) as {
+      error?: { message?: string };
+    } | null;
+    console.error(
+      "[Live Voice] Could not provision an ephemeral Gemini token.",
+      {
+        message: detail?.error?.message ?? "token provisioning failed",
+        status: tokenResponse?.status ?? 503,
+      }
+    );
     return NextResponse.json(
-      { configured: false, error: "Impossible de préparer une session vocale Live. Réessayez dans un instant." },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
+      {
+        configured: false,
+        error:
+          "Impossible de préparer une session vocale Live. Réessayez dans un instant.",
+      },
+      { headers: { "Cache-Control": "no-store" }, status: 503 }
     );
   }
 
-  const tokenPayload = await tokenResponse.json().catch(() => null) as
-    | { name?: unknown }
-    | null;
+  const tokenPayload = (await tokenResponse.json().catch(() => null)) as {
+    name?: unknown;
+  } | null;
   const ephemeralToken =
     typeof tokenPayload?.name === "string" ? tokenPayload.name : null;
 
   if (!ephemeralToken) {
     console.error("[Live Voice] Gemini returned no ephemeral token name.");
     return NextResponse.json(
-      { configured: false, error: "Gemini n’a pas fourni de jeton vocal utilisable." },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
+      {
+        configured: false,
+        error: "Gemini n’a pas fourni de jeton vocal utilisable.",
+      },
+      { headers: { "Cache-Control": "no-store" }, status: 503 }
     );
   }
+
+  const { searchParams } = new URL(request.url);
+  const requestedWay = (
+    searchParams.get("way") ||
+    request.headers.get("x-idealy-way") ||
+    "ninja"
+  ).toLowerCase();
+  const requestedLang = (
+    searchParams.get("lang") ||
+    request.headers.get("x-idealy-lang") ||
+    "fr"
+  ).toLowerCase();
+
+  // Map Ways to Gemini voices:
+  // ninja -> Puck (energetic, agile, crisp)
+  // mage -> Kore (creative, mystical, resonant)
+  // hunter -> Fenrir (tactical, assertive, focused)
+  // professional -> Charon (executive, articulate, measured)
+  const WAY_VOICE_MAP: Record<string, string> = {
+    hunter: "Fenrir",
+    mage: "Kore",
+    ninja: "Puck",
+    professional: "Charon",
+  };
+
+  const voiceName = WAY_VOICE_MAP[requestedWay] ?? "Puck";
 
   const wsUrl = new URL(LIVE_WEBSOCKET_BASE);
   wsUrl.searchParams.set("access_token", ephemeralToken);
@@ -105,11 +147,13 @@ export async function GET(request: Request) {
   return NextResponse.json(
     {
       configured: true,
+      language: requestedLang,
       model: LIVE_MODEL,
+      sampleRate: 16_000,
+      voiceName,
+      way: requestedWay,
       wsUrl: wsUrl.toString(),
-      sampleRate: 16000,
-      voiceName: "Aoede",
     },
-    { headers: { "Cache-Control": "no-store" } },
+    { headers: { "Cache-Control": "no-store" } }
   );
 }

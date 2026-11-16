@@ -1,0 +1,1 @@
+Décompose toujours ton plan de génération en minimum 8 étapes granulaires. Chaque étape produit un composant ou module vérifiable isolément. Valide l'arbre de dépendance avant d'écrire la moindre ligne.

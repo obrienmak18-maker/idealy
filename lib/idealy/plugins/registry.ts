@@ -62,6 +62,19 @@ export type EnvironmentFacts = {
  * plugin is genuinely available; a non-empty list is what the UI renders as
  * "configuration required".
  */
+const ENV_ALIASES: Record<string, string[]> = {
+  GITHUB_CLIENT_ID: ["GITHUB_OAUTH_CLIENT_ID"],
+  GITHUB_CLIENT_SECRET: ["GITHUB_OAUTH_CLIENT_SECRET"],
+  GITHUB_OAUTH_CLIENT_ID: ["GITHUB_CLIENT_ID"],
+  GITHUB_OAUTH_CLIENT_SECRET: ["GITHUB_CLIENT_SECRET"],
+  GOOGLE_CLIENT_ID: ["GOOGLE_OAUTH_CLIENT_ID"],
+  GOOGLE_CLIENT_SECRET: ["GOOGLE_OAUTH_CLIENT_SECRET"],
+  GOOGLE_OAUTH_CLIENT_ID: ["GOOGLE_CLIENT_ID"],
+  GOOGLE_OAUTH_CLIENT_SECRET: ["GOOGLE_CLIENT_SECRET"],
+  NEXT_PUBLIC_VERCEL_APP_CLIENT_ID: ["VERCEL_APP_CLIENT_ID"],
+  VERCEL_APP_CLIENT_ID: ["NEXT_PUBLIC_VERCEL_APP_CLIENT_ID"],
+};
+
 export function missingRequirements({
   facts,
   manifest,
@@ -75,7 +88,11 @@ export function missingRequirements({
     missing.push("configuration");
   }
   for (const envName of manifest.requirements.requiredSecretEnvNames) {
-    if (!facts.presentSecretEnvNames.has(envName)) {
+    const aliases = ENV_ALIASES[envName] ?? [];
+    const isPresent =
+      facts.presentSecretEnvNames.has(envName) ||
+      aliases.some((alias) => facts.presentSecretEnvNames.has(alias));
+    if (!isPresent) {
       missing.push(`server_secret:${envName}`);
     }
   }
@@ -101,7 +118,10 @@ export function missingRequirements({
 }
 
 /** GitHub's broader `user` OAuth scope also satisfies its `read:user` scope. */
-function hasGrantedScope(grantedScopes: ReadonlySet<string>, requiredScope: string) {
+function hasGrantedScope(
+  grantedScopes: ReadonlySet<string>,
+  requiredScope: string
+) {
   return (
     grantedScopes.has(requiredScope) ||
     (requiredScope === "read:user" && grantedScopes.has("user"))

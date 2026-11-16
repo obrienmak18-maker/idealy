@@ -14,6 +14,7 @@ import { authenticatedFetch, signOutFirebase } from "../../services/firebase";
 type AccountProfile = {
   accountEmail: string | null;
   displayName: string | null;
+  plan?: string | null;
 };
 
 type AccountResult = {
@@ -23,28 +24,71 @@ type AccountResult = {
 
 let accountRequest: Promise<AccountResult> | null = null;
 
+function formatPlanName(
+  plan: string | undefined | null,
+  language: string
+): string {
+  if (!plan) {
+    return language === "en"
+      ? "Free Tier"
+      : language === "es"
+        ? "Plan Gratuito"
+        : "Compte Gratuit";
+  }
+  const p = plan.toLowerCase();
+  if (p === "pro") {
+    return "Plan Pro";
+  }
+  if (p === "business") {
+    return "Plan Business";
+  }
+  if (p === "enterprise") {
+    return "Plan Enterprise";
+  }
+  return language === "en"
+    ? "Free Tier"
+    : language === "es"
+      ? "Plan Gratuito"
+      : "Compte Gratuit";
+}
+
 function loadAccountProfile(): Promise<AccountResult> {
   if (!accountRequest) {
-    accountRequest = authenticatedFetch("/api/idealy/profile/preferences", {
-      cache: "no-store",
-      credentials: "same-origin",
-    })
-      .then(async (response) => {
-        if (response.status === 401) {
+    accountRequest = Promise.all([
+      authenticatedFetch("/api/idealy/profile/preferences", {
+        cache: "no-store",
+        credentials: "same-origin",
+      }),
+      authenticatedFetch("/api/idealy/power", {
+        cache: "no-store",
+        credentials: "same-origin",
+      }).catch(() => null),
+    ])
+      .then(async ([prefResponse, powerResponse]) => {
+        if (prefResponse.status === 401) {
           return { profile: null, requiresSignIn: true };
         }
-        if (!response.ok) {
+        if (!prefResponse.ok) {
           return { profile: null, requiresSignIn: false };
         }
-        const payload = (await response.json().catch(() => null)) as
-          | AccountProfile
-          | null;
+        const prefPayload = (await prefResponse
+          .json()
+          .catch(() => null)) as AccountProfile | null;
+        let plan: string | null = null;
+        if (powerResponse && powerResponse.ok) {
+          const powerPayload = (await powerResponse
+            .json()
+            .catch(() => null)) as { plan?: string } | null;
+          if (typeof powerPayload?.plan === "string") {
+            plan = powerPayload.plan;
+          }
+        }
         return {
           profile:
-            payload &&
-            (typeof payload.displayName === "string" ||
-              typeof payload.accountEmail === "string")
-              ? payload
+            prefPayload &&
+            (typeof prefPayload.displayName === "string" ||
+              typeof prefPayload.accountEmail === "string")
+              ? { ...prefPayload, plan }
               : null,
           requiresSignIn: false,
         };
@@ -58,7 +102,8 @@ export const AccountChip: React.FC<{
   collapsed?: boolean;
   onOpenSettings: () => void;
 }> = ({ collapsed = false, onOpenSettings }) => {
-  const { setActivePage, theme, setTheme, setIsCommandPaletteOpen } = useApp();
+  const { setActivePage, theme, setTheme, setIsCommandPaletteOpen, language } =
+    useApp();
   const [result, setResult] = useState<AccountResult>({
     profile: null,
     requiresSignIn: false,
@@ -71,7 +116,9 @@ export const AccountChip: React.FC<{
   useEffect(() => {
     let cancelled = false;
     void loadAccountProfile().then((account) => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       setResult(account);
       setLoading(false);
     });
@@ -82,7 +129,9 @@ export const AccountChip: React.FC<{
 
   // Close outside
   useEffect(() => {
-    if (!isMenuOpen) return;
+    if (!isMenuOpen) {
+      return;
+    }
     const handleClickOutside = (e: MouseEvent) => {
       if (
         menuRef.current &&
@@ -141,7 +190,13 @@ export const AccountChip: React.FC<{
               {name}
             </span>
             <span className="truncate text-[10px] text-[var(--dsw-alias-label-tertiary)]">
-              Plan Pro
+              {loading
+                ? language === "en"
+                  ? "Loading…"
+                  : language === "es"
+                    ? "Cargando…"
+                    : "Chargement…"
+                : formatPlanName(result.profile?.plan, language)}
             </span>
           </div>
         )}
@@ -171,7 +226,7 @@ export const AccountChip: React.FC<{
             </div>
             <div className="mt-2 flex items-center justify-between">
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/[0.05] text-[var(--dsw-alias-label-secondary)] border border-[var(--dsw-alias-border-l1)]">
-                Compte Idealy
+                {formatPlanName(result.profile?.plan, language)}
               </span>
             </div>
           </div>
@@ -249,7 +304,8 @@ export const AccountChip: React.FC<{
                     localStorage.removeItem("idealy_session");
                     localStorage.removeItem("idealy_user_profile");
                     localStorage.removeItem("idealy_profile");
-                    document.cookie = "idealy_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                    document.cookie =
+                      "idealy_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                   } catch {}
                   window.location.href = "/welcome";
                 }

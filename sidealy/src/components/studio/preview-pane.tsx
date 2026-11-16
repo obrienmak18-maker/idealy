@@ -1,4 +1,17 @@
-import { Eye, Loader2, Play, Square } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Loader2,
+  MessageSquare,
+  MousePointer2,
+  Pencil,
+  Play,
+  Redo2,
+  Square,
+  Type,
+  Undo2,
+} from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -40,6 +53,15 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
     runtimeState
   );
 
+  // Floating Design Palette State
+  const [designTool, setDesignTool] = useState<
+    "select" | "text" | "draw" | "comment" | null
+  >(null);
+  const [paletteMinimized, setPaletteMinimized] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [designFeedback, setDesignFeedback] = useState<string | null>(null);
+
   const refresh = useCallback(() => {
     setIframeKey((k) => k + 1);
   }, []);
@@ -50,6 +72,70 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
     window.addEventListener("idealy:refresh-preview", handler);
     return () => window.removeEventListener("idealy:refresh-preview", handler);
   }, [refresh]);
+
+  const selectDesignTool = (tool: "select" | "text" | "draw" | "comment") => {
+    const nextTool = designTool === tool ? null : tool;
+    setDesignTool(nextTool);
+
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(
+        {
+          mode: nextTool,
+          type: "IDEALY_SET_DESIGN_MODE",
+        },
+        "*"
+      );
+    }
+
+    if (nextTool === "select") {
+      setDesignFeedback(
+        "Mode inspection actif : cliquez sur un élément du rendu."
+      );
+    } else if (nextTool === "text") {
+      setDesignFeedback(
+        "Mode édition directe actif : cliquez sur un texte pour le modifier."
+      );
+    } else if (nextTool === "draw") {
+      setDesignFeedback(
+        "Mode annotation actif : dessinez directement sur la zone."
+      );
+    } else if (nextTool === "comment") {
+      setDesignFeedback(
+        "Mode commentaire : cliquez pour épingler un commentaire."
+      );
+    } else {
+      setDesignFeedback(null);
+    }
+
+    if (nextTool) {
+      setCanUndo(true);
+    }
+  };
+
+  const handleUndo = () => {
+    if (!canUndo) {
+      return;
+    }
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "IDEALY_DESIGN_UNDO" },
+      "*"
+    );
+    setCanRedo(true);
+    setDesignFeedback("Action annulée");
+    setTimeout(() => setDesignFeedback(null), 2000);
+  };
+
+  const handleRedo = () => {
+    if (!canRedo) {
+      return;
+    }
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "IDEALY_DESIGN_REDO" },
+      "*"
+    );
+    setDesignFeedback("Action rétablie");
+    setTimeout(() => setDesignFeedback(null), 2000);
+  };
 
   const dims = DEVICE_DIMENSIONS[device];
 
@@ -174,6 +260,123 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
           src={previewUrl}
           title="Aperçu de l'application"
         />
+
+        {/* Floating Retractable Design Palette */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-auto">
+          {designFeedback && (
+            <div className="mb-2 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10 text-[10px] text-white font-medium shadow-lg animate-fade-in flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {designFeedback}
+            </div>
+          )}
+
+          {paletteMinimized ? (
+            <button
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--dsw-alias-bg-layer-2)]/90 hover:bg-[var(--dsw-alias-bg-layer-2)] border border-[var(--dsw-alias-border-l2)] text-xs font-semibold text-[var(--dsw-alias-label-primary)] shadow-elevated backdrop-blur-md transition-all hover:scale-105"
+              onClick={() => setPaletteMinimized(false)}
+              title="Agrandir la palette Design"
+              type="button"
+            >
+              <MousePointer2 className="h-3.5 w-3.5 text-[var(--idealy-teal-petrol)]" />
+              <span className="text-[11px]">Design</span>
+              <ChevronUp className="h-3 w-3 text-[var(--dsw-alias-label-secondary)]" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1 p-1 rounded-2xl bg-[var(--dsw-alias-bg-layer-2)]/95 border border-[var(--dsw-alias-border-l2)] shadow-2xl backdrop-blur-xl animate-scale-in">
+              {/* Select Element */}
+              <button
+                className={`p-1.5 rounded-xl transition-all ${
+                  designTool === "select"
+                    ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                    : "text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+                }`}
+                onClick={() => selectDesignTool("select")}
+                title="Sélectionner un élément (inspecter / style)"
+                type="button"
+              >
+                <MousePointer2 className="h-4 w-4" />
+              </button>
+
+              {/* Edit text inline */}
+              <button
+                className={`p-1.5 rounded-xl transition-all ${
+                  designTool === "text"
+                    ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                    : "text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+                }`}
+                onClick={() => selectDesignTool("text")}
+                title="Édition de texte directe"
+                type="button"
+              >
+                <Type className="h-4 w-4" />
+              </button>
+
+              {/* Draw / Annotate */}
+              <button
+                className={`p-1.5 rounded-xl transition-all ${
+                  designTool === "draw"
+                    ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                    : "text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+                }`}
+                onClick={() => selectDesignTool("draw")}
+                title="Dessiner / Annoter"
+                type="button"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+
+              {/* Comment */}
+              <button
+                className={`p-1.5 rounded-xl transition-all ${
+                  designTool === "comment"
+                    ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                    : "text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
+                }`}
+                onClick={() => selectDesignTool("comment")}
+                title="Ajouter un commentaire"
+                type="button"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </button>
+
+              <div className="h-4 w-px bg-[var(--dsw-alias-border-l1)] mx-0.5" />
+
+              {/* Undo */}
+              <button
+                className="p-1.5 rounded-xl text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] disabled:opacity-30 transition-all"
+                disabled={!canUndo}
+                onClick={handleUndo}
+                title="Annuler (Ctrl+Z)"
+                type="button"
+              >
+                <Undo2 className="h-4 w-4" />
+              </button>
+
+              {/* Redo */}
+              <button
+                className="p-1.5 rounded-xl text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] disabled:opacity-30 transition-all"
+                disabled={!canRedo}
+                onClick={handleRedo}
+                title="Rétablir (Ctrl+Y)"
+                type="button"
+              >
+                <Redo2 className="h-4 w-4" />
+              </button>
+
+              <div className="h-4 w-px bg-[var(--dsw-alias-border-l1)] mx-0.5" />
+
+              {/* Minimize */}
+              <button
+                className="p-1.5 rounded-xl text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] transition-all"
+                onClick={() => setPaletteMinimized(true)}
+                title="Réduire la palette"
+                type="button"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Built with Idealy watermark */}
         <div className="absolute bottom-2 right-2 z-10">
