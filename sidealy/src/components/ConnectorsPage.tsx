@@ -47,13 +47,10 @@ export const ConnectorsPage: React.FC = () => {
 
   useEffect(() => {
     if (selectedConnector) {
-      const savedKey =
-        localStorage.getItem(`idealy_connector_key_${selectedConnector.id}`) ||
-        "";
-      setConfigToken(savedKey);
+      setConfigToken("");
       setTestStatus("idle");
       setTestFeedback("");
-      setShowAdvanced(Boolean(savedKey));
+      setShowAdvanced(false);
       setIsAuthenticating(false);
     }
   }, [selectedConnector]);
@@ -188,81 +185,192 @@ export const ConnectorsPage: React.FC = () => {
   };
 
   const handleTestConnection = async () => {
+    if (!selectedConnector) return;
     if (!configToken.trim()) {
       setTestStatus("error");
       setTestFeedback("Veuillez renseigner un jeton ou une clé pour tester.");
       return;
     }
     setTestStatus("testing");
-    setTestFeedback("Vérification réelle de la connectivité en cours...");
+    setTestFeedback(
+      `Vérification en temps réel auprès de l'API ${selectedConnector.name}...`
+    );
 
     try {
-      const startTime = performance.now();
-      const res = await fetch("/api/connectors/ping", { cache: "no-store" });
-      const latency = Math.round(performance.now() - startTime);
+      const bearer = await getBearerToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (bearer) {
+        headers.Authorization = `Bearer ${bearer}`;
+      }
 
-      if (res.ok) {
+      const res = await authenticatedFetch("/api/idealy/connectors/test", {
+        body: JSON.stringify({
+          provider: selectedConnector.id,
+          token: configToken.trim(),
+        }),
+        headers,
+        method: "POST",
+      });
+
+      const data = (await res.json().catch(() => ({}))) as {
+        account?: { name?: string; login?: string };
+        error?: string;
+        latencyMs?: number;
+        success?: boolean;
+      };
+
+      if (res.ok && data.success) {
         setTestStatus("success");
+        const accountStr = data.account?.name || data.account?.login;
         setTestFeedback(
-          `Connectivité API validée avec succès (latence réelle : ${latency}ms).`
+          `Authentification réussie auprès de ${selectedConnector.name}${
+            accountStr ? ` (${accountStr})` : ""
+          } — latence : ${data.latencyMs ?? 0}ms.`
         );
       } else {
         setTestStatus("error");
         setTestFeedback(
-          "Le serveur a répondu avec une erreur lors du test de connectivité."
+          data.error ||
+            `Échec de vérification des identifiants avec ${selectedConnector.name}.`
         );
       }
-    } catch {
+    } catch (err) {
       setTestStatus("error");
-      setTestFeedback(
-        "Impossible de joindre le serveur pour tester la connectivité."
-      );
+      const msg = err instanceof Error ? err.message : "Erreur de connexion";
+      setTestFeedback(`Impossible de vérifier les identifiants : ${msg}`);
     }
   };
 
-  const handleSaveConnector = () => {
-    if (!selectedConnector) {
+  const handleSaveConnector = async () => {
+    if (!selectedConnector || !configToken.trim()) {
       return;
     }
-    if (configToken.trim()) {
-      localStorage.setItem(
-        `idealy_connector_key_${selectedConnector.id}`,
-        configToken.trim()
-      );
-      setConnectors((prev) =>
-        prev.map((c) =>
-          c.id === selectedConnector.id
-            ? {
-                ...c,
-                configurationRequired: false,
-                installed: true,
-                status: "connected",
-              }
-            : c
-        )
-      );
-      setSelectedConnector(null);
-    }
-  };
-
-  const handleDisconnectConnector = () => {
-    if (!selectedConnector) {
-      return;
-    }
-    localStorage.removeItem(`idealy_connector_key_${selectedConnector.id}`);
-    setConnectors((prev) =>
-      prev.map((c) =>
-        c.id === selectedConnector.id
-          ? {
-              ...c,
-              configurationRequired: false,
-              installed: false,
-              status: "not_connected",
-            }
-          : c
-      )
+    setTestStatus("testing");
+    setTestFeedback(
+      "Transmission sécurisée et enregistrement sur le serveur..."
     );
-    setSelectedConnector(null);
+
+    try {
+      const bearer = await getBearerToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (bearer) {
+        headers.Authorization = `Bearer ${bearer}`;
+      }
+
+      const res = await authenticatedFetch(
+        "/api/idealy/connectors/credentials",
+        {
+          body: JSON.stringify({
+            provider: selectedConnector.id,
+            token: configToken.trim(),
+          }),
+          headers,
+          method: "POST",
+        }
+      );
+
+      const data = (await res.json().catch(() => ({}))) as {
+        displayName?: string;
+        error?: string;
+        success?: boolean;
+      };
+
+      if (res.ok && data.success) {
+        setConnectors((prev) =>
+          prev.map((c) =>
+            c.id === selectedConnector.id
+              ? {
+                  ...c,
+                  configurationRequired: false,
+                  installed: true,
+                  status: "connected",
+                }
+              : c
+          )
+        );
+        setTestStatus("success");
+        setTestFeedback(
+          `Connecteur ${selectedConnector.name} enregistré et activé sur le serveur.`
+        );
+        await syncConnectorStatus();
+        setTimeout(() => {
+          setSelectedConnector(null);
+        }, 800);
+      } else {
+        setTestStatus("error");
+        setTestFeedback(
+          data.error ||
+            `Impossible d'enregistrer le connecteur ${selectedConnector.name}.`
+        );
+      }
+    } catch (err) {
+      setTestStatus("error");
+      const msg = err instanceof Error ? err.message : "Erreur réseau";
+      setTestFeedback(`Erreur lors de l'enregistrement : ${msg}`);
+    }
+  };
+
+  const handleDisconnectConnector = async () => {
+    if (!selectedConnector) {
+      return;
+    }
+    setTestStatus("testing");
+    setTestFeedback("Révocation des accès en cours sur le serveur...");
+
+    try {
+      const bearer = await getBearerToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (bearer) {
+        headers.Authorization = `Bearer ${bearer}`;
+      }
+
+      const res = await authenticatedFetch(
+        "/api/idealy/connectors/disconnect",
+        {
+          body: JSON.stringify({
+            provider: selectedConnector.id,
+          }),
+          headers,
+          method: "POST",
+        }
+      );
+
+      if (res.ok) {
+        setConnectors((prev) =>
+          prev.map((c) =>
+            c.id === selectedConnector.id
+              ? {
+                  ...c,
+                  configurationRequired: false,
+                  installed: false,
+                  status: "not_connected",
+                }
+              : c
+          )
+        );
+        setSelectedConnector(null);
+        await syncConnectorStatus();
+      } else {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setTestStatus("error");
+        setTestFeedback(
+          data.error ||
+            `Impossible de révoquer le connecteur ${selectedConnector.name}.`
+        );
+      }
+    } catch (err) {
+      setTestStatus("error");
+      const msg = err instanceof Error ? err.message : "Erreur réseau";
+      setTestFeedback(`Erreur lors de la déconnexion : ${msg}`);
+    }
   };
 
   // Fetch live backend connectors & status on mount

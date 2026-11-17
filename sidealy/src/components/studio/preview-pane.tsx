@@ -13,7 +13,7 @@ import {
   Undo2,
 } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type DeviceViewport = "desktop" | "tablet" | "mobile";
 
@@ -62,6 +62,93 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
   const [canRedo, setCanRedo] = useState(false);
   const [designFeedback, setDesignFeedback] = useState<string | null>(null);
 
+  // Calculate authenticated target origin from previewUrl
+  const targetOrigin = useMemo(() => {
+    if (!previewUrl || previewUrl === "about:blank") return null;
+    try {
+      const parsed = new URL(
+        previewUrl,
+        typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
+      );
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        return parsed.origin;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, [previewUrl]);
+
+  // Securely transmit messages ONLY to the validated target origin
+  const sendDesignMessage = useCallback(
+    (message: { type: string; mode?: string | null; [key: string]: unknown }) => {
+      if (!iframeRef.current?.contentWindow || !targetOrigin) {
+        return;
+      }
+      iframeRef.current.contentWindow.postMessage(message, targetOrigin);
+    },
+    [targetOrigin]
+  );
+
+  // Reset palette state on preview URL change
+  useEffect(() => {
+    setDesignTool(null);
+    setCanUndo(false);
+    setCanRedo(false);
+    setDesignFeedback(null);
+  }, [previewUrl]);
+
+  // Strict inbound message validator: verifies event.source, targetOrigin, and payload structure
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // 1. Strict source check: must come directly from our iframe's contentWindow
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) {
+        return;
+      }
+
+      // 2. Strict origin check: must match the target preview origin exactly
+      if (!targetOrigin || event.origin !== targetOrigin) {
+        return;
+      }
+
+      // 3. Structured payload validation
+      const data = event.data;
+      if (!data || typeof data !== "object") {
+        return;
+      }
+
+      const type = (data as { type?: unknown }).type;
+      if (typeof type !== "string") {
+        return;
+      }
+
+      // Handle Idealy Design Protocol & preview bridge events
+      if (type === "IDEALY_DESIGN_HISTORY_CHANGE") {
+        if (typeof data.canUndo === "boolean") setCanUndo(data.canUndo);
+        if (typeof data.canRedo === "boolean") setCanRedo(data.canRedo);
+      } else if (
+        type === "IDEALY_DESIGN_ELEMENT_SELECTED" ||
+        type === "idealy:preview-element"
+      ) {
+        const tagName =
+          data.tagName || data.tag || data.selector || "élément";
+        setDesignFeedback(`Élément sélectionné : <${String(tagName).toLowerCase()}>`);
+      } else if (type === "IDEALY_DESIGN_TEXT_EDITED") {
+        setDesignFeedback("Texte modifié avec succès");
+        setCanUndo(true);
+      } else if (type === "IDEALY_DESIGN_ANNOTATION_SAVED") {
+        setDesignFeedback("Annotation enregistrée");
+        setCanUndo(true);
+      } else if (type === "IDEALY_DESIGN_COMMENT_ADDED") {
+        setDesignFeedback("Commentaire ajouté");
+        setCanUndo(true);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [targetOrigin]);
+
   const refresh = useCallback(() => {
     setIframeKey((k) => k + 1);
   }, []);
@@ -77,15 +164,10 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
     const nextTool = designTool === tool ? null : tool;
     setDesignTool(nextTool);
 
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(
-        {
-          mode: nextTool,
-          type: "IDEALY_SET_DESIGN_MODE",
-        },
-        "*"
-      );
-    }
+    sendDesignMessage({
+      mode: nextTool,
+      type: "IDEALY_SET_DESIGN_MODE",
+    });
 
     if (nextTool === "select") {
       setDesignFeedback(
@@ -116,10 +198,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
     if (!canUndo) {
       return;
     }
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: "IDEALY_DESIGN_UNDO" },
-      "*"
-    );
+    sendDesignMessage({ type: "IDEALY_DESIGN_UNDO" });
     setCanRedo(true);
     setDesignFeedback("Action annulée");
     setTimeout(() => setDesignFeedback(null), 2000);
@@ -129,10 +208,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
     if (!canRedo) {
       return;
     }
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: "IDEALY_DESIGN_REDO" },
-      "*"
-    );
+    sendDesignMessage({ type: "IDEALY_DESIGN_REDO" });
     setDesignFeedback("Action rétablie");
     setTimeout(() => setDesignFeedback(null), 2000);
   };

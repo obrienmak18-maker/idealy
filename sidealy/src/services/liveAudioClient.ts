@@ -15,6 +15,19 @@ export type LiveAudioClientCallbacks = {
   onAudioLevel?: (level: number) => void;
 };
 
+export const WAY_VOICE_MAP: Record<string, string> = {
+  hunter: "Fenrir",
+  mage: "Kore",
+  ninja: "Puck",
+  professional: "Charon",
+};
+
+export function getVoiceForWay(way?: string | null): string {
+  if (!way) return "Puck";
+  const normalized = way.toLowerCase().trim();
+  return WAY_VOICE_MAP[normalized] || "Puck";
+}
+
 const PCM_CHUNK_SAMPLES = 2048;
 
 export class LiveAudioClient {
@@ -123,7 +136,7 @@ export class LiveAudioClient {
                 speechConfig: {
                   voiceConfig: {
                     prebuiltVoiceConfig: {
-                      voiceName: config.voiceName || "Aoede",
+                      voiceName: config.voiceName || getVoiceForWay(way),
                     },
                   },
                 },

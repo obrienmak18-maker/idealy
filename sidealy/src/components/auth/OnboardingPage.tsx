@@ -29,64 +29,249 @@ const WAY_RGB: Record<(typeof WAYS)[number], string> = {
   professional: "37,99,235",
 };
 
-const PROJECTS = [
+const PROJECT_CONFIG = [
   {
-    desc: "Dashboard, Stripe, gestion utilisateurs",
     icon: Layout,
     id: "saas",
-    label: "SaaS & Abonnements",
+    translations: {
+      en: { desc: "Dashboard, Stripe, user management", label: "SaaS & Subscriptions" },
+      es: { desc: "Panel, Stripe, gestión de usuarios", label: "SaaS y Suscripciones" },
+      fr: { desc: "Dashboard, Stripe, gestion utilisateurs", label: "SaaS & Abonnements" },
+    },
   },
   {
-    desc: "Expérience interactive, API & temps réel",
     icon: Globe,
     id: "web",
-    label: "Application Web",
+    translations: {
+      en: { desc: "Interactive experience, API & real-time", label: "Web Application" },
+      es: { desc: "Experiencia interactiva, API y tiempo real", label: "Aplicación Web" },
+      fr: { desc: "Expérience interactive, API & temps réel", label: "Application Web" },
+    },
   },
   {
-    desc: "Catalogue, panier, checkout & inventaire",
     icon: ShoppingBag,
     id: "site",
-    label: "Site e-commerce",
+    translations: {
+      en: { desc: "Catalog, cart, checkout & inventory", label: "E-commerce Website" },
+      es: { desc: "Catálogo, carrito, checkout e inventario", label: "Sitio de Comercio Electrónico" },
+      fr: { desc: "Catalogue, panier, checkout & inventaire", label: "Site e-commerce" },
+    },
   },
   {
-    desc: "Backoffice d'équipe, gestion de tickets",
     icon: Database,
     id: "internal_tool",
-    label: "Outil Interne / CRM",
+    translations: {
+      en: { desc: "Team backoffice, ticket management", label: "Internal Tool / CRM" },
+      es: { desc: "Backoffice de equipo, gestión de tickets", label: "Herramienta Interna / CRM" },
+      fr: { desc: "Backoffice d'équipe, gestion de tickets", label: "Outil Interne / CRM" },
+    },
   },
   {
-    desc: "Valider une idée ou tester une fonctionnalité",
     icon: Rocket,
     id: "prototype",
-    label: "Prototype Rapide",
+    translations: {
+      en: { desc: "Validate an idea or test a feature", label: "Rapid Prototype" },
+      es: { desc: "Validar una idea o probar una función", label: "Prototipo Rápido" },
+      fr: { desc: "Valider une idée ou tester une fonctionnalité", label: "Prototype Rapide" },
+    },
   },
   {
-    desc: "Projet sur-mesure ou concept novateur",
     icon: Compass,
     id: "other",
-    label: "Autre Création",
+    translations: {
+      en: { desc: "Bespoke project or novel concept", label: "Custom Creation" },
+      es: { desc: "Proyecto a medida o concepto innovador", label: "Otra Creación" },
+      fr: { desc: "Projet sur-mesure ou concept novateur", label: "Autre Création" },
+    },
   },
 ] as const;
 
-const LEVELS = [
-  ["non_coder", "Je ne code pas (No-code / Vision)"],
-  ["beginner", "Débutant (Notions de base)"],
-  ["intermediate", "Intermédiaire (HTML, CSS, JS)"],
-  ["advanced", "Avancé (React, TypeScript, APIs)"],
-  ["expert", "Expert (Architecture & DevOps)"],
+const LEVEL_CONFIG = [
+  {
+    id: "non_coder",
+    translations: {
+      en: "I don't code (No-code / Vision)",
+      es: "No programo (No-code / Visión)",
+      fr: "Je ne code pas (No-code / Vision)",
+    },
+  },
+  {
+    id: "beginner",
+    translations: {
+      en: "Beginner (Basics)",
+      es: "Principiante (Nociones básicas)",
+      fr: "Débutant (Notions de base)",
+    },
+  },
+  {
+    id: "intermediate",
+    translations: {
+      en: "Intermediate (HTML, CSS, JS)",
+      es: "Intermedio (HTML, CSS, JS)",
+      fr: "Intermédiaire (HTML, CSS, JS)",
+    },
+  },
+  {
+    id: "advanced",
+    translations: {
+      en: "Advanced (React, TypeScript, APIs)",
+      es: "Avanzado (React, TypeScript, APIs)",
+      fr: "Avancé (React, TypeScript, APIs)",
+    },
+  },
+  {
+    id: "expert",
+    translations: {
+      en: "Expert (Architecture & DevOps)",
+      es: "Experto (Arquitectura y DevOps)",
+      fr: "Expert (Architecture & DevOps)",
+    },
+  },
 ] as const;
 
-const SOURCES = [
-  ["youtube", "YouTube"],
-  ["github", "GitHub"],
-  ["google", "Recherche Google"],
-  ["community", "Communauté / Réseaux sociaux"],
-  ["friend", "Bouche-à-oreille"],
-  ["other", "Autre"],
+const SOURCE_CONFIG = [
+  { id: "youtube", translations: { en: "YouTube", es: "YouTube", fr: "YouTube" } },
+  { id: "github", translations: { en: "GitHub", es: "GitHub", fr: "GitHub" } },
+  {
+    id: "google",
+    translations: {
+      en: "Google Search",
+      es: "Búsqueda en Google",
+      fr: "Recherche Google",
+    },
+  },
+  {
+    id: "community",
+    translations: {
+      en: "Community / Social media",
+      es: "Comunidad / Redes sociales",
+      fr: "Communauté / Réseaux sociaux",
+    },
+  },
+  {
+    id: "friend",
+    translations: {
+      en: "Word of mouth",
+      es: "Boca a boca",
+      fr: "Bouche-à-oreille",
+    },
+  },
+  { id: "other", translations: { en: "Other", es: "Otro", fr: "Autre" } },
 ] as const;
+
+const ONBOARDING_I18N = {
+  en: {
+    backStep: "← Previous step",
+    busySubmitting: "Preparing your universe…",
+    continueButton: "Continue",
+    enterApp: "Enter Idealy ✦",
+    errorConfirm: "Idealy could not confirm your profile registration. Please try again.",
+    errorSave: "Unable to save your profile with Idealy. Please try again.",
+    experienceLabel: "Your development experience",
+    goalLabel: "Describe your idea in a few words",
+    goalPlaceholder: "E.g., a customer and sales management platform for small businesses.",
+    nameLabel: "What should we call you?",
+    namePlaceholder: "Your first name or nickname",
+    sourceLabel: "How did you hear about Idealy? (optional)",
+    stepAria: (s: number) => `Step ${s + 1} of 3`,
+    titles: [
+      [
+        "What do you want to create?",
+        "Select the type of project you want to prototype or build.",
+      ],
+      [
+        "Choose your Energy Way",
+        "It shapes your universe, energy vocabulary, and specialist agents.",
+      ],
+      [
+        "Your creator profile",
+        "A few details to tailor Idealy's level of technical explanation.",
+      ],
+    ],
+  },
+  es: {
+    backStep: "← Paso anterior",
+    busySubmitting: "Preparando su universo…",
+    continueButton: "Continuar",
+    enterApp: "Entrar en Idealy ✦",
+    errorConfirm: "Idealy no pudo confirmar el registro de su perfil. Vuelva a intentarlo.",
+    errorSave: "No se pudo guardar su perfil en Idealy. Vuelva a intentarlo.",
+    experienceLabel: "Su experiencia en desarrollo",
+    goalLabel: "Describa su idea en pocas palabras",
+    goalPlaceholder: "Ej.: una plataforma de gestión de clientes y ventas para pequeñas empresas.",
+    nameLabel: "¿Cómo deberíamos llamarle?",
+    namePlaceholder: "Su nombre o apodo",
+    sourceLabel: "¿Cómo conoció Idealy? (opcional)",
+    stepAria: (s: number) => `Paso ${s + 1} de 3`,
+    titles: [
+      [
+        "¿Qué desea crear?",
+        "Seleccione el tipo de proyecto que desea crear o prototipar.",
+      ],
+      [
+        "Elija su Vía de energía",
+        "Modela su universo, el vocabulario de energía y sus especialistas.",
+      ],
+      [
+        "Su perfil de creador",
+        "Algunos detalles para adaptar el nivel de explicación técnica de Idealy.",
+      ],
+    ],
+  },
+  fr: {
+    backStep: "← Étape précédente",
+    busySubmitting: "Préparation de votre univers…",
+    continueButton: "Continuer",
+    enterApp: "Entrer dans Idealy ✦",
+    errorConfirm: "Idealy n’a pas pu confirmer l’enregistrement de votre profil. Réessayez.",
+    errorSave: "Impossible d’enregistrer votre profil auprès d’Idealy. Réessayez.",
+    experienceLabel: "Votre expérience en développement",
+    goalLabel: "Décrivez votre idée en quelques mots",
+    goalPlaceholder: "Ex. : une plateforme de gestion des clients et des ventes pour petites entreprises.",
+    nameLabel: "Comment doit-on vous appeler ?",
+    namePlaceholder: "Votre prénom ou pseudo",
+    sourceLabel: "Comment avez-vous connu Idealy ? (facultatif)",
+    stepAria: (s: number) => `Étape ${s + 1} sur 3`,
+    titles: [
+      [
+        "Que souhaitez-vous créer ?",
+        "Sélectionnez le type de projet que vous voulez prototyper ou construire.",
+      ],
+      [
+        "Choisissez votre Voie d'énergie",
+        "Elle façonne votre univers, le vocabulaire d'énergie et vos spécialistes.",
+      ],
+      [
+        "Votre profil de créateur",
+        "Quelques précisions pour adapter le niveau d'explication d'Idealy.",
+      ],
+    ],
+  },
+};
 
 export const OnboardingPage: React.FC = () => {
   const { setActivePage, language } = useApp();
+  const currentLang: "fr" | "en" | "es" =
+    language === "en" || language === "es" ? language : "fr";
+  const i18n = ONBOARDING_I18N[currentLang];
+
+  const projects = PROJECT_CONFIG.map((p) => ({
+    desc: p.translations[currentLang].desc,
+    icon: p.icon,
+    id: p.id,
+    label: p.translations[currentLang].label,
+  }));
+
+  const levels = LEVEL_CONFIG.map((l) => [
+    l.id,
+    l.translations[currentLang],
+  ] as const);
+
+  const sources = SOURCE_CONFIG.map((s) => [
+    s.id,
+    s.translations[currentLang],
+  ] as const);
+
   const [step, setStep] = useState(0);
   const [projectType, setProjectType] = useState<string>("saas");
   const [goal, setGoal] = useState("");
@@ -119,7 +304,7 @@ export const OnboardingPage: React.FC = () => {
       discoverySource: source ?? undefined,
       experienceLevel: level,
       firstName: firstName.trim(),
-      preferredLanguage: language || "fr",
+      preferredLanguage: currentLang,
       primaryGoal: goal.trim(),
       projectType,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
@@ -151,7 +336,7 @@ export const OnboardingPage: React.FC = () => {
         throw new Error(
           typeof result.error === "string"
             ? result.error
-            : "Idealy n’a pas pu confirmer l’enregistrement de votre profil. Réessayez."
+            : i18n.errorConfirm
         );
       }
 
@@ -164,7 +349,7 @@ export const OnboardingPage: React.FC = () => {
       setError(
         err instanceof Error
           ? err.message
-          : "Impossible d’enregistrer votre profil auprès d’Idealy. Réessayez."
+          : i18n.errorSave
       );
     } finally {
       setBusy(false);
@@ -173,30 +358,17 @@ export const OnboardingPage: React.FC = () => {
 
   const next = () => (step < 2 ? setStep(step + 1) : void submit());
 
-  const titles = [
-    [
-      "Que souhaitez-vous créer ?",
-      "Sélectionnez le type de projet que vous voulez prototyper ou construire.",
-    ],
-    [
-      "Choisissez votre Voie d'énergie",
-      "Elle façonne votre univers, le vocabulaire d'énergie et vos spécialistes.",
-    ],
-    [
-      "Votre profil de créateur",
-      "Quelques précisions pour adapter le niveau d'explication d'Idealy.",
-    ],
-  ][step];
+  const currentTitles = i18n.titles[step];
 
   return (
     <AuthShell
       ambient={way ? WAY_RGB[way] : "45,212,191"}
-      subtitle={titles[1]}
-      title={titles[0]}
+      subtitle={currentTitles[1]}
+      title={currentTitles[0]}
       width={step === 1 ? 620 : 520}
     >
       {/* Step Progress Bar */}
-      <div aria-label={`Étape ${step + 1} sur 3`} className="mb-6 flex gap-2">
+      <div aria-label={i18n.stepAria(step)} className="mb-6 flex gap-2">
         {[0, 1, 2].map((i) => (
           <span
             className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
@@ -213,7 +385,7 @@ export const OnboardingPage: React.FC = () => {
       {step === 0 && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {PROJECTS.map((proj) => {
+            {projects.map((proj) => {
               const Icon = proj.icon;
               const active = projectType === proj.id;
               return (
@@ -254,14 +426,14 @@ export const OnboardingPage: React.FC = () => {
               className="mb-2 block text-xs font-semibold text-zinc-300"
               htmlFor="onboarding-goal"
             >
-              Décrivez votre idée en quelques mots
+              {i18n.goalLabel}
             </label>
             <textarea
               className={`${authField} min-h-[104px] resize-y py-4`}
               id="onboarding-goal"
               maxLength={400}
               onChange={(event) => setGoal(event.target.value)}
-              placeholder="Ex. : une plateforme de gestion des clients et des ventes pour petites entreprises."
+              placeholder={i18n.goalPlaceholder}
               required
               value={goal}
             />
@@ -272,7 +444,7 @@ export const OnboardingPage: React.FC = () => {
         </div>
       )}
 
-      {/* Step 1: Choix de la Voie (Minato, Erza, Netero, Daniel) */}
+      {/* Step 1: Choix de la Voie */}
       {step === 1 && (
         <div className="grid gap-3 sm:grid-cols-2">
           {WAYS.map((key) => {
@@ -362,23 +534,23 @@ export const OnboardingPage: React.FC = () => {
         <div className="space-y-5">
           <div>
             <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-              Comment doit-on vous appeler ?
+              {i18n.nameLabel}
             </label>
             <input
               autoComplete="given-name"
               className={authField}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Votre prénom ou pseudo"
+              placeholder={i18n.namePlaceholder}
               value={firstName}
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-zinc-300 mb-2">
-              Votre expérience en développement
+              {i18n.experienceLabel}
             </label>
             <div className="space-y-1.5">
-              {LEVELS.map(([id, label]) => (
+              {levels.map(([id, label]) => (
                 <button
                   className={`w-full p-2.5 rounded-xl border text-left text-xs font-medium transition-all ${
                     level === id
@@ -397,10 +569,10 @@ export const OnboardingPage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-semibold text-zinc-300 mb-2">
-              Comment avez-vous connu Idealy ? (facultatif)
+              {i18n.sourceLabel}
             </label>
             <div className="flex flex-wrap gap-2">
-              {SOURCES.map(([id, label]) => (
+              {sources.map(([id, label]) => (
                 <button
                   className={`px-3 py-1.5 rounded-lg border text-xs transition-all ${
                     source === id
@@ -429,10 +601,10 @@ export const OnboardingPage: React.FC = () => {
           type="button"
         >
           {busy
-            ? "Préparation de votre univers…"
+            ? i18n.busySubmitting
             : step < 2
-              ? "Continuer"
-              : "Entrer dans Idealy ✦"}
+              ? i18n.continueButton
+              : i18n.enterApp}
         </button>
         {step > 0 && (
           <button
@@ -440,7 +612,7 @@ export const OnboardingPage: React.FC = () => {
             onClick={() => setStep(step - 1)}
             type="button"
           >
-            ← Étape précédente
+            {i18n.backStep}
           </button>
         )}
       </div>

@@ -24,7 +24,7 @@ type AccountResult = {
 
 let accountRequest: Promise<AccountResult> | null = null;
 
-function formatPlanName(
+export function formatPlanName(
   plan: string | undefined | null,
   language: string
 ): string {

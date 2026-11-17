@@ -350,6 +350,24 @@ export const Composer: React.FC<ComposerProps> = ({
       return;
     }
     let promptToSend = draft.trim();
+
+    // Strip parasitic @agent mentions from text and ensure agents are routed
+    const agentsList = activeAgentTag ? [activeAgentTag.id] : [];
+    for (const agent of availableAgents) {
+      const regex = new RegExp(`(^|\\s)@${agent.name}\\b`, "gi");
+      if (regex.test(promptToSend)) {
+        if (!agentsList.includes(agent.id)) {
+          agentsList.push(agent.id);
+        }
+        promptToSend = promptToSend.replace(regex, "$1");
+      }
+    }
+    if (activeAgentTag) {
+      const activeTagRegex = new RegExp(`(^|\\s)@${activeAgentTag.name}\\b`, "gi");
+      promptToSend = promptToSend.replace(activeTagRegex, "$1");
+    }
+    promptToSend = promptToSend.replace(/[ \t]{2,}/g, " ").trim();
+
     if (attachedConnectors.length > 0) {
       const names = attachedConnectors
         .map(
@@ -359,7 +377,6 @@ export const Composer: React.FC<ComposerProps> = ({
         .join(", ");
       promptToSend = `[Connecteurs activés : ${names}]\n${promptToSend}`;
     }
-    const agentsList = activeAgentTag ? [activeAgentTag.id] : [];
     sendMessage(promptToSend, attachments, {
       agents: agentsList,
       connectors: attachedConnectors,

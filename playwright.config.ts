@@ -81,7 +81,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "pnpm dev",
+    command: process.platform === "win32" ? "pnpm.cmd dev" : "pnpm dev",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     url: `${baseURL}/ping`,
