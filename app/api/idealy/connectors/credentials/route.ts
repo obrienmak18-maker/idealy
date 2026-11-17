@@ -1,4 +1,5 @@
 import { getSafeToken } from "@/lib/auth/session-token";
+import { encryptConnectorToken } from "@/lib/security/connector-encryption";
 import { createClient } from "@supabase/supabase-js";
 
 function noStore() {
@@ -111,14 +112,28 @@ export async function POST(request: Request) {
     );
   }
 
-  // 2. Persist in database under user_integrations
+  // 2. Real cryptographic encryption (AES-256-GCM)
+  const encrypted = encryptConnectorToken(rawToken);
+
+  // 3. Persist in database under user_integrations & integration_credentials
   const admin = getSupabaseAdmin();
-  if (admin) {
-    try {
-      const { error: dbError } = await admin.from("user_integrations").upsert(
+  if (!admin) {
+    return Response.json(
+      {
+        error:
+          "Le service de stockage sécurisé des intégrations n'est pas configuré sur ce serveur.",
+      },
+      { headers: noStore(), status: 503 },
+    );
+  }
+
+  try {
+    const { data: integration, error: dbError } = await admin
+      .from("user_integrations")
+      .upsert(
         {
           connection_type: "api_key",
-          credential_reference: `vault:${provider}:${Date.now()}`,
+          credential_reference: `encrypted:${provider}`,
           display_name: displayName,
           last_verified_at: new Date().toISOString(),
           metadata: {
@@ -131,23 +146,68 @@ export async function POST(request: Request) {
           user_id: userId,
         },
         { onConflict: "user_id,provider" },
+      )
+      .select("id")
+      .single();
+
+    if (dbError || !integration) {
+      console.error(
+        "[Connectors credentials] Supabase user_integrations upsert error:",
+        dbError?.message,
+      );
+      return Response.json(
+        {
+          error: `Échec de l'enregistrement de l'intégration : ${dbError?.message || "erreur base de données"}`,
+        },
+        { headers: noStore(), status: 500 },
+      );
+    }
+
+    const { error: credError } = await admin
+      .from("integration_credentials")
+      .upsert(
+        {
+          algorithm: encrypted.algorithm,
+          ciphertext: encrypted.ciphertext,
+          integration_id: integration.id,
+          iv: encrypted.iv,
+          key_version: 1,
+          rotated_at: new Date().toISOString(),
+        },
+        { onConflict: "integration_id" },
       );
 
-      if (dbError) {
-        console.error(
-          "[Connectors credentials] Supabase upsert error:",
-          dbError.message,
-        );
-      }
-    } catch (e) {
-      console.warn("[Connectors credentials] DB write failed:", e);
+    if (credError) {
+      console.error(
+        "[Connectors credentials] Supabase integration_credentials error:",
+        credError.message,
+      );
+      await admin
+        .from("user_integrations")
+        .update({ status: "error" })
+        .eq("id", integration.id);
+      return Response.json(
+        {
+          error: `Échec du stockage chiffré des identifiants : ${credError.message}`,
+        },
+        { headers: noStore(), status: 500 },
+      );
     }
+  } catch (e) {
+    console.error("[Connectors credentials] Critical DB write failure:", e);
+    return Response.json(
+      {
+        error:
+          "Une erreur critique est survenue lors de l'enregistrement sécurisé.",
+      },
+      { headers: noStore(), status: 500 },
+    );
   }
 
   return Response.json(
     {
       displayName,
-      message: `Connecteur ${provider} configuré et vérifié avec succès.`,
+      message: `Connecteur ${provider} configuré, chiffré et vérifié avec succès.`,
       provider,
       status: "connected",
       success: true,

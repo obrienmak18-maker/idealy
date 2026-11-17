@@ -52,14 +52,64 @@ export async function POST(request: Request) {
   const admin = getSupabaseAdmin();
   if (admin) {
     try {
-      // 1. Delete or mark revoked in user_integrations
-      await admin
+      // 1. Identify existing integration records
+      const { data: existing, error: selectError } = await admin
         .from("user_integrations")
-        .delete()
+        .select("id")
         .eq("user_id", userId)
         .in("provider", [provider, canonicalProvider]);
+
+      if (selectError) {
+        console.error(
+          "[Connectors disconnect] Select error:",
+          selectError.message,
+        );
+      }
+
+      if (existing && existing.length > 0) {
+        const ids = existing.map((row) => row.id);
+
+        // 2. Explicitly remove integration credentials (defense in depth)
+        const { error: credDeleteError } = await admin
+          .from("integration_credentials")
+          .delete()
+          .in("integration_id", ids);
+
+        if (credDeleteError) {
+          console.warn(
+            "[Connectors disconnect] Credentials delete warning:",
+            credDeleteError.message,
+          );
+        }
+
+        // 3. Delete user integration record
+        const { error: delError } = await admin
+          .from("user_integrations")
+          .delete()
+          .in("id", ids);
+
+        if (delError) {
+          console.error(
+            "[Connectors disconnect] DB delete error:",
+            delError.message,
+          );
+          return Response.json(
+            {
+              error: `Échec de la suppression de l'intégration : ${delError.message}`,
+            },
+            { headers: noStore(), status: 500 },
+          );
+        }
+      }
     } catch (err) {
-      console.warn("[Connectors disconnect] DB delete warning:", err);
+      console.error("[Connectors disconnect] DB delete exception:", err);
+      return Response.json(
+        {
+          error:
+            "Une erreur est survenue lors de la suppression des identifiants.",
+        },
+        { headers: noStore(), status: 500 },
+      );
     }
   }
 
