@@ -1,5 +1,7 @@
 import {
   Check,
+  Lock,
+  X,
   CreditCard,
   ExternalLink,
   LoaderCircle,
@@ -13,7 +15,9 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 import { authenticatedFetch, signOutFirebase } from "../../services/firebase";
+import { voiesCatalog, type WayDetailed } from "../../services/voies-catalog";
 
 type Preferences = {
   accountEmail: string | null;
@@ -23,13 +27,6 @@ type Preferences = {
   way: "mage" | "ninja" | "hunter" | "professional";
 };
 type ServiceState = "checking" | "ready" | "offline";
-
-const wayOptions: Array<{ id: Preferences["way"]; label: string }> = [
-  { id: "professional", label: "Professionnel" },
-  { id: "mage", label: "Mage" },
-  { id: "ninja", label: "Ninja" },
-  { id: "hunter", label: "Hunter" },
-];
 
 export const SettingsPage: React.FC = () => {
   const {
@@ -46,6 +43,7 @@ export const SettingsPage: React.FC = () => {
     setLanguage,
     remainingWayChanges,
   } = useApp();
+  const { t } = useTranslation();
   const settingsSections = [
     "general",
     "account",
@@ -86,6 +84,7 @@ export const SettingsPage: React.FC = () => {
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingError, setBillingError] = useState("");
   const [portalLoading, setPortalLoading] = useState(false);
+  const [pendingWayChange, setPendingWayChange] = useState<WayDetailed | null>(null);
 
   useEffect(() => {
     const syncSection = () => setSection(currentSection());
@@ -251,11 +250,11 @@ export const SettingsPage: React.FC = () => {
           setPreferences(profile);
         } else if (preferencesResponse.status === 401) {
           setNotice(
-            "Connectez-vous pour charger et modifier vos préférences de compte."
+            t("auth.submitLogin")
           );
         } else if (preferencesResponse.status === 409) {
           setNotice(
-            "Terminez la configuration de votre profil pour accéder aux préférences du compte."
+            t("common.continue")
           );
         }
         if (quotaResponse.ok && quotaPayload) {
@@ -281,16 +280,6 @@ export const SettingsPage: React.FC = () => {
     setSaving(true);
     setNotice("");
     try {
-      if (updates.way && updates.way !== (preferences?.way || userWay)) {
-        const wayResult = setUserWay(updates.way);
-        if (!wayResult.success) {
-          throw new Error(wayResult.error || "Impossible de changer de voie.");
-        }
-      }
-      if (updates.preferredLanguage) {
-        setLanguage(updates.preferredLanguage);
-      }
-
       const response = await authenticatedFetch(
         "/api/idealy/profile/preferences",
         {
@@ -305,22 +294,33 @@ export const SettingsPage: React.FC = () => {
         .catch(() => ({}))) as Preferences & { error?: string };
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error("Session expirée. Veuillez vous reconnecter.");
+          throw new Error(t("common.error"));
         }
         if (response.status === 409) {
-          throw new Error("Configuration du profil incomplète.");
+          throw new Error(t("common.error"));
         }
         if (response.status === 503) {
-          throw new Error("Service temporairement indisponible.");
+          throw new Error(t("common.error"));
         }
-        throw new Error(payload.error || "Enregistrement impossible.");
+        throw new Error(payload.error || t("common.error"));
+      }
+
+      // Backend update succeeded! Synchronize UI state
+      if (updates.way && updates.way !== (preferences?.way || userWay)) {
+        const wayResult = setUserWay(updates.way);
+        if (!wayResult.success) {
+          throw new Error(wayResult.error || t("common.error"));
+        }
+      }
+      if (updates.preferredLanguage) {
+        setLanguage(updates.preferredLanguage);
       }
       setPreferences((current) =>
         current
           ? { ...current, ...updates, ...payload }
           : ({ ...updates, ...payload } as Preferences)
       );
-      setNotice("Préférences enregistrées.");
+      setNotice(t("settings.saved"));
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Enregistrement impossible."
@@ -331,9 +331,9 @@ export const SettingsPage: React.FC = () => {
   };
 
   const themes = [
-    { icon: Monitor, id: "system" as const, label: "Système" },
-    { icon: Sun, id: "light" as const, label: "Clair" },
-    { icon: Moon, id: "dark" as const, label: "Sombre" },
+    { icon: Monitor, id: "system" as const, label: t("settings.general") },
+    { icon: Sun, id: "light" as const, label: t("settings.appearance") },
+    { icon: Moon, id: "dark" as const, label: t("settings.appearance") },
   ];
 
   return (
@@ -346,24 +346,23 @@ export const SettingsPage: React.FC = () => {
           Paramètres
         </h1>
         <p className="mt-2 text-sm leading-6 text-text-muted">
-          Gérez l’apparence, les préférences de travail et vérifiez les services
-          connectés.
+          {t("settings.subtitle")}
         </p>
 
         <nav
-          aria-label="Sections des paramètres"
+          aria-label={t("settings.title")}
           className="mt-6 flex gap-1 overflow-x-auto rounded-xl border border-border-subtle bg-bg-surface p-1 scrollbar-none"
         >
           {(
             [
-              ["general", "Général"],
-              ["account", "Compte"],
-              ["appearance", "Apparence"],
-              ["billing", "Facturation"],
-              ["notifications", "Notifications"],
-              ["privacy", "Confidentialité"],
-              ["data", "Données"],
-              ["shortcuts", "Raccourcis"],
+              ["general", t("settings.general")],
+              ["account", t("settings.account")],
+              ["appearance", t("settings.appearance")],
+              ["billing", t("settings.billing")],
+              ["notifications", t("settings.notifications")],
+              ["privacy", t("settings.privacy")],
+              ["data", t("settings.data")],
+              ["shortcuts", t("settings.shortcuts")],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -389,7 +388,7 @@ export const SettingsPage: React.FC = () => {
                   Apparence
                 </h2>
                 <p className="mt-1 text-xs text-text-muted">
-                  Choisissez le thème de l’interface.
+                  {t("settings.theme")}
                 </p>
               </div>
             </div>
@@ -421,14 +420,13 @@ export const SettingsPage: React.FC = () => {
                   Préférences du compte
                 </h2>
                 <p className="mt-1 text-xs text-text-muted">
-                  Ces options sont chargées et enregistrées sur votre profil
-                  Idealy.
+                  {t("settings.subtitle")}
                 </p>
               </div>
             </div>
             {loading ? (
               <p className="mt-5 text-sm text-text-muted">
-                Chargement des préférences…
+                {t("common.loading")}
               </p>
             ) : (
               <div className="mt-5 space-y-5">
@@ -444,47 +442,112 @@ export const SettingsPage: React.FC = () => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-text-main truncate">
-                      {preferences?.displayName || "Membre Idealy"}
+                      {preferences?.displayName || t("account.unknownTier")}
                     </p>
                     <p className="text-xs text-text-muted truncate">
-                      {preferences?.accountEmail || "Compte Idealy actif"}
+                      {preferences?.accountEmail || t("account.activeSession")}
                     </p>
                   </div>
                 </div>
 
-                <label className="block text-xs font-medium text-text-muted">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span>Voie de travail</span>
-                    <span className="text-[11px] font-normal text-text-muted">
-                      Changements restants ce mois :{" "}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs font-semibold text-text-main">
+                        {t("settings.way")}
+                      </h3>
+                      <p className="text-[11px] text-text-muted">
+                        {t("settings.subtitle")}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-bg-base border border-border-subtle px-2.5 py-1 text-[11px] text-text-muted">
+                      {t("settings.remainingChanges")}:{" "}
                       <strong className="text-text-main font-semibold">
                         {remainingWayChanges} / 2
                       </strong>
                     </span>
                   </div>
-                  <select
-                    className="h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
-                    disabled={
-                      remainingWayChanges === 0 &&
-                      (preferences?.way || userWay) !== "ninja"
-                    }
-                    onChange={(event) =>
-                      void savePreferences({
-                        way: event.target.value as Preferences["way"],
-                      })
-                    }
-                    value={preferences?.way || userWay}
-                  >
-                    {wayOptions.map((way) => (
-                      <option key={way.id} value={way.id}>
-                        {way.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label={t("settings.way")}>
+                    {Object.values(voiesCatalog).map((way) => {
+                      const isActive = (preferences?.way || userWay) === way.id;
+                      const isLocked = remainingWayChanges === 0 && !isActive;
+
+                      return (
+                        <button
+                          key={way.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={isActive}
+                          disabled={isLocked || saving}
+                          onClick={() => {
+                            if (isActive) return;
+                            setPendingWayChange(way);
+                          }}
+                          className={`relative flex flex-col justify-between text-left p-4 rounded-xl border transition-all duration-200 outline-none ${
+                            isActive
+                              ? "border-violet-500/60 bg-gradient-to-br from-violet-500/[0.08] to-transparent shadow-[0_0_20px_rgba(139,92,246,0.12)] ring-1 ring-violet-500/40"
+                              : isLocked
+                              ? "border-border-subtle/50 bg-bg-base/40 opacity-50 cursor-not-allowed"
+                              : "border-border-subtle bg-bg-base hover:border-border-strong hover:bg-bg-subtle/60 active:scale-[0.99]"
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-text-main">
+                                {way.label}
+                              </span>
+                              {isActive ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+                                  <Check className="h-3 w-3" />
+                                  Actif
+                                </span>
+                              ) : isLocked ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 px-2 py-0.5 text-[10px] text-zinc-400">
+                                  <Lock className="h-3 w-3" />
+                                  Verrouillé
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-bg-surface border border-border-subtle px-2 py-0.5 text-[10px] text-text-muted">
+                                  {way.resourceLabel}
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="mt-1.5 text-xs text-text-muted line-clamp-2 leading-relaxed">
+                              {way.tagline}
+                            </p>
+                          </div>
+
+                          <div className="mt-3.5 pt-3 border-t border-border-subtle/60 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-text-muted">Chef:</span>
+                              <span className="text-[11px] font-medium text-text-main">{way.chiefName}</span>
+                            </div>
+
+                            <div className="flex -space-x-1.5 overflow-hidden">
+                              {way.agents.slice(0, 4).map((agent) => (
+                                <img
+                                  key={agent.name}
+                                  src={agent.avatarUrl}
+                                  alt={agent.name}
+                                  title={`${agent.name} (${agent.role})`}
+                                  className="inline-block h-5 w-5 rounded-full ring-1 ring-bg-surface object-cover bg-bg-subtle"
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = "none";
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 <label className="block text-xs font-medium text-text-muted">
-                  Langue de l'interface
+                  {t("settings.language")}
                   <select
                     className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
                     onChange={(event) =>
@@ -502,7 +565,7 @@ export const SettingsPage: React.FC = () => {
                 </label>
 
                 <label className="block text-xs font-medium text-text-muted">
-                  Fuseau horaire
+                  {t("settings.timezone")}
                   <input
                     className="mt-2 h-10 w-full rounded-lg border border-border-subtle bg-bg-base px-3 text-sm text-text-main focus-ring"
                     defaultValue={preferences?.timezone || "UTC"}
@@ -520,10 +583,10 @@ export const SettingsPage: React.FC = () => {
                 <div className="pt-4 border-t border-border-subtle flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-text-main">
-                      Session active
+                      {t("account.activeSession")}
                     </p>
                     <p className="text-[11px] text-text-muted">
-                      Déconnectez votre compte de cet appareil
+                      {t("settings.logout")}
                     </p>
                   </div>
                   <button
@@ -542,7 +605,7 @@ export const SettingsPage: React.FC = () => {
                     type="button"
                   >
                     <LogOut className="h-3.5 w-3.5" />
-                    Se déconnecter
+                    {t("sidebar.logout")}
                   </button>
                 </div>
               </div>
@@ -890,6 +953,69 @@ export const SettingsPage: React.FC = () => {
             {saving ? "Enregistrement… " : ""}
             {notice}
           </p>
+        )}
+        {/* Work Mode Confirmation Modal */}
+        {pendingWayChange && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#161821] p-6 shadow-2xl">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <h3 className="text-base font-semibold text-white">
+                  {t("settings.confirmWayChange")}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setPendingWayChange(null)}
+                  className="rounded-lg p-1 text-zinc-400 hover:text-white hover:bg-white/10"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="p-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+                  <p className="text-sm font-semibold text-white">
+                    {pendingWayChange.label}
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-300">
+                    {pendingWayChange.tagline}
+                  </p>
+                  <div className="mt-2.5 flex items-center gap-3 text-xs text-zinc-400">
+                    <span>Ressource: <strong className="text-white">{pendingWayChange.resourceLabel}</strong></span>
+                    <span>·</span>
+                    <span>Chef: <strong className="text-white">{pendingWayChange.chiefName}</strong></span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Changer de mode reconfigurera votre escouade d'agents et le lexique de vos crédits.
+                  Il vous restera <strong className="text-white">{Math.max(0, remainingWayChanges - 1)}</strong> changement(s) ce mois-ci.
+                </p>
+              </div>
+
+              <div className="mt-6 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setPendingWayChange(null)}
+                  className="px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white rounded-lg hover:bg-white/[0.06] transition"
+                  disabled={saving}
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const target = pendingWayChange;
+                    setPendingWayChange(null);
+                    await savePreferences({ way: target.id });
+                  }}
+                  disabled={saving}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-violet-600 hover:bg-violet-500 rounded-lg shadow-md transition disabled:opacity-50"
+                >
+                  {saving ? t("common.loading") : t("common.continue")}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </main>

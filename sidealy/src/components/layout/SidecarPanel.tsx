@@ -34,6 +34,7 @@ import type React from "react";
 import type { MissionWorkspaceFile } from "../../types";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 import { authenticatedFetch } from "../../services/firebase";
 import {
   buildWorkspaceFileTree,
@@ -141,6 +142,7 @@ export const SidecarPanel: React.FC = () => {
     setDraft,
     updateArtifactContent,
   } = useApp();
+  const { t, ti } = useTranslation();
 
   const conversationId = activeConversation?.id ?? null;
   const latestMission = useMemo(
@@ -942,7 +944,7 @@ export const SidecarPanel: React.FC = () => {
             <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-text-muted">
               {statusIcon}
               <span>{statusText}</span>
-              {projectFiles.length > 0 && <span>· {projectFiles.length} fichiers</span>}
+              {projectFiles.length > 0 && <span>· {projectFiles.length === 1 ? t("studio.filesCountOne") : ti("studio.filesCountOther", { count: projectFiles.length })}</span>}
             </div>
           </div>
         </div>
@@ -1013,7 +1015,7 @@ export const SidecarPanel: React.FC = () => {
         </nav>
         <div className="flex shrink-0 items-center gap-1.5">
           <span className="hidden text-[10px] tabular-nums text-text-muted sm:inline">
-            {projectFiles.length ? projectFiles.length + " fichiers" : "Nouveau projet"}
+            {projectFiles.length ? (projectFiles.length === 1 ? t("studio.filesCountOne") : ti("studio.filesCountOther", { count: projectFiles.length })) : t("studio.newProject")}
           </span>
           <button
             aria-label={terminalOpen ? "Masquer le terminal" : "Afficher le terminal"}
@@ -1519,7 +1521,7 @@ export const SidecarPanel: React.FC = () => {
                     {fileSaveNotice && <span className="truncate text-emerald-400">{fileSaveNotice}</span>}
                     {fileSaveError && <span className="truncate text-rose-400">{fileSaveError}</span>}
                   </div>
-                  <span className="shrink-0 text-zinc-600">Ctrl/⌘ + S pour enregistrer</span>
+                  <span className="shrink-0 text-zinc-600">Ctrl/⌘ + S</span>
                 </footer>
               </>
             ) : (

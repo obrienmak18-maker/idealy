@@ -217,29 +217,27 @@ function conversationTitleFromPrompt(
   const normalized = content.replace(/\s+/g, " ").trim();
   if (!normalized && attachments.length) {
     const firstName = attachments[0]?.name?.trim();
-    return firstName ? `Fichier : ${firstName}` : "Fichiers partagés";
+    return firstName ? `${firstName}` : "Shared files";
   }
 
   const concise = normalized
-    .replace(/^aide(?:z)?-moi\s+(?:à|de)\s+/i, "")
-    .replace(/^je\s+(?:voudrais|veux|souhaite)\s+/i, "")
+    .replace(/^(?:help\s+me(?:\s+to)?|please|could\s+you|can\s+you|aide[z]?-moi\s+(?:à|de)|je\s+(?:voudrais|veux|souhaite)|ayúdame\s+a|por\s+favor)\s+/i, "")
+    .replace(/^[@/#]\w+\s*/g, "")
     .replace(/[\s:;,.!?]+$/u, "")
-    .replace(/\s+(?:pour|avec|de|du|des|à|au|sur|dans|et)$/iu, "")
+    .replace(/\s+(?:pour|avec|de|du|des|à|au|sur|dans|et|for|with|of|to|in|on|and|para|con|en|y)$/iu, "")
     .trim();
-  const title = concise || normalized;
+  const title = concise || normalized || "New chat";
   const points = Array.from(title);
   if (points.length <= 44) {
-    return (
-      points.join("").charAt(0).toLocaleUpperCase("fr-FR") +
-      points.join("").slice(1)
-    );
+    const s = points.join("");
+    return s.charAt(0).toUpperCase() + s.slice(1);
   }
   const preview = points.slice(0, 44).join("");
   const wordBoundary = preview.lastIndexOf(" ");
   const shortened = preview
     .slice(0, wordBoundary > 26 ? wordBoundary : 44)
     .trim();
-  return `${shortened.charAt(0).toLocaleUpperCase("fr-FR")}${shortened.slice(1)}…`;
+  return `${shortened.charAt(0).toUpperCase()}${shortened.slice(1)}…`;
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -333,7 +331,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const [language, setLanguageState] = useState<"fr" | "en" | "es">(() => {
     if (typeof window === "undefined") {
-      return "fr";
+      return "en";
     }
     const urlLang = new URLSearchParams(window.location.search).get("lang");
     if (urlLang === "fr" || urlLang === "en" || urlLang === "es") {
@@ -355,7 +353,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const stored = window.localStorage.getItem("idealy_language");
     return stored === "fr" || stored === "en" || stored === "es"
       ? stored
-      : "fr";
+      : "en";
   });
 
   const [remainingWayChanges, setRemainingWayChanges] = useState<number>(() => {
@@ -422,6 +420,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     document.cookie = `NEXT_LOCALE=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
     document.cookie = `idealy_lang=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
     setLanguageState(nextLang);
+  }, []);
+
+  // Synchronize authenticated user profile preferences (way and preferredLanguage) from authoritative backend
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await authenticatedFetch(
+          "/api/idealy/profile/preferences",
+          {
+            cache: "no-store",
+            credentials: "same-origin",
+          }
+        );
+        if (!response.ok || cancelled) return;
+        const profile = (await response.json()) as {
+          preferredLanguage?: "fr" | "en" | "es";
+          way?: "ninja" | "mage" | "hunter" | "professional";
+        };
+        if (cancelled) return;
+        if (
+          profile.preferredLanguage &&
+          (profile.preferredLanguage === "fr" ||
+            profile.preferredLanguage === "en" ||
+            profile.preferredLanguage === "es")
+        ) {
+          setLanguageState(profile.preferredLanguage);
+          try {
+            window.localStorage.setItem(
+              "idealy_language",
+              profile.preferredLanguage
+            );
+            document.cookie = `NEXT_LOCALE=${profile.preferredLanguage}; path=/; max-age=31536000; SameSite=Lax`;
+            document.cookie = `idealy_lang=${profile.preferredLanguage}; path=/; max-age=31536000; SameSite=Lax`;
+          } catch {}
+        }
+        if (
+          profile.way &&
+          (profile.way === "ninja" ||
+            profile.way === "mage" ||
+            profile.way === "hunter" ||
+            profile.way === "professional")
+        ) {
+          setUserWayState(profile.way);
+          try {
+            window.localStorage.setItem("idealy_user_way", profile.way);
+            document.cookie = `idealy_user_way=${profile.way}; path=/; max-age=31536000; SameSite=Lax`;
+          } catch {}
+        }
+      } catch {
+        // Unauthenticated or offline fallback
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Firestore Project Sync
@@ -523,7 +577,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       setActivePageState(page);
       const destination = pagePaths[page];
       if (window.location.pathname !== destination) {
-        window.location.assign(destination);
+        try {
+          window.location.assign(destination);
+        } catch {
+          // jsdom or non-browser fallback
+        }
       }
       return;
     }
@@ -532,7 +590,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     // WebContainer receives the isolation headers configured for /studio.
     if (page === "chat" && window.location.pathname === pagePaths.login) {
       setActivePageState(page);
-      window.location.assign(pagePaths.chat);
+      try {
+        window.location.assign(pagePaths.chat);
+      } catch {
+        // jsdom or non-browser fallback
+      }
       return;
     }
 
@@ -799,6 +861,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return activeConversation.id;
     }
 
+    const defaultTitle =
+      language === "fr"
+        ? "Nouvelle discussion"
+        : language === "es"
+          ? "Nueva conversación"
+          : "New chat";
     const newConv: Conversation = {
       createdAt: Date.now(),
       draft: "",
@@ -807,7 +875,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       isPinned: false,
       selectedMode: "chat",
       spaceId: targetSpace,
-      title: title || "Nouvelle conversation",
+      title: title || defaultTitle,
       updatedAt: Date.now(),
     };
     const next = [newConv, ...conversations];
@@ -1010,10 +1078,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const convMsgCount = messages.filter(
       (m) => m.conversationId === currentConvId
     ).length;
-    if (
-      convMsgCount === 0 ||
-      activeConversation.title === "Nouvelle conversation"
-    ) {
+    const isDefaultTitle =
+      !activeConversation.title ||
+      activeConversation.title === "Nouvelle conversation" ||
+      activeConversation.title === "Nouvelle discussion" ||
+      activeConversation.title === "New conversation" ||
+      activeConversation.title === "New chat" ||
+      activeConversation.title === "Nueva conversación";
+    if (convMsgCount === 0 || isDefaultTitle) {
       const suggestedTitle = conversationTitleFromPrompt(content, attachments);
       renameConversation(currentConvId, suggestedTitle);
     }

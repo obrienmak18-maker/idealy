@@ -5,6 +5,7 @@ export function hasConversationActivity(
   messages: Message[],
 ): boolean {
   if (conversation.isPinned) return true;
+  if (conversation.draft?.trim()) return true;
 
   // Locally created chats should not appear in history until the user
   // has actually sent a message. Remote history remains visible while unloaded.

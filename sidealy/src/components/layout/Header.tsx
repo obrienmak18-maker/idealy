@@ -193,13 +193,14 @@ export const Header: React.FC = () => {
       <div className="flex shrink-0 items-center gap-1">
         {hasWorkspace && (
           <button
-            aria-label="Ouvrir l’espace de prévisualisation"
-            className="grid h-8 w-8 place-items-center rounded-xl text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] focus-ring xl:hidden"
+            aria-label="Aperçu"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-violet-500/10 text-violet-300 border border-violet-500/20 hover:bg-violet-500/20 transition-colors focus-ring xl:hidden"
             onClick={openWorkspace}
-            title="Ouvrir le workspace"
+            title="Aperçu"
             type="button"
           >
-            <PanelRight aria-hidden="true" className="h-4 w-4" />
+            <PanelRight aria-hidden="true" className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-semibold">Aperçu</span>
           </button>
         )}
         <button

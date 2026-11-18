@@ -23,6 +23,7 @@ import {
   STATIC_AGENT_REGISTRY,
 } from "../../services/agentRegistry";
 import type { Attachment } from "../../types";
+import { authenticatedFetch } from "../../services/firebase";
 import { getConnectorBrandLogo } from "../connectors/brand-logos";
 import { DEFAULT_CONNECTORS_CATALOG } from "../connectors/default-connectors";
 
@@ -99,7 +100,104 @@ export const Composer: React.FC<ComposerProps> = ({
   } | null>(null);
 
   const ROTATING_PROMPTS = useMemo(() => {
-    if (language === "en") {
+    const isEn = language === "en";
+    const isEs = language === "es";
+
+    if (userWay === "mage") {
+      if (isEn) {
+        return [
+          "Message Idealy...",
+          "Ask Natsu to forge blazing React components...",
+          "Type @ to summon a mage or / for an arcane connector...",
+          "Ask Erza to orchestrate the magic architecture...",
+          "Upload an image or screenshot to transmute into code...",
+          "Cast security and performance audits with Mirajane...",
+        ];
+      }
+      if (isEs) {
+        return [
+          "Mensaje a Idealy...",
+          "Pide a Natsu crear componentes React ardientes...",
+          "Escribe @ para invocar un mago o / para un conector...",
+          "Pide a Erza diseñar la arquitectura mágica...",
+          "Arrastra un diseño para transmutarlo en código...",
+          "Optimiza el rendimiento y la seguridad con Mirajane...",
+        ];
+      }
+      return [
+        "Message à Idealy...",
+        "Demandez à Natsu d'enflammer vos composants React...",
+        "Tapez @ pour invoquer un mage ou / pour un connecteur...",
+        "Demandez à Erza d'orchestrer l'architecture magique...",
+        "Importez une maquette à transmuter en code...",
+        "Purifiez la sécurité et la vitesse avec Mirajane...",
+      ];
+    }
+
+    if (userWay === "hunter") {
+      if (isEn) {
+        return [
+          "Message Idealy...",
+          "Ask Gon to craft direct and punchy UI modules...",
+          "Type @ to target a hunter or / for a specialized tool...",
+          "Ask Netero to establish the core project structure...",
+          "Upload a mockup to analyze and construct with Nen...",
+          "Lock down precision and vulnerability tests with Kurapika...",
+        ];
+      }
+      if (isEs) {
+        return [
+          "Mensaje a Idealy...",
+          "Pide a Gon construir módulos UI directos y eficaces...",
+          "Escribe @ para apuntar a un hunter o / para una herramienta...",
+          "Pide a Netero estructurar la arquitectura del proyecto...",
+          "Arrastra un diseño para analizarlo con Nen...",
+          "Asegura la precisión y el rendimiento con Kurapika...",
+        ];
+      }
+      return [
+        "Message à Idealy...",
+        "Demandez à Gon de forger des modules UI percutants...",
+        "Tapez @ pour désigner un hunter ou / pour un outil...",
+        "Demandez à Netero d'établir la structure fondamentale...",
+        "Importez une maquette à analyser avec le Nen...",
+        "Verrouillez la sécurité et la précision avec Kurapika...",
+      ];
+    }
+
+    if (userWay === "professional") {
+      if (isEn) {
+        return [
+          "Message Idealy...",
+          "Ask Kevin to build production-grade full-stack features...",
+          "Type @ to assign an engineer or / for an integration...",
+          "Ask Daniel to architect scalable distributed systems...",
+          "Upload wireframes or specs to convert into clean code...",
+          "Run rigorous security, testing and QA with Maya...",
+        ];
+      }
+      if (isEs) {
+        return [
+          "Mensaje a Idealy...",
+          "Pide a Kevin desarrollar funciones de nivel de producción...",
+          "Escribe @ para asignar un ingeniero o / para una integración...",
+          "Pide a Daniel diseñar una arquitectura escalable...",
+          "Arrastra especificaciones o diseños para generar código limpio...",
+          "Ejecuta auditorías de seguridad y pruebas con Maya...",
+        ];
+      }
+      return [
+        "Message à Idealy...",
+        "Demandez à Kevin de développer des fonctionnalités de production...",
+        "Tapez @ pour assigner un ingénieur ou / pour une intégration...",
+        "Demandez à Daniel de concevoir une architecture scalable...",
+        "Importez des spécifications ou maquettes pour coder...",
+        "Exécutez des audits de sécurité et tests rigoureux avec Maya...",
+      ];
+    }
+
+    // Default: ninja
+    if (isEn) {
       return [
         "Message Idealy...",
         "Ask Naruto to build a responsive React UI...",
@@ -109,7 +207,7 @@ export const Composer: React.FC<ComposerProps> = ({
         "Optimize performance and security with Shikamaru...",
       ];
     }
-    if (language === "es") {
+    if (isEs) {
       return [
         "Mensaje a Idealy...",
         "Pide a Naruto crear una interfaz en React...",
@@ -127,7 +225,7 @@ export const Composer: React.FC<ComposerProps> = ({
       "Importez une maquette ou capture pour la coder...",
       "Optimisez la sécurité et la vitesse avec Shikamaru...",
     ];
-  }, [language]);
+  }, [language, userWay]);
 
   const [promptIndex, setPromptIndex] = useState(0);
 
@@ -152,6 +250,28 @@ export const Composer: React.FC<ComposerProps> = ({
         a.role.toLowerCase().includes(mentionQuery)
     );
   }, [userWay, mentionQuery]);
+
+    const [verifiedConnectorIds, setVerifiedConnectorIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let active = true;
+    authenticatedFetch("/api/idealy/connectors/status", { cache: "no-store", credentials: "same-origin" })
+      .then(async (res: Response) => {
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        if (data?.integrations && Array.isArray(data.integrations) && active) {
+          const connected = new Set<string>();
+          for (const item of data.integrations) {
+            if (item.status === "connected" || item.serverReady) {
+              connected.add(item.provider);
+            }
+          }
+          setVerifiedConnectorIds(connected);
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const availableConnectors = useMemo(() => {
     const catalog = DEFAULT_CONNECTORS_CATALOG;
@@ -787,9 +907,6 @@ export const Composer: React.FC<ComposerProps> = ({
                   src={activeAgentTag.avatar}
                 />
                 <span className="font-bold">@{activeAgentTag.name}</span>
-                <span className="text-[10px] opacity-80 font-normal">
-                  ({activeAgentTag.role})
-                </span>
                 <button
                   aria-label="Retirer l'agent"
                   className="ml-1 rounded-full p-0.5 hover:bg-black/20 text-current transition-colors"
@@ -947,6 +1064,7 @@ export const Composer: React.FC<ComposerProps> = ({
               </div>
               {availableConnectors.map((connector, i) => {
                 const isAttached = attachedConnectors.includes(connector.id);
+                const isVerified = verifiedConnectorIds.has(connector.id) || isAttached;
                 return (
                   <button
                     aria-selected={i === slashIndex}
@@ -976,9 +1094,17 @@ export const Composer: React.FC<ComposerProps> = ({
                         {connector.description}
                       </p>
                     </div>
-                    {isAttached && (
+                    {isAttached ? (
                       <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
                         Attaché
+                      </span>
+                    ) : isVerified ? (
+                      <span className="text-[10px] font-medium text-emerald-400/80 bg-emerald-500/5 px-1.5 py-0.5 rounded">
+                        Connecté
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-zinc-500 bg-white/5 px-1.5 py-0.5 rounded">
+                        À connecter
                       </span>
                     )}
                   </button>

@@ -377,13 +377,13 @@ export const Sidebar: React.FC = () => {
             createConversation();
             setActivePage("chat");
           }}
-          title="Nouvelle conversation"
+          title={t("sidebar.newChat")}
           type="button"
         >
           <SquarePen className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
           {!collapsed && (
             <span className="text-xs font-semibold tracking-tight">
-              Nouvelle discussion
+              {t("sidebar.newChat")}
             </span>
           )}
         </button>

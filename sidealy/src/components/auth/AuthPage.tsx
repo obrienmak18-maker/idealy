@@ -16,6 +16,7 @@ import {
   createBackendSession,
   completeGoogleRedirect,
   ensureFirebaseConfigured,
+  getFirebaseAuth,
   isGoogleRedirectPending,
   getBearerToken,
   isFirebaseConfigured,
@@ -30,6 +31,7 @@ import {
   sendVerificationEmail,
 } from "../../services/firebase";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 import { AuthShell, authPrimary } from "./AuthShell";
 import { IdealyLogo } from "../branding/IdealyLogo";
 
@@ -59,6 +61,7 @@ const GoogleIcon = () => (
 
 export const AuthPage: React.FC = () => {
   const { setActivePage } = useApp();
+  const { t, ti } = useTranslation();
   const [view, setView] = useState<View>(() => {
     if (typeof window !== "undefined" && window.location.pathname.startsWith("/register")) {
       return "signup";
@@ -142,8 +145,7 @@ export const AuthPage: React.FC = () => {
     setActivePage("chat");
   };
 
-  // Firebase public configuration is loaded from the existing Idealy API
-  // project. Magic links are handled only after the client SDK is initialized.
+  // Auto-redirect: if the user already has an active Firebase session, skip the login form.
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -151,9 +153,25 @@ export const AuthPage: React.FC = () => {
       if (!active) return;
       setFirebaseReady(true);
       if (!configured) {
-        setError("La configuration Firebase publique n’est pas disponible. Le backend doit exposer ses paramètres Firebase.");
+        setError(t("auth.firebaseUnavailable"));
         return;
       }
+
+      // Check for existing session before showing the form
+      try {
+        const auth = getFirebaseAuth();
+        await auth.authStateReady();
+        const existingUser = auth.currentUser;
+        if (existingUser && existingUser.emailVerified) {
+          // User already signed in with verified email — go straight to studio
+          setBusy(true);
+          await finish(existingUser);
+          return;
+        }
+      } catch {
+        // If session restore fails, fall through to login form
+      }
+
       if (isGoogleRedirectPending()) {
         await run(async () => {
           const redirectedUser = await completeGoogleRedirect();
@@ -166,7 +184,7 @@ export const AuthPage: React.FC = () => {
       const known = rememberedMagicEmail();
       if (!known) {
         setView("magic");
-        setNotice("Confirmez votre adresse e-mail pour terminer la connexion.");
+        setNotice(t("auth.confirmMagicEmail"));
         return;
       }
       await run(async () => finish(await completeMagicLink(known)));
@@ -180,7 +198,7 @@ export const AuthPage: React.FC = () => {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (view === "signup" && !acceptTerms) {
-      setError("Veuillez accepter les conditions d'utilisation pour créer un compte.");
+      setError(t("auth.acceptTermsError"));
       return;
     }
 
@@ -211,7 +229,7 @@ export const AuthPage: React.FC = () => {
           if (!recaptchaRef.current) return;
           await sendPhoneCode(phone.replace(/\s+/g, ""), recaptchaRef.current);
           setCodeSent(true);
-          setNotice("Code envoyé par SMS.");
+          setNotice(t("auth.codeSentSms"));
           return;
         }
         return finish(await confirmPhoneCode(code));
@@ -219,17 +237,45 @@ export const AuthPage: React.FC = () => {
     });
   };
 
+  // --- Title helpers ---
+  const viewTitle = (): string => {
+    if (view === "login") return t("auth.welcomeBack");
+    if (view === "signup") return t("auth.createAccount");
+    if (view === "reset") return t("auth.forgotPassword");
+    if (view === "magic") return t("auth.magicLinkTitle");
+    return t("auth.phoneTitle");
+  };
+
+  const viewSubtitle = (): string => {
+    if (view === "login") return t("auth.loginSubtitle");
+    if (view === "signup") return t("auth.signupSubtitle");
+    if (view === "reset") return t("auth.resetSubtitle");
+    if (view === "magic") return t("auth.magicSubtitle");
+    return t("auth.phoneSubtitle");
+  };
+
+  const submitLabel = (): string => {
+    if (busy) return t("auth.busy");
+    if (view === "login") return t("auth.submitLogin");
+    if (view === "signup") return t("auth.submitSignup");
+    if (view === "reset") return t("auth.submitReset");
+    if (view === "phone") return codeSent ? t("auth.submitVerifyCode") : t("auth.submitPhoneCode");
+    return t("auth.submitMagic");
+  };
+
+  // --- "Sent" confirmation screen ---
   if (view === "sent" && sentTo) {
-    const text =
+    const checkMailKey =
       sentTo.kind === "verify"
-        ? `Un e-mail de confirmation a été envoyé à ${sentTo.email}. Ouvrez-le pour activer votre compte.`
+        ? "auth.checkMailVerify"
         : sentTo.kind === "magic"
-          ? `Un lien de connexion a été envoyé à ${sentTo.email}. Ouvrez-le sur cet appareil.`
-          : `Si un compte correspond à ${sentTo.email}, un lien de réinitialisation vient d’être envoyé.`;
+          ? "auth.checkMailMagic"
+          : "auth.checkMailReset";
+    const text = ti(checkMailKey, { email: sentTo.email });
 
     return (
       <AuthShell
-        title="Vérifiez votre boîte mail"
+        title={t("auth.checkMailTitle")}
         subtitle={text}
         width={560}
       >
@@ -237,14 +283,14 @@ export const AuthPage: React.FC = () => {
           <Mail className="size-5" />
         </div>
         <p className="mb-7 text-sm leading-relaxed text-[#9ca6b8]">
-          Pensez également à vérifier vos courriers indésirables. Vous pourrez revenir ici après avoir ouvert le lien.
+          {t("auth.checkMailSpam")}
         </p>
         <button
           className={authPrimary}
           onClick={() => go("login")}
           type="button"
         >
-          Retour à la connexion
+          {t("auth.backToLoginBtn")}
         </button>
       </AuthShell>
     );
@@ -270,12 +316,12 @@ export const AuthPage: React.FC = () => {
           type="button"
         >
           <ArrowLeft className="size-4" />
-          Retour à Idealy
+          {t("auth.backToIdealy")}
         </button>
 
         <section className="rounded-[26px] border border-white/[0.10] bg-[#191b22]/95 p-6 shadow-[0_28px_90px_-38px_rgba(0,0,0,0.92)] backdrop-blur-2xl sm:p-8">
           <a
-            aria-label="Accueil Idealy"
+            aria-label={t("auth.homeLinkLabel")}
             className="mb-7 inline-flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
             href="/welcome"
           >
@@ -285,31 +331,15 @@ export const AuthPage: React.FC = () => {
 
           <div className="space-y-2.5">
             <h1 className="text-[27px] font-semibold leading-tight tracking-[-0.045em] text-white sm:text-[30px]">
-              {isLogin
-                ? "Heureux de vous revoir"
-                : isSignup
-                  ? "Créez votre compte Idealy"
-                  : view === "reset"
-                    ? "Mot de passe oublié ?"
-                    : view === "magic"
-                      ? "Recevoir un lien de connexion"
-                      : "Connexion par SMS"}
+              {viewTitle()}
             </h1>
             <p className="text-[14px] leading-[1.7] text-[#9ca6b8]">
-              {isLogin
-                ? "Connectez-vous pour retrouver vos projets et reprendre là où vous en étiez."
-                : isSignup
-                  ? "Créez votre espace et commencez à transformer vos idées en applications."
-                  : view === "reset"
-                    ? "Nous vous enverrons un lien sécurisé pour réinitialiser votre mot de passe."
-                    : view === "magic"
-                      ? "Recevez un lien sécurisé directement dans votre boîte mail."
-                      : "Utilisez votre numéro pour recevoir un code de vérification."}
+              {viewSubtitle()}
             </p>
           </div>
 
           {isPrimaryAuthView && (
-            <div className="mt-6 grid grid-cols-2 rounded-xl border border-white/[0.08] bg-[#11141b] p-1" role="tablist" aria-label="Type de compte">
+            <div className="mt-6 grid grid-cols-2 rounded-xl border border-white/[0.08] bg-[#11141b] p-1" role="tablist" aria-label={t("auth.tabLogin")}>
               <button
                 aria-selected={isLogin}
                 className={"min-h-10 rounded-lg px-3 text-[12px] font-semibold transition " + (isLogin ? "bg-white text-[#171923] shadow-sm" : "text-white/50 hover:text-white")}
@@ -317,7 +347,7 @@ export const AuthPage: React.FC = () => {
                 role="tab"
                 type="button"
               >
-                Se connecter
+                {t("auth.tabLogin")}
               </button>
               <button
                 aria-selected={isSignup}
@@ -326,7 +356,7 @@ export const AuthPage: React.FC = () => {
                 role="tab"
                 type="button"
               >
-                Créer un compte
+                {t("auth.tabSignup")}
               </button>
             </div>
           )}
@@ -360,7 +390,7 @@ export const AuthPage: React.FC = () => {
                 disabled={busy || !firebaseReady || !isFirebaseConfigured()}
                 onClick={() => {
                   if (isSignup && !acceptTerms) {
-                    setError("Veuillez accepter les conditions d’utilisation et la politique de confidentialité avant de continuer.");
+                    setError(t("auth.acceptTermsGoogleError"));
                     return;
                   }
                   void run(async () => {
@@ -371,12 +401,12 @@ export const AuthPage: React.FC = () => {
                 type="button"
               >
                 <GoogleIcon />
-                Continuer avec Google
+                {t("auth.continueGoogle")}
               </button>
 
               <div className="my-5 flex items-center gap-3 text-[11px] text-[#737d90]">
                 <span className="h-px flex-1 bg-white/[0.08]" />
-                ou continuer avec votre e-mail
+                {t("auth.orEmail")}
                 <span className="h-px flex-1 bg-white/[0.08]" />
               </div>
             </>
@@ -386,7 +416,7 @@ export const AuthPage: React.FC = () => {
             {view !== "phone" && (
               <div className="space-y-2">
                 <label className="block text-[12px] font-medium text-[#c6ccd6]" htmlFor="idealy-email">
-                  Adresse e-mail
+                  {t("auth.emailLabel")}
                 </label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8590a3]" />
@@ -396,7 +426,7 @@ export const AuthPage: React.FC = () => {
                     className="h-12 w-full rounded-xl border border-white/[0.10] bg-[#242730] pl-10 pr-4 text-[14px] text-white outline-none transition placeholder:text-[#7f899b] hover:border-white/20 focus:border-[#8c94f8] focus:ring-4 focus:ring-violet-400/[0.10]"
                     id="idealy-email"
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="vous@exemple.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     required
                     type="email"
                     value={email}
@@ -409,7 +439,7 @@ export const AuthPage: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <label className="block text-[12px] font-medium text-[#c6ccd6]" htmlFor="idealy-password">
-                    Mot de passe
+                    {t("auth.passwordLabel")}
                   </label>
                   {isLogin && (
                     <button
@@ -417,7 +447,7 @@ export const AuthPage: React.FC = () => {
                       onClick={() => go("reset")}
                       type="button"
                     >
-                      Mot de passe oublié ?
+                      {t("auth.forgotPasswordLink")}
                     </button>
                   )}
                 </div>
@@ -429,13 +459,13 @@ export const AuthPage: React.FC = () => {
                     id="idealy-password"
                     minLength={6}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Au moins 6 caractères"
+                    placeholder={t("auth.passwordPlaceholder")}
                     required
                     type={showPassword ? "text" : "password"}
                     value={password}
                   />
                   <button
-                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    aria-label={showPassword ? t("auth.passwordLabel") : t("auth.passwordLabel")}
                     className="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-[#9ba6ba] transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
                     onClick={() => setShowPassword((visible) => !visible)}
                     type="button"
@@ -455,13 +485,13 @@ export const AuthPage: React.FC = () => {
                   type="checkbox"
                 />
                 <span>
-                  J’accepte les{" "}
+                  {t("auth.acceptTermsPrefix")}{" "}
                   <button className="text-white underline underline-offset-2 hover:text-orange-200" onClick={() => setActivePage("terms")} type="button">
-                    conditions d’utilisation
+                    {t("auth.termsOfService")}
                   </button>
-                  {" "}et la{" "}
+                  {" "}{t("auth.andThe")}{" "}
                   <button className="text-white underline underline-offset-2 hover:text-orange-200" onClick={() => setActivePage("privacy")} type="button">
-                    politique de confidentialité
+                    {t("auth.privacyPolicy")}
                   </button>
                   .
                 </span>
@@ -472,7 +502,7 @@ export const AuthPage: React.FC = () => {
               <div className="space-y-3">
                 <div className="space-y-2">
                   <label className="block text-[12px] font-medium text-[#c6ccd6]" htmlFor="idealy-phone">
-                    Numéro de téléphone
+                    {t("auth.phoneLabel")}
                   </label>
                   <div className="relative">
                     <Phone className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8590a3]" />
@@ -497,7 +527,7 @@ export const AuthPage: React.FC = () => {
                     inputMode="numeric"
                     maxLength={6}
                     onChange={(event) => setCode(event.target.value)}
-                    placeholder="Code de vérification"
+                    placeholder={t("auth.codeLabel")}
                     required
                     value={code}
                   />
@@ -511,29 +541,17 @@ export const AuthPage: React.FC = () => {
               disabled={busy || !firebaseReady || !isFirebaseConfigured()}
               type="submit"
             >
-              {busy
-                ? "Connexion en cours…"
-                : isLogin
-                  ? "Se connecter"
-                  : isSignup
-                    ? "Créer mon compte"
-                    : view === "reset"
-                      ? "Envoyer le lien de réinitialisation"
-                      : view === "phone"
-                        ? codeSent
-                          ? "Valider le code"
-                          : "Recevoir le code SMS"
-                        : "Envoyer le lien de connexion"}
+              {submitLabel()}
             </button>
           </form>
 
           {!firebaseReady ? (
             <p className="mt-4 text-center text-[11px] text-[#7f899b]" role="status">
-              Préparation de la connexion sécurisée…
+              {t("auth.preparingSecure")}
             </p>
           ) : !isFirebaseConfigured() ? (
             <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-center text-[11px] leading-relaxed text-amber-100/90" role="alert">
-              La connexion sécurisée n’est pas configurée pour cet environnement. Aucun accès invité n’est ouvert.
+              {t("auth.firebaseNotConfigured")}
             </p>
           ) : null}
 
@@ -541,22 +559,22 @@ export const AuthPage: React.FC = () => {
             {isPrimaryAuthView ? (
               <>
                 <p className="text-[12px] text-[#9ca6b8]">
-                  {isLogin ? "Pas encore de compte ?" : "Vous avez déjà un compte ?"}
+                  {isLogin ? t("auth.noAccount") : t("auth.haveAccount")}
                   {" "}
                   <button
                     className="font-semibold text-[#b5b9ff] transition hover:text-white"
                     onClick={() => go(isLogin ? "signup" : "login")}
                     type="button"
                   >
-                    {isLogin ? "Créer un compte" : "Se connecter"}
+                    {isLogin ? t("auth.tabSignup") : t("auth.tabLogin")}
                   </button>
                 </p>
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-[#7f899b]">
                   <button className="transition hover:text-white" onClick={() => go("magic")} type="button">
-                    Lien de connexion par e-mail
+                    {t("auth.magicLinkOption")}
                   </button>
                   <button className="transition hover:text-white" onClick={() => { setCodeSent(false); setCode(""); go("phone"); }} type="button">
-                    Connexion par SMS
+                    {t("auth.phoneOption")}
                   </button>
                 </div>
               </>
@@ -566,14 +584,14 @@ export const AuthPage: React.FC = () => {
                 onClick={() => go("login")}
                 type="button"
               >
-                ← Retour à la connexion
+                {t("auth.backToLogin")}
               </button>
             )}
           </div>
         </section>
 
         <p className="mx-auto mt-5 max-w-[390px] px-3 text-center text-[10px] leading-relaxed text-white/35">
-          L’IA peut se tromper. Vérifiez les informations importantes avant d’agir.
+          {t("auth.aiDisclaimer")}
         </p>
       </div>
     </main>

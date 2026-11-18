@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const firebaseMocks = vi.hoisted(() => {
@@ -78,7 +78,7 @@ describe("Idealy Application Suite", () => {
     render(<App />);
 
     expect(
-      await screen.findByPlaceholderText(/Message à Idealy/i)
+      await screen.findByPlaceholderText(/Message (à\s+)?Idealy/i)
     ).toBeInTheDocument();
     expect(screen.queryByText(/Passez de l’idée/i)).not.toBeInTheDocument();
   });
@@ -91,19 +91,19 @@ describe("Idealy Application Suite", () => {
     render(<App />);
 
     expect(
-      await screen.findByText("Heureux de vous revoir")
+      await screen.findByText(/Welcome back|Heureux de vous revoir/i)
     ).toBeInTheDocument();
   });
 
   it("renders the core application layout and welcome message", async () => {
     render(<App />);
-    await screen.findByPlaceholderText(/Message à Idealy/i);
+    await screen.findByPlaceholderText(/Message (à\s+)?Idealy/i);
     expect(screen.getAllByText(/Idealy/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Nouvelle discussion/i).length).toBeGreaterThan(
-      0
-    );
     expect(
-      await screen.findByPlaceholderText(/Message à Idealy/i)
+      screen.getAllByText(/New chat|Nouvelle discussion/i).length
+    ).toBeGreaterThan(0);
+    expect(
+      await screen.findByPlaceholderText(/Message (à\s+)?Idealy/i)
     ).toBeInTheDocument();
   });
 
@@ -111,14 +111,14 @@ describe("Idealy Application Suite", () => {
     render(<App />);
 
     // Type in composer in current conversation
-    const textarea = await screen.findByPlaceholderText(/Message à Idealy/i);
+    const textarea = await screen.findByPlaceholderText(/Message (à\s+)?Idealy/i);
     fireEvent.change(textarea, {
       target: { value: "Brouillon test pour conv 1" },
     });
     expect(textarea).toHaveValue("Brouillon test pour conv 1");
 
     // Create a new conversation
-    const [newConvBtn] = screen.getAllByTitle(/Nouvelle conversation/i);
+    const [newConvBtn] = screen.getAllByTitle(/New chat|Nouvelle conversation/i);
     fireEvent.click(newConvBtn);
 
     // Verify draft is empty for the new conversation
@@ -131,11 +131,15 @@ describe("Idealy Application Suite", () => {
     expect(textarea).toHaveValue("Brouillon pour conv 2");
 
     // Switch back to the previous conversation
-    const convButtons = screen.getAllByRole("button", {
-      name: /Discussion/i,
-    });
-    if (convButtons.length > 1) {
-      fireEvent.click(convButtons[1]);
+    const convList = screen.getByRole("list");
+    const convTitleButtons = within(convList)
+      .getAllByRole("button")
+      .filter((btn) => !btn.getAttribute("aria-label")?.includes("Options"));
+    const prevConv = convTitleButtons.find(
+      (btn) => btn.getAttribute("aria-current") !== "true"
+    );
+    if (prevConv) {
+      fireEvent.click(prevConv);
       await waitFor(() => {
         expect(textarea).toHaveValue("Brouillon test pour conv 1");
       });
@@ -173,14 +177,14 @@ describe("Idealy Application Suite", () => {
     );
 
     render(<App />);
-    await screen.findByPlaceholderText(/Message à Idealy/i);
+    await screen.findByPlaceholderText(/Message (à\s+)?Idealy/i);
 
     expect(
       screen.getByLabelText("Espace de prévisualisation et de création")
     ).toBeInTheDocument();
     expect(screen.getByTitle(/Aperçu interactif/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByTitle(/Nouvelle conversation/i)[0]);
+    fireEvent.click(screen.getAllByTitle(/New chat|Nouvelle conversation/i)[0]);
 
     await waitFor(() => {
       expect(
@@ -208,12 +212,12 @@ describe("Idealy Application Suite", () => {
     );
 
     render(<App />);
-    await screen.findByPlaceholderText(/Message à Idealy/i);
+    await screen.findByPlaceholderText(/Message (à\s+)?Idealy/i);
     expect(
       screen.getByLabelText("Espace de prévisualisation et de création")
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByTitle(/Nouvelle conversation/i)[0]);
+    fireEvent.click(screen.getAllByTitle(/New chat|Nouvelle conversation/i)[0]);
 
     await waitFor(() => {
       expect(
@@ -239,13 +243,13 @@ describe("Idealy Application Suite", () => {
       ])
     );
     render(<App />);
-    await screen.findByPlaceholderText(/Message à Idealy/i);
+    await screen.findByPlaceholderText(/Message (à\s+)?Idealy/i);
 
     expect(
       screen.getByLabelText("Espace de prévisualisation et de création")
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTitle("Paramètres généraux"));
+    fireEvent.click(screen.getByTitle(/General|Paramètres généraux/i));
 
     await waitFor(() => {
       expect(
@@ -285,12 +289,12 @@ describe("Idealy Application Suite", () => {
       });
     render(<App />);
 
-    const textarea = await screen.findByPlaceholderText(/Message à Idealy/i);
+    const textarea = await screen.findByPlaceholderText(/Message (à\s+)?Idealy/i);
     fireEvent.change(textarea, {
       target: { value: "Spécification du module d'authentification" },
     });
 
-    const sendBtn = screen.getByRole("button", { name: /Envoyer le message/i });
+    const sendBtn = screen.getByRole("button", { name: /Send message|Envoyer le message/i });
     fireEvent.click(sendBtn);
 
     // Verify the user message and a fully completed local stream appear.

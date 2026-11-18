@@ -14,7 +14,23 @@
       "destination": "/sidealy/index.html"
     },
     {
+      "source": "/connectors/:path*",
+      "destination": "/sidealy/index.html"
+    },
+    {
       "source": "/plugins",
+      "destination": "/sidealy/index.html"
+    },
+    {
+      "source": "/plugins/:path*",
+      "destination": "/sidealy/index.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/sidealy/index.html"
+    },
+    {
+      "source": "/settings/:path*",
       "destination": "/sidealy/index.html"
     },
     {

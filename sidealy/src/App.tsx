@@ -46,6 +46,49 @@ const PROTECTED_PAGES = new Set([
   "onboarding",
 ]);
 
+const StudioLayoutSkeleton: React.FC = () => (
+  <div className="flex h-screen w-screen overflow-hidden bg-[#08070d] text-white">
+    <div className="fixed inset-x-0 top-0 z-50 h-[2px] bg-gradient-to-r from-transparent via-[#858cf8] to-transparent animate-pulse" />
+    <aside className="hidden md:flex h-full w-[260px] flex-col border-r border-white/5 bg-[#0d0f17] p-3 space-y-4">
+      <div className="flex items-center gap-3 px-2 py-1">
+        <div className="h-7 w-7 rounded-lg bg-white/10 animate-pulse" />
+        <div className="h-4 w-24 rounded bg-white/10 animate-pulse" />
+      </div>
+      <div className="h-9 w-full rounded-xl bg-white/5 animate-pulse" />
+      <div className="flex-1 space-y-2 pt-2">
+        <div className="h-4 w-16 rounded bg-white/5 animate-pulse" />
+        <div className="h-8 w-full rounded-lg bg-white/5 animate-pulse" />
+        <div className="h-8 w-full rounded-lg bg-white/5 animate-pulse" />
+        <div className="h-8 w-full rounded-lg bg-white/5 animate-pulse" />
+      </div>
+      <div className="h-10 w-full rounded-xl bg-white/5 animate-pulse" />
+    </aside>
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <header className="flex h-12 items-center justify-between border-b border-white/5 px-4">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-24 rounded bg-white/5 animate-pulse" />
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-20 rounded-full bg-white/5 animate-pulse" />
+          <div className="h-7 w-7 rounded-full bg-white/5 animate-pulse" />
+        </div>
+      </header>
+      <main className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+        <IdealyLogo animated size={44} />
+        <div className="mt-4 h-1 w-32 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full w-1/2 animate-pulse rounded-full bg-[#858cf8]" />
+        </div>
+        <p className="mt-3 text-xs text-[#7f899b]">
+          Restoring your workspace…
+        </p>
+      </main>
+      <footer className="mx-auto w-full max-w-3xl p-4">
+        <div className="h-14 w-full rounded-2xl border border-white/5 bg-white/[0.02] animate-pulse" />
+      </footer>
+    </div>
+  </div>
+);
+
 const AppContent: React.FC = () => {
   const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
   const handleCloseLiveVoice = useCallback(() => setIsLiveVoiceOpen(false), []);
@@ -64,6 +107,7 @@ const AppContent: React.FC = () => {
     artifacts,
     setActivePage,
     userWay,
+    language,
   } = useApp();
   const hasActiveWorkspace = hasConversationWorkspace(
     activeMessages,
@@ -87,7 +131,7 @@ const AppContent: React.FC = () => {
     }
 
     // A completed verification remains valid while the same user navigates
-    // between protected Vite pages. Avoid a blocking security screen per click.
+    // between protected pages. Avoid a blocking security screen per click.
     let currentUserId: string | null = null;
     try {
       currentUserId = getFirebaseAuth().currentUser?.uid ?? null;
@@ -107,7 +151,7 @@ const AppContent: React.FC = () => {
     setAuthGateState("checking");
     setAuthGateError(null);
 
-    void (async () => {
+    const checkAuth = async () => {
       const configured = await ensureFirebaseConfigured();
       if (!active) {
         return;
@@ -129,13 +173,24 @@ const AppContent: React.FC = () => {
         return;
       }
 
-      await user.reload();
+      if (!user.emailVerified) {
+        try {
+          await user.reload();
+        } catch {}
+      }
       if (!user.emailVerified) {
         setActivePage("login");
         return;
       }
 
-      await createBackendSession(user);
+      const hasActiveSession =
+        typeof window !== "undefined" &&
+        localStorage.getItem("idealy_session") === "active";
+
+      if (!hasActiveSession) {
+        await createBackendSession(user);
+      }
+
       const bearer = await getBearerToken();
       if (!bearer) {
         setActivePage("login");
@@ -155,7 +210,13 @@ const AppContent: React.FC = () => {
         return;
       }
       if (!response.ok) {
-        throw new Error("Le profil Idealy n’a pas pu être vérifié. Réessayez.");
+        throw new Error(
+          language === "fr"
+            ? "Le profil Idealy n’a pas pu être vérifié. Réessayez."
+            : language === "es"
+              ? "No se pudo verificar el perfil de Idealy. Reintentar."
+              : "Unable to verify your Idealy workspace. Please retry."
+        );
       }
 
       const profile = (await response.json()) as {
@@ -172,14 +233,36 @@ const AppContent: React.FC = () => {
       }
 
       setAuthGateState("ready");
-    })().catch((error: unknown) => {
+    };
+
+    // Bounded timeout to prevent infinite hanging
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      const timer = setTimeout(() => {
+        reject(
+          new Error(
+            language === "fr"
+              ? "La vérification de session a expiré. Vérifiez votre connexion et réessayez."
+              : language === "es"
+                ? "La verificación de sesión ha expirado. Compruebe la conexión y reintente."
+                : "Session verification timed out. Check your connection and retry."
+          )
+        );
+      }, 7000);
+      return () => clearTimeout(timer);
+    });
+
+    Promise.race([checkAuth(), timeoutPromise]).catch((error: unknown) => {
       if (!active) {
         return;
       }
       setAuthGateError(
         error instanceof Error
           ? error.message
-          : "La session Idealy n’a pas pu être vérifiée."
+          : language === "fr"
+            ? "La session Idealy n’a pas pu être vérifiée."
+            : language === "es"
+              ? "La sesión de Idealy no pudo verificarse."
+              : "The Idealy session could not be verified."
       );
       setAuthGateState("error");
     });
@@ -187,22 +270,10 @@ const AppContent: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [activePage, authGateRetry, requiresAuthentication, setActivePage]);
+  }, [activePage, authGateRetry, language, requiresAuthentication, setActivePage]);
 
   if (requiresAuthentication && authGateState === "checking") {
-    return (
-      <main className="flex min-h-screen w-full items-center justify-center bg-[#0b0d14] px-5 text-white">
-        <div className="flex flex-col items-center gap-5 text-center">
-          <IdealyLogo animated size={48} />
-          <div className="h-1 w-36 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full w-1/2 animate-pulse rounded-full bg-[#858cf8]" />
-          </div>
-          <p className="text-sm text-[#9ca6b8]">
-            Vérification sécurisée de votre espace…
-          </p>
-        </div>
-      </main>
-    );
+    return <StudioLayoutSkeleton />;
   }
 
   if (requiresAuthentication && authGateState === "error") {
@@ -211,7 +282,11 @@ const AppContent: React.FC = () => {
         <section className="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#191b22] p-8 shadow-2xl sm:p-10">
           <IdealyLogo animated={false} size={40} />
           <h1 className="mt-8 text-2xl font-semibold tracking-tight">
-            Impossible de vérifier votre espace
+            {language === "fr"
+              ? "Impossible de vérifier votre espace"
+              : language === "es"
+                ? "No se pudo verificar su espacio"
+                : "Unable to verify your workspace"}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-[#9ca6b8]">
             {authGateError}
@@ -221,14 +296,22 @@ const AppContent: React.FC = () => {
             onClick={() => setAuthGateRetry((value) => value + 1)}
             type="button"
           >
-            Réessayer
+            {language === "fr"
+              ? "Réessayer"
+              : language === "es"
+                ? "Reintentar"
+                : "Try again"}
           </button>
           <button
             className="mt-4 w-full text-sm font-medium text-[#aeb6c7] transition hover:text-white"
             onClick={() => setActivePage("login")}
             type="button"
           >
-            Retour à la connexion
+            {language === "fr"
+              ? "Retour à la connexion"
+              : language === "es"
+                ? "Volver a inicio de sesión"
+                : "Back to sign in"}
           </button>
         </section>
       </main>

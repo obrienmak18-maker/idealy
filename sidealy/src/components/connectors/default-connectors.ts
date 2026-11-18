@@ -123,7 +123,7 @@ export const DEFAULT_CONNECTORS_CATALOG: ConnectorDefinition[] = [
     description:
       "Connectez votre facturation, gérez les abonnements et simulez des flux de paiement sécurisés.",
     id: "stripe",
-    installed: true,
+    installed: false,
     name: "Stripe",
     tools: [
       { id: "stripe.get_customer", label: "Consulter un client", risk: "low" },
@@ -163,7 +163,7 @@ export const DEFAULT_CONNECTORS_CATALOG: ConnectorDefinition[] = [
     description:
       "Apportez vos propres clés API (BYOK) pour GPT-4o, GPT-o1, o3-mini et les derniers modèles OpenAI.",
     id: "openai",
-    installed: true,
+    installed: false,
     name: "OpenAI Models",
     tools: [
       {
@@ -182,7 +182,7 @@ export const DEFAULT_CONNECTORS_CATALOG: ConnectorDefinition[] = [
     description:
       "Intégrez Claude 3.7 Sonnet, Claude 3.5 et les modèles de pointe Anthropic pour le code architectural de haute précision.",
     id: "anthropic",
-    installed: true,
+    installed: false,
     name: "Anthropic Claude",
     tools: [
       {
