@@ -39,6 +39,8 @@ export const postRequestBodySchema = z.object({
   selectedTone: z.string().optional(),
   selectedLanguage: z.string().optional(),
   selectedUserName: z.string().optional(),
+  agents: z.array(z.string().min(1).max(80)).max(10).optional(),
+  connectors: z.array(z.string().min(1).max(80)).max(20).optional(),
 });
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;

@@ -59,10 +59,17 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export const AuthPage: React.FC = () => {
+export type AuthPageProps = {
+  initialView?: "login" | "signup";
+};
+
+export const AuthPage: React.FC<AuthPageProps> = ({ initialView }) => {
   const { setActivePage } = useApp();
   const { t, ti } = useTranslation();
   const [view, setView] = useState<View>(() => {
+    if (initialView) {
+      return initialView;
+    }
     if (typeof window !== "undefined" && window.location.pathname.startsWith("/register")) {
       return "signup";
     }

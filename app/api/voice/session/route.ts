@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         configured: false,
-        error: "Reconnectez-vous à Idealy pour ouvrir une session Live.",
+        error: "Please sign in to Idealy to open a Live voice session.",
       },
       { headers: { "Cache-Control": "no-store" }, status: 401 }
     );
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         configured: false,
-        error: "Le service vocal Live n’est pas configuré sur le serveur.",
+        error: "The Live voice service is not configured on the server.",
       },
       { headers: { "Cache-Control": "no-store" }, status: 503 }
     );
@@ -61,9 +61,10 @@ export async function GET(request: Request) {
     {
       body: JSON.stringify({
         expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
-        liveConnectConstraints: {
+        bidiGenerateContentSetup: {
           model: `models/${LIVE_MODEL}`,
         },
+        fieldMask: "model",
         newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
         uses: 1,
       }),
@@ -92,7 +93,7 @@ export async function GET(request: Request) {
       {
         configured: false,
         error:
-          "Impossible de préparer une session vocale Live. Réessayez dans un instant.",
+          "Unable to prepare a Live voice session. Please retry in a moment.",
       },
       { headers: { "Cache-Control": "no-store" }, status: 503 }
     );
@@ -109,7 +110,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         configured: false,
-        error: "Gemini n’a pas fourni de jeton vocal utilisable.",
+        error: "Gemini did not provide a usable voice session token.",
       },
       { headers: { "Cache-Control": "no-store" }, status: 503 }
     );
@@ -124,7 +125,7 @@ export async function GET(request: Request) {
   const requestedLang = (
     searchParams.get("lang") ||
     request.headers.get("x-idealy-lang") ||
-    "fr"
+    "en"
   ).toLowerCase();
 
   // Map Ways to Gemini voices:

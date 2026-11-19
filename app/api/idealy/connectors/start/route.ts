@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   if (!accessToken || !anonKey) {
     return Response.json(
-      { error: "Une session Idealy authentifiée est requise." },
+      { error: "An authenticated Idealy session is required." },
       { status: 401, headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   if (!allowedProviders.has(provider)) {
     return Response.json(
-      { error: "Ce connecteur OAuth n'est pas disponible." },
+      { error: "This OAuth connector is not available." },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const suppliedOrigin = request.headers.get("origin");
   if (suppliedOrigin && suppliedOrigin !== returnOrigin) {
     return Response.json(
-      { error: "L’origine de cette demande n’est pas autorisée." },
+      { error: "Request origin is not allowed." },
       { status: 403, headers: { "Cache-Control": "no-store" } },
     );
   }

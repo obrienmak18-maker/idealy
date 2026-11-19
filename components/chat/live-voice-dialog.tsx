@@ -70,11 +70,11 @@ export function LiveVoiceDialog({
           <div className="flex items-center gap-2">
             <Radio className="size-4 animate-pulse text-emerald-500" />
             <h3 className="text-sm font-semibold text-foreground">
-              Mode Vocal Live (Gemini 3.8 / 2.0 Live)
+              Live Voice Session (Gemini 3.8 Live)
             </h3>
           </div>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-            Voie {wayName}
+            {wayName} Way
           </span>
         </div>
 
@@ -97,11 +97,11 @@ export function LiveVoiceDialog({
           </div>
 
           <p className="mt-4 text-xs font-medium text-muted-foreground">
-            {status === "connecting" && "Connexion au flux vocal temps réel…"}
-            {status === "listening" && "Idealy vous écoute…"}
-            {status === "speaking" && "Idealy répond à la voix…"}
-            {status === "error" && (errorMessage || "Erreur de connexion")}
-            {status === "disconnected" && "Session terminée"}
+            {status === "connecting" && "Connecting to real-time voice stream…"}
+            {status === "listening" && "Idealy is listening…"}
+            {status === "speaking" && "Idealy is speaking…"}
+            {status === "error" && (errorMessage || "Voice connection error")}
+            {status === "disconnected" && "Session ended"}
           </p>
         </div>
 
@@ -110,7 +110,7 @@ export function LiveVoiceDialog({
           <div className="max-h-24 overflow-y-auto rounded-lg border border-border/40 bg-background/50 p-2.5 text-xs text-muted-foreground space-y-1">
             {transcripts.map((t, idx) => (
               <p key={idx} className={t.isUser ? "text-primary" : "text-foreground"}>
-                <span className="font-semibold">{t.isUser ? "Vous" : "Idealy"} : </span>
+                <span className="font-semibold">{t.isUser ? "You" : "Idealy"} : </span>
                 {t.text}
               </p>
             ))}
@@ -127,7 +127,7 @@ export function LiveVoiceDialog({
                 ? "border-amber-500/50 bg-amber-500/10 text-amber-500"
                 : "border-border/60 bg-muted/60 text-foreground hover:bg-muted"
             }`}
-            title={isMuted ? "Activer le micro" : "Couper le micro"}
+            title={isMuted ? "Unmute microphone" : "Mute microphone"}
           >
             {isMuted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
           </button>
@@ -136,7 +136,7 @@ export function LiveVoiceDialog({
             type="button"
             onClick={handleHangup}
             className="grid size-12 place-items-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
-            title="Terminer l'appel"
+            title="End call"
           >
             <PhoneOff className="size-5" />
           </button>

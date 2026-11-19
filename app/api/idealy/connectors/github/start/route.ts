@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
   if (!accessToken || !anonKey) {
     return Response.json(
-      { error: "Une session Idealy authentifiée est requise." },
+      { error: "An authenticated Idealy session is required." },
       { status: 401, headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       {
         error:
           payload?.error ??
-          "La connexion GitHub est momentanément indisponible.",
+          "GitHub connection is temporarily unavailable.",
       },
       {
         status: response?.status ?? 503,

@@ -202,32 +202,32 @@ export async function signUpEmail(email: string, password: string): Promise<User
 export const resetPassword = (email: string) =>
   sendPasswordResetEmail(auth(), email, actionCodeSettings("resetPassword"));
 
-/** Message clair et court pour les erreurs Firebase courantes. */
+/** Clear, short message for common Firebase auth errors. */
 export function authErrorMessage(error: unknown): string {
   const code = (error as { code?: string })?.code ?? (error as Error)?.message ?? "";
-  if (code.includes("firebase_not_configured")) return "La connexion n’est pas encore configurée sur cet environnement.";
-  if (code.includes("email_not_verified")) return "Confirmez votre adresse e-mail avant de vous connecter.";
-  if (code.includes("google_redirect_no_result")) return "Google n’a pas terminé la connexion. Recommencez ou utilisez votre e-mail.";
-  if (code.includes("google_redirect_unavailable")) return "La redirection Google n’a pas pu démarrer. Vérifiez les domaines autorisés dans Firebase.";
-  if (code.includes("auth/unauthorized-domain")) return "Ce domaine n’est pas autorisé dans Firebase Authentication. Ajoutez idealy-ai.vercel.app dans Authentication > Paramètres > Domaines autorisés.";
-  if (code.includes("auth/operation-not-allowed")) return "Le fournisseur Google n’est pas activé dans Firebase Authentication. Activez Google dans la liste des fournisseurs.";
-  if (code.includes("auth/invalid-api-key")) return "La clé Firebase Web est invalide pour cet environnement. Vérifiez la configuration publique Firebase de Vercel.";
-  if (code.includes("auth/operation-not-supported-in-this-environment")) return "Ce navigateur ne permet pas la fenêtre Google. La connexion doit utiliser la redirection sécurisée.";
+  if (code.includes("firebase_not_configured")) return "Authentication is not yet configured for this environment.";
+  if (code.includes("email_not_verified")) return "Please verify your email address before signing in.";
+  if (code.includes("google_redirect_no_result")) return "Google did not complete the sign-in. Try again or use your email.";
+  if (code.includes("google_redirect_unavailable")) return "Google redirect could not start. Check the authorized domains in Firebase.";
+  if (code.includes("auth/unauthorized-domain")) return "This domain is not authorized in Firebase Authentication. Add idealy-ai.vercel.app under Authentication > Settings > Authorized domains.";
+  if (code.includes("auth/operation-not-allowed")) return "The Google provider is not enabled in Firebase Authentication. Enable Google in the provider list.";
+  if (code.includes("auth/invalid-api-key")) return "The Firebase Web key is invalid for this environment. Check the public Firebase configuration.";
+  if (code.includes("auth/operation-not-supported-in-this-environment")) return "This browser does not allow the Google popup. Sign-in must use the secure redirect.";
   if (code.includes("auth/network-request-failed")) return "La connexion réseau a échoué pendant l’authentification Google. Vérifiez Internet et réessayez.";
-  if (code.includes("firebase_backend_identity_rejected")) return "Firebase a reconnu votre compte, mais le backend Idealy n’a pas validé cette identité.";
-  if (code.includes("firebase_backend_unavailable")) return "Le service d’authentification Idealy est momentanément indisponible. Réessayez dans un instant.";
-  if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return "E-mail ou mot de passe incorrect.";
-  if (code.includes("email-already-in-use")) return "Un compte existe déjà avec cet e-mail.";
-  if (code.includes("weak-password")) return "Choisissez un mot de passe d’au moins 6 caractères.";
-  if (code.includes("invalid-email")) return "Cette adresse e-mail n’est pas valide.";
-  if (code.includes("popup-closed") || code.includes("cancelled-popup")) return "Connexion annulée.";
-  if (code.includes("too-many-requests")) return "Trop de tentatives. Réessayez dans quelques minutes.";
-  if (code.includes("invalid-phone-number")) return "Ce numéro n’est pas valide. Utilisez le format international (+234…).";
-  if (code.includes("invalid-verification-code") || code.includes("invalid-code")) return "Ce code est incorrect.";
-  if (code.includes("code-expired") || code.includes("expired-action-code")) return "Ce lien ou ce code a expiré. Demandez-en un nouveau.";
-  if (code.includes("invalid-action-code")) return "Ce lien n’est plus valide. Demandez-en un nouveau.";
-  if (code.includes("network")) return "Connexion réseau indisponible.";
-  return "La connexion a échoué. Réessayez.";
+  if (code.includes("firebase_backend_identity_rejected")) return "Firebase recognized your account, but the Idealy backend did not validate this identity.";
+  if (code.includes("firebase_backend_unavailable")) return "The Idealy authentication service is temporarily unavailable. Please try again shortly.";
+  if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return "Incorrect email or password.";
+  if (code.includes("email-already-in-use")) return "An account already exists with this email.";
+  if (code.includes("weak-password")) return "Choose a password with at least 6 characters.";
+  if (code.includes("invalid-email")) return "This email address is not valid.";
+  if (code.includes("popup-closed") || code.includes("cancelled-popup")) return "Sign-in cancelled.";
+  if (code.includes("too-many-requests")) return "Too many attempts. Try again in a few minutes.";
+  if (code.includes("invalid-phone-number")) return "This phone number is not valid. Use international format (+1…).";
+  if (code.includes("invalid-verification-code") || code.includes("invalid-code")) return "This code is incorrect.";
+  if (code.includes("code-expired") || code.includes("expired-action-code")) return "This link or code has expired. Request a new one.";
+  if (code.includes("invalid-action-code")) return "This link is no longer valid. Request a new one.";
+  if (code.includes("network")) return "Network connection unavailable.";
+  return "Sign-in failed. Please try again.";
 }
 
 /** Verify the Firebase identity with Idealy's backend and resolve its Supabase account.
@@ -375,16 +375,47 @@ export async function authenticatedFetch(
 /** End the local Firebase session and clear non-authoritative UI hints. */
 export async function signOutFirebase(): Promise<void> {
   const firebaseAuth = auth();
-  await firebaseAuth.signOut();
   try {
-    localStorage.removeItem("idealy_session");
-    localStorage.removeItem("idealy_user_id");
-    localStorage.removeItem("idealy_user_email");
-    localStorage.removeItem("idealy_user_way");
-    localStorage.removeItem("idealy_profile");
-    localStorage.removeItem("idealy_user_profile");
-    localStorage.removeItem(MAGIC_EMAIL_KEY);
+    await firebaseAuth.signOut();
+  } catch (error) {
+    console.warn("[Firebase] signOut error:", error);
+  }
+
+  // Clear all client-side account state so Account B never inherits Account A's state
+  try {
+    const keysToRemove = [
+      "idealy_session",
+      "idealy_user_id",
+      "idealy_user_email",
+      "idealy_user_way",
+      "idealy_preferred_way",
+      "idealy_profile",
+      "idealy_user_profile",
+      "idealy_onboarding_completed",
+      "idealy_active_conversation_id",
+      "idealy_conversations_v1",
+      "idealy_messages_v1",
+      "idealy_backend_chat_ids_v1",
+      MAGIC_EMAIL_KEY,
+    ];
+    for (const key of keysToRemove) {
+      localStorage.removeItem(key);
+    }
+    document.cookie = "idealy_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "idealy_user_way=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   } catch {
-    // Firebase sign-out succeeded; local UI cache cleanup is best effort.
+    // Storage cleanup is best effort
+  }
+
+  // Clear backend session cookies if any NextAuth session exists
+  try {
+    await fetch("/api/auth/signout", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callbackUrl: "/welcome" }),
+    });
+  } catch {
+    // Best-effort backend signout
   }
 }

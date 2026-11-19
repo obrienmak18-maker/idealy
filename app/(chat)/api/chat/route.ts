@@ -460,12 +460,22 @@ export async function POST(request: Request) {
 
     const lastUserPrompt =
       message?.role === "user" ? getTextFromMessageParts(message).trim() : "";
-    const requestedAgentCandidate = lastUserPrompt.match(/(?:^|\s)@([A-Za-z0-9_-]{2,40})/)?.[1] ?? null;
-    const requestedAgent = requestedAgentCandidate
-      ? getMissionAgentRoster(userWay).find(
-          (agent) => agent.name.toLowerCase() === requestedAgentCandidate.toLowerCase(),
-        )?.name ?? null
-      : null;
+
+    // --- Agent resolution: prefer structured agents array from body, fall back to @mention ---
+    const structuredAgents: string[] = Array.isArray(requestBody?.agents) ? requestBody.agents : [];
+    const headerAgents = (request.headers.get("x-idealy-agents") ?? "")
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+    const mentionedAgentCandidate = lastUserPrompt.match(/(?:^|\s)@([A-Za-z0-9_-]{2,40})/)?.[1] ?? null;
+    const roster = getMissionAgentRoster(userWay);
+
+    // Merge all agent sources, deduplicate, and validate against roster
+    const allAgentCandidates = [...new Set([...structuredAgents, ...headerAgents, ...(mentionedAgentCandidate ? [mentionedAgentCandidate] : [])])];
+    const resolvedAgents = allAgentCandidates
+      .map((candidate) => roster.find((agent) => agent.name.toLowerCase() === candidate.toLowerCase())?.name)
+      .filter((name): name is string => !!name);
+    const requestedAgent = resolvedAgents[0] ?? null;
 
     // Fast, resilient interceptor for conversational greetings across all environments
     if (lastUserPrompt && isSimpleGreeting(lastUserPrompt)) {

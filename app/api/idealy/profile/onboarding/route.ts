@@ -137,7 +137,7 @@ export async function GET(request: Request) {
     }
   }
   if (!token) {
-    return response({ error: "Une session Idealy authentifiée est requise." }, 401);
+    return response({ error: "An authenticated Idealy session is required." }, 401);
   }
 
   const supabaseContext = await resolveSupabaseToken(token);
@@ -159,7 +159,7 @@ export async function GET(request: Request) {
     console.error("Idealy onboarding profile check failed", error);
     return response(
       {
-        error: "Le profil Idealy n’a pas pu être vérifié. Réessayez dans un instant.",
+        error: "Idealy profile could not be verified. Please try again shortly.",
       },
       503,
     );
@@ -174,7 +174,7 @@ export async function POST(request: Request) {
 
     if (!parsedDemoInput.success) {
       return response(
-        { error: "Les informations d’onboarding sont invalides." },
+        { error: "Invalid onboarding details." },
         400,
       );
     }
@@ -204,7 +204,7 @@ export async function POST(request: Request) {
     }
   }
   if (!token) {
-    return response({ error: "Une session Idealy authentifiée est requise." }, 401);
+    return response({ error: "An authenticated Idealy session is required." }, 401);
   }
 
   const supabaseContext = await resolveSupabaseToken(token);

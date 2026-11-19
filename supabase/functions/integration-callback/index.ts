@@ -19,8 +19,12 @@ const APP_ORIGIN = (
 );
 
 function redirect(query: string, origin = APP_ORIGIN) {
-  const target = new URL("/connectors", origin);
+  // Redirect to /studio so the Sidealy SPA handles the callback,
+  // not the legacy Next.js /connectors page.
+  const target = new URL("/studio", origin);
   target.search = query;
+  // Also set the page hint so the SPA routes to the connectors view
+  target.searchParams.set("page", "connectors");
   return Response.redirect(target.toString());
 }
 

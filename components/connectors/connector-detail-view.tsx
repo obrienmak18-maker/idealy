@@ -71,14 +71,14 @@ export function ConnectorDetailView({ connector }: ConnectorDetailViewProps) {
       });
       const payload = await response.json().catch(() => null) as { url?: string; error?: string } | null;
       if (response.status === 401) {
-        throw new Error("Connecte-toi à Idealy avant de relier ce compte.");
+        throw new Error("Sign in to Idealy before connecting this account.");
       }
       if (!response.ok || !payload?.url) {
-        throw new Error(payload?.error ?? "La connexion OAuth est momentanément indisponible.");
+        throw new Error(payload?.error ?? "OAuth connection is temporarily unavailable.");
       }
       window.location.assign(payload.url);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Impossible de démarrer la connexion.");
+      toast.error(error instanceof Error ? error.message : "Unable to initiate connection.");
       setConnecting(false);
     }
   };
@@ -92,7 +92,7 @@ export function ConnectorDetailView({ connector }: ConnectorDetailViewProps) {
             className="inline-flex items-center gap-2 rounded-full border border-outline-variant bg-surface-container-low px-3.5 py-2 text-xs font-medium text-on-surface-variant shadow-sm transition-colors hover:border-ring/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           >
             <ArrowLeft className="size-3.5" />
-            <span>Retour aux connecteurs</span>
+            <span>Back to connectors</span>
           </Link>
         </div>
 

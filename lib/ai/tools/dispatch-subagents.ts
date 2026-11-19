@@ -42,7 +42,7 @@ export const dispatchSubAgents = ({ dataStream, modelId = DEFAULT_CHAT_MODEL }: 
           objective,
           squad,
           status: "limit_reached" as const,
-          message: "Une seule équipe peut être lancée par réponse.",
+          message: "Only one squad can be dispatched per turn.",
           agents: [],
           completedCount: 0,
           failedCount: 0,

@@ -93,13 +93,14 @@ export const Composer: React.FC<ComposerProps> = ({
     }
     return list;
   });
-  const [activeAgentTag, setActiveAgentTag] = useState<{
+  type ComposerAgentTag = {
+    avatar: string;
     id: string;
     name: string;
-    avatar: string;
-    tint: string;
     role: string;
-  } | null>(null);
+    tint: string;
+  };
+  const [activeAgentTags, setActiveAgentTags] = useState<ComposerAgentTag[]>([]);
 
   const ROTATING_PROMPTS = useMemo(() => {
     const isEn = language === "en";
@@ -293,12 +294,20 @@ export const Composer: React.FC<ComposerProps> = ({
       (a) => a.name.toLowerCase() === agentName.toLowerCase()
     );
     if (agent) {
-      setActiveAgentTag({
-        avatar: agent.avatar,
-        id: agent.id,
-        name: agent.name,
-        role: agent.role,
-        tint: agent.tint || "#f97316",
+      setActiveAgentTags((prev) => {
+        if (prev.some((a) => a.id === agent.id)) {
+          return prev;
+        }
+        return [
+          ...prev,
+          {
+            avatar: agent.avatar,
+            id: agent.id,
+            name: agent.name,
+            role: agent.role,
+            tint: agent.tint || "#f97316",
+          },
+        ];
       });
     }
     const textarea = textareaRef.current;
@@ -351,7 +360,7 @@ export const Composer: React.FC<ComposerProps> = ({
     try {
       window.localStorage.setItem("idealy.model.mode", mode);
     } catch {
-      /* stockage indisponible */
+      /* storage unavailable */
     }
   };
 
@@ -407,7 +416,7 @@ export const Composer: React.FC<ComposerProps> = ({
       setAttachments((prev) => [...prev, newAttachment]);
       if (!draft.trim()) {
         setDraft(
-          "Consulte le document markdown ci-joint pour les instructions."
+          "Review the attached markdown document for instructions."
         );
       }
     }
@@ -474,7 +483,7 @@ export const Composer: React.FC<ComposerProps> = ({
     let promptToSend = draft.trim();
 
     // Strip parasitic @agent mentions from text and ensure agents are routed
-    const agentsList = activeAgentTag ? [activeAgentTag.id] : [];
+    const agentsList = [...new Set(activeAgentTags.map((a) => a.id))];
     for (const agent of availableAgents) {
       const regex = new RegExp(`(^|\\s)@${agent.name}\\b`, "gi");
       if (regex.test(promptToSend)) {
@@ -484,8 +493,8 @@ export const Composer: React.FC<ComposerProps> = ({
         promptToSend = promptToSend.replace(regex, "$1");
       }
     }
-    if (activeAgentTag) {
-      const activeTagRegex = new RegExp(`(^|\\s)@${activeAgentTag.name}\\b`, "gi");
+    for (const tag of activeAgentTags) {
+      const activeTagRegex = new RegExp(`(^|\\s)@${tag.name}\\b`, "gi");
       promptToSend = promptToSend.replace(activeTagRegex, "$1");
     }
     promptToSend = promptToSend.replace(/[ \t]{2,}/g, " ").trim();
@@ -497,7 +506,7 @@ export const Composer: React.FC<ComposerProps> = ({
             DEFAULT_CONNECTORS_CATALOG.find((c) => c.id === id)?.name || id
         )
         .join(", ");
-      promptToSend = `[Connecteurs activés : ${names}]\n${promptToSend}`;
+      promptToSend = `[Active connectors: ${names}]\n${promptToSend}`;
     }
     sendMessage(promptToSend, attachments, {
       agents: agentsList,
@@ -506,7 +515,7 @@ export const Composer: React.FC<ComposerProps> = ({
       webSearch,
     });
     setAttachments([]);
-    setActiveAgentTag(null);
+    setActiveAgentTags([]);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -891,34 +900,39 @@ export const Composer: React.FC<ComposerProps> = ({
         {/* Attachments, Active Connectors & Active Agent Badges (ChatGPT / Gemini style) */}
         {(attachments.length > 0 ||
           attachedConnectors.length > 0 ||
-          activeAgentTag) && (
+          activeAgentTags.length > 0) && (
           <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
-            {/* Active Targeted Agent Badge */}
-            {activeAgentTag && (
+            {/* Active Targeted Agent Badges (Multi-agent squad selection) */}
+            {activeAgentTags.map((agentTag) => (
               <div
                 className="flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold shadow-xs animate-scale-in"
+                key={agentTag.id}
                 style={{
-                  backgroundColor: `${activeAgentTag.tint}18`,
-                  border: `1px solid ${activeAgentTag.tint}40`,
-                  color: activeAgentTag.tint,
+                  backgroundColor: `${agentTag.tint}18`,
+                  border: `1px solid ${agentTag.tint}40`,
+                  color: agentTag.tint,
                 }}
               >
                 <img
-                  alt={activeAgentTag.name}
+                  alt={agentTag.name}
                   className="h-4 w-4 rounded-full object-cover ring-1 ring-white/20"
-                  src={activeAgentTag.avatar}
+                  src={agentTag.avatar}
                 />
-                <span className="font-bold">@{activeAgentTag.name}</span>
+                <span className="font-bold">@{agentTag.name}</span>
                 <button
                   aria-label={t("composer.removeAgent")}
                   className="ml-1 rounded-full p-0.5 hover:bg-black/20 text-current transition-colors"
-                  onClick={() => setActiveAgentTag(null)}
+                  onClick={() =>
+                    setActiveAgentTags((prev) =>
+                      prev.filter((a) => a.id !== agentTag.id)
+                    )
+                  }
                   type="button"
                 >
                   <X className="h-3 w-3" />
                 </button>
               </div>
-            )}
+            ))}
 
             {/* Attached Connectors Badges (colored brand icon + color name) */}
             {attachedConnectors.map((cId) => {
@@ -935,10 +949,10 @@ export const Composer: React.FC<ComposerProps> = ({
                   </div>
                   <span>{connector.name}</span>
                   <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1 py-0.2 rounded">
-                    ACTIF
+                    ACTIVE
                   </span>
                   <button
-                    aria-label={`Retirer le connecteur ${connector.name}`}
+                    aria-label={`Remove connector ${connector.name}`}
                     className="ml-0.5 rounded-full p-0.5 hover:bg-bg-subtle text-text-muted hover:text-text-main transition-colors"
                     onClick={() =>
                       setAttachedConnectors((prev) =>
@@ -1014,40 +1028,46 @@ export const Composer: React.FC<ComposerProps> = ({
               <div className="px-2 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
                 {t("composer.mention")}
               </div>
-              {availableAgents.map((agent, i) => (
-                <button
-                  aria-selected={i === mentionIndex}
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
-                    i === mentionIndex
-                      ? "bg-[var(--dsw-alias-interactive-bg-hover)] text-text-main"
-                      : "hover:bg-[var(--dsw-alias-interactive-bg-hover)] text-text-muted hover:text-text-main"
-                  }`}
-                  key={agent.id}
-                  onClick={() => insertAgentMention(agent.name)}
-                  role="option"
-                  type="button"
-                >
-                  <img
-                    alt={agent.name}
-                    className="h-6 w-6 rounded-full object-cover ring-1 ring-white/10"
-                    src={agent.avatar}
-                    style={{ borderColor: agent.tint }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="font-semibold text-text-main"
-                        style={{ color: agent.tint }}
-                      >
-                        @{agent.name}
-                      </span>
-                      <span className="text-[10px] text-text-muted truncate">
-                        ({agent.role})
-                      </span>
+              {availableAgents.map((agent, i) => {
+                const isSelected = activeAgentTags.some((a) => a.id === agent.id);
+                return (
+                  <button
+                    aria-selected={i === mentionIndex || isSelected}
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
+                      i === mentionIndex
+                        ? "bg-[var(--dsw-alias-interactive-bg-hover)] text-text-main"
+                        : "hover:bg-[var(--dsw-alias-interactive-bg-hover)] text-text-muted hover:text-text-main"
+                    }`}
+                    key={agent.id}
+                    onClick={() => insertAgentMention(agent.name)}
+                    role="option"
+                    type="button"
+                  >
+                    <img
+                      alt={agent.name}
+                      className="h-6 w-6 rounded-full object-cover ring-1 ring-white/10"
+                      src={agent.avatar}
+                      style={{ borderColor: agent.tint }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="font-semibold text-text-main"
+                          style={{ color: agent.tint }}
+                        >
+                          @{agent.name}
+                        </span>
+                        <span className="text-[10px] text-text-muted truncate">
+                          ({agent.role})
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))}
+                    {isSelected && (
+                      <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -1134,7 +1154,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 };
                 setAttachments((prev) => [...prev, newAttachment]);
                 setDraft(
-                  "Consulte le document markdown ci-joint pour les instructions."
+                  "Review the attached markdown document for instructions."
                 );
                 return;
               }
@@ -1366,7 +1386,7 @@ export const Composer: React.FC<ComposerProps> = ({
                         type="button"
                       >
                         <LayoutGrid aria-hidden="true" />
-                        <span>Bibliothèque</span>
+                        <span>Library</span>
                       </button>
                     </>
                   )}
@@ -1380,15 +1400,15 @@ export const Composer: React.FC<ComposerProps> = ({
               <button
                 aria-expanded={modelMenuOpen}
                 aria-haspopup="menu"
-                aria-label="Choisir le mode d'action"
+                aria-label="Choose action mode"
                 className="flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] border border-border-subtle/60 focus-ring"
                 onClick={() => setModelMenuOpen((o) => !o)}
                 type="button"
               >
                 {modelMode === "discuter"
-                  ? "Discuter"
+                  ? "Chat"
                   : modelMode === "construire"
-                    ? "Construire"
+                    ? "Build"
                     : "Auto"}
                 <ChevronDown aria-hidden="true" className="h-3 w-3" />
               </button>
@@ -1402,17 +1422,17 @@ export const Composer: React.FC<ComposerProps> = ({
                       [
                         "auto",
                         "Auto",
-                        "Détection intelligente (discute ou construit)",
+                        "Smart detection (chat or build)",
                       ],
                       [
                         "discuter",
-                        "Discuter",
-                        "Échange & analyse sans lancer de build",
+                        "Chat",
+                        "Conversation & analysis without building",
                       ],
                       [
                         "construire",
-                        "Construire",
-                        "Génère du code et crée l'application",
+                        "Build",
+                        "Generate code and create the application",
                       ],
                     ] as const
                   ).map(([key, label, hint]) => (
@@ -1444,14 +1464,14 @@ export const Composer: React.FC<ComposerProps> = ({
             {!isGenerating && (
               <>
                 <button
-                  aria-label="Mode vocal temps réel (Gemini Live)"
+                  aria-label="Real-time voice mode (Gemini Live)"
                   className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full text-[var(--dsw-alias-label-secondary)] hover:bg-emerald-500/10 hover:text-emerald-400 transition-all duration-200 active:scale-95 focus-ring"
                   onClick={() =>
                     window.dispatchEvent(
                       new CustomEvent("idealy:open-live-voice")
                     )
                   }
-                  title="Mode vocal temps réel (Gemini Live)"
+                  title="Real-time voice mode (Gemini Live)"
                   type="button"
                 >
                   <Radio aria-hidden="true" className="h-4 w-4" />
@@ -1459,8 +1479,8 @@ export const Composer: React.FC<ComposerProps> = ({
                 <button
                   aria-label={
                     dictationActive
-                      ? "Arrêter la dictée vocale"
-                      : "Dicter avec le microphone"
+                      ? "Stop voice dictation"
+                      : "Dictate with microphone"
                   }
                   aria-pressed={dictationActive}
                   className={
@@ -1473,9 +1493,9 @@ export const Composer: React.FC<ComposerProps> = ({
                   title={
                     SpeechRecognition
                       ? dictationActive
-                        ? "Arrêter la dictée"
-                        : "Dicter"
-                      : "Dictée indisponible dans ce navigateur"
+                        ? "Stop dictation"
+                        : "Dictate"
+                      : "Dictation unavailable in this browser"
                   }
                   type="button"
                 >
@@ -1515,20 +1535,20 @@ export const Composer: React.FC<ComposerProps> = ({
             )}
             {isGenerating ? (
               <button
-                aria-label="Arrêter la réponse"
+                aria-label="Stop response"
                 className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full bg-[var(--dsw-alias-state-error-primary)] text-white shadow-sm transition-all duration-200 active:scale-95 focus-ring"
                 onClick={stopGeneration}
-                title="Arrêter la réponse"
+                title="Stop response"
                 type="button"
               >
                 <Square aria-hidden="true" className="h-4 w-4 fill-current" />
               </button>
             ) : isEmpty ? null : (
               <button
-                aria-label="Envoyer le message"
+                aria-label="Send message"
                 className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full bg-gradient-to-tr from-[var(--idealy-teal-petrol)] to-[var(--idealy-indigo)] text-white hover:opacity-95 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg focus-ring animate-scale-in"
                 onClick={handleSend}
-                title="Envoyer le message"
+                title="Send message"
                 type="button"
               >
                 <ArrowUp aria-hidden="true" className="h-4 w-4 stroke-[2.2]" />

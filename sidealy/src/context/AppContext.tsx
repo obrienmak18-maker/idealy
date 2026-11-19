@@ -152,6 +152,7 @@ export type AppPage =
   | "terms"
   | "eula"
   | "login"
+  | "register"
   | "onboarding"
   | "authAction";
 
@@ -169,6 +170,7 @@ const pagePaths: Record<AppPage, string> = {
   plugins: "/connectors",
   pricing: "/pricing",
   privacy: "/privacy",
+  register: "/register",
   settings: "/studio/settings",
   support: "/support",
   terms: "/terms",
@@ -177,11 +179,14 @@ const pagePaths: Record<AppPage, string> = {
 
 function pageFromPath(pathname: string): AppPage {
   const path = pathname.replace(/\/$/, "") || "/";
+  if (path === "/register") {
+    return "register";
+  }
   const match = (Object.entries(pagePaths) as [AppPage, string][]).find(
     ([, route]) => route === path
   );
-  if (path === "/register") {
-    return "login";
+  if (match) {
+    return match[0];
   }
   if (path === "/studio/settings" || path.startsWith("/studio/settings/")) {
     return "settings";

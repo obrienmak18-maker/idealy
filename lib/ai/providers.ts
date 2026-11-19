@@ -145,7 +145,7 @@ export function getLanguageModel(modelId: string) {
     return mistral.chat("mistral-large-latest");
   }
 
-  // Utiliser un fournisseur direct configuré. Ne jamais basculer vers un Gateway payant implicite.
+  // Use an available direct provider. Never silently fall back to a paid gateway.
   const fallback = getAnyAvailableDirectModel();
   if (fallback) {
     return fallback;

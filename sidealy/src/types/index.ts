@@ -3,6 +3,12 @@ export type Theme = "light" | "dark" | "system";
 export type IntentionMode = "chat" | "explore" | "produce";
 
 export type AgentState =
+  | "idle"
+  | "thinking"
+  | "producing"
+  | "completed"
+  | "error"
+  // Legacy French values kept for backward compatibility with persisted data
   | "attente"
   | "réflexion"
   | "production"
@@ -46,7 +52,7 @@ export interface RunTurn {
 export interface Run {
   creditsSpent?: number;
   id: string;
-  mode: "solo" | "équipe";
+  mode: "solo" | "team" | "équipe";
   reason: string;
   turns: RunTurn[];
 }

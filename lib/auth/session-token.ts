@@ -113,7 +113,7 @@ async function getFirebaseBearerToken(request: Request): Promise<JWT | null> {
   const token = {
     email,
     id: localUser.id,
-    name: decoded.name ?? localUser.name ?? "Utilisateur Idealy",
+    name: decoded.name ?? localUser.name ?? "Idealy User",
     picture: decoded.picture ?? localUser.image ?? undefined,
     sub: decoded.uid,
     supabaseAccessToken: supabaseAuth.accessToken,

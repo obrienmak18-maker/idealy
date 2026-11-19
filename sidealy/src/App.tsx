@@ -187,10 +187,14 @@ const AppContent: React.FC = () => {
 
       const hasActiveSession =
         typeof window !== "undefined" &&
-        localStorage.getItem("idealy_session") === "active";
+        localStorage.getItem("idealy_session") === "active" &&
+        // Ensure the stored session belongs to the CURRENT Firebase user
+        localStorage.getItem("idealy_user_id") === user.uid;
 
       if (!hasActiveSession) {
         await createBackendSession(user);
+        // Store the UID so subsequent checks are identity-aware
+        localStorage.setItem("idealy_user_id", user.uid);
       }
 
       const bearer = await getBearerToken();
@@ -238,8 +242,9 @@ const AppContent: React.FC = () => {
     };
 
     // Bounded timeout to prevent infinite hanging
+    let timerId: ReturnType<typeof setTimeout> | null = null;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      const timer = setTimeout(() => {
+      timerId = setTimeout(() => {
         reject(
           new Error(
             language === "fr"
@@ -250,27 +255,37 @@ const AppContent: React.FC = () => {
           )
         );
       }, 7000);
-      return () => clearTimeout(timer);
     });
 
-    Promise.race([checkAuth(), timeoutPromise]).catch((error: unknown) => {
-      if (!active) {
-        return;
-      }
-      setAuthGateError(
-        error instanceof Error
-          ? error.message
-          : language === "fr"
-            ? "La session Idealy n’a pas pu être vérifiée."
-            : language === "es"
-              ? "La sesión de Idealy no pudo verificarse."
-              : "The Idealy session could not be verified."
-      );
-      setAuthGateState("error");
-    });
+    Promise.race([checkAuth(), timeoutPromise])
+      .finally(() => {
+        if (timerId !== null) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+      })
+      .catch((error: unknown) => {
+        if (!active) {
+          return;
+        }
+        setAuthGateError(
+          error instanceof Error
+            ? error.message
+            : language === "fr"
+              ? "La session Idealy n’a pas pu être vérifiée."
+              : language === "es"
+                ? "La sesión de Idealy no pudo verificarse."
+                : "The Idealy session could not be verified."
+        );
+        setAuthGateState("error");
+      });
 
     return () => {
       active = false;
+      if (timerId !== null) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
     };
   }, [activePage, authGateRetry, language, requiresAuthentication, setActivePage]);
 
@@ -342,6 +357,14 @@ const AppContent: React.FC = () => {
       <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
         <CookieNotice />
         <AuthPage />
+      </div>
+    );
+  }
+  if (activePage === "register") {
+    return (
+      <div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-bg-base">
+        <CookieNotice />
+        <AuthPage initialView="signup" />
       </div>
     );
   }

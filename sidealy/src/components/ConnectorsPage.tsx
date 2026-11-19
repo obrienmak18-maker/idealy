@@ -118,7 +118,7 @@ export const ConnectorsPage: React.FC = () => {
     setIsAuthenticating(true);
     setTestStatus("testing");
     setTestFeedback(
-      `Initialisation de l'authentification avec ${connector.name}...`
+      `Initializing authentication with ${connector.name}...`
     );
 
     try {
@@ -157,20 +157,20 @@ export const ConnectorsPage: React.FC = () => {
         setTestStatus("error");
         setTestFeedback(
           data?.error ||
-            `Impossible d'initier la connexion avec ${connector.name}.`
+            `Unable to initiate connection with ${connector.name}.`
         );
         return;
       }
 
       const redirectUrl = data?.authorizationUrl || data?.url;
       if (redirectUrl) {
-        setTestFeedback(`Redirection sécurisée vers ${connector.name}...`);
+        setTestFeedback(`Secure redirect to ${connector.name}...`);
         window.location.assign(redirectUrl);
         return;
       }
 
       setTestStatus("success");
-      setTestFeedback(`Connecteur ${connector.name} synchronisé avec succès.`);
+      setTestFeedback(`Connector ${connector.name} synchronized successfully.`);
       setIsAuthenticating(false);
       await syncConnectorStatus();
       setTimeout(() => {
@@ -179,8 +179,8 @@ export const ConnectorsPage: React.FC = () => {
     } catch (err: unknown) {
       setIsAuthenticating(false);
       setTestStatus("error");
-      const message = err instanceof Error ? err.message : "Erreur inattendue";
-      setTestFeedback(`Erreur lors de la tentative de connexion : ${message}`);
+      const message = err instanceof Error ? err.message : "Unexpected error";
+      setTestFeedback(`Error during connection attempt: ${message}`);
     }
   };
 
@@ -188,12 +188,12 @@ export const ConnectorsPage: React.FC = () => {
     if (!selectedConnector) return;
     if (!configToken.trim()) {
       setTestStatus("error");
-      setTestFeedback("Veuillez renseigner un jeton ou une clé pour tester.");
+      setTestFeedback("Please enter a token or key to test.");
       return;
     }
     setTestStatus("testing");
     setTestFeedback(
-      `Vérification en temps réel auprès de l'API ${selectedConnector.name}...`
+      `Verifying live connection with the ${selectedConnector.name} API...`
     );
 
     try {
@@ -233,13 +233,13 @@ export const ConnectorsPage: React.FC = () => {
         setTestStatus("error");
         setTestFeedback(
           data.error ||
-            `Échec de vérification des identifiants avec ${selectedConnector.name}.`
+            `Credential verification failed with ${selectedConnector.name}.`
         );
       }
     } catch (err) {
       setTestStatus("error");
-      const msg = err instanceof Error ? err.message : "Erreur de connexion";
-      setTestFeedback(`Impossible de vérifier les identifiants : ${msg}`);
+      const msg = err instanceof Error ? err.message : "Connection error";
+      setTestFeedback(`Unable to verify credentials: ${msg}`);
     }
   };
 
@@ -249,7 +249,7 @@ export const ConnectorsPage: React.FC = () => {
     }
     setTestStatus("testing");
     setTestFeedback(
-      "Transmission sécurisée et enregistrement sur le serveur..."
+      "Secure transmission and saving on server..."
     );
 
     try {
@@ -294,7 +294,7 @@ export const ConnectorsPage: React.FC = () => {
         );
         setTestStatus("success");
         setTestFeedback(
-          `Connecteur ${selectedConnector.name} enregistré et activé sur le serveur.`
+          `Connector ${selectedConnector.name} saved and activated.`
         );
         await syncConnectorStatus();
         setTimeout(() => {
@@ -304,13 +304,13 @@ export const ConnectorsPage: React.FC = () => {
         setTestStatus("error");
         setTestFeedback(
           data.error ||
-            `Impossible d'enregistrer le connecteur ${selectedConnector.name}.`
+            `Unable to save connector ${selectedConnector.name}.`
         );
       }
     } catch (err) {
       setTestStatus("error");
-      const msg = err instanceof Error ? err.message : "Erreur réseau";
-      setTestFeedback(`Erreur lors de l'enregistrement : ${msg}`);
+      const msg = err instanceof Error ? err.message : "Network error";
+      setTestFeedback(`Error saving: ${msg}`);
     }
   };
 
@@ -319,7 +319,7 @@ export const ConnectorsPage: React.FC = () => {
       return;
     }
     setTestStatus("testing");
-    setTestFeedback("Révocation des accès en cours sur le serveur...");
+    setTestFeedback("Revoking access on server...");
 
     try {
       const bearer = await getBearerToken();
@@ -363,19 +363,39 @@ export const ConnectorsPage: React.FC = () => {
         setTestStatus("error");
         setTestFeedback(
           data.error ||
-            `Impossible de révoquer le connecteur ${selectedConnector.name}.`
+            `Unable to disconnect ${selectedConnector.name}.`
         );
       }
     } catch (err) {
       setTestStatus("error");
-      const msg = err instanceof Error ? err.message : "Erreur réseau";
-      setTestFeedback(`Erreur lors de la déconnexion : ${msg}`);
+      const msg = err instanceof Error ? err.message : "Network error";
+      setTestFeedback(`Error disconnecting: ${msg}`);
     }
   };
 
-  // Fetch live backend connectors & status on mount
+  // Fetch live backend connectors & status on mount, and handle OAuth return params
   useEffect(() => {
     let cancelled = false;
+
+    // Handle OAuth return query parameters (from Supabase integration-callback redirect)
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const connectedProvider = urlParams.get("connected");
+      const oauthError = urlParams.get("error");
+      const displayName = urlParams.get("display");
+
+      if (connectedProvider) {
+        setTestStatus("success");
+        setTestFeedback(`Connected to ${displayName || connectedProvider} successfully.`);
+        const cleanUrl = window.location.pathname + (urlParams.get("page") ? `?page=${urlParams.get("page")}` : "");
+        window.history.replaceState({}, document.title, cleanUrl);
+      } else if (oauthError) {
+        setTestStatus("error");
+        setTestFeedback(`Connection failed: ${oauthError.replace(/_/g, " ")}`);
+        const cleanUrl = window.location.pathname + (urlParams.get("page") ? `?page=${urlParams.get("page")}` : "");
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
 
     syncConnectorStatus().catch(() => undefined);
 
@@ -689,8 +709,8 @@ export const ConnectorsPage: React.FC = () => {
                     )}
                     <span>
                       {isAuthenticating
-                        ? "Connexion OAuth en cours..."
-                        : `Connecter avec ${selectedConnector.name} (OAuth)`}
+                        ? "OAuth connection in progress..."
+                        : `Connect with ${selectedConnector.name} (OAuth)`}
                     </span>
                   </button>
                 )}
@@ -728,8 +748,8 @@ export const ConnectorsPage: React.FC = () => {
                 >
                   <span>
                     {showAdvanced
-                      ? "▾ Masquer"
-                      : "▸ Paramètres avancés (Jeton personnel optionnel)"}
+                      ? "▾ Hide"
+                      : "▸ Advanced settings (Optional personal token)"}
                   </span>
                 </button>
 
@@ -739,7 +759,7 @@ export const ConnectorsPage: React.FC = () => {
                       className="text-[10.5px] font-semibold text-text-muted block"
                       htmlFor="personal-access-token"
                     >
-                      Jeton d'accès personnalisé (Personal Access Token)
+                      Personal Access Token
                     </label>
                     <input
                       className="w-full px-3 py-1.5 rounded-lg bg-bg-surface border border-border-subtle text-xs text-text-main placeholder:text-text-muted outline-none focus:border-brand-primary font-mono"
@@ -763,7 +783,7 @@ export const ConnectorsPage: React.FC = () => {
                         onClick={handleTestConnection}
                         type="button"
                       >
-                        Tester la clé
+                        Test token
                       </button>
                       <button
                         className="px-3 py-1 rounded-md text-[11px] font-semibold bg-brand-primary text-white hover:opacity-90 disabled:opacity-40 transition-colors"
@@ -771,7 +791,7 @@ export const ConnectorsPage: React.FC = () => {
                         onClick={handleSaveConnector}
                         type="button"
                       >
-                        Enregistrer
+                        Save
                       </button>
                     </div>
                   </div>

@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Mic, MicOff, PhoneOff, Radio, Volume2 } from "lucide-react";
 import { LiveAudioClient, type LiveSessionStatus } from "../../services/liveAudioClient";
+import { useTranslation } from "../../services/i18n";
+import { useApp } from "../../context/AppContext";
 
 export type LiveVoiceDialogProps = {
   isOpen: boolean;
@@ -8,40 +10,55 @@ export type LiveVoiceDialogProps = {
   wayName?: string;
 };
 
-const wayThemes: Record<string, { label: string; badge: string; glow: string; text: string }> = {
+const wayThemes: Record<string, { badge: string; glow: string; text: string }> = {
   ninja: {
-    label: "Voie du Ninja",
     badge: "bg-orange-500/10 text-orange-400 border-orange-500/20",
     glow: "from-orange-500/40 to-red-500/30",
     text: "text-orange-400",
   },
   mage: {
-    label: "Voie du Mage",
     badge: "bg-sky-500/10 text-sky-400 border-sky-500/20",
     glow: "from-sky-500/40 to-violet-500/30",
     text: "text-sky-400",
   },
   hunter: {
-    label: "Voie du Hunter",
     badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
     glow: "from-emerald-500/40 to-cyan-500/30",
     text: "text-emerald-400",
   },
   professional: {
-    label: "Voie du Pro",
     badge: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20",
     glow: "from-fuchsia-500/40 to-amber-500/30",
     text: "text-fuchsia-400",
   },
 };
 
+function getWayDisplayLabel(way: string, lang: string): string {
+  const isEn = lang === "en";
+  const isEs = lang === "es";
+  switch (way) {
+    case "mage":
+      return isEn ? "Mage Way" : isEs ? "Camino del Mago" : "Voie du Mage";
+    case "hunter":
+      return isEn ? "Hunter Way" : isEs ? "Camino del Cazador" : "Voie du Hunter";
+    case "professional":
+      return isEn ? "Pro Way" : isEs ? "Camino Profesional" : "Voie du Pro";
+    case "ninja":
+    default:
+      return isEn ? "Ninja Way" : isEs ? "Camino del Ninja" : "Voie du Ninja";
+  }
+}
+
 export function LiveVoiceDialog({
   isOpen,
   onClose,
   wayName = "ninja",
 }: LiveVoiceDialogProps) {
+  const { language } = useApp();
+  const { t } = useTranslation();
   const normalizedWay = (wayName || "ninja").toLowerCase();
   const activeTheme = wayThemes[normalizedWay] || wayThemes.ninja;
+  const wayLabel = getWayDisplayLabel(normalizedWay, language);
   const [status, setStatus] = useState<LiveSessionStatus>("disconnected");
   const [isMuted, setIsMuted] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
@@ -97,11 +114,11 @@ export function LiveVoiceDialog({
           <div className="flex items-center gap-2">
             <Radio className="size-4 animate-pulse text-emerald-400" />
             <h3 className="text-sm font-semibold tracking-tight text-white">
-              Session vocale — {activeTheme.label}
+              {t("voice.title")} — {wayLabel}
             </h3>
           </div>
           <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium border ${activeTheme.badge}`}>
-            {activeTheme.label}
+            {wayLabel}
           </span>
         </div>
 
@@ -124,21 +141,21 @@ export function LiveVoiceDialog({
           </div>
 
           <p className="mt-4 text-xs font-medium text-zinc-400">
-            {status === "connecting" && "Connexion au flux vocal temps réel…"}
-            {status === "listening" && "Idealy vous écoute…"}
-            {status === "speaking" && "Idealy répond à la voix…"}
-            {status === "error" && (errorMessage || "Erreur de connexion")}
-            {status === "disconnected" && "Session terminée"}
+            {status === "connecting" && (language === "fr" ? "Connexion au flux vocal temps réel…" : language === "es" ? "Conectando al flujo de voz en tiempo real…" : "Connecting to real-time voice stream…")}
+            {status === "listening" && (language === "fr" ? "Idealy vous écoute…" : language === "es" ? "Idealy está escuchando…" : "Idealy is listening…")}
+            {status === "speaking" && (language === "fr" ? "Idealy répond à la voix…" : language === "es" ? "Idealy está respondiendo…" : "Idealy is speaking…")}
+            {status === "error" && (errorMessage || t("voice.statusError"))}
+            {status === "disconnected" && t("voice.statusDisconnected")}
           </p>
         </div>
 
         {/* Live Transcripts */}
         {transcripts.length > 0 && (
           <div className="max-h-24 overflow-y-auto rounded-lg border border-white/10 bg-black/40 p-2.5 text-xs text-zinc-300 space-y-1">
-            {transcripts.map((t, idx) => (
-              <p key={idx} className={t.isUser ? "text-cyan-400" : "text-zinc-200"}>
-                <span className="font-semibold">{t.isUser ? "Vous" : "Idealy"} : </span>
-                {t.text}
+            {transcripts.map((tItem, idx) => (
+              <p key={idx} className={tItem.isUser ? "text-cyan-400" : "text-zinc-200"}>
+                <span className="font-semibold">{tItem.isUser ? (language === "fr" ? "Vous" : language === "es" ? "Tú" : "You") : "Idealy"} : </span>
+                {tItem.text}
               </p>
             ))}
           </div>
@@ -154,7 +171,7 @@ export function LiveVoiceDialog({
                 ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
                 : "border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10"
             }`}
-            title={isMuted ? "Activer le micro" : "Couper le micro"}
+            title={isMuted ? t("voice.unmute") : t("voice.mute")}
           >
             {isMuted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
           </button>
@@ -163,7 +180,7 @@ export function LiveVoiceDialog({
             type="button"
             onClick={handleHangup}
             className="grid size-12 place-items-center rounded-full bg-red-600 text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
-            title="Terminer l'appel"
+            title={t("voice.endSession")}
           >
             <PhoneOff className="size-5" />
           </button>

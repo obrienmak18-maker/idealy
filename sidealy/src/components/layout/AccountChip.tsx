@@ -24,6 +24,10 @@ type AccountResult = {
 
 let accountRequest: Promise<AccountResult> | null = null;
 
+export function resetAccountProfileCache(): void {
+  accountRequest = null;
+}
+
 export function formatPlanName(
   plan: string | undefined | null,
   language: string
@@ -156,16 +160,34 @@ export const AccountChip: React.FC<{
     };
   }, [isMenuOpen]);
 
-  const name = result.profile?.displayName?.trim() || "Compte Idealy";
-  const email = result.profile?.accountEmail?.trim() || "Compte authentifié";
-  const initial = name.charAt(0).toLocaleUpperCase("fr-FR");
+  const name =
+    result.profile?.displayName?.trim() ||
+    (language === "fr"
+      ? "Compte Idealy"
+      : language === "es"
+        ? "Cuenta Idealy"
+        : "Idealy Account");
+  const email =
+    result.profile?.accountEmail?.trim() ||
+    (language === "fr"
+      ? "Compte authentifié"
+      : language === "es"
+        ? "Cuenta autenticada"
+        : "Authenticated account");
+  const initial = name.charAt(0).toUpperCase();
 
   return (
     <div className="relative">
       <button
         aria-expanded={isMenuOpen}
         aria-haspopup="menu"
-        aria-label="Menu du profil utilisateur"
+        aria-label={
+          language === "fr"
+            ? "Menu du profil utilisateur"
+            : language === "es"
+              ? "Menú del perfil de usuario"
+              : "User profile menu"
+        }
         className={`group/account flex min-w-0 items-center rounded-xl text-left transition-colors duration-200 hover:bg-[var(--dsw-alias-interactive-bg-hover)] focus-ring ${
           collapsed ? "h-9 w-9 justify-center" : "h-10 flex-1 gap-2.5 px-2"
         }`}
@@ -242,7 +264,13 @@ export const AccountChip: React.FC<{
               type="button"
             >
               <Settings className="h-4 w-4 text-[var(--dsw-alias-label-tertiary)]" />
-              <span>Paramètres généraux</span>
+              <span>
+                {language === "fr"
+                  ? "Paramètres généraux"
+                  : language === "es"
+                    ? "Configuración general"
+                    : "General Settings"}
+              </span>
             </button>
 
             <button
@@ -254,7 +282,13 @@ export const AccountChip: React.FC<{
               type="button"
             >
               <Keyboard className="h-4 w-4 text-[var(--dsw-alias-label-tertiary)]" />
-              <span>Palette de commandes</span>
+              <span>
+                {language === "fr"
+                  ? "Palette de commandes"
+                  : language === "es"
+                    ? "Paleta de comandos"
+                    : "Command Palette"}
+              </span>
             </button>
 
             <button
@@ -266,7 +300,13 @@ export const AccountChip: React.FC<{
               type="button"
             >
               <CreditCard className="h-4 w-4 text-[var(--dsw-alias-label-tertiary)]" />
-              <span>Offres & Forfaits</span>
+              <span>
+                {language === "fr"
+                  ? "Offres & Forfaits"
+                  : language === "es"
+                    ? "Planes y Precios"
+                    : "Plans & Pricing"}
+              </span>
             </button>
 
             <button
@@ -282,7 +322,13 @@ export const AccountChip: React.FC<{
                 ) : (
                   <Sun className="h-4 w-4 text-[var(--dsw-alias-label-tertiary)]" />
                 )}
-                <span>Thème d'affichage</span>
+                <span>
+                  {language === "fr"
+                    ? "Thème d'affichage"
+                    : language === "es"
+                      ? "Tema de visualización"
+                      : "Theme"}
+                </span>
               </span>
               <span className="text-[10.5px] font-mono text-[var(--dsw-alias-label-tertiary)] uppercase">
                 {theme}
@@ -295,25 +341,25 @@ export const AccountChip: React.FC<{
               className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors text-left"
               onClick={async () => {
                 setIsMenuOpen(false);
+                resetAccountProfileCache();
                 try {
                   await signOutFirebase();
                 } catch (error) {
                   console.error("[Idealy sign-out]", error);
                 } finally {
-                  try {
-                    localStorage.removeItem("idealy_session");
-                    localStorage.removeItem("idealy_user_profile");
-                    localStorage.removeItem("idealy_profile");
-                    document.cookie =
-                      "idealy_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-                  } catch {}
                   window.location.href = "/welcome";
                 }
               }}
               type="button"
             >
               <LogOut className="h-4 w-4" />
-              <span>Se déconnecter</span>
+              <span>
+                {language === "fr"
+                  ? "Se déconnecter"
+                  : language === "es"
+                    ? "Cerrar sesión"
+                    : "Sign out"}
+              </span>
             </button>
           </div>
         </div>
