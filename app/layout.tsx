@@ -25,11 +25,11 @@ const bingVerification =
 export const metadata: Metadata = {
   applicationName: "Idealy",
   title: {
-    default: "Idealy — Transformez une idée en projet",
+    default: "Idealy — Turn an idea into a real project",
     template: "%s | Idealy",
   },
   description:
-    "Idealy aide à transformer une idée en mission, plan de projet et application assistée par IA.",
+    "Idealy helps you turn an idea into a mission, project plan, and AI-powered application.",
   metadataBase: new URL(siteUrl),
   alternates: {
     canonical: "./",
@@ -41,19 +41,19 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.webmanifest",
   openGraph: {
-    title: "Idealy — Transformez une idée en projet",
+    title: "Idealy — Turn an idea into a real project",
     description:
-      "Clarifiez une idée, planifiez votre projet et construisez avec un workspace assisté par IA.",
+      "Describe an idea, plan your project, and build with an AI-powered workspace.",
     url: siteUrl,
     siteName: "Idealy",
-    locale: "fr_FR",
+    locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Idealy — Transformez une idée en projet",
+    title: "Idealy — Turn an idea into a real project",
     description:
-      "Clarifiez une idée, planifiez votre projet et construisez avec un workspace assisté par IA.",
+      "Describe an idea, plan your project, and build with an AI-powered workspace.",
   },
   robots: {
     index: true,
@@ -117,7 +117,7 @@ const jsonLdSchema = {
         url: `${siteUrl}/idealy-mark.svg`,
       },
       description:
-        "Plateforme d'ingénierie et d'orchestration logicielle assistée par IA.",
+        "AI-powered software engineering and orchestration platform.",
     },
     {
       "@type": "WebSite",
@@ -127,9 +127,9 @@ const jsonLdSchema = {
       publisher: {
         "@id": `${siteUrl}/#organization`,
       },
-      inLanguage: "fr-FR",
+      inLanguage: "en-US",
       description:
-        "Transformez une idée en mission, plan de projet et application logicielle assistée par IA.",
+        "Turn an idea into a mission, project plan, and AI-powered software application.",
     },
   ],
 };
@@ -140,7 +140,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: "Required"

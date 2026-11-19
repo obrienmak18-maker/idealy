@@ -24,16 +24,16 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType>({
-  language: "fr",
+  language: "en",
   setLanguage: () => {},
   t: (path, paramsOrFallback) =>
     typeof paramsOrFallback === "string" ? paramsOrFallback : path,
-  dict: fr,
+  dict: en,
 });
 
 export function LanguageProvider({
   children,
-  initialLanguage = "fr",
+  initialLanguage = "en",
 }: {
   children: React.ReactNode;
   initialLanguage?: SupportedLanguage;
@@ -58,7 +58,7 @@ export function LanguageProvider({
   // Use the server-provided cookie locale during SSR and the first hydration
   // render. This keeps translated text and <html lang> consistent.
   const currentLang = mounted ? language : initialLanguage;
-  const dict = translations[currentLang] || fr;
+  const dict = translations[currentLang] || en;
 
   useEffect(() => {
     document.documentElement.lang = currentLang;

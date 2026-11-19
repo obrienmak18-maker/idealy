@@ -14,7 +14,7 @@ function syncLocaleCookie(lang: SupportedLanguage) {
 }
 
 export const useLanguageStore = create<LanguageState>((set) => ({
-  language: "fr",
+  language: "en",
   setLanguage: (lang) => {
     syncLocaleCookie(lang);
     set({ language: lang });

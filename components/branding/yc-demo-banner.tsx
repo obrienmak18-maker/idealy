@@ -32,7 +32,7 @@ const noticeCopy = {
 
 export function ContinuousUpdateNotice() {
   const { language } = useTranslation();
-  const text = noticeCopy[language] ?? noticeCopy.fr;
+  const text = noticeCopy[language] ?? noticeCopy.en;
   const [mounted, setMounted] = useState(false);
   const [dismissed, setDismissed] = useState(true);
 
