@@ -180,7 +180,7 @@ export default function WelcomePage() {
     setMounted(true);
   }, []);
 
-  const t = welcomeTranslations[lang] || welcomeTranslations.fr;
+  const t = welcomeTranslations[lang] || welcomeTranslations.en;
   const activeWayData: WayDetailed = voiesCatalog[selectedWay] || voiesCatalog.ninja;
   const wayCopy = wayWorkspaceCopy[lang];
   const betaCopy = betaPolicyCopy[lang === "en" ? "en" : lang === "es" ? "es" : "fr"];

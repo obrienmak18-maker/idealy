@@ -4,7 +4,7 @@ import { LanguageProvider } from "./provider";
 import type { SupportedLanguage } from "./language-store";
 
 function resolveLanguage(value: string | undefined): SupportedLanguage {
-  return value === "en" || value === "es" ? value : "fr";
+  return value === "fr" || value === "es" ? value : "en";
 }
 
 /**

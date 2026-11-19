@@ -5,10 +5,10 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#09090f",
     categories: ["productivity", "business", "developer"],
     description:
-      "Idealy transforme une idée en mission, plan et projet assistés par IA.",
+      "Idealy turns an idea into an AI-powered mission, plan, and running application.",
     display: "standalone",
-    lang: "fr",
-    name: "Idealy — Transformez une idée en projet",
+    lang: "en",
+    name: "Idealy — Turn an idea into a project",
     short_name: "Idealy",
     start_url: "/welcome",
     theme_color: "#09090f",

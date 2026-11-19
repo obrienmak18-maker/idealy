@@ -4,14 +4,14 @@ import type { ReactNode } from "react";
 export const metadata: Metadata = {
   alternates: { canonical: "/welcome" },
   description:
-    "Idealy aide à clarifier une idée, planifier un projet et construire une application avec un workspace assisté par IA.",
+    "Idealy helps you clarify an idea, plan a project, and build an application with an AI-powered workspace.",
   openGraph: {
     description:
-      "Transformez une intention en mission, plan et projet visible avec Idealy.",
-    title: "Idealy — Transformez une idée en projet",
+      "Turn an intention into a mission, plan, and visible application with Idealy.",
+    title: "Idealy — Turn an idea into a project",
     url: "/welcome",
   },
-  title: "Transformez une idée en projet",
+  title: "Turn an idea into a project",
 };
 
 const baseUrl =
@@ -25,8 +25,8 @@ const structuredData = {
   "@type": "WebApplication",
   applicationCategory: "BusinessApplication",
   description:
-    "Workspace de création assistée qui transforme une intention en mission, plan de projet et application visible.",
-  inLanguage: "fr",
+    "AI-assisted creation workspace that transforms an intention into a mission, project plan, and running application.",
+  inLanguage: "en",
   name: "Idealy",
   operatingSystem: "Web",
   url: `${baseUrl}/welcome`,
