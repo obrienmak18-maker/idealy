@@ -346,12 +346,15 @@ export function routeRun(
   prompt: string,
   options?: {
     explicitAgent?: string;
+    language?: string;
     mode?: "chat" | "explore" | "produce";
     wayId?: string;
   }
 ): RunRouteDecision {
   const text = prompt.trim();
   const lower = text.toLowerCase();
+  const lang = options?.language || "";
+  const isEn = lang.toLowerCase().startsWith("en");
   const effectiveWay =
     options?.wayId ||
     (typeof window !== "undefined"
@@ -370,7 +373,9 @@ export function routeRun(
     return {
       mode: "solo",
       agents: [requested],
-      reason: `Mention explicite : mission confiée à ${requested.name} (${requested.role}).`,
+      reason: isEn
+        ? `Explicit mention: mission entrusted to ${requested.name} (${requested.role}).`
+        : `Mention explicite : mission confiée à ${requested.name} (${requested.role}).`,
     };
   }
 
@@ -379,7 +384,9 @@ export function routeRun(
     return {
       mode: "solo",
       agents: [requested],
-      reason: `Agent sélectionné : intervention directe de ${requested.name}.`,
+      reason: isEn
+        ? `Selected agent: direct engagement by ${requested.name}.`
+        : `Agent sélectionné : intervention directe de ${requested.name}.`,
     };
   }
 
@@ -388,47 +395,55 @@ export function routeRun(
     return {
       mode: "solo",
       agents: [STATIC_AGENT_REGISTRY.alvin],
-      reason: "Accueil et qualification du besoin pris en charge par Alvin (Dispatcher Universel).",
+      reason: isEn
+        ? "Welcome and task intake managed by Alvin (Universal Dispatcher)."
+        : "Accueil et qualification du besoin pris en charge par Alvin (Dispatcher Universel).",
     };
   }
 
   // 2. Détection de question / explication simple -> Run SOLO
   const isQuestion =
     text.endsWith("?") ||
-    /^(comment|pourquoi|qu'est-ce|qu'est ce|quelle|quel|explique|peux-tu m'expliquer|peux tu m'expliquer|c'est quoi|dis-moi|dis moi)/i.test(
+    /^(comment|pourquoi|qu'est-ce|qu'est ce|quelle|quel|explique|peux-tu m'expliquer|peux tu m'expliquer|c'est quoi|dis-moi|dis moi|how|why|what|can you explain|explain|tell me|is it|what's|whats)/i.test(
       lower
     );
 
   const isShortOrGeneral =
     text.length < 90 &&
-    !/(construis|crée|génère|développe|fais-moi une application|application complète|nouveau projet|refais tout)/i.test(
+    !/(construis|crée|génère|développe|fais-moi une application|application complète|nouveau projet|refais tout|build|create|generate|develop|make|scaffold|code|implement|add|update|modify|change)/i.test(
       lower
     );
 
   if (isQuestion || isShortOrGeneral || options?.mode === "chat") {
     // Choix de l'agent solo selon la thématique
-    if (/(style|css|couleur|tailwind|ui|ux|bouton|design|charte|police)/i.test(lower)) {
+    if (/(style|css|couleur|color|theme|tailwind|ui|ux|bouton|button|design|charte|police|font|layout)/i.test(lower)) {
       const designer = wayAgents.find((a) => a.role.toLowerCase().includes("designer")) || wayAgents[3];
       return {
         mode: "solo",
         agents: [designer],
-        reason: `Explication ciblée sur l'interface et le design confiée à ${designer.name}.`,
+        reason: isEn
+          ? `Interface and design clarification entrusted to ${designer.name}.`
+          : `Explication ciblée sur l'interface et le design confiée à ${designer.name}.`,
       };
     }
 
-    if (/(architecture|base de données|sql|supabase|sécurité|schéma|api|modèle|table)/i.test(lower)) {
+    if (/(architecture|base de données|database|sql|supabase|sécurité|security|schéma|schema|api|modèle|model|table|backend)/i.test(lower)) {
       return {
         mode: "solo",
         agents: [architect],
-        reason: `Question d'architecture et de modèle de données traitée par ${architect.name}.`,
+        reason: isEn
+          ? `Architecture and data model inquiry handled by ${architect.name}.`
+          : `Question d'architecture et de modèle de données traitée par ${architect.name}.`,
       };
     }
 
-    if (/(bug|erreur|faille|crash|test|pourquoi ça marche pas|régression)/i.test(lower)) {
+    if (/(bug|erreur|error|faille|crash|test|pourquoi ça marche pas|why doesn't|broken|issue|régression|regression)/i.test(lower)) {
       return {
         mode: "solo",
         agents: [qa],
-        reason: `Analyse de problème et diagnostic confiés à ${qa.name}.`,
+        reason: isEn
+          ? `Problem analysis and diagnostics entrusted to ${qa.name}.`
+          : `Analyse de problème et diagnostic confiés à ${qa.name}.`,
       };
     }
 
@@ -436,17 +451,19 @@ export function routeRun(
     return {
       mode: "solo",
       agents: [builder],
-      reason: `Réponse technique directe et ciblée prise en charge par ${builder.name}.`,
+      reason: isEn
+        ? `Direct targeted technical response taken by ${builder.name}.`
+        : `Réponse technique directe et ciblée prise en charge par ${builder.name}.`,
     };
   }
 
   // 3. Dépendances réelles pour Run en Équipe
   const needsDesignAndCode =
-    /(créer|faire|construis|génère|développe)/i.test(lower) &&
-    /(bouton|page|composant|interface|écran|modal|tableau de bord|navbar)/i.test(lower);
+    /(créer|faire|construis|génère|développe|build|create|make|generate|design)/i.test(lower) &&
+    /(bouton|page|composant|interface|écran|modal|tableau de bord|navbar|button|component|sidebar|dashboard|screen|modal|header|card)/i.test(lower);
 
   const needsFullApp =
-    /(application complète|projet complet|site entier|saas|plateforme|mvp)/i.test(lower) ||
+    /(application complète|projet complet|site entier|saas|plateforme|mvp|full app|complete app|entire app|full application|web app|platform|dashboard)/i.test(lower) ||
     options?.mode === "produce";
 
   if (needsFullApp) {
@@ -455,7 +472,9 @@ export function routeRun(
       mode: "équipe",
       leader,
       agents: [leader, builder, qa],
-      reason: `Projet d'envergure : cadrage par ${leader.name}, implémentation par ${builder.name}, et certification par ${qa.name}.`,
+      reason: isEn
+        ? `Major project: scoping by ${leader.name}, implementation by ${builder.name}, verification by ${qa.name}.`
+        : `Projet d'envergure : cadrage par ${leader.name}, implémentation par ${builder.name}, et certification par ${qa.name}.`,
     };
   }
 
@@ -465,7 +484,9 @@ export function routeRun(
       mode: "équipe",
       leader,
       agents: [leader, builder],
-      reason: `Dépendance conception puis implémentation : coordination ${leader.name} → ${builder.name}.`,
+      reason: isEn
+        ? `Design and implementation dependency: coordination ${leader.name} → ${builder.name}.`
+        : `Dépendance conception puis implémentation : coordination ${leader.name} → ${builder.name}.`,
     };
   }
 
@@ -473,7 +494,9 @@ export function routeRun(
   return {
     mode: "solo",
     agents: [builder],
-    reason: `Prise en charge directe par ${builder.name} (${builder.role}).`,
+    reason: isEn
+      ? `Direct ownership by ${builder.name} (${builder.role}).`
+      : `Prise en charge directe par ${builder.name} (${builder.role}).`,
   };
 }
 
@@ -486,18 +509,21 @@ export function buildRunForMessage(
   options?: {
     artifacts?: RunArtifact[];
     deepThink?: boolean;
+    language?: string;
     mode?: "chat" | "explore" | "produce";
     reasoning?: string;
     wayId?: string;
   }
 ): Run {
   const route = routeRun(userPrompt, {
+    language: options?.language,
     mode: options?.mode,
     wayId: options?.wayId,
   });
 
   const now = Date.now();
   const runId = `run-${now}`;
+  const isEn = Boolean(options?.language && options.language.toLowerCase().startsWith("en"));
 
   if (route.mode === "solo") {
     const agent = route.agents[0];
@@ -533,11 +559,19 @@ export function buildRunForMessage(
       startedAt: now,
       endedAt: now + 1200,
       state: "terminé",
-      reasoning: options?.reasoning ? `${options.reasoning.slice(0, 180)}...` : `Analyse de la demande : cadrage des spécifications et identification des contraintes.`,
-      content: `J'ai analysé votre demande. Je pose le socle technique et l'architecture avant de passer la main.`,
+      reasoning: options?.reasoning
+        ? `${options.reasoning.slice(0, 180)}...`
+        : isEn
+          ? "Request analysis: scoping specifications and identifying technical constraints."
+          : `Analyse de la demande : cadrage des spécifications et identification des contraintes.`,
+      content: isEn
+        ? "I analyzed your request. I am setting up the technical foundation and architecture before handing over."
+        : `J'ai analysé votre demande. Je pose le socle technique et l'architecture avant de passer la main.`,
       handoff: {
         to: second.id,
-        line: `Le socle est prêt. ${second.name}, tu peux prendre le relais pour l'implémentation complète ?`,
+        line: isEn
+          ? `Foundation is set. ${second.name}, can you take over for full implementation?`
+          : `Le socle est prêt. ${second.name}, tu peux prendre le relais pour l'implémentation complète ?`,
       },
     });
 
@@ -547,7 +581,9 @@ export function buildRunForMessage(
       startedAt: now + 1300,
       endedAt: now + 3000,
       state: "terminé",
-      reasoning: `Intégration du composant, typage strict et vérification des états d'erreur.`,
+      reasoning: isEn
+        ? "Component integration, strict typing, and error state handling."
+        : `Intégration du composant, typage strict et vérification des états d'erreur.`,
       content: responseContent,
       artifacts: options?.artifacts,
     });
@@ -561,11 +597,17 @@ export function buildRunForMessage(
       startedAt: now,
       endedAt: now + 800,
       state: "terminé",
-      reasoning: `Cadrage du projet : répartition des tâches entre ${worker.name} et ${reviewer.name}.`,
-      content: `Demande reçue. Nous mettons en place une chaîne d'exécution ciblée : ${worker.name} va construire les composants nécessaires, puis ${reviewer.name} vérifiera la conformité et les cas limites.`,
+      reasoning: isEn
+        ? `Project scoping: task allocation between ${worker.name} and ${reviewer.name}.`
+        : `Cadrage du projet : répartition des tâches entre ${worker.name} et ${reviewer.name}.`,
+      content: isEn
+        ? `Request received. Establishing targeted execution chain: ${worker.name} will construct the components, then ${reviewer.name} will audit compliance and edge cases.`
+        : `Demande reçue. Nous mettons en place une chaîne d'exécution ciblée : ${worker.name} va construire les composants nécessaires, puis ${reviewer.name} vérifiera la conformité et les cas limites.`,
       handoff: {
         to: worker.id,
-        line: `Objectif validé. ${worker.name}, tu as le champ libre pour implémenter la solution.`,
+        line: isEn
+          ? `Objective validated. ${worker.name}, you have full clearance to implement the solution.`
+          : `Objectif validé. ${worker.name}, tu as le champ libre pour implémenter la solution.`,
       },
     });
 
@@ -575,12 +617,14 @@ export function buildRunForMessage(
       startedAt: now + 900,
       endedAt: now + 2400,
       state: "terminé",
-      reasoning: options?.reasoning || `Écriture du code et structuration des modules.`,
+      reasoning: options?.reasoning || (isEn ? "Writing code and structuring modules." : `Écriture du code et structuration des modules.`),
       content: responseContent,
       artifacts: options?.artifacts,
       handoff: {
         to: reviewer.id,
-        line: `Les composants et styles sont en place. ${reviewer.name}, peux-tu auditer les cas d'erreur et confirmer ?`,
+        line: isEn
+          ? `Components and styles are in place. ${reviewer.name}, can you audit error cases and confirm?`
+          : `Les composants et styles sont en place. ${reviewer.name}, peux-tu auditer les cas d'erreur et confirmer ?`,
       },
     });
 
@@ -590,8 +634,12 @@ export function buildRunForMessage(
       startedAt: now + 2500,
       endedAt: now + 3200,
       state: "terminé",
-      reasoning: `Contrôle de l'accessibilité, typage et tests des régressions.`,
-      content: `Vérification terminée. Les contrats d'API sont respectés, les styles sont harmonisés et aucun point bloquant n'a été détecté. L'ensemble est opérationnel.`,
+      reasoning: isEn
+        ? "Accessibility audit, typing compliance, and regression testing."
+        : `Contrôle de l'accessibilité, typage et tests des régressions.`,
+      content: isEn
+        ? "Verification complete. API contracts are respected, styles are consistent, and no blockers were detected. Everything is operational."
+        : `Vérification terminée. Les contrats d'API sont respectés, les styles sont harmonisés et aucun point bloquant n'a été détecté. L'ensemble est opérationnel.`,
     });
   }
 

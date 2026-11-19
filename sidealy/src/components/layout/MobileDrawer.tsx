@@ -18,12 +18,14 @@ import {
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useApp, type AppPage } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 import { hasConversationActivity } from "../../services/conversationVisibility";
 import { AccountChip } from "./AccountChip";
 import { CreditsPill } from "../credits/CreditsPill";
 import { IdealyLogo } from "../branding/IdealyLogo";
 
 export const MobileDrawer: React.FC = () => {
+  const { t } = useTranslation();
   const {
     isMobileDrawerOpen,
     setIsMobileDrawerOpen,
@@ -126,13 +128,13 @@ export const MobileDrawer: React.FC = () => {
       setOpenActionsId(null);
       setIsMobileDrawerOpen(false);
       openConfirmModal({
-        confirmLabel: "Supprimer définitivement",
+        confirmLabel: t("sidebar.delete"),
         isDestructive: true,
         message:
           `Êtes-vous certain de vouloir supprimer définitivement « ${conversation.title} » ? ` +
           "Tous les messages et livrables associés seront effacés.",
         onConfirm: () => deleteConversation(conversation.id),
-        title: "Supprimer cette conversation ?",
+        title: t("studio.deleteProject"),
       });
     };
     return (
@@ -205,7 +207,7 @@ export const MobileDrawer: React.FC = () => {
               type="button"
             >
               <Pin aria-hidden="true" className="h-3 w-3" />
-              {conversation.isPinned ? "Désépingler" : "Épingler"}
+              {conversation.isPinned ? t("sidebar.unpin") : t("sidebar.pin")}
             </button>
             <button
               className="flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[11px] text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] focus-ring"
@@ -228,7 +230,7 @@ export const MobileDrawer: React.FC = () => {
               type="button"
             >
               <Archive aria-hidden="true" className="h-3 w-3" />
-              {conversation.isArchived ? "Désarchiver" : "Archiver"}
+              {conversation.isArchived ? t("sidebar.unarchive") : t("sidebar.archive")}
             </button>
             <button
               className="flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[11px] text-[var(--dsw-alias-state-error-primary)] hover:bg-red-500/10 focus-ring"
@@ -285,7 +287,7 @@ export const MobileDrawer: React.FC = () => {
             type="button"
           >
             <SquarePen aria-hidden="true" className="h-3.5 w-3.5" />
-            <span>Nouvelle discussion</span>
+            <span>{t("sidebar.newChat")}</span>
           </button>
 
           <button
@@ -300,7 +302,7 @@ export const MobileDrawer: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Bot aria-hidden="true" className="h-3.5 w-3.5 text-[var(--idealy-indigo)]" />
-              <span>Agents</span>
+              <span>{t("sidebar.agents")}</span>
             </div>
           </button>
 
@@ -311,7 +313,7 @@ export const MobileDrawer: React.FC = () => {
             type="button"
           >
             <LayoutGrid aria-hidden="true" className="h-3.5 w-3.5" />
-            <span>Bibliothèque</span>
+            <span>{t("sidebar.library")}</span>
           </button>
           <button
             aria-current={activePage === "connectors" ? "page" : undefined}
@@ -328,7 +330,7 @@ export const MobileDrawer: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Plug aria-hidden="true" className="h-3.5 w-3.5 text-violet-500" />
-              <span>Connecteurs</span>
+              <span>{t("sidebar.connectors")}</span>
             </div>
           </button>
           <button
@@ -340,7 +342,7 @@ export const MobileDrawer: React.FC = () => {
             type="button"
           >
             <Search aria-hidden="true" className="h-3.5 w-3.5" />
-            <span>Rechercher</span>
+            <span>{t("sidebar.search")}</span>
           </button>
         </div>
 

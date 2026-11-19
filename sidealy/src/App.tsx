@@ -28,6 +28,7 @@ import { WelcomePage } from "./components/pages/WelcomePage";
 import { ClarifyingQuestionsCard } from "./components/studio/clarifying-questions-card";
 import { NotificationBanner } from "./components/studio/notification-banner";
 import { AppProvider, useApp } from "./context/AppContext";
+import { useTranslation } from "./services/i18n";
 import { hasConversationWorkspace } from "./services/conversationWorkspace";
 import {
   createBackendSession,
@@ -90,6 +91,7 @@ const StudioLayoutSkeleton: React.FC = () => (
 );
 
 const AppContent: React.FC = () => {
+  const { t } = useTranslation();
   const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
   const handleCloseLiveVoice = useCallback(() => setIsLiveVoiceOpen(false), []);
 
@@ -371,7 +373,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-base text-text-main font-sans selection:bg-brand-primary/20">
       <a className="idealy-skip-link" href="#main-content">
-        Passer au contenu principal
+        {t("common.skipToMain")}
       </a>
       {/* Desktop Sidebar Navigation */}
       <CreditAlert />

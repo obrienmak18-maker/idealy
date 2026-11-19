@@ -57,6 +57,7 @@ import { injectFreeIdealyBadge } from "@/lib/branding/free-badge";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { isSimpleGreeting, getGreetingReply } from "@/lib/ai/greeting-handler";
 import { createDocument } from "@/lib/ai/tools/create-document";
+import { dispatchSubAgents } from "@/lib/ai/tools/dispatch-subagents";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -898,6 +899,7 @@ export async function POST(request: Request) {
                             "requestSuggestions",
                             "searchImages",
                             "generateImage",
+                            "dispatchSubAgents",
                             "webSearch",
                             "executeSandbox",
                             "generateVideo",
@@ -943,6 +945,7 @@ export async function POST(request: Request) {
                         modelId: chatModel,
                         session: effectiveSession,
                       }),
+                      dispatchSubAgents: dispatchSubAgents({ dataStream }),
                       editDocument: editDocument({ dataStream, session: effectiveSession }),
                       getWeather,
                       requestSuggestions: requestSuggestions({
@@ -1009,6 +1012,7 @@ export async function POST(request: Request) {
                     "requestSuggestions",
                     "searchImages",
                     "generateImage",
+                    "dispatchSubAgents",
                     "webSearch",
                     "executeSandbox",
                     "generateVideo",
@@ -1054,6 +1058,7 @@ export async function POST(request: Request) {
                 modelId: chatModel,
                 session: effectiveSession,
               }),
+              dispatchSubAgents: dispatchSubAgents({ dataStream }),
               editDocument: editDocument({ dataStream, session: effectiveSession }),
               getWeather,
               requestSuggestions: requestSuggestions({

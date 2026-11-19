@@ -1,6 +1,8 @@
 import type React from "react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { getConversationWorkspaceFiles } from "../../services/conversationWorkspace";
+import { compileWorkspacePreview } from "../../services/previewCompiler";
 import type { ProjectRuntimeState } from "../../services/projectRuntime";
 import type { MissionWorkspaceFile } from "../../types";
 import { Composer } from "../chat/Composer";
@@ -27,7 +29,7 @@ type DeviceViewport = "desktop" | "tablet" | "mobile";
  * Right pane: Tabbed workspace (Preview | Code | Database | More)
  */
 export const StudioWorkspace: React.FC = () => {
-  const { activeMessages, activeConversation } = useApp();
+  const { activeMessages, activeConversation, artifacts, generationStatus } = useApp();
 
   const [activeTab, setActiveTab] = useState<StudioTab>("preview");
   const [device, setDevice] = useState<DeviceViewport>("desktop");
@@ -44,17 +46,23 @@ export const StudioWorkspace: React.FC = () => {
   >(null);
   const previewGenerationRef = useRef(0);
 
-  // Files from the last mission run (if any)
-  const missionFiles = useMemo<MissionWorkspaceFile[]>(() => {
-    // Walk messages backwards to find the latest mission with files
-    for (let i = activeMessages.length - 1; i >= 0; i--) {
-      const msg = activeMessages[i];
-      if (msg.mission?.files && msg.mission.files.length > 0) {
-        return msg.mission.files;
-      }
-    }
-    return [];
-  }, [activeMessages]);
+  // Full conversation workspace files from both mission snapshots and artifacts
+  const workspaceFiles = useMemo<MissionWorkspaceFile[]>(() => {
+    return getConversationWorkspaceFiles(
+      activeMessages,
+      artifacts,
+      activeConversation?.id
+    );
+  }, [activeMessages, artifacts, activeConversation?.id]);
+
+  // Compiled preview result (works instantly, even while WebContainer dev server boots)
+  const compiledResult = useMemo(() => {
+    return compileWorkspacePreview({
+      files: workspaceFiles,
+      isStreaming: generationStatus === "receiving",
+      projectTitle: activeConversation?.title || "Idealy Project",
+    });
+  }, [workspaceFiles, generationStatus, activeConversation?.title]);
 
   const missionId = useMemo<string | null>(() => {
     for (let i = activeMessages.length - 1; i >= 0; i--) {
@@ -66,7 +74,7 @@ export const StudioWorkspace: React.FC = () => {
     return null;
   }, [activeMessages]);
 
-  const hasProjectManifest = missionFiles.some(
+  const hasProjectManifest = workspaceFiles.some(
     (f) => f.path.replace(/\\/g, "/").replace(/^\/+/, "") === "package.json"
   );
 
@@ -86,7 +94,7 @@ export const StudioWorkspace: React.FC = () => {
         runtime.stopProjectPreview();
         return;
       }
-      const url = await runtime.startProjectPreview(missionFiles, {
+      const url = await runtime.startProjectPreview(workspaceFiles, {
         onOutput: (text) => setRuntimeOutput((c) => (c + text).slice(-18_000)),
         onState: setRuntimeState,
       });
@@ -94,10 +102,22 @@ export const StudioWorkspace: React.FC = () => {
     } catch (cause) {
       setRuntimeState("error");
       setRuntimeError(
-        cause instanceof Error ? cause.message : "L'aperçu n'a pas pu démarrer."
+        cause instanceof Error ? cause.message : "Preview could not start."
       );
     }
-  }, [hasProjectManifest, missionFiles]);
+  }, [hasProjectManifest, workspaceFiles]);
+
+  // Auto-start preview when project manifest arrives and dev server is idle
+  useEffect(() => {
+    if (
+      hasProjectManifest &&
+      runtimeState === "stopped" &&
+      !runtimeUrl &&
+      workspaceFiles.length > 0
+    ) {
+      startPreview();
+    }
+  }, [hasProjectManifest, runtimeState, runtimeUrl, workspaceFiles.length, startPreview]);
 
   const stopPreview = useCallback(() => {
     previewGenerationRef.current += 1;
@@ -113,19 +133,23 @@ export const StudioWorkspace: React.FC = () => {
   const openExternal = useCallback(() => {
     if (runtimeUrl) {
       window.open(runtimeUrl, "_blank");
+    } else if (compiledResult.html) {
+      const blob = new Blob([compiledResult.html], { type: "text/html" });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
     }
-  }, [runtimeUrl]);
+  }, [runtimeUrl, compiledResult.html]);
 
   const downloadProject = useCallback(async () => {
-    if (missionFiles.length === 0) {
+    if (workspaceFiles.length === 0) {
       return;
     }
     const { downloadZip } = await import("../../utils/zip");
     downloadZip(
-      missionFiles.map((f) => ({ content: f.content, path: f.path })),
+      workspaceFiles.map((f) => ({ content: f.content, path: f.path })),
       `${activeConversation?.title || "idealy-project"}.zip`
     );
-  }, [missionFiles, activeConversation]);
+  }, [workspaceFiles, activeConversation]);
 
   // Decide whether to show the two-pane layout or single-column
   const hasStudioContent = activeMessages.length > 0;
@@ -166,6 +190,7 @@ export const StudioWorkspace: React.FC = () => {
       case "preview":
         return (
           <PreviewPane
+            compiledHtml={compiledResult.html}
             device={device}
             hasProjectManifest={hasProjectManifest}
             onStartPreview={startPreview}
@@ -179,9 +204,9 @@ export const StudioWorkspace: React.FC = () => {
       case "code":
         return (
           <CodePane
-            files={missionFiles}
+            files={workspaceFiles}
             onDownloadProject={
-              missionFiles.length > 0 ? downloadProject : undefined
+              workspaceFiles.length > 0 ? downloadProject : undefined
             }
             terminalOutput={runtimeOutput}
           />

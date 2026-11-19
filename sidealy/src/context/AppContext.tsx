@@ -134,7 +134,7 @@ interface AppContextValue {
   webSearch: boolean;
 }
 
-const AppContext = createContext<AppContextValue | null>(null);
+export const AppContext = createContext<AppContextValue | null>(null);
 
 export type AppPage =
   | "chat"

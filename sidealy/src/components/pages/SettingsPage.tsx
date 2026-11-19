@@ -43,7 +43,7 @@ export const SettingsPage: React.FC = () => {
     setLanguage,
     remainingWayChanges,
   } = useApp();
-  const { t } = useTranslation();
+  const { t, ti } = useTranslation();
   const settingsSections = [
     "general",
     "account",
@@ -331,19 +331,19 @@ export const SettingsPage: React.FC = () => {
   };
 
   const themes = [
-    { icon: Monitor, id: "system" as const, label: t("settings.general") },
-    { icon: Sun, id: "light" as const, label: t("settings.appearance") },
-    { icon: Moon, id: "dark" as const, label: t("settings.appearance") },
+    { icon: Monitor, id: "system" as const, label: t("settings.themeSystem") },
+    { icon: Sun, id: "light" as const, label: t("settings.themeLight") },
+    { icon: Moon, id: "dark" as const, label: t("settings.themeDark") },
   ];
 
   return (
     <main className="h-full w-full overflow-y-auto px-5 py-8 sm:px-8 lg:px-10 xl:px-12">
       <div className="mx-auto w-full max-w-[1280px] pb-12">
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
-          Compte et application
+          {t("settings.accountAndApp")}
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-main">
-          Paramètres
+          {t("settings.settingsTitle")}
         </h1>
         <p className="mt-2 text-sm leading-6 text-text-muted">
           {t("settings.subtitle")}
@@ -385,7 +385,7 @@ export const SettingsPage: React.FC = () => {
               </span>
               <div>
                 <h2 className="text-sm font-semibold text-text-main">
-                  Apparence
+                  {t("settings.appearance")}
                 </h2>
                 <p className="mt-1 text-xs text-text-muted">
                   {t("settings.theme")}
@@ -417,7 +417,7 @@ export const SettingsPage: React.FC = () => {
               </span>
               <div>
                 <h2 className="text-sm font-semibold text-text-main">
-                  Préférences du compte
+                  {t("settings.accountPreferences")}
                 </h2>
                 <p className="mt-1 text-xs text-text-muted">
                   {t("settings.subtitle")}
@@ -500,12 +500,12 @@ export const SettingsPage: React.FC = () => {
                               {isActive ? (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
                                   <Check className="h-3 w-3" />
-                                  Actif
+                                  {t("settings.activeStatus")}
                                 </span>
                               ) : isLocked ? (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 px-2 py-0.5 text-[10px] text-zinc-400">
                                   <Lock className="h-3 w-3" />
-                                  Verrouillé
+                                  {t("settings.lockedStatus")}
                                 </span>
                               ) : (
                                 <span className="rounded-full bg-bg-surface border border-border-subtle px-2 py-0.5 text-[10px] text-text-muted">
@@ -521,24 +521,30 @@ export const SettingsPage: React.FC = () => {
 
                           <div className="mt-3.5 pt-3 border-t border-border-subtle/60 flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-text-muted">Chef:</span>
+                              <span className="text-[10px] text-text-muted">{t("settings.chiefLabel")}</span>
                               <span className="text-[11px] font-medium text-text-main">{way.chiefName}</span>
                             </div>
 
-                            <div className="flex -space-x-1.5 overflow-hidden">
-                              {way.agents.slice(0, 4).map((agent) => (
-                                <img
-                                  key={agent.name}
-                                  src={agent.avatarUrl}
-                                  alt={agent.name}
-                                  title={`${agent.name} (${agent.role})`}
-                                  className="inline-block h-5 w-5 rounded-full ring-1 ring-bg-surface object-cover bg-bg-subtle"
-                                  onError={(e) => {
-                                    (e.target as HTMLElement).style.display = "none";
-                                  }}
-                                />
-                              ))}
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-text-muted mr-0.5">5 agents</span>
+                              <div className="flex -space-x-1.5 overflow-hidden">
+                                {way.agents.slice(0, 5).map((agent) => (
+                                  <img
+                                    key={agent.name}
+                                    src={agent.avatarUrl}
+                                    alt={agent.name}
+                                    title={`${agent.name} (${agent.role})`}
+                                    className="inline-block h-5 w-5 rounded-full ring-1 ring-bg-surface object-cover bg-bg-subtle"
+                                    onError={(e) => {
+                                      (e.target as HTMLElement).style.display = "none";
+                                    }}
+                                  />
+                                ))}
+                              </div>
                             </div>
+                          </div>
+                          <div className="mt-2 text-[10.5px] text-text-muted/80 truncate">
+                            {way.agents.slice(0, 5).map((a) => a.name).join(" · ")}
                           </div>
                         </button>
                       );
@@ -621,10 +627,10 @@ export const SettingsPage: React.FC = () => {
               </span>
               <div className="min-w-0 flex-1">
                 <h2 className="text-sm font-semibold text-text-main">
-                  Services et compteurs
+                  {t("settings.servicesTitle")}
                 </h2>
                 <p className="mt-1 text-xs text-text-muted">
-                  État lu depuis les API du backend Idealy.
+                  {t("settings.servicesSubtitle")}
                 </p>
               </div>
               <span
@@ -636,25 +642,25 @@ export const SettingsPage: React.FC = () => {
                   <Check className="h-3.5 w-3.5" />
                 ) : null}
                 {service === "checking"
-                  ? "Vérification"
+                  ? t("settings.serviceChecking")
                   : service === "ready"
-                    ? "Disponible"
-                    : "Indisponible"}
+                    ? t("settings.serviceAvailable")
+                    : t("settings.serviceUnavailable")}
               </span>
             </div>
             <div className="mt-4 flex flex-wrap gap-2 text-xs text-text-muted">
               <span className="rounded-lg bg-bg-subtle px-3 py-2">
                 API Idealy :{" "}
                 {service === "ready"
-                  ? "connectée"
+                  ? t("settings.apiConnected")
                   : service === "checking"
-                    ? "vérification en cours"
-                    : "non joignable"}
+                    ? t("settings.apiChecking")
+                    : t("settings.apiUnreachable")}
               </span>
               {quota && (
                 <span className="rounded-lg bg-bg-subtle px-3 py-2">
-                  Quota : {quota.remaining ?? "—"} restant
-                  {quota.limit ? ` sur ${quota.limit}` : ""}
+                  {ti("settings.quotaRemaining", { remaining: quota.remaining ?? "—" })}
+                  {quota.limit ? ti("settings.quotaOutOf", { limit: quota.limit }) : ""}
                 </span>
               )}
               <button
@@ -662,7 +668,7 @@ export const SettingsPage: React.FC = () => {
                 onClick={() => setActivePage("connectors")}
                 type="button"
               >
-                Gérer les connecteurs
+                {t("settings.manageConnectors")}
               </button>
             </div>
           </section>
@@ -676,17 +682,16 @@ export const SettingsPage: React.FC = () => {
               </span>
               <div>
                 <h2 className="text-sm font-semibold text-text-main">
-                  Abonnement et facturation
+                  {t("settings.billingTitle")}
                 </h2>
                 <p className="mt-1 text-xs leading-5 text-text-muted">
-                  État du forfait et crédits lus depuis le service de
-                  facturation Idealy.
+                  {t("settings.billingSubtitle")}
                 </p>
               </div>
             </div>
             {billingLoading ? (
               <p aria-live="polite" className="mt-5 text-sm text-text-muted">
-                Chargement de l’abonnement…
+                {t("settings.billingLoading")}
               </p>
             ) : billingError ? (
               <p
@@ -741,7 +746,7 @@ export const SettingsPage: React.FC = () => {
                       <dl className="mt-5 grid gap-3 sm:grid-cols-2">
                         <div className="rounded-xl bg-bg-subtle p-3">
                           <dt className="text-xs text-text-muted">
-                            Forfait actif ({activeWayKey.toUpperCase()})
+                            {t("settings.activePlan")} ({activeWayKey.toUpperCase()})
                           </dt>
                           <dd className="mt-1 text-sm font-semibold text-text-main">
                             {billing.planId === "business"
@@ -753,17 +758,17 @@ export const SettingsPage: React.FC = () => {
                         </div>
                         <div className="rounded-xl bg-bg-subtle p-3">
                           <dt className="text-xs text-text-muted">
-                            Crédits de ressource ({tiers.resource})
+                            {t("settings.resourceCredits")} ({tiers.resource})
                           </dt>
                           <dd className="mt-1 text-sm font-semibold text-text-main">
                             {billing.creditsBalance ??
-                              "Illimité (Période Bêta)"}
+                              t("settings.unlimitedBeta")}
                           </dd>
                         </div>
                       </dl>
                       <div className="mt-4 p-3 rounded-xl bg-bg-subtle/50 border border-border-subtle">
                         <p className="text-xs font-semibold text-text-main mb-2">
-                          Paliers disponibles pour votre Voie ({activeWayKey})
+                          {ti("settings.availableTiers", { way: activeWayKey })}
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                           <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
@@ -771,7 +776,7 @@ export const SettingsPage: React.FC = () => {
                               {tiers.free}
                             </p>
                             <p className="text-[11px] text-text-muted">
-                              0 € / mois
+                              0 € {t("settings.month")}
                             </p>
                           </div>
                           <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
@@ -779,7 +784,7 @@ export const SettingsPage: React.FC = () => {
                               {tiers.pro}
                             </p>
                             <p className="text-[11px] text-text-muted">
-                              19 € / mois
+                              19 € {t("settings.month")}
                             </p>
                           </div>
                           <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
@@ -787,7 +792,7 @@ export const SettingsPage: React.FC = () => {
                               {tiers.business}
                             </p>
                             <p className="text-[11px] text-text-muted">
-                              49 € / mois
+                              49 € {t("settings.month")}
                             </p>
                           </div>
                           <div className="p-2 rounded-lg bg-bg-surface border border-border-subtle">
@@ -795,7 +800,7 @@ export const SettingsPage: React.FC = () => {
                               {tiers.max}
                             </p>
                             <p className="text-[11px] text-text-muted">
-                              199 € / mois
+                              199 € {t("settings.month")}
                             </p>
                           </div>
                         </div>
@@ -806,9 +811,9 @@ export const SettingsPage: React.FC = () => {
                 <p className="mt-3 text-xs leading-5 text-text-muted">
                   {billing.active
                     ? billing.cancelAtPeriodEnd
-                      ? `L’abonnement se termine le ${billing.currentPeriodEnd ? new Date(billing.currentPeriodEnd * 1000).toLocaleDateString("fr-FR") : "à la fin de la période"}.`
-                      : `Abonnement ${billing.status === "trialing" ? "en période d’essai" : "actif"}${billing.currentPeriodEnd ? ` · renouvellement le ${new Date(billing.currentPeriodEnd * 1000).toLocaleDateString("fr-FR")}` : ""}.`
-                    : "Aucun abonnement payant actif sur ce compte."}
+                      ? `L’abonnement se termine le ${billing.currentPeriodEnd ? new Date(billing.currentPeriodEnd * 1000).toLocaleDateString() : "à la fin de la période"}.`
+                      : `Abonnement ${billing.status === "trialing" ? "en période d’essai" : "actif"}${billing.currentPeriodEnd ? ` · renouvellement le ${new Date(billing.currentPeriodEnd * 1000).toLocaleDateString()}` : ""}.`
+                    : t("settings.noActiveSubscription")}
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {billing.active ? (
@@ -826,7 +831,7 @@ export const SettingsPage: React.FC = () => {
                       ) : (
                         <ExternalLink aria-hidden="true" className="h-4 w-4" />
                       )}
-                      Gérer l’abonnement
+                      {t("settings.manageSubscription")}
                     </button>
                   ) : (
                     <button
@@ -834,14 +839,14 @@ export const SettingsPage: React.FC = () => {
                       onClick={() => setActivePage("pricing")}
                       type="button"
                     >
-                      Voir les formules
+                      {t("settings.viewPlans")}
                     </button>
                   )}
                 </div>
               </>
             ) : (
               <p className="mt-5 text-sm text-text-muted">
-                Connectez-vous pour consulter les informations de facturation.
+                {t("settings.loginToViewBilling")}
               </p>
             )}
           </section>
@@ -850,20 +855,17 @@ export const SettingsPage: React.FC = () => {
         {section === "data" && (
           <section className="mt-4 rounded-2xl border border-border-subtle bg-bg-surface p-5 sm:p-6">
             <h2 className="text-sm font-semibold text-text-main">
-              Vos données sur cet appareil
+              {t("settings.dataTitle")}
             </h2>
             <p className="mt-2 text-sm leading-6 text-text-muted">
-              Les brouillons, espaces, messages affichés et livrables conservés
-              localement peuvent être exportés en JSON. Les conversations de
-              compte restent également dans l’historique backend quand la
-              session est active.
+              {t("settings.dataSubtitle")}
             </p>
             <dl className="mt-5 grid grid-cols-2 gap-3 text-xs text-text-muted sm:grid-cols-4">
               {[
                 ["Discussions", conversations.length],
                 ["Messages", messages.length],
-                ["Espaces", spaces.length],
-                ["Livrables", artifacts.length],
+                ["Spaces", spaces.length],
+                ["Artifacts", artifacts.length],
               ].map(([label, count]) => (
                 <div
                   className="rounded-xl bg-bg-subtle p-3"
@@ -881,57 +883,48 @@ export const SettingsPage: React.FC = () => {
               onClick={exportLocalData}
               type="button"
             >
-              Exporter les données locales
+              {t("settings.exportData")}
             </button>
           </section>
         )}
         {section === "notifications" && (
           <section className="mt-4 rounded-2xl border border-border-subtle bg-bg-surface p-5 sm:p-6">
             <h2 className="text-sm font-semibold text-text-main">
-              Notifications
+              {t("settings.notificationsTitle")}
             </h2>
             <p className="mt-2 text-sm leading-6 text-text-muted">
-              Les notifications push et e-mail du backend ne sont pas encore
-              exposées dans cette interface. Idealy n’active donc aucun
-              abonnement de notification depuis ce panneau.
-            </p>
-            <p className="mt-4 text-xs text-text-muted">
-              Les alertes de génération restent visibles directement dans la
-              conversation ouverte.
+              {t("settings.notificationsDesc")}
             </p>
           </section>
         )}
         {section === "privacy" && (
           <section className="mt-4 rounded-2xl border border-border-subtle bg-bg-surface p-5 sm:p-6">
             <h2 className="text-sm font-semibold text-text-main">
-              Confidentialité et accès
+              {t("settings.privacyTitle")}
             </h2>
             <p className="mt-2 text-sm leading-6 text-text-muted">
-              Le navigateur appelle les API du même domaine. Les secrets
-              fournisseurs restent côté serveur ; les contenus envoyés à un
-              modèle peuvent être transmis au fournisseur configuré pour traiter
-              la demande.
+              {t("settings.privacyDesc")}
             </p>
             <button
               className="mt-5 h-10 rounded-xl border border-border-subtle px-4 text-sm font-medium text-text-main hover:bg-bg-subtle focus-ring"
               onClick={() => setActivePage("privacy")}
               type="button"
             >
-              Lire la politique de confidentialité
+              {t("settings.readPrivacyPolicy")}
             </button>
           </section>
         )}
         {section === "shortcuts" && (
           <section className="mt-4 rounded-2xl border border-border-subtle bg-bg-surface p-5 sm:p-6">
             <h2 className="text-sm font-semibold text-text-main">
-              Raccourcis clavier
+              {t("settings.shortcutsTitle")}
             </h2>
             <dl className="mt-4 divide-y divide-border-subtle">
               {[
-                ["Ctrl / ⌘ + K", "Ouvrir la palette de commandes"],
-                ["Entrée", "Envoyer un message sur ordinateur"],
-                ["Maj + Entrée", "Ajouter une nouvelle ligne"],
-                ["Échap", "Fermer le menu ou la fenêtre active"],
+                ["Ctrl / ⌘ + K", t("settings.shortcutPalette")],
+                ["Enter", t("settings.shortcutSend")],
+                ["Shift + Enter", t("settings.shortcutNewLine")],
+                ["Esc", t("settings.shortcutEscape")],
               ].map(([key, action]) => (
                 <div
                   className="flex items-center justify-between gap-4 py-3 text-sm"
@@ -950,7 +943,7 @@ export const SettingsPage: React.FC = () => {
         )}
         {notice && (
           <p aria-live="polite" className="mt-4 text-sm text-text-muted">
-            {saving ? "Enregistrement… " : ""}
+            {saving ? `${t("settings.saving")} ` : ""}
             {notice}
           </p>
         )}
@@ -980,15 +973,31 @@ export const SettingsPage: React.FC = () => {
                     {pendingWayChange.tagline}
                   </p>
                   <div className="mt-2.5 flex items-center gap-3 text-xs text-zinc-400">
-                    <span>Ressource: <strong className="text-white">{pendingWayChange.resourceLabel}</strong></span>
+                    <span>{t("settings.resourceLabel")} <strong className="text-white">{pendingWayChange.resourceLabel}</strong></span>
                     <span>·</span>
-                    <span>Chef: <strong className="text-white">{pendingWayChange.chiefName}</strong></span>
+                    <span>{t("settings.chiefLabel")} <strong className="text-white">{pendingWayChange.chiefName}</strong></span>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-white/10">
+                    <p className="text-xs font-medium text-zinc-400 mb-2">
+                      {ti("settings.agentsSquad", { count: pendingWayChange.agents.length })}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {pendingWayChange.agents.slice(0, 5).map((agent) => (
+                        <div key={agent.name} className="flex items-center gap-2 rounded-lg bg-white/[0.03] p-1.5 border border-white/[0.06]">
+                          <img src={agent.avatarUrl} alt={agent.name} className="h-6 w-6 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-white truncate">{agent.name}</p>
+                            <p className="text-[10px] text-zinc-400 truncate">{agent.role}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Changer de mode reconfigurera votre escouade d'agents et le lexique de vos crédits.
-                  Il vous restera <strong className="text-white">{Math.max(0, remainingWayChanges - 1)}</strong> changement(s) ce mois-ci.
+                  {t("settings.wayChangeDescription")}{" "}
+                  <strong className="text-white">{Math.max(0, remainingWayChanges - 1)}</strong> {t("settings.wayChangeRemaining")}
                 </p>
               </div>
 

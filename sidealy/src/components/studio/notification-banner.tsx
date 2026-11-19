@@ -2,8 +2,10 @@ import { Bell, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 
 export const NotificationBanner: React.FC = () => {
+  const { t } = useTranslation();
   const { generationStatus } = useApp();
   const [isVisible, setIsVisible] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
@@ -33,7 +35,7 @@ export const NotificationBanner: React.FC = () => {
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         const _n = new Notification("Idealy", {
-          body: "Notifications activées ! Vous serez averti à la fin de vos builds.",
+          body: t("notification.bannerEnabled"),
           icon: "/favicon.ico",
         });
         _n.onclose = null; // satisfy lint: reference the instantiated object
@@ -56,7 +58,7 @@ export const NotificationBanner: React.FC = () => {
 
   return (
     <section
-      aria-label="Notification de statut de build"
+      aria-label={t("notification.bannerTitle")}
       className="mx-auto w-full max-w-3xl px-3 sm:px-4 mb-2 animate-fade-in"
     >
       <div className="relative flex items-start gap-3 rounded-2xl border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-2)]/90 p-3.5 sm:p-4 shadow-sm backdrop-blur-md">
@@ -66,11 +68,10 @@ export const NotificationBanner: React.FC = () => {
 
         <div className="flex-1 min-w-0 pr-6">
           <h4 className="text-xs font-semibold text-[var(--dsw-alias-label-primary)]">
-            Recevoir une notification quand Idealy termine
+            {t("notification.bannerTitle")}
           </h4>
           <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--dsw-alias-label-secondary)]">
-            Soyez prévenu dès que la construction est prête ou requiert votre
-            attention. Modifiable à tout moment dans les paramètres.
+            {t("notification.bannerDesc")}
           </p>
 
           <div className="mt-2.5 flex items-center gap-2">
@@ -79,20 +80,20 @@ export const NotificationBanner: React.FC = () => {
               onClick={handleRequest}
               type="button"
             >
-              Activer les notifications
+              {t("notification.bannerEnable")}
             </button>
             <button
               className="inline-flex items-center justify-center rounded-lg border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-1)] px-3 py-1.5 text-xs font-medium text-[var(--dsw-alias-label-secondary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-colors focus-ring"
               onClick={handleDismiss}
               type="button"
             >
-              Plus tard
+              {t("notification.bannerLater")}
             </button>
           </div>
         </div>
 
         <button
-          aria-label="Fermer l'alerte de notification"
+          aria-label={t("notification.bannerClose")}
           className="absolute right-2.5 top-2.5 grid h-6 w-6 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-colors"
           onClick={handleDismiss}
           type="button"

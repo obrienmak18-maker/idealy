@@ -2,6 +2,7 @@ import { Radio, Search, SquarePen, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 import { hasConversationActivity } from "../../services/conversationVisibility";
 
 const normalize = (value: string) =>
@@ -9,6 +10,7 @@ const normalize = (value: string) =>
 
 /** Recherche simple et discrète : un champ, vos discussions avec extraits. (Ctrl/Cmd + K) */
 export const CommandPalette: React.FC = () => {
+  const { t } = useTranslation();
   const {
     isCommandPaletteOpen,
     setIsCommandPaletteOpen,
@@ -112,7 +114,7 @@ export const CommandPalette: React.FC = () => {
             type="button"
           >
             <SquarePen aria-hidden="true" className="h-3.5 w-3.5 text-[var(--dsw-alias-label-tertiary)]" />
-            <span>Nouvelle discussion</span>
+            <span>{t("sidebar.newChat")}</span>
           </button>
           <button
             className="focus-ring flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs text-[var(--dsw-alias-label-primary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)]"
@@ -123,11 +125,11 @@ export const CommandPalette: React.FC = () => {
             type="button"
           >
             <Radio aria-hidden="true" className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Mode Vocal Live (Gemini Live)</span>
+            <span>{t("commandPalette.liveVoice")}</span>
           </button>
           {results.length > 0 && (
             <p className="px-3 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--dsw-alias-label-tertiary)]">
-              {query ? "Résultats" : "Récentes"}
+              {query ? t("commandPalette.results") : t("commandPalette.recent")}
             </p>
           )}
           {results.map(({ conversation, snippet }, i) => (

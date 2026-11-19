@@ -10,6 +10,7 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 import {
   alvinMessenger,
   voiesCatalog,
@@ -20,6 +21,7 @@ import { PageFrame } from "../layout/PageFrame";
 import { PageHeader } from "../layout/PageHeader";
 
 export const AgentsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { createConversation, setActivePage, setDraft, userWay } = useApp();
   const [selectedWayKey, setSelectedWayKey] = useState<string>(
     () => userWay || "ninja"
@@ -44,7 +46,7 @@ export const AgentsPage: React.FC = () => {
   };
 
   return (
-    <PageFrame label="Escouade Multi-Agents">
+    <PageFrame label={t("agents.title")}>
       <div className="idealy-page-enter mx-auto max-w-6xl pb-16">
         <PageHeader
           action={
@@ -54,13 +56,13 @@ export const AgentsPage: React.FC = () => {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                 </span>
-                Architecture Multi-Agents Active
+                {t("agents.activeArchitecture")}
               </span>
             </div>
           }
-          description="Explorez et commandez les agents d'élite d'Idealy. Chaque agent possède une spécialité pointue, une stratégie propre et agit en coordination tactique."
-          eyebrow="Système d'Escouade • Atoms / Idealy Engine"
-          title="Escouade Multi-Agents"
+          description={t("agents.description")}
+          eyebrow={t("agents.eyebrow")}
+          title={t("agents.title")}
         />
 
         {/* ─── UNIVERSAL MESSENGER BANNER (ALVIN) ─────────────────────────── */}

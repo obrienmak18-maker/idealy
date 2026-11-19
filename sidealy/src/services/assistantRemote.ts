@@ -276,7 +276,7 @@ export const AssistantRemoteService = {
     const userWay =
       options.way || localStorage.getItem("idealy_user_way") || "ninja";
     const userTone = localStorage.getItem("idealy_user_tone") || "concise";
-    const userLanguage = localStorage.getItem("idealy_language") || "fr";
+    const userLanguage = localStorage.getItem("idealy_language") || "en";
     headers["x-idealy-user-way"] = userWay;
     headers["x-idealy-user-tone"] = userTone;
     headers["x-idealy-language"] = userLanguage;
@@ -499,7 +499,7 @@ export const AssistantRemoteService = {
                 ]
               : []
           );
-          if (agents.length && agents.length <= 3) {
+          if (agents.length && agents.length <= 5) {
             callbacks.onSubAgentProgress?.({
               agents,
               objective: candidate.objective.slice(0, 1200),

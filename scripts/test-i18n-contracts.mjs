@@ -3,7 +3,8 @@ import fs from "node:fs";
 
 console.log("Verifying Idealy tri-lingual dictionary symmetry (EN, FR, ES)...");
 
-const content = fs.readFileSync("sidealy/src/services/i18n.ts", "utf8");
+const raw = fs.readFileSync("sidealy/src/services/i18n.ts", "utf8");
+const content = raw.replace(/\r\n/g, "\n");
 
 const enStart = content.indexOf("  en: {");
 const frStart = content.indexOf("  fr: {");

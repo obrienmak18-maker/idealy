@@ -2,6 +2,7 @@ import { Send, Sparkles, X } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 
 export interface ClarifyingQuestionData {
   context?: string;
@@ -11,6 +12,7 @@ export interface ClarifyingQuestionData {
 }
 
 export const ClarifyingQuestionsCard: React.FC = () => {
+  const { t } = useTranslation();
   const { sendMessage } = useApp();
   const [activeQuestion, setActiveQuestion] =
     useState<ClarifyingQuestionData | null>(null);
@@ -55,13 +57,13 @@ export const ClarifyingQuestionsCard: React.FC = () => {
 
       setIsSubmitting(true);
       try {
-        await sendMessage(`Option choisie : ${choice}`);
+        await sendMessage(`${t("clarification.chosenOption")} ${choice}`);
         setActiveQuestion(null);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [activeQuestion, isSubmitting, sendMessage]
+    [activeQuestion, isSubmitting, sendMessage, t]
   );
 
   const handleSubmitCustom = useCallback(async () => {
@@ -70,13 +72,13 @@ export const ClarifyingQuestionsCard: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      await sendMessage(`Réponse personnalisée : ${customText.trim()}`);
+      await sendMessage(`${t("clarification.customAnswer")} ${customText.trim()}`);
       setActiveQuestion(null);
       setCustomText("");
     } finally {
       setIsSubmitting(false);
     }
-  }, [activeQuestion, customText, isSubmitting, sendMessage]);
+  }, [activeQuestion, customText, isSubmitting, sendMessage, t]);
 
   const handleDismiss = useCallback(() => setActiveQuestion(null), []);
 
@@ -137,7 +139,7 @@ export const ClarifyingQuestionsCard: React.FC = () => {
 
   return (
     <section
-      aria-label="Clarification requise par l'agent"
+      aria-label={t("clarification.badge")}
       className="mx-auto w-full max-w-3xl px-3 sm:px-4 mb-2 animate-fade-in"
     >
       <div className="relative rounded-2xl border border-[var(--idealy-teal-petrol)]/40 bg-[var(--dsw-alias-bg-layer-2)]/95 p-3.5 sm:p-4 shadow-elevated backdrop-blur-md">
@@ -147,12 +149,12 @@ export const ClarifyingQuestionsCard: React.FC = () => {
               <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
             </span>
             <span className="text-xs font-semibold text-[var(--dsw-alias-label-primary)]">
-              Précision nécessaire pour votre projet
+              {t("clarification.badge")}
             </span>
           </div>
 
           <button
-            aria-label="Ignorer la question"
+            aria-label={t("clarification.dismiss")}
             className="grid h-6 w-6 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-colors"
             onClick={handleDismiss}
             type="button"
@@ -191,7 +193,7 @@ export const ClarifyingQuestionsCard: React.FC = () => {
                   <span className="truncate">{option}</span>
                 </div>
                 <span className="text-[10px] text-[var(--dsw-alias-label-caption)] group-hover:text-[var(--idealy-teal-petrol)]">
-                  Entrée ↵
+                  {t("clarification.enter")}
                 </span>
               </button>
             );
@@ -204,12 +206,12 @@ export const ClarifyingQuestionsCard: React.FC = () => {
             className="flex-1 rounded-lg border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-1)] px-2.5 py-1.5 text-xs text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] focus:border-[var(--idealy-teal-petrol)] focus:outline-none"
             onChange={handleCustomTextChange}
             onKeyDown={handleCustomKeyDown}
-            placeholder="Autre précision personnalisée…"
+            placeholder={t("clarification.customPlaceholder")}
             type="text"
             value={customText}
           />
           <button
-            aria-label="Envoyer la réponse personnalisée"
+            aria-label={t("clarification.send")}
             className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[var(--idealy-teal-petrol)] text-white disabled:opacity-30 transition-all hover:opacity-90 active:scale-95"
             disabled={!customText.trim() || isSubmitting}
             onClick={handleSubmitCustom}

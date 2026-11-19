@@ -74,17 +74,26 @@ export function getConversationWorkspaceFiles(
       if (artifact.conversationId !== conversationId || artifact.type !== "code") {
         return false;
       }
-      // An artifact title represents a source path only when it has a filename
-      // extension. Avoid mounting arbitrary document titles as filesystem paths.
-      return /(?:^|\/)[^/]+\.[a-z0-9]{1,12}$/i.test(artifact.title);
+      return true;
     })
-    .map((artifact) => ({
-      content: artifact.content,
-      language: artifact.language ?? artifact.title.split(".").pop() ?? "text",
-      path: artifact.title,
-      status: "saved" as const,
-      version: artifact.createdAt,
-    }));
+    .map((artifact) => {
+      let path = artifact.title.replaceAll("\\", "/").replace(/^\/+/, "");
+      if (!/(?:^|\/)[^/]+\.[a-z0-9]{1,12}$/i.test(path)) {
+        path =
+          artifact.language === "html" ||
+          artifact.content.includes("<!DOCTYPE") ||
+          artifact.content.includes("<html")
+            ? "index.html"
+            : "src/App.tsx";
+      }
+      return {
+        content: artifact.content,
+        language: artifact.language ?? path.split(".").pop() ?? "text",
+        path,
+        status: "saved" as const,
+        version: artifact.createdAt,
+      };
+    });
   if (!missionFiles.length) return keepLatestFile(artifactFiles);
 
   // The mission snapshot keeps the backend optimistic-lock version. Locally

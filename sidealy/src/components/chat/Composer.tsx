@@ -26,6 +26,7 @@ import type { Attachment } from "../../types";
 import { authenticatedFetch } from "../../services/firebase";
 import { getConnectorBrandLogo } from "../connectors/brand-logos";
 import { DEFAULT_CONNECTORS_CATALOG } from "../connectors/default-connectors";
+import { useTranslation } from "../../services/i18n";
 
 type SpeechResultLike = {
   isFinal: boolean;
@@ -71,6 +72,7 @@ export const Composer: React.FC<ComposerProps> = ({
     deepThink,
     webSearch,
   } = useApp();
+  const { t } = useTranslation();
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [slashQuery, setSlashQuery] = useState<string | null>(null);
@@ -568,13 +570,13 @@ export const Composer: React.FC<ComposerProps> = ({
 
   const startWhisperDictation = async () => {
     dictationDraftRef.current = draft;
-    setDictationStatus("Autorisez le microphone pour commencer…");
+    setDictationStatus(t("voice.requestingMic"));
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       setDictationStatus(
-        "Accès au microphone refusé. Vérifiez l’autorisation du navigateur."
+        t("voice.micDenied")
       );
       return;
     }
@@ -597,11 +599,11 @@ export const Composer: React.FC<ComposerProps> = ({
       });
       if (blob.size < 800) {
         setDictationStatus(
-          "Aucune voix détectée. Touchez le micro pour réessayer."
+          t("voice.noVoice")
         );
         return;
       }
-      setDictationStatus("Transcription…");
+      setDictationStatus(t("voice.statusConnecting"));
       try {
         const body = new FormData();
         body.append(
@@ -609,7 +611,7 @@ export const Composer: React.FC<ComposerProps> = ({
           blob,
           `dictation.${blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm"}`
         );
-        body.append("language", language || "fr");
+        body.append("language", language || "en");
         const res = await fetch("/api/idealy/transcribe", {
           body,
           credentials: "include",
@@ -627,22 +629,22 @@ export const Composer: React.FC<ComposerProps> = ({
           setDictationStatus("");
         } else {
           setDictationStatus(
-            "Aucune voix détectée. Touchez le micro pour réessayer."
+            t("voice.noVoice")
           );
         }
       } catch {
         whisperProbe.current = null;
-        setDictationStatus("La transcription a échoué. Réessayez.");
+        setDictationStatus(t("voice.transcriptionFailed"));
       }
     };
     recorder.start();
     setDictationActive(true);
-    setDictationStatus("Écoute en cours…");
+    setDictationStatus(t("voice.statusListening"));
   };
 
   const toggleDictation = async () => {
     if (dictationActive && recorderRef.current) {
-      setDictationStatus("Transcription…");
+      setDictationStatus(t("voice.statusConnecting"));
       recorderRef.current.stop();
       return;
     }
@@ -655,7 +657,7 @@ export const Composer: React.FC<ComposerProps> = ({
       return;
     }
     if (dictationActive) {
-      setDictationStatus("Arrêt de la dictée…");
+      setDictationStatus(t("voice.stopping"));
       recognitionRef.current?.stop();
       releaseAudioCapture();
       setDictationActive(false);
@@ -664,7 +666,7 @@ export const Composer: React.FC<ComposerProps> = ({
 
     if (!SpeechRecognition) {
       setDictationStatus(
-        "La dictée vocale n’est pas prise en charge par ce navigateur."
+        t("voice.unsupported")
       );
       return;
     }
@@ -676,7 +678,7 @@ export const Composer: React.FC<ComposerProps> = ({
     }
 
     dictationDraftRef.current = draft;
-    setDictationStatus("Autorisez le microphone pour commencer…");
+    setDictationStatus(t("voice.requestingMic"));
 
     let stream: MediaStream;
     try {
@@ -908,7 +910,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 />
                 <span className="font-bold">@{activeAgentTag.name}</span>
                 <button
-                  aria-label="Retirer l'agent"
+                  aria-label={t("composer.removeAgent")}
                   className="ml-1 rounded-full p-0.5 hover:bg-black/20 text-current transition-colors"
                   onClick={() => setActiveAgentTag(null)}
                   type="button"
@@ -1005,12 +1007,12 @@ export const Composer: React.FC<ComposerProps> = ({
           {/* @ Agent Mention Autocomplete */}
           {mentionQuery !== null && availableAgents.length > 0 && (
             <div
-              aria-label="Sélectionner un agent"
+              aria-label={t("composer.selectAgent")}
               className="absolute bottom-full left-5 mb-2 z-50 w-72 max-h-60 overflow-y-auto rounded-xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.36)] backdrop-blur-md animate-scale-in"
               role="listbox"
             >
               <div className="px-2 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
-                Mentionner un spécialiste
+                {t("composer.mention")}
               </div>
               {availableAgents.map((agent, i) => (
                 <button
@@ -1344,7 +1346,7 @@ export const Composer: React.FC<ComposerProps> = ({
                         type="button"
                       >
                         <User aria-hidden="true" className="text-amber-400" />
-                        <span>Mentionner un agent (@)</span>
+                        <span>{t("composer.mention")}</span>
                       </button>
                       <button
                         className="composer-add-row"
@@ -1352,7 +1354,7 @@ export const Composer: React.FC<ComposerProps> = ({
                         type="button"
                       >
                         <Plug aria-hidden="true" className="text-violet-400" />
-                        <span className="flex-1 text-left">Connecteurs</span>
+                        <span className="flex-1 text-left">{t("composer.connectors")}</span>
                         <ChevronRight className="h-3.5 w-3.5 text-text-muted" />
                       </button>
                       <button

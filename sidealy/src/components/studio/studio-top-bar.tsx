@@ -15,8 +15,9 @@ import {
   Tablet,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 import type { StudioTab } from "./studio-layout";
 
 type DeviceViewport = "desktop" | "tablet" | "mobile";
@@ -41,39 +42,6 @@ interface StudioTopBarProps {
   routes?: Array<{ label: string; path: string }>;
 }
 
-const TABS: Array<{ id: StudioTab; label: string; icon: React.ReactNode }> = [
-  { icon: <Globe className="h-3.5 w-3.5" />, id: "preview", label: "Aperçu" },
-  { icon: <Code2 className="h-3.5 w-3.5" />, id: "code", label: "Code" },
-  {
-    icon: <Database className="h-3.5 w-3.5" />,
-    id: "database",
-    label: "Database",
-  },
-  {
-    icon: <MoreHorizontal className="h-3.5 w-3.5" />,
-    id: "more",
-    label: "More",
-  },
-];
-
-const DEVICES: Array<{
-  id: DeviceViewport;
-  label: string;
-  icon: React.ReactNode;
-}> = [
-  {
-    icon: <Laptop className="h-3.5 w-3.5" />,
-    id: "desktop",
-    label: "Ordinateur",
-  },
-  { icon: <Tablet className="h-3.5 w-3.5" />, id: "tablet", label: "Tablette" },
-  {
-    icon: <Smartphone className="h-3.5 w-3.5" />,
-    id: "mobile",
-    label: "Mobile",
-  },
-];
-
 export const StudioTopBar: React.FC<StudioTopBarProps> = ({
   activeTab,
   onTabChange,
@@ -87,6 +55,7 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
   onToggleHistory,
   rightPaneWidth = 800,
 }) => {
+  const { t, ti } = useTranslation();
   const {
     activeConversation,
     renameConversation,
@@ -94,6 +63,39 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
     deleteConversation,
     exportConversation,
   } = useApp();
+
+  const tabs = useMemo<Array<{ id: StudioTab; label: string; icon: React.ReactNode }>>(() => [
+    { icon: <Globe className="h-3.5 w-3.5" />, id: "preview", label: t("studio.preview") },
+    { icon: <Code2 className="h-3.5 w-3.5" />, id: "code", label: t("studio.code") },
+    {
+      icon: <Database className="h-3.5 w-3.5" />,
+      id: "database",
+      label: t("studio.database"),
+    },
+    {
+      icon: <MoreHorizontal className="h-3.5 w-3.5" />,
+      id: "more",
+      label: t("studio.more"),
+    },
+  ], [t]);
+
+  const devices = useMemo<Array<{
+    id: DeviceViewport;
+    label: string;
+    icon: React.ReactNode;
+  }>>(() => [
+    {
+      icon: <Laptop className="h-3.5 w-3.5" />,
+      id: "desktop",
+      label: t("studio.responsiveDesktop"),
+    },
+    { icon: <Tablet className="h-3.5 w-3.5" />, id: "tablet", label: t("studio.responsiveTablet") },
+    {
+      icon: <Smartphone className="h-3.5 w-3.5" />,
+      id: "mobile",
+      label: t("studio.responsiveMobile"),
+    },
+  ], [t]);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [routeMenuOpen, setRouteMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -186,7 +188,7 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
               onClick={startRename}
               type="button"
             >
-              <Pencil className="h-3.5 w-3.5" /> Renommer
+              <Pencil className="h-3.5 w-3.5" /> {t("sidebar.rename")}
             </button>
             <button
               className="studio-dropdown-item"
@@ -198,14 +200,14 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
               }}
               type="button"
             >
-              <Download className="h-3.5 w-3.5" /> Exporter ZIP
+              <Download className="h-3.5 w-3.5" /> {t("studio.exportZip")}
             </button>
             <button
               className="studio-dropdown-item"
               onClick={onToggleHistory}
               type="button"
             >
-              <History className="h-3.5 w-3.5" /> Historique des versions
+              <History className="h-3.5 w-3.5" /> {t("studio.history")}
             </button>
             <div className="my-1 h-px bg-[var(--dsw-alias-border-l1)]" />
             <button
@@ -214,17 +216,17 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
                 setProjectMenuOpen(false);
                 if (activeConversation) {
                   openConfirmModal({
-                    confirmLabel: "Supprimer",
+                    confirmLabel: t("sidebar.delete"),
                     isDestructive: true,
-                    message: `Êtes-vous sûr de vouloir supprimer « ${activeConversation.title} » ? Cette action est irréversible.`,
+                    message: ti("studio.deleteConfirm", { title: activeConversation.title }),
                     onConfirm: () => deleteConversation(activeConversation.id),
-                    title: "Supprimer le projet",
+                    title: t("studio.deleteProject"),
                   });
                 }
               }}
               type="button"
             >
-              Supprimer
+              {t("sidebar.delete")}
             </button>
           </div>
         )}
@@ -232,10 +234,10 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
 
       {/* Center: Segmented tab switcher */}
       <nav
-        aria-label="Vue du workspace"
+        aria-label="Workspace view"
         className="flex items-center rounded-lg border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-1)] p-0.5"
       >
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const active = activeTab === tab.id;
           return (
             <button
@@ -263,7 +265,7 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
           <>
             {/* Device viewport toggle */}
             <div className="flex items-center rounded-lg border border-[var(--dsw-alias-border-l1)] bg-[var(--dsw-alias-bg-layer-1)] p-0.5">
-              {DEVICES.map((d) => (
+              {devices.map((d) => (
                 <button
                   aria-label={d.label}
                   className={`grid h-6 w-6 place-items-center rounded-md transition-colors ${
@@ -314,10 +316,10 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
 
             {/* Refresh */}
             <button
-              aria-label="Rafraîchir l'aperçu"
+              aria-label={t("studio.refresh")}
               className="grid h-7 w-7 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-colors"
               onClick={onRefresh}
-              title="Rafraîchir"
+              title={t("studio.refresh")}
               type="button"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -325,10 +327,10 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
 
             {/* Open in new tab */}
             <button
-              aria-label="Ouvrir dans un nouvel onglet"
+              aria-label={t("studio.openExternal")}
               className="grid h-7 w-7 place-items-center rounded-lg text-[var(--dsw-alias-label-tertiary)] hover:bg-[var(--dsw-alias-interactive-bg-hover)] hover:text-[var(--dsw-alias-label-primary)] transition-colors"
               onClick={onOpenExternal}
-              title="Ouvrir dans un nouvel onglet"
+              title={t("studio.openExternal")}
               type="button"
             >
               <ExternalLink className="h-3.5 w-3.5" />
@@ -342,13 +344,13 @@ export const StudioTopBar: React.FC<StudioTopBarProps> = ({
           type="button"
         >
           <Share2 className="h-3 w-3" />
-          {!compact && "Partager"}
+          {!compact && t("common.share")}
         </button>
         <button
           className="inline-flex items-center gap-1 rounded-lg bg-[var(--idealy-teal-petrol)] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90 active:scale-95 transition-all"
           type="button"
         >
-          Publier
+          {t("common.publish")}
         </button>
       </div>
     </header>

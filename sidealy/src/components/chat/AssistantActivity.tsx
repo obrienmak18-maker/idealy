@@ -9,6 +9,7 @@ import {
   Video,
 } from "lucide-react";
 import type React from "react";
+import { useTranslation } from "../../services/i18n";
 import type {
   AssistantToolActivity,
   MissionFileActivity,
@@ -16,26 +17,70 @@ import type {
 } from "../../types";
 import { GenerativeUIWidget } from "./GenerativeUIWidget";
 
-const toolLabels: Record<AssistantToolActivity["kind"], string> = {
-  dispatchSubAgents: "Préparation du plan d’agents",
-  generateImage: "Génération d’image",
-  generateVideo: "Génération vidéo",
-  renderWidget: "Préparation de l’aperçu",
-  searchImages: "Recherche d’images",
-  webSearch: "Recherche sur le web",
+const TOOL_LABELS_MAP: Record<string, Record<AssistantToolActivity["kind"], string>> = {
+  en: {
+    dispatchSubAgents: "Planning squad assignments",
+    generateImage: "Generating visual asset",
+    generateVideo: "Generating video asset",
+    renderWidget: "Preparing interactive preview",
+    searchImages: "Searching image references",
+    webSearch: "Web search",
+  },
+  fr: {
+    dispatchSubAgents: "Préparation du plan d’agents",
+    generateImage: "Génération d’image",
+    generateVideo: "Génération vidéo",
+    renderWidget: "Préparation de l’aperçu",
+    searchImages: "Recherche d’images",
+    webSearch: "Recherche sur le web",
+  },
+  es: {
+    dispatchSubAgents: "Planificación del escuadrón",
+    generateImage: "Generación de imagen",
+    generateVideo: "Generación de video",
+    renderWidget: "Preparación de vista previa",
+    searchImages: "Búsqueda de imágenes",
+    webSearch: "Búsqueda web",
+  },
 };
 
-const eventLabels: Record<string, string> = {
-  agent_started: "Agent démarré",
-  auto_correction_started: "Correction automatique",
-  build_log: "Vérification du projet",
-  file_content: "Écriture du fichier",
-  file_saved: "Fichier enregistré",
-  file_started: "Création du fichier",
-  mission_completed: "Mission terminée",
-  mission_error: "Erreur de mission",
-  mission_started: "Mission démarrée",
-  validation_result: "Résultat de validation",
+const EVENT_LABELS_MAP: Record<string, Record<string, string>> = {
+  en: {
+    agent_started: "Agent activated",
+    auto_correction_started: "Self-correcting build",
+    build_log: "Verifying project",
+    file_content: "Writing file",
+    file_saved: "File saved",
+    file_started: "Creating file",
+    mission_completed: "Mission completed",
+    mission_error: "Build error",
+    mission_started: "Mission started",
+    validation_result: "Validation complete",
+  },
+  fr: {
+    agent_started: "Agent démarré",
+    auto_correction_started: "Correction automatique",
+    build_log: "Vérification du projet",
+    file_content: "Écriture du fichier",
+    file_saved: "Fichier enregistré",
+    file_started: "Création du fichier",
+    mission_completed: "Mission terminée",
+    mission_error: "Erreur de mission",
+    mission_started: "Mission démarrée",
+    validation_result: "Résultat de validation",
+  },
+  es: {
+    agent_started: "Agente iniciado",
+    auto_correction_started: "Corrección automática",
+    build_log: "Verificando proyecto",
+    file_content: "Escribiendo archivo",
+    file_saved: "Archivo guardado",
+    file_started: "Creando archivo",
+    mission_completed: "Misión completada",
+    mission_error: "Error de misión",
+    mission_started: "Misión iniciada",
+    validation_result: "Resultado de validación",
+  },
 };
 
 const ToolIcon: React.FC<{ kind: AssistantToolActivity["kind"] }> = ({
@@ -67,6 +112,11 @@ export const AssistantActivity: React.FC<{
   isStreaming = false,
   subagents = [],
 }) => {
+  const { language } = useTranslation();
+  const currentLang = language === "fr" || language === "es" ? language : "en";
+  const toolLabels = TOOL_LABELS_MAP[currentLang] || TOOL_LABELS_MAP.en;
+  const eventLabels = EVENT_LABELS_MAP[currentLang] || EVENT_LABELS_MAP.en;
+
   const latestActivities = activities.slice(-4).reverse();
   const currentFileEvents = fileEvents.reduce<MissionFileActivity[]>(
     (current, event) => {
@@ -94,11 +144,14 @@ export const AssistantActivity: React.FC<{
   const AGENT_TINTS = ["45,212,191", "129,140,248", "167,139,250", "251,146,60", "56,189,248"];
 
   type Step = { key: string; state: "running" | "done" | "failed"; label: string; detail?: string; icon: React.ReactNode };
+  const defaultToolFallback = currentLang === "en" ? "Idealy Tool" : currentLang === "es" ? "Herramienta Idealy" : "Outil Idealy";
+  const defaultEventFallback = currentLang === "en" ? "Project Activity" : currentLang === "es" ? "Actividad del proyecto" : "Activité du projet";
+
   const steps: Step[] = [
     ...[...latestActivities].reverse().map<Step>((activity) => ({
       key: activity.toolCallId,
       state: activity.state === "output-error" ? "failed" : activity.state === "output-available" ? "done" : "running",
-      label: toolLabels[activity.kind] ?? "Outil Idealy",
+      label: toolLabels[activity.kind] ?? defaultToolFallback,
       icon: <ToolIcon kind={activity.kind} />,
     })),
     ...[...latestFileEvents].reverse().map<Step>((event) => {
@@ -107,7 +160,7 @@ export const AssistantActivity: React.FC<{
       return {
         key: `${event.missionId}-${event.sequence}`,
         state: failed ? "failed" : done ? "done" : "running",
-        label: eventLabels[event.eventType] ?? "Activité du projet",
+        label: eventLabels[event.eventType] ?? defaultEventFallback,
         detail: event.path || event.file?.path,
         icon: <FileCode2 aria-hidden="true" className="h-3.5 w-3.5" />,
       };
@@ -116,7 +169,7 @@ export const AssistantActivity: React.FC<{
 
   return (
     <div
-      aria-label="Activité de l’assistant"
+      aria-label={currentLang === "en" ? "Assistant activity" : currentLang === "es" ? "Actividad del asistente" : "Activité de l’assistant"}
       aria-live={isStreaming ? "polite" : undefined}
       className="my-2 space-y-4 text-[13px] text-[var(--dsw-alias-label-secondary)]"
       role={isStreaming ? "status" : undefined}
@@ -127,12 +180,20 @@ export const AssistantActivity: React.FC<{
         const failed = group.agents.filter((agent) => agent.status === "failed").length;
         const running = group.agents.filter((agent) => agent.status === "running").length;
         const active = running + group.agents.filter((agent) => agent.status === "queued").length;
-        const status = active ? `${completed}/${total} · ${running} en cours` : failed ? `${completed}/${total} · ${failed} échec${failed > 1 ? "s" : ""}` : "Terminé";
+        const teamLabel = currentLang === "en" ? "Squad" : currentLang === "es" ? "Escuadrón" : "Équipe";
+        const inProgressLabel = currentLang === "en" ? "in progress" : currentLang === "es" ? "en curso" : "en cours";
+        const failedLabel = currentLang === "en" ? "failed" : currentLang === "es" ? "fallo" : "échec";
+        const doneLabel = currentLang === "en" ? "Completed" : currentLang === "es" ? "Completado" : "Terminé";
+        const status = active
+          ? `${completed}/${total} · ${running} ${inProgressLabel}`
+          : failed
+            ? `${completed}/${total} · ${failed} ${failedLabel}${failed > 1 ? "s" : ""}`
+            : doneLabel;
         return (
           <details className="group/agents rounded-2xl border border-[var(--dsw-alias-border-l2)] bg-[var(--dsw-alias-bg-layer-2)]/60" key={group.timestamp} open={isStreaming}>
             <summary className="flex cursor-pointer list-none items-center gap-2.5 px-3.5 py-3 text-[var(--dsw-alias-label-primary)] [&::-webkit-details-marker]:hidden">
               <Users aria-hidden="true" className="h-4 w-4 text-[var(--dsw-alias-label-tertiary)]" />
-              <span className="flex-1 text-[13.5px] font-medium">Équipe</span>
+              <span className="flex-1 text-[13.5px] font-medium">{teamLabel}</span>
               <span className="text-[12px] text-[var(--dsw-alias-label-tertiary)]">{status}</span>
             </summary>
             <div aria-hidden="true" className="mx-3.5 flex gap-1">

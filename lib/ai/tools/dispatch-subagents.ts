@@ -1,6 +1,7 @@
 import { generateText, tool, type UIMessageStreamWriter } from "ai";
 import { z } from "zod";
 import type { ChatMessage, IdealySubAgentEvent } from "@/lib/types";
+import { DEFAULT_CHAT_MODEL } from "../models";
 import { getLanguageModel } from "../providers";
 
 const MAX_SUBAGENTS = 3;
@@ -8,7 +9,7 @@ const MAX_AGENT_OUTPUT_TOKENS = 420;
 
 export type DispatchSubAgentsProps = {
   dataStream?: UIMessageStreamWriter<ChatMessage>;
-  modelId: string;
+  modelId?: string;
 };
 
 const subAgentSchema = z.object({
@@ -22,7 +23,7 @@ function safeSummary(text: string): string {
   return cleaned.length > 900 ? `${cleaned.slice(0, 897)}…` : cleaned;
 }
 
-export const dispatchSubAgents = ({ dataStream, modelId }: DispatchSubAgentsProps) => {
+export const dispatchSubAgents = ({ dataStream, modelId = DEFAULT_CHAT_MODEL }: DispatchSubAgentsProps = {}) => {
   let hasDispatched = false;
   return tool({
     description:
@@ -62,11 +63,13 @@ export const dispatchSubAgents = ({ dataStream, modelId }: DispatchSubAgentsProp
         timestamp: Date.now(),
       };
       const publish = () => {
-        dataStream?.write({
-          data: structuredClone(event),
-          transient: true,
-          type: "data-idealy-subagent",
-        });
+        if (dataStream) {
+          dataStream.write({
+            data: structuredClone(event),
+            transient: true,
+            type: "data-idealy-subagent",
+          });
+        }
       };
 
       publish();
@@ -121,7 +124,7 @@ export const dispatchSubAgents = ({ dataStream, modelId }: DispatchSubAgentsProp
       );
 
       return {
-        status: "completed" as const,
+        status: "success" as const,
         objective,
         squad,
         agents: results.filter((result): result is NonNullable<typeof result> => result !== null),

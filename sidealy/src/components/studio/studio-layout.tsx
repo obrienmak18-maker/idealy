@@ -27,6 +27,26 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
   const startXRef = useRef(0);
   const startRatioRef = useRef(DEFAULT_RATIO);
 
+  const [mobileTab, setMobileTab] = useState<"chat" | "workspace">("chat");
+  const [isMobile, setIsMobile] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const handleOpenWorkspace = () => setMobileTab("workspace");
+    window.addEventListener("idealy:open-workspace", handleOpenWorkspace);
+    return () =>
+      window.removeEventListener("idealy:open-workspace", handleOpenWorkspace);
+  }, []);
+
   const [ratio, setRatio] = useState<number>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -123,6 +143,53 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
     return (
       <div className="flex h-full w-full flex-col overflow-hidden">
         {leftPane}
+      </div>
+    );
+  }
+
+  // Mobile layout (< 768px): Single pane with top segmented toggle
+  if (isMobile) {
+    return (
+      <div
+        className="flex h-full w-full flex-col overflow-hidden"
+        ref={containerRef}
+      >
+        {topBar}
+        <div className="flex items-center justify-center p-2 bg-[var(--dsw-alias-bg-base)] border-b border-[var(--dsw-alias-border-l1)] shrink-0">
+          <div className="flex rounded-lg bg-[var(--dsw-alias-bg-layer-2)] p-0.5 border border-[var(--dsw-alias-border-l1)]">
+            <button
+              type="button"
+              onClick={() => setMobileTab("chat")}
+              className={`px-3.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                mobileTab === "chat"
+                  ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                  : "text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)]"
+              }`}
+            >
+              Chat
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("workspace")}
+              className={`px-3.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                mobileTab === "workspace"
+                  ? "bg-[var(--idealy-teal-petrol)] text-white shadow-xs"
+                  : "text-[var(--dsw-alias-label-secondary)] hover:text-[var(--dsw-alias-label-primary)]"
+              }`}
+            >
+              Studio
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {mobileTab === "chat" ? (
+            <div className="h-full w-full overflow-hidden">{leftPane}</div>
+          ) : (
+            <div className="h-full w-full overflow-hidden bg-[var(--dsw-alias-bg-layer-1)]">
+              {rightPane}
+            </div>
+          )}
+        </div>
       </div>
     );
   }

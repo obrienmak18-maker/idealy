@@ -90,7 +90,7 @@ export class LiveAudioClient {
         headers.Authorization = `Bearer ${bearer}`;
       }
       const way = localStorage.getItem("idealy_user_way") || "ninja";
-      const lang = localStorage.getItem("idealy_language") || "fr";
+      const lang = localStorage.getItem("idealy_language") || "en";
       headers["x-idealy-way"] = way;
       headers["x-idealy-lang"] = lang;
 

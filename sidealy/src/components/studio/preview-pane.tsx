@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "../../services/i18n";
 
 type DeviceViewport = "desktop" | "tablet" | "mobile";
 
@@ -27,6 +28,7 @@ const DEVICE_DIMENSIONS: Record<
 };
 
 interface PreviewPaneProps {
+  compiledHtml?: string;
   device: DeviceViewport;
   hasProjectManifest?: boolean;
   onStartPreview?: () => void;
@@ -38,6 +40,7 @@ interface PreviewPaneProps {
 }
 
 export const PreviewPane: React.FC<PreviewPaneProps> = ({
+  compiledHtml,
   previewUrl,
   runtimeState,
   device,
@@ -47,6 +50,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
   runtimeOutput = "",
   runtimeError = "",
 }) => {
+  const { t } = useTranslation();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeKey, setIframeKey] = useState(0);
   const runtimeBusy = ["booting", "installing", "starting"].includes(
@@ -216,7 +220,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
   const dims = DEVICE_DIMENSIONS[device];
 
   // Empty state — no preview available
-  if (!previewUrl && !runtimeBusy && runtimeState !== "error") {
+  if (!previewUrl && !compiledHtml && !runtimeBusy && runtimeState !== "error") {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-6 text-center">
         <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[var(--dsw-alias-bg-layer-2)] border border-[var(--dsw-alias-border-l1)]">
@@ -224,11 +228,10 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
         </div>
         <div className="max-w-xs">
           <h3 className="text-sm font-semibold text-[var(--dsw-alias-label-primary)]">
-            Aucun aperçu disponible
+            {t("studio.noPreview")}
           </h3>
           <p className="mt-1 text-xs text-[var(--dsw-alias-label-secondary)] leading-relaxed">
-            Décrivez votre application dans le chat pour commencer la
-            construction, ou lancez l'aperçu manuellement.
+            {t("studio.noPreviewDesc")}
           </p>
         </div>
         {hasProjectManifest && (
@@ -238,7 +241,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
             type="button"
           >
             <Play className="h-3.5 w-3.5" />
-            Lancer l'aperçu
+            {t("studio.startPreview")}
           </button>
         )}
       </div>
@@ -249,10 +252,10 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
   if (runtimeBusy) {
     const stateLabel =
       runtimeState === "booting"
-        ? "Démarrage du runtime…"
+        ? t("studio.bootingRuntime")
         : runtimeState === "installing"
-          ? "Installation des dépendances…"
-          : "Lancement du serveur de dev…";
+          ? t("studio.installingDeps")
+          : t("studio.startingDevServer");
 
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
@@ -271,7 +274,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
           type="button"
         >
           <Square className="h-3 w-3" />
-          Arrêter
+          {t("studio.stopPreview")}
         </button>
       </div>
     );
@@ -285,7 +288,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
           <Square className="h-5 w-5" />
         </div>
         <p className="text-xs font-medium text-destructive">
-          L'aperçu n'a pas pu démarrer
+          {t("studio.previewFailed")}
         </p>
         {runtimeError && (
           <p className="max-w-sm text-[11px] text-[var(--dsw-alias-label-secondary)]">
@@ -299,7 +302,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
             type="button"
           >
             <Play className="h-3.5 w-3.5" />
-            Réessayer
+            {t("studio.retryPreview")}
           </button>
         )}
       </div>
@@ -322,7 +325,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
           </div>
           <div className="flex-1 flex items-center">
             <span className="rounded-md bg-white border border-gray-200 px-2 py-0.5 text-[10px] text-gray-500 font-mono truncate max-w-full">
-              {previewUrl || "sandbox.idealy.run"}
+              {previewUrl || "app.idealy.run"}
             </span>
           </div>
         </div>
@@ -333,8 +336,9 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
           key={iframeKey}
           ref={iframeRef}
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-          src={previewUrl}
-          title="Aperçu de l'application"
+          src={previewUrl || undefined}
+          srcDoc={previewUrl ? undefined : compiledHtml}
+          title={t("studio.preview")}
         />
 
         {/* Floating Retractable Design Palette */}

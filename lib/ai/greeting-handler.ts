@@ -69,7 +69,7 @@ export function isSimpleGreeting(text: string): boolean {
 
 export function getGreetingReply({
   displayName,
-  language = "fr",
+  language = "en",
   tone,
   way = "professional",
 }: {
@@ -79,18 +79,18 @@ export function getGreetingReply({
   way?: string | null;
 }): string {
   const nameGreeting = displayName ? ` ${displayName}` : "";
-  const lang = (language ?? "fr").toLowerCase().slice(0, 2);
+  const lang = (language ?? "en").toLowerCase().slice(0, 2);
 
-  if (lang === "en") {
+  if (lang === "fr") {
     switch (way) {
       case "ninja":
-        return `Hey${nameGreeting}! Ready to build with speed and laser focus? Tell me what you'd like to create today.`;
+        return `Salut${nameGreeting} ! Prêt à avancer à vitesse maximale ? Décrivez l’application ou la fonctionnalité que vous voulez construire.`;
       case "mage":
-        return `Hello${nameGreeting}! What creative idea or prototype shall we design and explore today?`;
+        return `Bonjour${nameGreeting} ! Quelle idée fascinante ou quel prototype allons-nous concevoir et explorer aujourd’hui ?`;
       case "hunter":
-        return `Hello${nameGreeting}! Ready to track down the best architecture and build something solid? What's your project idea?`;
+        return `Salut${nameGreeting} ! Prêt à traquer la meilleure solution technique ? Dites-moi ce que vous souhaitez concevoir.`;
       default:
-        return `Hello${nameGreeting}! How can I help you today? Describe your idea, and we will turn it into a clear plan and code.`;
+        return `Bonjour${nameGreeting} ! Comment puis-je vous aider aujourd'hui ? Décrivez votre idée d'application ou d'outil, et préparons les fondations ensemble.`;
     }
   }
 
@@ -107,15 +107,15 @@ export function getGreetingReply({
     }
   }
 
-  // French (default)
+  // English (default)
   switch (way) {
     case "ninja":
-      return `Salut${nameGreeting} ! Prêt à avancer à vitesse maximale ? Décrivez l’application ou la fonctionnalité que vous voulez construire.`;
+      return `Hey${nameGreeting}! Ready to build with speed and laser focus? Tell me what you'd like to create today.`;
     case "mage":
-      return `Bonjour${nameGreeting} ! Quelle idée fascinante ou quel prototype allons-nous concevoir et explorer aujourd’hui ?`;
+      return `Hello${nameGreeting}! What creative idea or prototype shall we design and explore today?`;
     case "hunter":
-      return `Salut${nameGreeting} ! Prêt à traquer la meilleure solution technique ? Dites-moi ce que vous souhaitez concevoir.`;
+      return `Hello${nameGreeting}! Ready to track down the best architecture and build something solid? What's your project idea?`;
     default:
-      return `Bonjour${nameGreeting} ! Comment puis-je vous aider aujourd'hui ? Décrivez votre idée d'application ou d'outil, et préparons les fondations ensemble.`;
+      return `Hello${nameGreeting}! How can I help you today? Describe your idea, and we will turn it into a clear plan and code.`;
   }
 }

@@ -15,12 +15,14 @@ import {
 import type React from "react";
 import { useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 import { hasConversationActivity } from "../../services/conversationVisibility";
 import { PageFrame } from "../layout/PageFrame";
 
 type LibraryFilter = "all" | "chats" | "artifacts" | "pinned";
 
 export const LibraryPage: React.FC = () => {
+  const { t } = useTranslation();
   const {
     artifacts,
     conversations,
@@ -154,7 +156,7 @@ export const LibraryPage: React.FC = () => {
               Bibliothèque
             </h1>
             <p className="text-xs text-[var(--dsw-alias-label-secondary)] mt-0.5">
-              Historique de vos discussions et livrables de code
+              {t("library.subtitle")}
             </p>
           </div>
           <button
@@ -176,7 +178,7 @@ export const LibraryPage: React.FC = () => {
           <input
             className="min-w-0 flex-1 bg-transparent text-xs text-[var(--dsw-alias-label-primary)] placeholder:text-[var(--dsw-alias-label-caption)] outline-none"
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher une discussion ou un fichier produit..."
+            placeholder={t("library.searchPlaceholder")}
             value={query}
           />
           {query && (

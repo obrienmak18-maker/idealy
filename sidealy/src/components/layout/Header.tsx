@@ -2,9 +2,11 @@ import { ChevronDown, Download, FileArchive, Menu, PanelRight, Pencil, Pin, Squa
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { useTranslation } from "../../services/i18n";
 import { hasConversationWorkspace } from "../../services/conversationWorkspace";
 
 export const Header: React.FC = () => {
+  const { t, ti } = useTranslation();
   const {
     setIsMobileDrawerOpen,
     activeConversation,
@@ -63,9 +65,9 @@ export const Header: React.FC = () => {
     if (!activeConversation) return;
     setMenuOpen(false);
     openConfirmModal({
-      title: "Supprimer la conversation",
-      message: "Êtes-vous sûr de vouloir supprimer cette discussion ? Cette action est irréversible.",
-      confirmLabel: "Supprimer",
+      title: t("studio.deleteProject"),
+      message: ti("studio.deleteConfirm", { title: activeConversation.title || "Project" }),
+      confirmLabel: t("sidebar.delete"),
       isDestructive: true,
       onConfirm: () => deleteConversation(activeConversation.id),
     });
@@ -182,7 +184,7 @@ export const Header: React.FC = () => {
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-rose-500 hover:bg-rose-500/10 transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  <span>Supprimer la discussion</span>
+                  <span>{t("sidebar.delete")}</span>
                 </button>
               </div>
             )}
@@ -193,24 +195,26 @@ export const Header: React.FC = () => {
       <div className="flex shrink-0 items-center gap-1">
         {hasWorkspace && (
           <button
-            aria-label="Aperçu"
+            aria-label={t("studio.preview")}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-violet-500/10 text-violet-300 border border-violet-500/20 hover:bg-violet-500/20 transition-colors focus-ring xl:hidden"
             onClick={openWorkspace}
-            title="Aperçu"
+            title={t("studio.preview")}
             type="button"
           >
             <PanelRight aria-hidden="true" className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-semibold">Aperçu</span>
+            <span className="text-[11px] font-semibold">{t("studio.preview")}</span>
           </button>
         )}
-        <button
-          aria-label="Nouvelle conversation"
-          className="grid h-8 w-8 place-items-center rounded-xl text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] focus-ring md:hidden"
-          onClick={() => createConversation()}
-          type="button"
-        >
-          <SquarePen aria-hidden="true" className="h-4.5 w-4.5" />
-        </button>
+        {hasMessages && (
+          <button
+            aria-label={t("sidebar.newChat")}
+            className="grid h-8 w-8 place-items-center rounded-xl text-[var(--dsw-alias-label-secondary)] transition-colors hover:bg-[var(--dsw-alias-interactive-bg-hover)] focus-ring md:hidden"
+            onClick={() => createConversation()}
+            type="button"
+          >
+            <SquarePen aria-hidden="true" className="h-4.5 w-4.5" />
+          </button>
+        )}
       </div>
     </header>
   );
