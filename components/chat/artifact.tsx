@@ -152,9 +152,7 @@ function PureArtifact({
     isLoading: isDocumentsFetching,
     mutate: mutateDocuments,
   } = useSWR<Document[]>(
-    artifact.documentId !== "init" &&
-      artifact.status !== "streaming" &&
-      !isDemoMode
+    artifact.documentId !== "init" && artifact.status !== "streaming" && !isDemoMode
       ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}`
       : null,
     fetcher
